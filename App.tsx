@@ -1,42 +1,40 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
-import { supabase } from './lib/supabase';
+import { NavigationContainer } from '@react-navigation/native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+import RoleSelectScreen from './src/RoleSelectScreen';
+import CustomerNavigator from './src/customer/CustomerNavigator';
+import BarberNavigator from './src/barber/BarberNavigator';
+import { appFonts } from './src/theme/typography';
+
+type Role = 'customer' | 'barber' | null;
+
+SplashScreen.preventAutoHideAsync();
 
 export default function App() {
-  const [status, setStatus] = useState('Connecting to Supabase…');
+  const [fontsLoaded] = useFonts(appFonts);
+  const [role, setRole] = useState<Role>(null);
 
-  useEffect(() => {
-    supabase
-      .from('__connection_check__')
-      .select('*')
-      .limit(1)
-      .then(({ error }) => {
-        // A "table not found" response confirms the client reached
-        // Supabase and the URL/anon key are valid.
-        if (error?.code === 'PGRST205') {
-          setStatus('Connected to Supabase ✅');
-        } else if (error) {
-          setStatus(`Supabase error: ${error.message}`);
-        } else {
-          setStatus('Connected to Supabase ✅');
-        }
-      });
-  }, []);
+  const onLayoutRootView = useCallback(async () => {
+    if (fontsLoaded) {
+      await SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   return (
-    <View style={styles.container}>
-      <Text>{status}</Text>
+    <SafeAreaProvider onLayout={onLayoutRootView}>
+      <NavigationContainer>
+        {role === 'customer' && <CustomerNavigator onExit={() => setRole(null)} />}
+        {role === 'barber' && <BarberNavigator onExit={() => setRole(null)} />}
+        {role === null && <RoleSelectScreen onSelectRole={setRole} />}
+      </NavigationContainer>
       <StatusBar style="auto" />
-    </View>
+    </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
