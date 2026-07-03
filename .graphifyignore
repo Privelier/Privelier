@@ -1,0 +1,15 @@
+# Tooling config, not project code/docs -- excluded from the knowledge graph.
+.claude/
+.expo/
+
+# Static binary brand assets -- graphing these requires image understanding,
+# which needs an LLM backend. Excluded to keep extraction fully local/keyless.
+assets/*.png
+
+# Markdown docs -- graphify treats docs as requiring semantic (LLM) extraction.
+# Excluded here to keep the corpus code-only and avoid any API key requirement.
+# Code files (.ts/.tsx/.sql/etc.) are unaffected and fully indexed via local
+# tree-sitter AST parsing.
+CLAUDE.md
+README.md
+src/mobile_dev_review_notes.md

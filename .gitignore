@@ -35,6 +35,9 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# graphify -- regenerable knowledge graph, rebuild locally with `graphify update .`
+graphify-out/
+
 # generated native folders
 /ios
 /android

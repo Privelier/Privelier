@@ -124,3 +124,13 @@ Every feature passes through this exact sequence: **Plan → Design → Build �
 - No biometric or automated identity processing — manual verification only, until explicitly revisited in a later phase.
 - Stay inside the MVP scope above. If asked to build something in the "do not build yet" list, flag it and wait for explicit confirmation rather than building it.
 - Dispute resolution, refund policy, and in-home safety features are known open gaps, not solved problems — do not silently build around them as if they don't exist; surface them again when Phase 2 planning starts.
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
