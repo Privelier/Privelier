@@ -1,9 +1,11 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/useTheme';
+import { useExitRole } from '../../RoleContext';
 
-export default function BarberDashboardScreen({ onBack }: { onBack: () => void }) {
+export default function BarberDashboardScreen() {
   const { colors, fonts } = useTheme();
+  const onBack = useExitRole();
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -13,7 +15,12 @@ export default function BarberDashboardScreen({ onBack }: { onBack: () => void }
       <Text style={[styles.body, { color: colors.textSecondary, fontFamily: fonts.body }]}>
         Services, availability, and bookings land here next.
       </Text>
-      <Pressable onPress={onBack}>
+      <Pressable
+        onPress={onBack}
+        accessibilityRole="button"
+        accessibilityLabel="Not you? Go back to role selection"
+        hitSlop={12}
+      >
         <Text style={[styles.back, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
           Not you? Go back
         </Text>

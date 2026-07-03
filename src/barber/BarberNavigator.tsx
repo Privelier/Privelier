@@ -1,4 +1,5 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { RoleExitProvider } from '../RoleContext';
 import BarberDashboardScreen from './screens/BarberDashboardScreen';
 
 export type BarberStackParamList = {
@@ -9,10 +10,10 @@ const Stack = createNativeStackNavigator<BarberStackParamList>();
 
 export default function BarberNavigator({ onExit }: { onExit: () => void }) {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="BarberDashboard">
-        {() => <BarberDashboardScreen onBack={onExit} />}
-      </Stack.Screen>
-    </Stack.Navigator>
+    <RoleExitProvider value={onExit}>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="BarberDashboard" component={BarberDashboardScreen} />
+      </Stack.Navigator>
+    </RoleExitProvider>
   );
 }

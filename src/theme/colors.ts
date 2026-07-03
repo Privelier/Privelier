@@ -27,7 +27,7 @@ export const lightPalette: Palette = {
   surface: '#FFFFFF',
   border: '#E6DFD0',
   textPrimary: '#211D17',
-  textSecondary: '#8A8175',
+  textSecondary: '#756D62',
   accent: '#BFA06B',
   accentText: '#8A6B3D',
   success: '#4F7355',

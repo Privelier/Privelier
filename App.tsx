@@ -8,14 +8,13 @@ import RoleSelectScreen from './src/RoleSelectScreen';
 import CustomerNavigator from './src/customer/CustomerNavigator';
 import BarberNavigator from './src/barber/BarberNavigator';
 import { appFonts } from './src/theme/typography';
-
-type Role = 'customer' | 'barber' | null;
+import type { Role } from './src/types';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function App() {
   const [fontsLoaded] = useFonts(appFonts);
-  const [role, setRole] = useState<Role>(null);
+  const [role, setRole] = useState<Role | null>(null);
 
   const onLayoutRootView = useCallback(async () => {
     if (fontsLoaded) {

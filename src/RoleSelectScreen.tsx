@@ -1,8 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from './theme/useTheme';
-
-type Role = 'customer' | 'barber';
+import type { Role } from './types';
 
 type Props = {
   onSelectRole: (role: Role) => void;
@@ -18,7 +17,7 @@ export default function RoleSelectScreen({ onSelectRole }: Props) {
           Privelier
         </Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-          Choose how you'd like to continue
+          Choose how you&rsquo;d like to continue
         </Text>
       </View>
 
@@ -27,11 +26,13 @@ export default function RoleSelectScreen({ onSelectRole }: Props) {
           label="Continue as customer"
           description="Book a private barber to come to you"
           onPress={() => onSelectRole('customer')}
+          testID="role-select-customer"
         />
         <RoleOption
           label="Continue as barber"
           description="Manage your services and bookings"
           onPress={() => onSelectRole('barber')}
+          testID="role-select-barber"
         />
       </View>
     </SafeAreaView>
@@ -42,16 +43,21 @@ function RoleOption({
   label,
   description,
   onPress,
+  testID,
 }: {
   label: string;
   description: string;
   onPress: () => void;
+  testID: string;
 }) {
   const { colors, fonts } = useTheme();
 
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      testID={testID}
       style={({ pressed }) => [
         styles.option,
         {
@@ -69,7 +75,7 @@ function RoleOption({
           {description}
         </Text>
       </View>
-      <Text style={[styles.chevron, { color: colors.accent }]}>{'›'}</Text>
+      <Text style={[styles.chevron, { color: colors.accentText }]}>{'›'}</Text>
     </Pressable>
   );
 }
