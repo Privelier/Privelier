@@ -154,6 +154,47 @@ create table if not exists public.verification_requests (
 create index if not exists idx_verification_requests_user_id on public.verification_requests(user_id);
 
 -- ============================================================
+-- Helper functions
+-- ============================================================
+
+-- Runs as the function owner (postgres, which has BYPASSRLS in Supabase),
+-- so the internal query never re-triggers the users SELECT policy. Without
+-- this, checking "is the caller an admin?" from inside a policy on users
+-- (or on any table whose policy checks users) causes infinite RLS
+-- recursion — discovered live via a 42P17 error when this was inlined as
+-- a plain subquery instead.
+create or replace function public.is_admin()
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.users where id = auth.uid() and role = 'admin'
+  );
+$$;
+
+-- ============================================================
+-- Grants
+-- Creating a table via the SQL Editor does NOT automatically grant
+-- anon/authenticated any SQL-level privilege on it (unlike creating one
+-- through the Table Editor UI). RLS policies below are the real gate;
+-- these grants just let PostgREST reach the table at all.
+-- ============================================================
+
+grant usage on schema public to anon, authenticated;
+
+grant select, insert, update, delete
+  on public.users, public.barber_profile, public.services, public.availability,
+     public.bookings, public.chat_rooms, public.messages, public.portfolio,
+     public.reviews, public.verification_requests
+  to anon, authenticated;
+
+alter default privileges in schema public
+  grant select, insert, update, delete on tables to anon, authenticated;
+
+-- ============================================================
 -- Row Level Security — enabled on every table
 -- ============================================================
 
@@ -175,7 +216,7 @@ create policy "users_select_own_or_admin_or_approved_barber"
   on public.users for select
   using (
     id = auth.uid()
-    or exists (select 1 from public.users me where me.id = auth.uid() and me.role = 'admin')
+    or public.is_admin()
     or (
       role = 'barber'
       and exists (
@@ -203,7 +244,7 @@ create policy "barber_profile_select_own_or_admin_or_approved"
   on public.barber_profile for select
   using (
     user_id = auth.uid()
-    or exists (select 1 from public.users me where me.id = auth.uid() and me.role = 'admin')
+    or public.is_admin()
     or verification_status = 'approved'
   );
 
