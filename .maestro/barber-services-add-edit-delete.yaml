@@ -1,0 +1,120 @@
+# Barber services CRUD flow (build-order step 7-8): log in as a barber ->
+# open Services -> add a service -> edit it -> delete it.
+#
+# NOT YET RUN. There is no Maestro CLI / Android SDK / emulator on the
+# authoring machine — see .maestro/README.md. Once tooling is available:
+#   maestro test .maestro/barber-services-add-edit-delete.yaml
+#
+# Prerequisites:
+# - appId below is a placeholder — see .maestro/README.md for the same TODO
+#   already tracked for the auth flows (app.json does not yet define
+#   android.package / ios.bundleIdentifier).
+# - Requires a pre-confirmed test barber account (email confirmation is ON
+#   for this project). Create one via signup + confirming the email once,
+#   then pass its credentials via --env at run time, e.g.:
+#     maestro test .maestro/barber-services-add-edit-delete.yaml \
+#       -e TEST_BARBER_EMAIL=... -e TEST_BARBER_PASSWORD=...
+# - Row testIDs are per-row (`barber-services-row-{id}`, `-edit-{id}`,
+#   `-delete-{id}`) since the id is a server-generated uuid unknown at
+#   authoring time. Selectors below use Maestro's regex support on `id` to
+#   match "any row" — safe here because the flow starts from a clean slate
+#   for the one service it creates and only ever has that single row visible
+#   at the point each regex selector is used.
+appId: com.privelier.app # TODO: replace once app.json defines a real package/bundleIdentifier
+env:
+  TEST_BARBER_EMAIL: barber.e2e@example.com
+  TEST_BARBER_PASSWORD: ChangeMe123!
+---
+- launchApp:
+    clearState: true
+
+# UNAUTHENTICATED: role-select is the very first screen.
+- assertVisible:
+    id: "role-select-barber"
+- tapOn:
+    id: "role-select-barber"
+
+# Per-role auth entry -> log in.
+- assertVisible:
+    id: "auth-entry-screen"
+- tapOn:
+    id: "auth-entry-login"
+
+- assertVisible:
+    id: "auth-login-screen"
+- tapOn:
+    id: "auth-login-email"
+- inputText: "${TEST_BARBER_EMAIL}"
+- tapOn:
+    id: "auth-login-password"
+- inputText: "${TEST_BARBER_PASSWORD}"
+- tapOn:
+    id: "auth-login-submit"
+
+# PROVISIONING is transient/may not appear at all on a returning user — wait
+# directly for the real destination, same approach as the auth login flow.
+- extendedWaitUntil:
+    visible:
+      id: "barber-dashboard-logout"
+    timeout: 15000
+
+- assertVisible:
+    id: "barber-dashboard-services"
+- tapOn:
+    id: "barber-dashboard-services"
+
+- assertVisible:
+    id: "barber-services-screen"
+
+# --- Add a service ---
+- tapOn:
+    id: "barber-services-name"
+- inputText: "Maestro test cut"
+- tapOn:
+    id: "barber-services-price"
+- inputText: "25"
+- tapOn:
+    id: "barber-services-duration"
+- inputText: "30"
+- hideKeyboard
+- tapOn:
+    id: "barber-services-submit"
+
+# The new row appears; form clears back to "Add a service" (create, not edit).
+- assertVisible:
+    text: "Maestro test cut"
+- assertVisible:
+    text: "Add a service"
+
+# --- Edit the service ---
+# id is server-generated; match "any row's edit control" via regex.
+- tapOn:
+    id: "barber-services-edit-.*"
+- assertVisible:
+    text: "Edit service"
+- tapOn:
+    id: "barber-services-name"
+- eraseText
+- inputText: "Maestro test cut (edited)"
+- hideKeyboard
+- tapOn:
+    id: "barber-services-submit"
+
+- assertVisible:
+    text: "Maestro test cut (edited)"
+- assertNotVisible:
+    text: "Maestro test cut"
+# Form reset back to create-mode confirms the edit committed.
+- assertVisible:
+    text: "Add a service"
+
+# --- Delete the service ---
+- tapOn:
+    id: "barber-services-delete-.*"
+- assertVisible:
+    text: "Delete service"
+- tapOn:
+    text: "Delete"
+
+- assertNotVisible:
+    text: "Maestro test cut (edited)"

@@ -1,0 +1,127 @@
+# Barber availability CRUD flow (build-order step 7-8): log in as a barber ->
+# open Availability -> add a day-of-week window -> edit it, switching the
+# mutually-exclusive mode toggle over to a specific date -> delete it.
+#
+# NOT YET RUN. There is no Maestro CLI / Android SDK / emulator on the
+# authoring machine — see .maestro/README.md. Once tooling is available:
+#   maestro test .maestro/barber-availability-add-edit-delete.yaml
+#
+# Prerequisites:
+# - appId below is a placeholder — see .maestro/README.md for the same TODO
+#   already tracked for the auth flows.
+# - Requires a pre-confirmed test barber account, same as
+#   barber-services-add-edit-delete.yaml. Pass credentials via --env, e.g.:
+#     maestro test .maestro/barber-availability-add-edit-delete.yaml \
+#       -e TEST_BARBER_EMAIL=... -e TEST_BARBER_PASSWORD=...
+# - Row testIDs are per-row (`barber-availability-row-{id}`, `-edit-{id}`,
+#   `-delete-{id}`) since the id is a server-generated uuid unknown at
+#   authoring time. Selectors below use Maestro's regex support on `id`,
+#   safe here because only the single window this flow creates is present
+#   when each regex selector is used.
+appId: com.privelier.app # TODO: replace once app.json defines a real package/bundleIdentifier
+env:
+  TEST_BARBER_EMAIL: barber.e2e@example.com
+  TEST_BARBER_PASSWORD: ChangeMe123!
+---
+- launchApp:
+    clearState: true
+
+# UNAUTHENTICATED: role-select is the very first screen.
+- assertVisible:
+    id: "role-select-barber"
+- tapOn:
+    id: "role-select-barber"
+
+# Per-role auth entry -> log in.
+- assertVisible:
+    id: "auth-entry-screen"
+- tapOn:
+    id: "auth-entry-login"
+
+- assertVisible:
+    id: "auth-login-screen"
+- tapOn:
+    id: "auth-login-email"
+- inputText: "${TEST_BARBER_EMAIL}"
+- tapOn:
+    id: "auth-login-password"
+- inputText: "${TEST_BARBER_PASSWORD}"
+- tapOn:
+    id: "auth-login-submit"
+
+- extendedWaitUntil:
+    visible:
+      id: "barber-dashboard-logout"
+    timeout: 15000
+
+- assertVisible:
+    id: "barber-dashboard-availability"
+- tapOn:
+    id: "barber-dashboard-availability"
+
+- assertVisible:
+    id: "barber-availability-screen"
+
+# --- Add a day-of-week window ---
+# "Day of week" is the default mode, but assert + tap it explicitly so this
+# flow still exercises the toggle even if the default ever changes.
+- assertVisible:
+    id: "barber-availability-mode-day"
+- tapOn:
+    id: "barber-availability-mode-day"
+- tapOn:
+    id: "barber-availability-day-2" # Tuesday
+- tapOn:
+    id: "barber-availability-start-time"
+- inputText: "09:00"
+- tapOn:
+    id: "barber-availability-end-time"
+- inputText: "17:00"
+- hideKeyboard
+- tapOn:
+    id: "barber-availability-submit"
+
+- assertVisible:
+    text: "Tuesday"
+- assertVisible:
+    text: "Add a window"
+
+# --- Edit the window, switching mode from day-of-week to specific date ---
+# id is server-generated; match "any row's edit control" via regex.
+- tapOn:
+    id: "barber-availability-edit-.*"
+- assertVisible:
+    text: "Edit window"
+# Confirm we actually landed in day mode with Tuesday selected before
+# switching, so the toggle's mutual exclusivity is meaningfully exercised.
+- assertVisible:
+    id: "barber-availability-mode-day"
+
+- tapOn:
+    id: "barber-availability-mode-date"
+- assertVisible:
+    id: "barber-availability-date"
+- tapOn:
+    id: "barber-availability-date"
+- inputText: "2026-08-15"
+- hideKeyboard
+- tapOn:
+    id: "barber-availability-submit"
+
+- assertVisible:
+    text: "2026-08-15"
+- assertNotVisible:
+    text: "Tuesday"
+- assertVisible:
+    text: "Add a window"
+
+# --- Delete the window ---
+- tapOn:
+    id: "barber-availability-delete-.*"
+- assertVisible:
+    text: "Delete availability"
+- tapOn:
+    text: "Delete"
+
+- assertNotVisible:
+    text: "2026-08-15"

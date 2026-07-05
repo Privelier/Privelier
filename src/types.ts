@@ -44,3 +44,54 @@ export interface BarberProfileRow {
   verified: boolean;
   verification_status: VerificationStatus;
 }
+
+/**
+ * Row shape of `public.services` (see supabase/migrations/0001_init_schema.sql).
+ * Writes are gated by RLS (`services_write_own`) to `barber_id = auth.uid()`
+ * with the barber role; reads are public to any authenticated caller.
+ */
+export interface ServiceRow {
+  id: string;
+  barber_id: string;
+  name: string;
+  price: number;
+  duration_minutes: number;
+}
+
+/**
+ * Row shape of `public.availability`. Exactly one of `day_of_week` /
+ * `specific_date` is set (enforced by `chk_availability_day_or_date`), and
+ * `start_time < end_time` is enforced by `chk_availability_time_order`.
+ * Writes are gated by RLS (`availability_write_own`) the same way as services.
+ */
+export interface AvailabilityRow {
+  id: string;
+  barber_id: string;
+  day_of_week: number | null;
+  specific_date: string | null;
+  start_time: string;
+  end_time: string;
+}
+
+/**
+ * Row shape of `public.barber_directory` (see migration
+ * 0006_require_authenticated_discovery_and_lock_users_columns.sql). This
+ * view is the ONLY discovery surface: a hand-picked, non-sensitive column
+ * projection over `users` joined to `barber_profile`, pre-filtered to
+ * `verification_status = 'approved'`. It deliberately has no email, phone,
+ * created_at, or verification_status column — do not add one here without a
+ * matching, deliberate schema change.
+ *
+ * `rating` is currently always the unmodified default: no review-aggregation
+ * exists yet (build-order step 18). Treating `rating === 0` as "no ratings
+ * yet" is a UI-layer decision, not something this row shape special-cases.
+ */
+export interface BarberDirectoryRow {
+  id: string;
+  name: string;
+  city: string | null;
+  country: string | null;
+  profile_image: string | null;
+  bio: string | null;
+  rating: number;
+}
