@@ -1,0 +1,67 @@
+# Priority E2E flow (Contract A/B): role-select -> signup -> lands on
+# AWAIT_EMAIL_CONFIRMATION -> tap resend -> success notice appears.
+#
+# NOT YET RUN. There is no Maestro CLI / Android SDK / emulator on the
+# authoring machine — see .maestro/README.md. Once tooling is available:
+#   maestro test .maestro/signup-await-confirmation-resend.yaml
+#
+# Prerequisites:
+# - appId below is a placeholder — see login-provisioning-role-landing.yaml
+#   for the same TODO.
+# - Uses a throwaway, never-before-used email each run (Supabase's duplicate
+#   -email obfuscation would otherwise silently short-circuit signUp() and
+#   this flow would never actually reach AwaitEmailConfirmation). Pass a
+#   fresh one via --env, e.g. with a timestamp:
+#     maestro test .maestro/signup-await-confirmation-resend.yaml \
+#       -e TEST_NEW_CUSTOMER_EMAIL=customer.e2e.$(date +%s)@example.com
+# - This flow does not confirm the email or log in afterwards — it only
+#   verifies the signup -> await-confirmation -> resend UI path.
+appId: com.privelier.app # TODO: replace once app.json defines a real package/bundleIdentifier
+env:
+  TEST_NEW_CUSTOMER_EMAIL: customer.e2e.signup@example.com
+  TEST_NEW_CUSTOMER_PASSWORD: ChangeMe123!
+---
+- launchApp:
+    clearState: true
+
+- assertVisible:
+    id: "role-select-customer"
+- tapOn:
+    id: "role-select-customer"
+
+- assertVisible:
+    id: "auth-entry-screen"
+- tapOn:
+    id: "auth-entry-signup"
+
+- assertVisible:
+    id: "auth-signup-screen"
+- tapOn:
+    id: "auth-signup-name"
+- inputText: "Maestro Test Customer"
+- tapOn:
+    id: "auth-signup-email"
+- inputText: "${TEST_NEW_CUSTOMER_EMAIL}"
+- tapOn:
+    id: "auth-signup-password"
+- inputText: "${TEST_NEW_CUSTOMER_PASSWORD}"
+- tapOn:
+    id: "auth-signup-city"
+- inputText: "Lisbon"
+- hideKeyboard
+- tapOn:
+    id: "auth-signup-submit"
+
+# Success: signUpCustomer() returns 'confirmation_email_sent' and the screen
+# navigates to AwaitEmailConfirmation (a no-session, client-nav-only state).
+- extendedWaitUntil:
+    visible:
+      id: "auth-confirm-screen"
+    timeout: 10000
+
+- tapOn:
+    id: "auth-confirm-resend"
+- assertVisible:
+    id: "auth-confirm-success"
+- assertNotVisible:
+    id: "auth-confirm-error"

@@ -1,0 +1,66 @@
+# Priority E2E flow (Contract A): role-select -> per-role login ->
+# (PROVISIONING, if ensureProfile() has not run for this user yet) -> lands
+# on the correct role home screen.
+#
+# NOT YET RUN. There is no Maestro CLI / Android SDK / emulator on the
+# authoring machine — see .maestro/README.md. Once tooling is available:
+#   maestro test .maestro/login-provisioning-role-landing.yaml
+#
+# Prerequisites:
+# - appId below is a placeholder — app.json does not yet define
+#   android.package / ios.bundleIdentifier (flagged as a follow-up). Set this
+#   to match once a dev-client build exists.
+# - Requires a pre-confirmed test customer account (email confirmation is ON
+#   for this project, so a freshly-signed-up user cannot log in yet). Create
+#   one via signup + confirming the email once (dashboard or a local
+#   gitignored admin script — never service_role in this repo), then pass its
+#   credentials via --env at run time, e.g.:
+#     maestro test .maestro/login-provisioning-role-landing.yaml \
+#       -e TEST_CUSTOMER_EMAIL=... -e TEST_CUSTOMER_PASSWORD=...
+appId: com.privelier.app # TODO: replace once app.json defines a real package/bundleIdentifier
+env:
+  TEST_CUSTOMER_EMAIL: customer.e2e@example.com
+  TEST_CUSTOMER_PASSWORD: ChangeMe123!
+---
+- launchApp:
+    clearState: true
+
+# UNAUTHENTICATED: role-select is the very first screen.
+- assertVisible:
+    id: "role-select-customer"
+- tapOn:
+    id: "role-select-customer"
+
+# Per-role auth entry -> log in.
+- assertVisible:
+    id: "auth-entry-screen"
+- tapOn:
+    id: "auth-entry-login"
+
+- assertVisible:
+    id: "auth-login-screen"
+- tapOn:
+    id: "auth-login-email"
+- inputText: "${TEST_CUSTOMER_EMAIL}"
+- tapOn:
+    id: "auth-login-password"
+- inputText: "${TEST_CUSTOMER_PASSWORD}"
+- tapOn:
+    id: "auth-login-submit"
+
+# PROVISIONING (ensureProfile() in flight) is transient and may not even be
+# observable if it resolves within a frame, or may not appear at all on a
+# user whose profile row already exists from a previous run — so we do NOT
+# assert the provisioning-screen/provisioning-loading testIDs here. We wait
+# directly for the real destination with a generous timeout instead.
+- extendedWaitUntil:
+    visible:
+      id: "customer-home-logout"
+    timeout: 15000
+
+# AUTHENTICATED, routed by public.users.role (never by which auth screen was
+# used) — assert we actually landed on the customer app, not the barber app.
+- assertVisible:
+    id: "customer-home-logout"
+- assertNotVisible:
+    id: "barber-dashboard-logout"
