@@ -1,0 +1,116 @@
+# Customer discovery flow (build-order step 9-10): log in as a customer ->
+# see an approved barber in the customer's own city on the home screen ->
+# tap it -> see that barber's profile with services.
+#
+# NOT YET RUN. There is no Maestro CLI / Android SDK / emulator on the
+# authoring machine — see .maestro/README.md. Once tooling is available:
+#   maestro test .maestro/customer-discovery-view-barber-profile.yaml
+#
+# Prerequisites:
+# - appId below is a placeholder — see .maestro/README.md for the same TODO
+#   already tracked for the auth and barber-services/availability flows
+#   (app.json does not yet define android.package / ios.bundleIdentifier).
+# - Requires a pre-confirmed test customer account (email confirmation is ON
+#   for this project) whose `users.city` is already set to a real value, AND
+#   at least one test barber account in that SAME city whose
+#   `barber_profile.verification_status = 'approved'` (set via the Supabase
+#   dashboard — this flow cannot itself drive the manual-verification admin
+#   step, which is a separate build-order step 17 pipeline run) with at least
+#   one service already saved (via the barber-services-add-edit-delete flow,
+#   or manually). Pass the customer's credentials and the expected barber's
+#   name via --env at run time, e.g.:
+#     maestro test .maestro/customer-discovery-view-barber-profile.yaml \
+#       -e TEST_CUSTOMER_EMAIL=... -e TEST_CUSTOMER_PASSWORD=... \
+#       -e TEST_BARBER_NAME="..."
+# - Unlike the barber-services/availability row testIDs (server-generated
+#   uuid, unknown at authoring time), the barber row on the customer home
+#   screen is matched by visible text (`TEST_BARBER_NAME`) rather than its
+#   `customer-home-barber-{id}` testID, since the id is also unknown at
+#   authoring time and Maestro has no way to look it up ahead of the run.
+appId: com.privelier.app # TODO: replace once app.json defines a real package/bundleIdentifier
+env:
+  TEST_CUSTOMER_EMAIL: customer.e2e@example.com
+  TEST_CUSTOMER_PASSWORD: ChangeMe123!
+  TEST_BARBER_NAME: Maestro test barber
+---
+- launchApp:
+    clearState: true
+
+# UNAUTHENTICATED: role-select is the very first screen.
+- assertVisible:
+    id: "role-select-customer"
+- tapOn:
+    id: "role-select-customer"
+
+# Per-role auth entry -> log in.
+- assertVisible:
+    id: "auth-entry-screen"
+- tapOn:
+    id: "auth-entry-login"
+
+- assertVisible:
+    id: "auth-login-screen"
+- tapOn:
+    id: "auth-login-email"
+- inputText: "${TEST_CUSTOMER_EMAIL}"
+- tapOn:
+    id: "auth-login-password"
+- inputText: "${TEST_CUSTOMER_PASSWORD}"
+- tapOn:
+    id: "auth-login-submit"
+
+# PROVISIONING is transient/may not appear at all on a returning user — wait
+# directly for the real destination, same approach as the auth login flow.
+- extendedWaitUntil:
+    visible:
+      id: "customer-home-logout"
+    timeout: 15000
+
+- assertVisible:
+    id: "customer-home-screen"
+
+# --- Discovery: the approved, same-city test barber appears ---
+# The loading spinner is transient; wait past it rather than asserting it.
+- extendedWaitUntil:
+    visible:
+      text: "${TEST_BARBER_NAME}"
+    timeout: 15000
+- assertNotVisible:
+    id: "customer-home-error"
+- assertNotVisible:
+    id: "customer-home-empty"
+
+- tapOn:
+    text: "${TEST_BARBER_NAME}"
+
+# --- Barber profile: the tapped barber's public profile and services ---
+- assertVisible:
+    id: "barber-profile-screen"
+- extendedWaitUntil:
+    notVisible:
+      id: "barber-profile-loading"
+    timeout: 15000
+- assertNotVisible:
+    id: "barber-profile-error"
+- assertNotVisible:
+    id: "barber-profile-not-found"
+- assertVisible:
+    text: "${TEST_BARBER_NAME}"
+- assertVisible:
+    id: "barber-profile-rating"
+
+# Services: the prerequisite test barber has at least one seeded service, so
+# the empty-state text must NOT show (a service row's testID is a
+# server-generated uuid, unknown at authoring time — same limitation as the
+# barber-services/availability row testIDs — so presence is asserted via the
+# absence of both the empty and error states rather than a specific row id).
+- assertNotVisible:
+    id: "barber-profile-services-empty"
+- assertNotVisible:
+    id: "barber-profile-services-error"
+
+# --- Back navigation returns to the home list ---
+- tapOn:
+    id: "barber-profile-back"
+- assertVisible:
+    id: "customer-home-screen"
