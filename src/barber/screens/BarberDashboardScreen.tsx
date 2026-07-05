@@ -5,7 +5,8 @@ import { useExitRole } from '../../RoleContext';
 
 export default function BarberDashboardScreen() {
   const { colors, fonts } = useTheme();
-  const onBack = useExitRole();
+  // In authenticated states the exit action is a real sign-out (Contract A).
+  const onSignOut = useExitRole();
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -16,13 +17,14 @@ export default function BarberDashboardScreen() {
         Services, availability, and bookings land here next.
       </Text>
       <Pressable
-        onPress={onBack}
+        onPress={onSignOut}
         accessibilityRole="button"
-        accessibilityLabel="Not you? Go back to role selection"
+        accessibilityLabel="Log out"
         hitSlop={12}
+        testID="barber-dashboard-logout"
       >
         <Text style={[styles.back, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
-          Not you? Go back
+          Log out
         </Text>
       </Pressable>
     </SafeAreaView>

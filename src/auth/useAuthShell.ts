@@ -119,11 +119,13 @@ export function useAuthShell(): AuthShell {
   // PROVISIONING: run ensureProfile() via an effect reacting to state —
   // never from inside the onAuthStateChange callback. Keyed on the user id
   // (not the session object) so token refreshes do not re-trigger it.
+  // The view is already 'loading' whenever a provisioning cycle begins: it is
+  // the initial value, SIGNED_OUT resets it, and retryProvisioning resets it
+  // in the event handler — so the effect body never calls setState directly.
   const userId = session?.user.id ?? null;
   useEffect(() => {
     if (restoring || userId === null || profile !== null) return;
     let cancelled = false;
-    setView({ kind: 'loading' });
     ensureProfile().then((result) => {
       if (!cancelled) applyEnsureResult(result);
     });
@@ -133,6 +135,7 @@ export function useAuthShell(): AuthShell {
   }, [restoring, userId, profile, attempt, applyEnsureResult]);
 
   const retryProvisioning = useCallback(() => {
+    setView({ kind: 'loading' });
     setAttempt((current) => current + 1);
   }, []);
 
