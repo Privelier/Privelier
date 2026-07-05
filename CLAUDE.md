@@ -134,3 +134,59 @@ Rules:
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+
+## Tasks (living backlog — maintained by Claude, read this every session)
+
+Maintenance protocol (authoritative):
+- This section lists every task still needed to build the app, in execution order. It is the single source of truth for "what's left".
+- When a task is fully done (its test/gate passed), DELETE its line from this section in the same session — do not leave completed tasks behind.
+- If a session is interrupted (session limit, crash, abandoned work), do NOT delete the task — append a short status comment beside it in the form `<!-- PROGRESS: what is done, what remains, where to resume -->`.
+- When new work is discovered mid-feature (bugs, review findings, follow-ups), add it here as a task rather than keeping it only in conversation.
+- Every feature task below still goes through the full orchestration pipeline (Plan → Design → Build → Validate → Secure → Integrate → Release). This list tracks WHAT is left, not a license to skip HOW.
+
+### Step 5 — auth & signup (in progress)
+- [ ] Wire App.tsx to the auth shell <!-- PROGRESS: session limit hit mid-stage-4. DONE: migration 0005 applied+verified live; src/auth data layer (authService/errors/types); all 8 auth screens + useAuthShell state-machine hook built, tsc+eslint clean, all committed (6873683). REMAINS: App.tsx still uses the old local role-select flow — replace it with useAuthShell-driven root switch (Contract A: RESTORING / UNAUTHENTICATED / AWAIT_EMAIL_CONFIRMATION / PROVISIONING / AUTHENTICATED states, navigators stay remount-stable). Resume by reading src/auth/useAuthShell.ts and App.tsx. -->
+- [ ] Stage 5 — ui-ux-designer polish of all new auth screens against the brand identity section (dark + light mode)
+- [ ] Stage 6 — test-engineer: unit/integration tests for authService (error mapping, insert sequencing, idempotent ensureProfile) + Maestro E2E (signup happy paths, duplicate email, app-kill-mid-provisioning recovery, login). Step-6 gate: one fake customer + one fake barber sign up and appear in public.users (+barber_profile). Note: email confirmation is ON — confirm test users via dashboard or a local gitignored admin script, never service_role in repo.
+- [ ] Stage 7 — security gate: security-auditor + /security-audit + /supabase-security-audit. Must re-verify the 0005 fixes with live negative tests (role flip reverted, pre-verified barber INSERT sanitized) and confirm no service_role key in client code or git history. Explicit PASS required.
+- [ ] Stage 8 — close out step 5: database-optimizer query check + context-manager integration check + graphify update
+- [ ] Rotate the Supabase personal access token (it was pasted into a chat transcript on 2026-07-05) and confirm SUPABASE_ACCESS_TOKEN env var + MCP server work after a Claude Code restart
+
+### Step 7–8 — barber services & availability (one pipeline run)
+- [ ] Barber "add a service" screen (name, price, duration) + service list/edit/delete, RLS-safe writes
+- [ ] Barber availability screen (day_of_week or specific_date windows, start/end time)
+- [ ] Gate: a service and an availability window are saved correctly and visible in the DB
+
+### Step 9–10 — customer discovery (one pipeline run)
+- [ ] Customer home screen: barber list filtered by customer's city, only verification_status='approved' barbers appear
+- [ ] Barber profile page (bio, services, rating placeholder, portfolio placeholder)
+- [ ] Gate: the test barber appears for the test customer once approved
+
+### Step 11–12 — booking flow (one pipeline run)
+- [ ] Booking flow end to end: pick service → available time slots derived from the barber's availability windows minus existing bookings → confirm with location; price snapshotted at booking time (never read live from SERVICES)
+- [ ] Gate: a booking is created with status 'pending'
+
+### Step 13–14 — barber requests & realtime status (one pipeline run, needs supabase-realtime-optimizer)
+- [ ] Barber incoming-requests screen with accept/reject respecting the booking state machine (pending→accepted / pending→rejected, accepted→cancelled, accepted→completed)
+- [ ] Realtime status updates on the customer side (BOOKINGS table, Realtime enabled)
+- [ ] Gate: accepting updates the booking status instantly on the customer's side via Realtime
+
+### Step 15–16 — chat (one pipeline run, needs supabase-realtime-optimizer)
+- [ ] Simple text chat tied to a booking (CHAT_ROOMS + MESSAGES, Realtime), customer↔barber both directions
+- [ ] Gate: messages send and receive correctly in both directions
+
+### Step 17 — manual verification flow (one pipeline run)
+- [ ] Barber uploads ID photo + license photo to a PRIVATE storage bucket → VERIFICATION_REQUESTS row (no selfie, no biometrics — hard rule)
+- [ ] Founder review path (Supabase dashboard or minimal admin view) sets verification_status; approved barbers become discoverable
+- [ ] Portfolio upload (max 6 images, enforce the 6-row constraint) — barber profile
+- [ ] Barber dashboard (bookings overview, profile completeness)
+
+### Step 18 — MVP release gate
+- [ ] Full end-to-end run with real test users: signup → verify barber → add service/availability → discover → book → accept (realtime) → chat → complete → review
+- [ ] Reviews: customer rates after a completed booking only (REVIEWS constraint), rating aggregation onto barber_profile via a server-owned path (rating column is trigger-protected — needs schema-architect involvement)
+- [ ] Final /security-audit + /supabase-security-audit across the whole app before Phase 2 planning
+
+### Phase 2 planning reminders (do not build yet — surface when Phase 2 starts)
+- [ ] Stripe Connect payments; dispute resolution + refund/cancellation-fee policy (undefined, blocks real money)
+- [ ] In-home safety features: live location sharing during appointment window, SOS button (highest-liability gap)
+- [ ] Revisit email-change flow (users.email is trigger-frozen; requires service_role-mediated sync)
