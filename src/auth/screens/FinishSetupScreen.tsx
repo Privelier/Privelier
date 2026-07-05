@@ -175,7 +175,7 @@ function RoleChoice({
       {error ? (
         <Text
           testID="setup-role-error"
-          style={[styles.roleError, { color: colors.error, fontFamily: fonts.body }]}
+          style={[styles.roleError, { color: colors.errorText, fontFamily: fonts.body }]}
         >
           {error}
         </Text>

@@ -20,7 +20,7 @@ export default function BarberDashboardScreen() {
         onPress={onSignOut}
         accessibilityRole="button"
         accessibilityLabel="Log out"
-        hitSlop={12}
+        hitSlop={16}
         testID="barber-dashboard-logout"
       >
         <Text style={[styles.back, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>

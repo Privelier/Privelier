@@ -46,7 +46,7 @@ export default function AwaitEmailConfirmationScreen({ navigation, route }: Prop
     <AuthScreenShell testID="auth-confirm-screen">
       <ScreenHeading
         title="Check your inbox"
-        subtitle={`We've sent a confirmation link to ${email}. Open it to activate your account, then log in.`}
+        subtitle={`We’ve sent a confirmation link to ${email}. Open it to activate your account, then log in.`}
       />
       {feedback.kind === 'success' ? (
         <Notice kind="success" message="Confirmation email sent." testID="auth-confirm-success" />

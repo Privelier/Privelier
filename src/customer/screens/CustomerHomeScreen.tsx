@@ -20,7 +20,7 @@ export default function CustomerHomeScreen() {
         onPress={onSignOut}
         accessibilityRole="button"
         accessibilityLabel="Log out"
-        hitSlop={12}
+        hitSlop={16}
         testID="customer-home-logout"
       >
         <Text style={[styles.back, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>

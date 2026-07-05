@@ -21,9 +21,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/useTheme';
 
-/** Ink used on top of the brass accent — dark in both modes for contrast. */
-export const ON_ACCENT = '#121214';
-
 // ---------------------------------------------------------------------------
 // Screen shell — safe area + keyboard avoidance + tap-to-dismiss scroll
 // ---------------------------------------------------------------------------
@@ -77,11 +74,11 @@ export function BackLink({ onPress, testID }: { onPress: () => void; testID: str
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel="Go back"
-      hitSlop={12}
+      hitSlop={16}
       testID={testID}
       style={shellStyles.backLink}
     >
-      <Text style={[shellStyles.backText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
+      <Text style={[shellStyles.backText, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
         {'‹ Back'}
       </Text>
     </Pressable>
@@ -136,6 +133,7 @@ export function FormTextField({
 }: FormTextFieldProps) {
   const { colors, fonts } = useTheme();
   const [hidden, setHidden] = useState(true);
+  const [focused, setFocused] = useState(false);
 
   return (
     <View style={fieldStyles.field}>
@@ -154,7 +152,7 @@ export function FormTextField({
           fieldStyles.inputRow,
           {
             backgroundColor: colors.surface,
-            borderColor: error ? colors.error : colors.border,
+            borderColor: error ? colors.error : focused ? colors.accent : colors.border,
           },
         ]}
       >
@@ -176,16 +174,18 @@ export function FormTextField({
           autoComplete={autoComplete}
           textContentType={textContentType}
           autoCorrect={false}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
         />
         {secure ? (
           <Pressable
             onPress={() => setHidden((current) => !current)}
             accessibilityRole="button"
             accessibilityLabel={hidden ? 'Show password' : 'Hide password'}
-            hitSlop={12}
+            hitSlop={16}
             testID={`${testID}-toggle`}
           >
-            <Text style={[fieldStyles.toggle, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
+            <Text style={[fieldStyles.toggle, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
               {hidden ? 'Show' : 'Hide'}
             </Text>
           </Pressable>
@@ -194,7 +194,7 @@ export function FormTextField({
       {error ? (
         <Text
           testID={`${testID}-error`}
-          style={[fieldStyles.meta, { color: colors.error, fontFamily: fonts.body }]}
+          style={[fieldStyles.meta, { color: colors.errorText, fontFamily: fonts.body }]}
         >
           {error}
         </Text>
@@ -255,9 +255,11 @@ export function PrimaryButton({ label, onPress, testID, loading = false, disable
       ]}
     >
       {loading ? (
-        <ActivityIndicator size="small" color={ON_ACCENT} />
+        <ActivityIndicator size="small" color={colors.onAccent} />
       ) : (
-        <Text style={[buttonStyles.primaryLabel, { fontFamily: fonts.bodySemiBold }]}>{label}</Text>
+        <Text style={[buttonStyles.primaryLabel, { color: colors.onAccent, fontFamily: fonts.bodySemiBold }]}>
+          {label}
+        </Text>
       )}
     </Pressable>
   );
@@ -324,7 +326,7 @@ const buttonStyles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 52,
   },
-  primaryLabel: { color: ON_ACCENT, fontSize: 16 },
+  primaryLabel: { fontSize: 16 },
   secondary: {
     borderRadius: 10,
     borderWidth: 0.5,
@@ -353,13 +355,14 @@ export function Notice({
 }) {
   const { colors, fonts } = useTheme();
   const tone = kind === 'error' ? colors.error : colors.success;
+  const toneText = kind === 'error' ? colors.errorText : colors.successText;
   return (
     <View
       testID={testID}
       accessibilityRole="alert"
       style={[noticeStyles.box, { borderColor: tone, backgroundColor: colors.surface }]}
     >
-      <Text style={[noticeStyles.text, { color: tone, fontFamily: fonts.bodyMedium }]}>{message}</Text>
+      <Text style={[noticeStyles.text, { color: toneText, fontFamily: fonts.bodyMedium }]}>{message}</Text>
     </View>
   );
 }
