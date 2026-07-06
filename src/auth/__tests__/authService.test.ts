@@ -32,6 +32,14 @@ jest.mock('../../../lib/supabase', () => ({
   },
 }));
 
+// deepLink.ts calls expo-linking's createURL(), which needs a real app
+// manifest (app.json scheme) to resolve — unavailable in the Jest
+// environment. authService only cares that it gets *some* stable string to
+// pass through as emailRedirectTo, not expo-linking's own behavior.
+jest.mock('../deepLink', () => ({
+  getEmailRedirectTo: jest.fn(() => 'privelier://auth-callback'),
+}));
+
 const mockAuth = supabase.auth as jest.Mocked<typeof supabase.auth>;
 const mockFrom = supabase.from as jest.Mock;
 
@@ -137,6 +145,7 @@ describe('signUpCustomer / signUpBarber', () => {
       email: 'test@example.com',
       password: 'password123',
       options: {
+        emailRedirectTo: 'privelier://auth-callback',
         data: {
           name: 'Alex',
           role: 'customer',
@@ -163,7 +172,10 @@ describe('signUpCustomer / signUpBarber', () => {
 
     expect(mockAuth.signUp).toHaveBeenCalledWith(
       expect.objectContaining({
-        options: { data: expect.objectContaining({ role: 'barber', bio: 'Fades and fresh cuts.' }) },
+        options: expect.objectContaining({
+          emailRedirectTo: 'privelier://auth-callback',
+          data: expect.objectContaining({ role: 'barber', bio: 'Fades and fresh cuts.' }),
+        }),
       })
     );
   });
@@ -255,7 +267,11 @@ describe('resendConfirmation', () => {
     mockAuth.resend.mockResolvedValue({ data: {}, error: null } as never);
     const result = await resendConfirmation('test@example.com');
     expect(result).toEqual({ status: 'sent' });
-    expect(mockAuth.resend).toHaveBeenCalledWith({ type: 'signup', email: 'test@example.com' });
+    expect(mockAuth.resend).toHaveBeenCalledWith({
+      type: 'signup',
+      email: 'test@example.com',
+      options: { emailRedirectTo: 'privelier://auth-callback' },
+    });
   });
 
   it('maps a rate-limit error', async () => {

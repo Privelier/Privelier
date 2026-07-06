@@ -17,9 +17,11 @@
  *   profile — never user_metadata, never which auth screen was used.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import * as Linking from 'expo-linking';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabase';
 import { ensureProfile, ensureProfileFromForm, signOut } from './authService';
+import { applyAuthCallbackUrl } from './deepLink';
 import type { AuthFailure } from './errors';
 import type { EnsureProfileResult, ProfilePrefill, SetupFormFields } from './types';
 import type { UsersRow } from '../types';
@@ -93,6 +95,21 @@ export function useAuthShell(): AuthShell {
       active = false;
       subscription.subscription.unsubscribe();
     };
+  }, []);
+
+  // Auth deep links (email confirmation) land here: applyAuthCallbackUrl
+  // calls setSession(), which fires the onAuthStateChange subscription above
+  // like any other sign-in — no separate state wiring needed. Handles both
+  // a cold start via the link (getInitialURL) and the app already running
+  // (the 'url' event).
+  useEffect(() => {
+    Linking.getInitialURL().then((url) => {
+      if (url) void applyAuthCallbackUrl(url);
+    });
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      void applyAuthCallbackUrl(url);
+    });
+    return () => subscription.remove();
   }, []);
 
   const applyEnsureResult = useCallback((result: EnsureProfileResult) => {

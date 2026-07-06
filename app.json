@@ -3,6 +3,7 @@
     "name": "Privelier",
     "slug": "privelier",
     "version": "1.0.0",
+    "scheme": "privelier",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",

@@ -18,6 +18,7 @@
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabase';
 import type { Role, UsersRow } from '../types';
+import { getEmailRedirectTo } from './deepLink';
 import { failure, logAuthError, mapAuthApiError, mapPostgrestError } from './errors';
 import type { AuthFailure } from './errors';
 import type {
@@ -67,6 +68,7 @@ async function signUp(
     email: normalizedEmail,
     password,
     options: {
+      emailRedirectTo: getEmailRedirectTo(),
       data: {
         name: metadata.name,
         role: metadata.role,
@@ -130,7 +132,11 @@ export async function signIn(email: string, password: string): Promise<SignInRes
 }
 
 export async function resendConfirmation(email: string): Promise<ResendConfirmationResult> {
-  const { error } = await supabase.auth.resend({ type: 'signup', email: email.trim() });
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email: email.trim(),
+    options: { emailRedirectTo: getEmailRedirectTo() },
+  });
   if (error) return mapAuthApiError('resendConfirmation', error);
   return { status: 'sent' };
 }
