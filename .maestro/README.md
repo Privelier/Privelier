@@ -92,8 +92,20 @@ with a seeded service) the flow needs before it can run.
 `auth-signup-screen`, `auth-signup-name`, `auth-signup-email`,
 `auth-signup-password`, `auth-signup-city`, `auth-signup-submit`,
 `auth-confirm-screen`, `auth-confirm-resend`, `auth-confirm-success`,
-`auth-confirm-error`, `customer-home-logout`, `barber-dashboard-logout`,
-`barber-dashboard-services`, `barber-dashboard-availability`,
+`auth-confirm-error`, `barber-dashboard-logout`,
+`barber-dashboard-services`, `barber-dashboard-availability`
+(all three now live on the Studio tab of the barber tab shell —
+`barber-dashboard-screen`, with `-loading`, `-error`, and `-verification`
+state ids; tab-bar buttons are
+`barber-tab-{studio|requests|portfolio|chats|verify}` and the
+the Requests tab has `barber-requests-screen`, `-loading`,
+`-error`, `-empty`, and `barber-requests-row-{id}`; the Portfolio
+tab has `barber-portfolio-screen`, `-loading`, `-error`,
+`barber-portfolio-add`, and `barber-portfolio-image-{id}`; the Chats tab
+has `barber-chats-screen`, `-loading`, `-error`, `-empty`, and
+`barber-chats-row-{id}`; the Verify tab has `barber-verify-screen`,
+`-loading`, `-error`, `barber-verify-status`, `barber-verify-doc-id`, and
+`barber-verify-doc-license`),
 `barber-services-screen`, `barber-services-name`, `barber-services-price`,
 `barber-services-duration`, `barber-services-submit`,
 `barber-services-cancel-edit`, `barber-services-row-{id}`,
@@ -104,12 +116,26 @@ with a seeded service) the flow needs before it can run.
 `barber-availability-end-time`, `barber-availability-submit`,
 `barber-availability-cancel-edit`, `barber-availability-row-{id}`,
 `barber-availability-edit-{id}`, `barber-availability-delete-{id}`,
-`customer-home-screen`, `customer-home-logout`, `customer-home-loading`,
+`customer-home-screen`, `customer-home-loading`,
 `customer-home-error`, `customer-home-empty`, `customer-home-barber-{id}`,
+`customer-tab-{discover|explore|bookings|inbox|account}` (tab-bar buttons),
+`customer-account-screen`, `customer-account-logout` (sign-out moved here
+from the old customer-home-logout when the customer UI was rebuilt against
+the Lovable prototype's tabbed shell),
+`customer-account-row-{favorites|notifications|privacy|preferences|help}`,
+`customer-account-section-screen`, `customer-account-section-back`,
+`customer-bookings-screen`, `customer-bookings-tab-{upcoming|past}`,
+`customer-bookings-loading`, `customer-bookings-error`,
+`customer-bookings-empty`, `customer-bookings-row-{id}`,
+`customer-inbox-screen`, `customer-inbox-loading`, `customer-inbox-error`,
+`customer-inbox-empty`, `customer-inbox-row-{id}`,
 `barber-profile-screen`, `barber-profile-back`, `barber-profile-loading`,
 `barber-profile-error`, `barber-profile-not-found`, `barber-profile-rating`,
 `barber-profile-services-error`, `barber-profile-services-empty`,
-`barber-profile-service-{id}`.
+`barber-profile-service-{id}`, `barber-profile-book-{id}`,
+`barber-profile-tab-{services|portfolio|reviews}` (Services is the default
+tab, so existing service assertions need no extra taps),
+`barber-profile-portfolio-placeholder`.
 
 If any of these have changed since, re-grep `testID=` under `src/` before
 trusting this list.

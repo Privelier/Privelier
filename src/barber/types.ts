@@ -4,8 +4,58 @@
  * union the UI can switch on; nothing here ever carries raw server error
  * text.
  */
-import type { AvailabilityRow, ServiceRow } from '../types';
+import type {
+  AvailabilityRow,
+  BarberProfileRow,
+  BookingRow,
+  PortfolioRow,
+  ServiceRow,
+  VerificationRequestRow,
+} from '../types';
+import type { InboxThread } from '../shared/threads';
 import type { BarberDataFailure } from './errors';
+
+// ---------------------------------------------------------------------------
+// Portfolio (public.portfolio, read-only until step 17)
+// ---------------------------------------------------------------------------
+
+export type ListOwnPortfolioResult =
+  | { status: 'ok'; images: PortfolioRow[] }
+  | BarberDataFailure;
+
+// ---------------------------------------------------------------------------
+// Chats (public.chat_rooms + public.messages, read-only until step 15-16)
+// ---------------------------------------------------------------------------
+
+export type OwnChatsViewResult =
+  | { status: 'ok'; threads: InboxThread[] }
+  | BarberDataFailure;
+
+// ---------------------------------------------------------------------------
+// Incoming requests (public.bookings, read-only until step 13-14)
+// ---------------------------------------------------------------------------
+
+/**
+ * `servicesById` is an own-services lookup for rendering; a booking whose
+ * service row was since deleted may be absent from it.
+ */
+export type OwnRequestsViewResult =
+  | { status: 'ok'; bookings: BookingRow[]; servicesById: Map<string, ServiceRow> }
+  | BarberDataFailure;
+
+// ---------------------------------------------------------------------------
+// Own barber_profile (read-only — admin-owned columns are display-only)
+// ---------------------------------------------------------------------------
+
+/** `profile: null` = row missing (defensive; provisioning creates it). */
+export type FetchOwnBarberProfileResult =
+  | { status: 'ok'; profile: BarberProfileRow | null }
+  | BarberDataFailure;
+
+/** `request: null` = no documents submitted yet (expected until step 17). */
+export type FetchOwnVerificationRequestResult =
+  | { status: 'ok'; request: VerificationRequestRow | null }
+  | BarberDataFailure;
 
 // ---------------------------------------------------------------------------
 // Services

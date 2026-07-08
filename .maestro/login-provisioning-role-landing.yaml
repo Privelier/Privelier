@@ -53,14 +53,24 @@ env:
 # user whose profile row already exists from a previous run — so we do NOT
 # assert the provisioning-screen/provisioning-loading testIDs here. We wait
 # directly for the real destination with a generous timeout instead.
+# (customer-home-screen is the Discover tab of the customer tab shell; the
+# old customer-home-logout moved to the Account tab as
+# customer-account-logout when the UI was rebuilt against the prototype.)
 - extendedWaitUntil:
     visible:
-      id: "customer-home-logout"
+      id: "customer-home-screen"
     timeout: 15000
 
 # AUTHENTICATED, routed by public.users.role (never by which auth screen was
 # used) — assert we actually landed on the customer app, not the barber app.
 - assertVisible:
-    id: "customer-home-logout"
+    id: "customer-home-screen"
 - assertNotVisible:
     id: "barber-dashboard-logout"
+
+# The sign-out affordance lives on the Account tab now — assert it is
+# reachable there (also proves the tab bar renders and navigates).
+- tapOn:
+    id: "customer-tab-account"
+- assertVisible:
+    id: "customer-account-logout"

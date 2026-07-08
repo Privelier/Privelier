@@ -61,13 +61,12 @@ env:
 
 # PROVISIONING is transient/may not appear at all on a returning user — wait
 # directly for the real destination, same approach as the auth login flow.
+# (The old customer-home-logout moved to the Account tab as
+# customer-account-logout when the UI was rebuilt against the prototype.)
 - extendedWaitUntil:
     visible:
-      id: "customer-home-logout"
+      id: "customer-home-screen"
     timeout: 15000
-
-- assertVisible:
-    id: "customer-home-screen"
 
 # --- Discovery: the approved, same-city test barber appears ---
 # The loading spinner is transient; wait past it rather than asserting it.

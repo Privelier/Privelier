@@ -109,6 +109,26 @@ export async function getBarberProfile(barberId: string): Promise<GetBarberProfi
 }
 
 /**
+ * Batched services read for a set of barbers (the Discover screen's
+ * "from €X" line and service-name chips). One query for the whole visible
+ * list instead of N per-barber queries. Same RLS surface as
+ * listServicesForBarber: migration 0007 hides rows of unapproved,
+ * non-owned barbers, so any id list a customer can hold is safe to pass.
+ */
+export async function listServicesForBarberIds(
+  barberIds: string[]
+): Promise<ListServicesForBarberResult> {
+  if (barberIds.length === 0) return { status: 'ok', services: [] };
+  const { data, error } = await supabase
+    .from('services')
+    .select('*')
+    .in('barber_id', barberIds);
+
+  if (error) return mapPostgrestError('listServicesForBarberIds', error);
+  return { status: 'ok', services: (data as ServiceRow[]) ?? [] };
+}
+
+/**
  * All services for the given barber. Safe against any barberId per
  * migration 0007: RLS itself hides an unapproved, non-owned barber's rows.
  */
