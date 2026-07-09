@@ -17,8 +17,8 @@ An on-demand marketplace where customers book independent private barbers who tr
 - Payments: Stripe Connect — Phase 2 only, not in the initial build.
 - Do not introduce any other backend service, database, or third-party API without explicit founder approval.
 - The `database/supabase` MCP server is connected — use it for direct, live read/write access to the actual Supabase project instead of asking the founders to paste schema or data manually.
-- The `react-native-best-practices` skill (Callstack, official) is installed and should be applied automatically to all React Native/Expo code — performance, Hermes, bundle size, native module patterns.
-- The `maestro-mobile-testing` skill (tovimx) is installed for E2E testing — use it for all end-to-end test writing, especially anything involving optimistic UI updates (status changes before the server confirms) and auth-gated screens, where flaky tests are most likely.
+- The `react-native-best-practices` skill (Callstack) is referenced throughout this file but is NOT actually installed (verified 2026-07-09: absent from `.claude/skills/`, `~/.claude/skills/`, and the harness skill list — it was never invokable). Until it is installed (tracked in the backlog), apply its intent manually: RN/Expo performance, Hermes, bundle size, native module patterns.
+- The `maestro-mobile-testing` skill (tovimx) is likewise referenced but NOT installed (same 2026-07-09 verification). The `.maestro/` flows written so far followed Maestro conventions manually and remain the house style — especially for optimistic UI updates and auth-gated screens, where flaky tests are most likely.
 
 ## Secrets and environment hygiene (authoritative — read before touching any Supabase key)
 
@@ -106,15 +106,15 @@ Every feature passes through this exact sequence: **Plan → Design → Build �
 1. Use the `task-decomposition-expert` agent to break the feature into subtasks. No code is written at this stage.
 2. Use the `architect-review` agent to validate the proposed design against the schema and state machine above.
 3. If a schema change is genuinely required, only the `supabase-schema-architect` agent makes it, then run the `/supabase-schema-sync` slash command to push it live.
-4. Use the `fullstack-developer` agent to build backend/API logic. No schema changes are allowed at this stage. For any feature involving Realtime (booking status updates, chat), also bring in the `supabase-realtime-optimizer` agent.
-5. Use the `mobile-developer` agent to build the screens, applying the `react-native-best-practices` skill.
+4. Use the `fullstack-developer` agent to build backend/API logic. No schema changes are allowed at this stage. For any feature involving Realtime (booking status updates, chat), additionally run the realtime design checklist from docs/design/step-13-14-realtime-requests-retroactive-review.md (publication membership, replica identity, RLS-on-WAL, reconnect/missed-event recovery, channel lifecycle, snapshot/stream reconciliation) — there is no `supabase-realtime-optimizer` agent; that name was a phantom reference, corrected 2026-07-09.
+5. Use the `mobile-developer` agent to build the screens, applying React Native/Expo best practices manually (the `react-native-best-practices` skill is not installed — see Tech stack).
 6. Use the `ui-ux-designer` agent (or the `ui-ux-pro-max` skill) to polish the UI against the brand identity section above.
-7. Use the `test-engineer` agent for unit/integration tests, and the `maestro-mobile-testing` skill for E2E tests — the booking accept/reject flow and the chat flow are the highest priority for E2E coverage, since they involve realtime/optimistic UI updates where flakiness is most likely.
+7. Use the `test-engineer` agent for unit/integration tests, and author Maestro E2E flows following the conventions established in `.maestro/README.md` (the `maestro-mobile-testing` skill is not installed — see Tech stack) — the booking accept/reject flow and the chat flow are the highest priority for E2E coverage, since they involve realtime/optimistic UI updates where flakiness is most likely.
 8. Use the `security-auditor` agent and run `/security-audit` plus `/supabase-security-audit`. This is the final gate — nothing is considered done without an explicit PASS. This check must also confirm no `service_role` key is present anywhere in client code.
-9. If anything breaks at any stage, use the `debugger` agent. For Realtime-specific issues (a status or message not arriving live), use the `/supabase-realtime-monitor` command first; for general data questions during debugging, use `/supabase-data-explorer` instead of switching to the Supabase dashboard.
+9. If anything breaks at any stage, use the `debugger` agent. For Realtime-specific issues (a status or message not arriving live), check the Supabase MCP server's `get_logs` (service: realtime) and the live publication/replica-identity state first; for general data questions during debugging, query the live DB via the Supabase MCP server (`execute_sql`) instead of switching to the Supabase dashboard. (The previously-referenced `/supabase-realtime-monitor` and `/supabase-data-explorer` commands never existed in `.claude/commands/` — phantom references, corrected 2026-07-09.)
 10. Once built and tested, use `database-optimizer` to check query performance and `context-manager` to confirm correct integration with everything already built, before starting the next feature.
 
-**Important distinction:** everything in `.claude/agents/` is a subagent, invoked by describing the task in plain language — these are not slash commands. Only files actually present in `.claude/commands/` (for example `supabase-schema-sync`, `security-audit`, `generate-tests`) work as real `/slash-commands`. Skills (`react-native-best-practices`, `maestro-mobile-testing`) activate automatically when relevant or can be invoked directly.
+**Important distinction:** everything in `.claude/agents/` is a subagent, invoked by describing the task in plain language — these are not slash commands. Only files actually present in `.claude/commands/` (for example `supabase-schema-sync`, `security-audit`, `generate-tests`) work as real `/slash-commands`. Skills that are actually installed (e.g. `ui-ux-pro-max`, `supabase-postgres-best-practices` in `.claude/skills/`) activate automatically when relevant or can be invoked directly — before referencing any agent/command/skill by name, confirm it exists in the corresponding directory (the 2026-07-09 inventory found five phantom references in this file alone).
 
 ## Hard rules
 
@@ -182,12 +182,14 @@ Status honesty note (2026-07-09): the build stage of this step landed in commit 
 - [ ] Security-audit follow-up (LOW, pre-existing from 0003 but re-surfaced 2026-07-09): the column-immutability freeze in `enforce_booking_status_transition` does not cover `id`/`created_at` — a participant could rewrite a booking's primary key or forge its creation timestamp via a raw UPDATE. Route through `supabase-schema-architect`.
 - [ ] Run `.maestro/barber-requests-accept-reject.yaml` once Maestro CLI is installed (same gap as Steps 6–12; it needs exactly two seeded pending bookings — see the flow's header).
 
-### Cross-cutting hygiene (discovered 2026-07-09 during the Step 13-14 closeout)
-- [ ] CLAUDE.md's pipeline names a `supabase-realtime-optimizer` agent that does not exist in `.claude/agents/` — either add the agent definition or amend CLAUDE.md to point at the realtime checklist used in docs/design/step-13-14-realtime-requests-retroactive-review.md. Chat (step 15-16) is the next realtime feature and will hit this again.
+### Cross-cutting hygiene (discovered 2026-07-09 during the Step 13-14 closeout and the same-day agent inventory)
+- [ ] `fullstack-developer` agent's body describes the wrong stack (Next.js 15/React 19, tRPC/Hono, Drizzle, Vercel — none used here). It has worked because task prompts carry the real Expo+Supabase context, but its priors pull web-stack; rewrite its Focus Areas/Approach for this project's actual stack. (Founder-deferred 2026-07-09 — noted, not yet fixed.)
+- [ ] `debugger` agent pins `model: claude-sonnet-4-5`, a previous-generation model id — update or remove the pin. (Founder-deferred 2026-07-09 — noted, not yet fixed.)
+- [ ] Actually install the two skills CLAUDE.md long claimed were installed but never were (corrected 2026-07-09): `react-native-best-practices` (Callstack) and `maestro-mobile-testing` (tovimx). Until then their intent is applied manually (see Tech stack section).
 - [ ] Supabase's migration ledger is missing entries for 0001, 0005, 0009, 0010 (they were applied via raw SQL, not `apply_migration`) — the live objects are all present and correct (verified 2026-07-09), but reconcile the ledger so tooling that trusts it doesn't mislead. `supabase-schema-architect`-owned.
 - [ ] Security-advisor items, none blocking: `barber_directory` is a SECURITY DEFINER view (advisor ERROR — intentional-by-design cross-user read surface, same rationale as the narrow RPCs, but document the acceptance or convert to `security_invoker` via `supabase-schema-architect`); leaked-password protection is disabled in Supabase Auth (WARN — one dashboard toggle, founder action); the two new RPC WARNs (`get_barber_busy_slots`, `get_booking_counterparts`) are the deliberate, documented pattern — accepted.
 
-### Step 15–16 — chat (one pipeline run, needs supabase-realtime-optimizer)
+### Step 15–16 — chat (one pipeline run; realtime feature — run the realtime design checklist from docs/design/step-13-14-realtime-requests-retroactive-review.md, and copy the step 13-14 architecture INCLUDING the F1 reconnect-recovery fix)
 - [ ] Simple text chat tied to a booking (CHAT_ROOMS + MESSAGES, Realtime), customer↔barber both directions
 - [ ] Gate: messages send and receive correctly in both directions
 
