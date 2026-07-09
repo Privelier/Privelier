@@ -9,7 +9,12 @@
  */
 
 /** Closed set of error codes the UI layer is allowed to switch on. */
-export type BarberDataErrorCode = 'forbidden' | 'invalid_input' | 'network' | 'unknown';
+export type BarberDataErrorCode =
+  | 'forbidden'
+  | 'invalid_input'
+  | 'network'
+  | 'unknown'
+  | 'transition_rejected';
 
 /** The error arm shared by every services/availability result union. */
 export interface BarberDataFailure {
@@ -28,6 +33,8 @@ export const barberDataErrorCopy: Record<BarberDataErrorCode, string> = {
     'That entry is not valid. Check the values (including day, date and times) and try again.',
   network: 'We could not reach the server. Check your connection and try again.',
   unknown: 'Something went wrong on our side. Try again in a moment.',
+  transition_rejected:
+    'That booking can no longer be changed that way. Refresh to see its current status.',
 };
 
 const retryableCodes: ReadonlySet<BarberDataErrorCode> = new Set(['network']);
@@ -63,6 +70,18 @@ const RLS_DENIED = '42501';
 /** Postgres check-constraint violation — e.g. chk_availability_day_or_date,
  * chk_availability_time_order, or the price/duration_minutes checks. */
 const CHECK_VIOLATION = '23514';
+/**
+ * Postgres raise_exception (a bare `RAISE EXCEPTION` in a trigger/function).
+ * On the barber write surfaces this only ever comes from the actor-aware
+ * booking status-transition trigger (migration 0011) rejecting an illegal
+ * transition or a wrong-actor attempt — services/availability writes have no
+ * such trigger. Surfaced as a distinct 'transition_rejected' so the Requests
+ * screen can tell the barber the booking's state moved out from under them
+ * (e.g. the customer withdrew a pending request) rather than showing generic
+ * error copy. The column-immutability freeze in the same trigger also raises
+ * P0001, but these mutations only ever change `status`, so it is never hit.
+ */
+const RAISE_EXCEPTION = 'P0001';
 
 /**
  * Map a PostgREST error to a typed failure and log the raw details.
@@ -70,12 +89,16 @@ const CHECK_VIOLATION = '23514';
  * - 23514 (check violation): an invalid day/date pairing, start >= end, or
  *   an out-of-range price/duration — surfaced as a clean validation message,
  *   never the raw Postgres constraint text.
+ * - P0001 (raise_exception): the booking status-transition trigger
+ *   (migration 0011) rejected an illegal transition or wrong-actor attempt —
+ *   surfaced as 'transition_rejected'.
  */
 export function mapPostgrestError(context: string, raw: PostgrestErrorLike | null): BarberDataFailure {
   logBarberDataError(context, raw);
   if (!raw) return failure('unknown');
   if (raw.code === RLS_DENIED) return failure('forbidden');
   if (raw.code === CHECK_VIOLATION) return failure('invalid_input');
+  if (raw.code === RAISE_EXCEPTION) return failure('transition_rejected');
   const msg = (raw.message ?? '').toLowerCase();
   if (msg.includes('row-level security')) return failure('forbidden');
   if (msg.includes('network request failed') || msg.includes('failed to fetch')) {

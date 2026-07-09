@@ -82,6 +82,25 @@ export type InsertBookingResult =
   | CustomerDataFailure;
 
 // ---------------------------------------------------------------------------
+// Booking cancellation (public.bookings status transition, step 13-14)
+// ---------------------------------------------------------------------------
+
+/**
+ * Result of a customer cancelling their own booking. One mutation covers
+ * BOTH legitimate cancel paths the trigger allows the customer (migration
+ * 0011): pending -> cancelled (withdraw a request the barber has not yet
+ * answered) and accepted -> cancelled (call off a confirmed booking).
+ * `booking` is the freshly-updated row for optimistic reconciliation.
+ * 'not_found' means the update matched no visible row. A cancel the trigger
+ * rejects (e.g. the booking is already completed/rejected, or the caller is
+ * not the customer) surfaces as a 'transition_rejected' CustomerDataFailure.
+ */
+export type CancelBookingResult =
+  | { status: 'ok'; booking: BookingRow }
+  | { status: 'not_found' }
+  | CustomerDataFailure;
+
+// ---------------------------------------------------------------------------
 // Inbox (public.chat_rooms + public.messages, read-only until step 15-16)
 // ---------------------------------------------------------------------------
 

@@ -14,7 +14,8 @@ export type CustomerDataErrorCode =
   | 'invalid_input'
   | 'network'
   | 'unknown'
-  | 'conflict';
+  | 'conflict'
+  | 'transition_rejected';
 
 /** The error arm shared by every discovery result union. */
 export interface CustomerDataFailure {
@@ -33,6 +34,8 @@ export const customerDataErrorCopy: Record<CustomerDataErrorCode, string> = {
   network: 'We could not reach the server. Check your connection and try again.',
   unknown: 'Something went wrong on our side. Try again in a moment.',
   conflict: 'That time was just booked by someone else. Pick another time.',
+  transition_rejected:
+    'That booking can no longer be cancelled. Refresh to see its current status.',
 };
 
 const retryableCodes: ReadonlySet<CustomerDataErrorCode> = new Set(['network']);
@@ -70,6 +73,17 @@ const RLS_DENIED = '42501';
  * consistency with the barber-side data layer's error shape. */
 const CHECK_VIOLATION = '23514';
 /**
+ * Postgres raise_exception (a bare `RAISE EXCEPTION` in a trigger/function).
+ * On the customer write surfaces this only comes from the actor-aware booking
+ * status-transition trigger (migration 0011) rejecting an illegal transition
+ * or a wrong-actor cancel — surfaced as a distinct 'transition_rejected' so
+ * the Bookings screen can tell the customer the booking already moved on
+ * rather than showing generic error copy. The column-immutability freeze in
+ * the same trigger also raises P0001, but the cancel mutation only ever
+ * changes `status`, so it is never hit.
+ */
+const RAISE_EXCEPTION = 'P0001';
+/**
  * Postgres unique-violation code. NOT mapped inside mapPostgrestError below
  * — 23505 means something different depending on context: during auth
  * provisioning it signals "another writer already created this same row,
@@ -98,6 +112,7 @@ export function mapPostgrestError(
   if (!raw) return failure('unknown');
   if (raw.code === RLS_DENIED) return failure('forbidden');
   if (raw.code === CHECK_VIOLATION) return failure('invalid_input');
+  if (raw.code === RAISE_EXCEPTION) return failure('transition_rejected');
   const msg = (raw.message ?? '').toLowerCase();
   if (msg.includes('row-level security')) return failure('forbidden');
   if (msg.includes('network request failed') || msg.includes('failed to fetch')) {

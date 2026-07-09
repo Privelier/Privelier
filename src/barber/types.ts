@@ -36,11 +36,47 @@ export type OwnChatsViewResult =
 // ---------------------------------------------------------------------------
 
 /**
+ * The other participant on a booking, as returned by the
+ * `get_booking_counterparts` RPC (migration 0012). For a barber caller this
+ * is the customer. Only the three display columns are ever exposed — never
+ * email/phone/city/country/role.
+ */
+export interface BookingCounterpart {
+  id: string;
+  name: string;
+  profile_image: string | null;
+}
+
+/**
  * `servicesById` is an own-services lookup for rendering; a booking whose
  * service row was since deleted may be absent from it.
+ *
+ * `counterpartsByBookingId` maps a booking id to its customer's display
+ * identity (name + photo), resolved via the `get_booking_counterparts` RPC.
+ * It is BEST-EFFORT: if that RPC fails the map is empty and the screen keeps
+ * its service-name fallback — the RPC never fails the whole view. A booking
+ * may also be legitimately absent from it (e.g. the RPC returned no row).
  */
 export type OwnRequestsViewResult =
-  | { status: 'ok'; bookings: BookingRow[]; servicesById: Map<string, ServiceRow> }
+  | {
+      status: 'ok';
+      bookings: BookingRow[];
+      servicesById: Map<string, ServiceRow>;
+      counterpartsByBookingId: Map<string, BookingCounterpart>;
+    }
+  | BarberDataFailure;
+
+/**
+ * Result of a barber-side booking status transition
+ * (accept/reject/complete/cancel). `booking` is the freshly-updated row for
+ * optimistic reconciliation. 'not_found' means the update matched no visible
+ * row (wrong id, or RLS hid a booking the caller is not a participant of —
+ * indistinguishable by design). A trigger-rejected transition (illegal
+ * shape / wrong actor) surfaces as a 'transition_rejected' BarberDataFailure.
+ */
+export type TransitionBookingResult =
+  | { status: 'ok'; booking: BookingRow }
+  | { status: 'not_found' }
   | BarberDataFailure;
 
 // ---------------------------------------------------------------------------

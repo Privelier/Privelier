@@ -15,7 +15,10 @@
 import { supabase } from '../../lib/supabase';
 import type { BarberDirectoryRow, BookingRow, ServiceRow } from '../types';
 import { mapPostgrestError } from './errors';
-import type { OwnBookingsViewResult } from './types';
+import type { CancelBookingResult, OwnBookingsViewResult } from './types';
+
+/** PostgREST code returned by `.single()` when the update matched no row. */
+const NO_ROWS = 'PGRST116';
 
 /**
  * Pure split rule for the Upcoming/Past tabs: a booking is upcoming while
@@ -63,4 +66,31 @@ export async function fetchOwnBookingsView(): Promise<OwnBookingsViewResult> {
   }
 
   return { status: 'ok', bookings, barbersById, servicesById };
+}
+
+/**
+ * Customer cancels their own booking (-> cancelled). This single mutation
+ * covers BOTH transitions the actor-aware trigger (migration 0011) allows the
+ * customer: pending -> cancelled (withdraw a request the barber has not yet
+ * answered — a founder-approved 2026-07-09 transition) and accepted ->
+ * cancelled (call off a confirmed booking). Authorization is entirely RLS +
+ * that trigger; this issues the write and shapes the result. `.select()
+ * .single()` returns the new row for optimistic reconciliation. A trigger
+ * rejection (e.g. the booking is already completed/rejected) comes back as
+ * Postgres P0001 and is mapped to 'transition_rejected'; a no-visible-row
+ * update (PGRST116) maps to 'not_found'.
+ */
+export async function cancelBookingAsCustomer(bookingId: string): Promise<CancelBookingResult> {
+  const { data, error } = await supabase
+    .from('bookings')
+    .update({ status: 'cancelled' })
+    .eq('id', bookingId)
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === NO_ROWS) return { status: 'not_found' };
+    return mapPostgrestError('cancelBookingAsCustomer', error);
+  }
+  return { status: 'ok', booking: data as BookingRow };
 }

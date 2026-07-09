@@ -165,5 +165,24 @@ tab, so existing service assertions need no extra taps),
 `customer-booking-confirm-error`, `customer-booking-confirm-pick-another-time`,
 `customer-booking-confirm-submit`, `customer-booking-confirm-success`.
 
+Build-order step 13-14 (barber requests & realtime status transitions) adds
+per-card action/state testIDs on the two booking screens. On the barber
+Requests tab: `request-accept-{id}`, `request-reject-{id}` (pending cards),
+`request-complete-{id}`, `request-cancel-{id}` (accepted cards),
+`barber-requests-actions-{id}` (the action row wrapper),
+`barber-requests-row-busy-{id}` (in-flight spinner while a mutation is
+awaited), and `barber-requests-row-error-{id}` (inline rollback error notice,
+`accessibilityRole="alert"`). On the customer Bookings tab:
+`booking-cancel-{id}` (cancel action, shown only on pending/accepted rows),
+`customer-bookings-row-busy-{id}` (in-flight spinner), and
+`customer-bookings-row-error-{id}` (inline rollback error notice). All are
+per-row because the id is a server-generated uuid unknown at authoring time;
+a step 13-14 E2E flow should assert on POST-echo state (the card's status
+label + the busy id clearing) rather than the pre-write optimistic frame,
+since the optimistic status and the realtime echo converge to the same value.
+Note: `barber-requests-loading` / `customer-bookings-loading` now render only
+on the FIRST load (while the list is still empty) — a focus refetch over an
+already-populated list is silent so realtime updates don't blank the list.
+
 If any of these have changed since, re-grep `testID=` under `src/` before
 trusting this list.
