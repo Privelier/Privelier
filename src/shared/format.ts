@@ -57,6 +57,23 @@ export function formatShortDate(iso: string): string {
 }
 
 /**
+ * Message-bubble timestamp: "14:32" when the message is from the same local
+ * calendar day as `now`, else "8 Jul · 14:32" — same deterministic short
+ * forms as formatShortDate; empty string if unparseable. `now` is injectable
+ * for tests.
+ */
+export function formatMessageTime(iso: string, now: Date = new Date()): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const clock = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const sameDay =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+  return sameDay ? clock : `${d.getDate()} ${MONTHS[d.getMonth()]} · ${clock}`;
+}
+
+/**
  * Price display. Whole-euro amounts render without decimals ("€110");
  * fractional amounts keep their cents exactly ("€42.50") — never rounded,
  * since real service prices appear on the profile detail page.

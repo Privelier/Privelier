@@ -12,18 +12,32 @@
  * (there is no presence system), and the preview line is the real latest
  * message — falling back to "About: {service}" booking context, which is
  * all the prototype ever showed — instead of mocked message text. Tapping
- * a thread explains that chat opens with a later update (step 15-16),
- * same pattern as the profile screen's Book button.
+ * a thread opens the real conversation screen (step 15-16), carrying the
+ * row's already-loaded barber/service context as the header.
+ *
+ * Loads on FOCUS (not mount): returning from a conversation must show the
+ * fresh last-message preview, and bottom-tab screens stay mounted.
  */
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
+import type { CompositeScreenProps } from '@react-navigation/native';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../../theme/useTheme';
 import type { InboxThread } from '../types';
+import type { CustomerTabParamList } from '../CustomerTabs';
+import type { CustomerStackParamList } from '../CustomerNavigator';
 import { fetchOwnInboxView } from '../inboxData';
 import { formatShortDate } from '../format';
 
-export default function InboxScreen() {
+type Props = CompositeScreenProps<
+  BottomTabScreenProps<CustomerTabParamList, 'Inbox'>,
+  NativeStackScreenProps<CustomerStackParamList>
+>;
+
+export default function InboxScreen({ navigation }: Props) {
   const { colors, fonts } = useTheme();
 
   const [threads, setThreads] = useState<InboxThread[]>([]);
@@ -42,21 +56,22 @@ export default function InboxScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    let active = true;
-    // Deferred via .then() (not called directly) for the same
-    // react-hooks/set-state-in-effect reason as the other data screens.
-    Promise.resolve().then(() => {
-      if (active) void load();
-    });
-    return () => {
-      active = false;
-    };
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load])
+  );
 
-  const onOpenThread = useCallback(() => {
-    Alert.alert('Chat opens soon', 'Messaging is coming in an upcoming update.');
-  }, []);
+  const onOpenThread = useCallback(
+    (item: InboxThread) => {
+      navigation.navigate('Conversation', {
+        room: item.room,
+        title: item.barber?.name ?? 'Barber',
+        subtitle: item.service?.name ?? null,
+      });
+    },
+    [navigation]
+  );
 
   return (
     <SafeAreaView
@@ -115,7 +130,7 @@ export default function InboxScreen() {
               (item.service ? `About: ${item.service.name}` : 'No messages yet.');
             return (
               <Pressable
-                onPress={onOpenThread}
+                onPress={() => onOpenThread(item)}
                 accessibilityRole="button"
                 accessibilityLabel={`Open conversation with ${name}`}
                 testID={`customer-inbox-row-${item.room.id}`}

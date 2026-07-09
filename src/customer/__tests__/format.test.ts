@@ -1,4 +1,10 @@
-import { firstName, formatBookingWhen, formatMoney, timeOfDayGreeting } from '../format';
+import {
+  firstName,
+  formatBookingWhen,
+  formatMessageTime,
+  formatMoney,
+  timeOfDayGreeting,
+} from '../format';
 
 describe('timeOfDayGreeting', () => {
   it.each([
@@ -41,5 +47,23 @@ describe('formatMoney', () => {
   it('keeps fractional cents exactly, never rounding', () => {
     expect(formatMoney(89.5)).toBe('€89.50');
     expect(formatMoney(42.25)).toBe('€42.25');
+  });
+});
+
+describe('formatMessageTime', () => {
+  const NOW = new Date(2026, 6, 9, 15, 0, 0); // 9 Jul 2026, local
+
+  it('same local day → clock only, zero-padded', () => {
+    expect(formatMessageTime(new Date(2026, 6, 9, 9, 5, 0).toISOString(), NOW)).toBe('09:05');
+  });
+
+  it('a different day → short date plus clock', () => {
+    expect(formatMessageTime(new Date(2026, 6, 8, 14, 30, 0).toISOString(), NOW)).toBe(
+      '8 Jul · 14:30'
+    );
+  });
+
+  it('unparseable input → empty string, not a crash', () => {
+    expect(formatMessageTime('not-a-date', NOW)).toBe('');
   });
 });

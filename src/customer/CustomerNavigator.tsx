@@ -1,13 +1,14 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { NavigatorScreenParams } from '@react-navigation/native';
 import { RoleExitProvider } from '../RoleContext';
-import type { ServiceRow } from '../types';
+import type { ChatRoomRow, ServiceRow } from '../types';
 import CustomerTabs, { type CustomerTabParamList } from './CustomerTabs';
 import BarberProfileScreen from './screens/BarberProfileScreen';
 import AccountSectionScreen, { type AccountSectionKey } from './screens/AccountSectionScreen';
 import BookingDateTimeScreen from './screens/BookingDateTimeScreen';
 import BookingLocationScreen from './screens/BookingLocationScreen';
 import BookingConfirmScreen from './screens/BookingConfirmScreen';
+import ConversationScreen from './screens/ConversationScreen';
 
 export type CustomerStackParamList = {
   CustomerTabs: NavigatorScreenParams<CustomerTabParamList> | undefined;
@@ -34,6 +35,12 @@ export type CustomerStackParamList = {
     time: string;
     location: string;
   };
+  // Chat (build-order step 15-16): the Inbox thread row carries the room
+  // plus its already-loaded display context so the conversation screen
+  // never re-fetches what the list already knew. title = barber name,
+  // subtitle = service context (both best-effort strings, prepared by the
+  // Inbox row).
+  Conversation: { room: ChatRoomRow; title: string; subtitle: string | null };
 };
 
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
@@ -48,6 +55,7 @@ export default function CustomerNavigator({ onExit }: { onExit: () => void }) {
         <Stack.Screen name="BookingDateTime" component={BookingDateTimeScreen} />
         <Stack.Screen name="BookingLocation" component={BookingLocationScreen} />
         <Stack.Screen name="BookingConfirm" component={BookingConfirmScreen} />
+        <Stack.Screen name="Conversation" component={ConversationScreen} />
       </Stack.Navigator>
     </RoleExitProvider>
   );

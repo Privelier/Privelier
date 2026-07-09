@@ -9,20 +9,34 @@
  *
  * Honesty deviations from the prototype: rows lead with the booking's
  * service name and a neutral avatar — the customer's name/photo is
- * unreadable under current users RLS (gap tracked for step 13-14, same as
- * the Requests tab). Tapping a thread explains chat opens with a later
- * update (step 15-16).
+ * unreadable list-side under users RLS (the conversation screen itself
+ * upgrades to the real name via the 0012 counterparts RPC). Tapping a
+ * thread opens the real conversation screen (step 15-16).
+ *
+ * Loads on FOCUS (not mount): returning from a conversation must show the
+ * fresh last-message preview, and bottom-tab screens stay mounted.
  */
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
+import type { CompositeScreenProps } from '@react-navigation/native';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../theme/useTheme';
 import type { InboxThread } from '../../shared/threads';
+import type { BarberTabParamList } from '../BarberTabs';
+import type { BarberStackParamList } from '../BarberNavigator';
 import { fetchOwnChatsView } from '../chatsData';
 import { formatShortDate } from '../../shared/format';
 
-export default function ChatsScreen() {
+type Props = CompositeScreenProps<
+  BottomTabScreenProps<BarberTabParamList, 'Chats'>,
+  NativeStackScreenProps<BarberStackParamList>
+>;
+
+export default function ChatsScreen({ navigation }: Props) {
   const { colors, fonts } = useTheme();
 
   const [threads, setThreads] = useState<InboxThread[]>([]);
@@ -41,21 +55,24 @@ export default function ChatsScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    let active = true;
-    // Deferred via .then() (not called directly) for the same
-    // react-hooks/set-state-in-effect reason as the other data screens.
-    Promise.resolve().then(() => {
-      if (active) void load();
-    });
-    return () => {
-      active = false;
-    };
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load])
+  );
 
-  const onOpenThread = useCallback(() => {
-    Alert.alert('Chat opens soon', 'Messaging is coming in an upcoming update.');
-  }, []);
+  const onOpenThread = useCallback(
+    (item: InboxThread) => {
+      navigation.navigate('Conversation', {
+        room: item.room,
+        title: item.service?.name ?? 'Booking',
+        // No list-side subtitle: the screen swaps the service name down to
+        // the subtitle slot once the counterparts RPC resolves the name.
+        subtitle: null,
+      });
+    },
+    [navigation]
+  );
 
   return (
     <SafeAreaView
@@ -107,7 +124,7 @@ export default function ChatsScreen() {
             const preview = item.lastMessage?.message ?? 'No messages yet.';
             return (
               <Pressable
-                onPress={onOpenThread}
+                onPress={() => onOpenThread(item)}
                 accessibilityRole="button"
                 accessibilityLabel={`Open conversation about ${title}`}
                 testID={`barber-chats-row-${item.room.id}`}

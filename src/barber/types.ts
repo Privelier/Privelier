@@ -8,6 +8,7 @@ import type {
   AvailabilityRow,
   BarberProfileRow,
   BookingRow,
+  MessageRow,
   PortfolioRow,
   ServiceRow,
   VerificationRequestRow,
@@ -29,6 +30,19 @@ export type ListOwnPortfolioResult =
 
 export type OwnChatsViewResult =
   | { status: 'ok'; threads: InboxThread[] }
+  | BarberDataFailure;
+
+// ---------------------------------------------------------------------------
+// Conversation (public.messages, build-order step 15-16)
+// ---------------------------------------------------------------------------
+
+export type FetchConversationResult =
+  | { status: 'ok'; messages: MessageRow[] }
+  | BarberDataFailure;
+
+/** `message` is the authoritative inserted row (server id + created_at). */
+export type SendMessageResult =
+  | { status: 'ok'; message: MessageRow }
   | BarberDataFailure;
 
 // ---------------------------------------------------------------------------

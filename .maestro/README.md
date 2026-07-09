@@ -16,6 +16,7 @@ maestro test .maestro/barber-availability-add-edit-delete.yaml
 maestro test .maestro/customer-discovery-view-barber-profile.yaml
 maestro test .maestro/customer-booking-create.yaml
 maestro test .maestro/barber-requests-accept-reject.yaml
+maestro test .maestro/customer-chat-send-message.yaml
 ```
 
 All seven flows use a placeholder `appId: com.privelier.app` — `app.json` does
@@ -117,6 +118,18 @@ testIDs are matched by regex + `index: 0`. Deliberately NOT covered: the
 customer's Bookings tab updating live at the moment of acceptance — that
 needs two simultaneous sessions, which single-device Maestro cannot do, so
 the realtime half of the step 13-14 gate remains a manual two-device check.
+
+For build-order step 15-16 (chat), `customer-chat-send-message.yaml` covers
+the single-device half: customer opens the Inbox's (single seeded) thread,
+sends a message, and the flow asserts the POST-echo state — the transient
+"Sending…" bubble resolving into the server-confirmed message bubble — not
+the optimistic frame. Rooms exist automatically per booking since migration
+0013, so seeding is just "exactly one booking". The gate's "both directions"
+half (barber receives live and replies) is a manual two-device check, same
+as step 13-14's realtime half. New testIDs (documented for both apps, same
+shape with the `barber-` prefix): `customer-conversation-screen`, `-back`,
+`-loading`, `-error`, `-empty`, `-input`, `-send`,
+`customer-conversation-message-{id}`, `-sending-{key}`, `-failed-{key}`.
 
 ## testIDs referenced (verified present in source as of this writing)
 

@@ -3,7 +3,13 @@
  * step 9-10). Every function returns a discriminated union the UI can
  * switch on; nothing here ever carries raw server error text.
  */
-import type { AvailabilityRow, BarberDirectoryRow, BookingRow, ServiceRow } from '../types';
+import type {
+  AvailabilityRow,
+  BarberDirectoryRow,
+  BookingRow,
+  MessageRow,
+  ServiceRow,
+} from '../types';
 import type { InboxThread } from '../shared/threads';
 import type { BusySlot } from '../shared/slots';
 import type { CustomerDataFailure } from './errors';
@@ -110,4 +116,17 @@ export type { InboxThread } from '../shared/threads';
 
 export type OwnInboxViewResult =
   | { status: 'ok'; threads: InboxThread[] }
+  | CustomerDataFailure;
+
+// ---------------------------------------------------------------------------
+// Conversation (public.messages, build-order step 15-16)
+// ---------------------------------------------------------------------------
+
+export type FetchConversationResult =
+  | { status: 'ok'; messages: MessageRow[] }
+  | CustomerDataFailure;
+
+/** `message` is the authoritative inserted row (server id + created_at). */
+export type SendMessageResult =
+  | { status: 'ok'; message: MessageRow }
   | CustomerDataFailure;

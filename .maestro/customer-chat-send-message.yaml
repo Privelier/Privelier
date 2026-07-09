@@ -1,0 +1,114 @@
+# Chat flow (build-order step 15-16): log in as a customer -> open the Inbox
+# tab -> tap the (single) thread row -> conversation screen loads -> type a
+# message -> send -> the sent message renders as a real, server-confirmed
+# bubble (post-echo state, not the transient "Sending…" frame).
+#
+# What this deliberately does NOT cover: the step 15-16 gate's "both
+# directions" half (the barber receiving it live, and replying) needs two
+# simultaneous sessions, which single-device Maestro cannot do — that half is
+# a manual two-device check, same as the step 13-14 realtime gate.
+#
+# NOT YET RUN. Same pre-existing tooling gap as every other flow here: no
+# Maestro CLI on the authoring machine — see .maestro/README.md.
+#
+# Prerequisites:
+# - A pre-confirmed test customer with EXACTLY ONE chat room (rooms are
+#   created automatically per booking since migration 0013, so: exactly one
+#   booking — any status). One room keeps the regex row-tap unambiguous,
+#   same "only one thing on screen when a regex selector is used" rule as
+#   the other flows.
+# - Same appId placeholder caveat as every other flow here.
+#
+# Run with:
+#   maestro test .maestro/customer-chat-send-message.yaml \
+#     -e TEST_CUSTOMER_EMAIL=... -e TEST_CUSTOMER_PASSWORD=... \
+#     -e TEST_MESSAGE="..."
+appId: com.privelier.app # TODO: replace once app.json defines a real package/bundleIdentifier
+env:
+  TEST_CUSTOMER_EMAIL: customer.e2e@example.com
+  TEST_CUSTOMER_PASSWORD: ChangeMe123!
+  TEST_MESSAGE: "Maestro test message"
+---
+- launchApp:
+    clearState: true
+
+# UNAUTHENTICATED: role-select is the very first screen.
+- assertVisible:
+    id: "role-select-customer"
+- tapOn:
+    id: "role-select-customer"
+
+- assertVisible:
+    id: "auth-entry-screen"
+- tapOn:
+    id: "auth-entry-login"
+
+- assertVisible:
+    id: "auth-login-screen"
+- tapOn:
+    id: "auth-login-email"
+- inputText: "${TEST_CUSTOMER_EMAIL}"
+- tapOn:
+    id: "auth-login-password"
+- inputText: "${TEST_CUSTOMER_PASSWORD}"
+- tapOn:
+    id: "auth-login-submit"
+
+- extendedWaitUntil:
+    visible:
+      id: "customer-home-screen"
+    timeout: 15000
+
+# --- Inbox tab -> the single thread row ---
+- tapOn:
+    id: "customer-tab-inbox"
+- assertVisible:
+    id: "customer-inbox-screen"
+- extendedWaitUntil:
+    notVisible:
+      id: "customer-inbox-loading"
+    timeout: 15000
+- assertNotVisible:
+    id: "customer-inbox-error"
+# A room exists per booking (migration 0013) -> the empty state must not show.
+- assertNotVisible:
+    id: "customer-inbox-empty"
+
+# Row testID is per-room (`customer-inbox-row-{uuid}`, unknown at authoring
+# time); exactly one room is seeded, so the regex matches exactly one row.
+- tapOn:
+    id: "customer-inbox-row-.*"
+
+# --- Conversation screen ---
+- assertVisible:
+    id: "customer-conversation-screen"
+- extendedWaitUntil:
+    notVisible:
+      id: "customer-conversation-loading"
+    timeout: 15000
+- assertNotVisible:
+    id: "customer-conversation-error"
+
+- tapOn:
+    id: "customer-conversation-input"
+- inputText: "${TEST_MESSAGE}"
+- tapOn:
+    id: "customer-conversation-send"
+
+# Post-echo assertion: wait for the transient "Sending…" bubble to resolve
+# into the server-confirmed message bubble (the authoritative row merge), so
+# this pins the real write, not the optimistic frame — same post-echo rule
+# as the step 13-14 flow.
+- extendedWaitUntil:
+    notVisible:
+      id: "customer-conversation-sending-.*"
+    timeout: 15000
+- assertNotVisible:
+    id: "customer-conversation-failed-.*"
+- assertVisible:
+    text: "${TEST_MESSAGE}"
+
+# The input cleared on send.
+- assertNotVisible:
+    text: "${TEST_MESSAGE}"
+    id: "customer-conversation-input"
