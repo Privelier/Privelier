@@ -18,6 +18,13 @@
  *    from rule 1 is harmless by construction, no dedup logic required.
  * 3. `applyBookingChange` appends unknown INSERTs; the caller re-sorts (this
  *    hook is ordering-policy-free).
+ * 4. Pass `onRecovered` and re-run the same baseline fetch from it: Supabase
+ *    does NOT replay events that fired while the socket was down, so after a
+ *    mid-focus network blip the auto-rejoined channel alone leaves the list
+ *    silently stale (retroactive design review finding F1). `onRecovered`
+ *    fires exactly when the channel re-enters SUBSCRIBED after an error —
+ *    never on the initial subscribe, which rule 1's fetch already covers —
+ *    and the refetch is race-free for the same idempotency reason as rule 2.
  *
  * LIFECYCLE: the CALLER drives `enabled`, normally from `useFocusEffect`.
  * Bottom-tab screens stay mounted when backgrounded, so gating on mount/
@@ -49,6 +56,13 @@ export type UseBookingsRealtimeArgs = {
   filterValue: string | null | undefined;
   /** Fed one normalized event per change to pass to `applyBookingChange`. */
   onChange: (event: BookingChangeEvent) => void;
+  /**
+   * Called when the channel re-enters SUBSCRIBED after an error/timeout —
+   * i.e. after a reconnect whose gap may have dropped events. Re-run the
+   * baseline fetch here (see ordering-contract rule 4). Never called on the
+   * initial, healthy subscribe.
+   */
+  onRecovered?: () => void;
   /** Gate — the caller passes focus state (e.g. from `useFocusEffect`). */
   enabled: boolean;
 };
@@ -61,17 +75,25 @@ export function useBookingsRealtime({
   filterColumn,
   filterValue,
   onChange,
+  onRecovered,
   enabled,
 }: UseBookingsRealtimeArgs): void {
-  // Keep the latest onChange in a ref so an unstable callback identity does
+  // Keep the latest callbacks in refs so unstable callback identities do
   // NOT tear down and recreate the channel every render.
   const onChangeRef = useRef(onChange);
+  const onRecoveredRef = useRef(onRecovered);
   useEffect(() => {
     onChangeRef.current = onChange;
-  }, [onChange]);
+    onRecoveredRef.current = onRecovered;
+  }, [onChange, onRecovered]);
 
   useEffect(() => {
     if (!enabled || !filterValue) return;
+
+    // Scoped to this channel instance: flips true on an error/timeout so the
+    // NEXT healthy SUBSCRIBED is recognized as a recovery (with a possible
+    // missed-event gap) rather than the initial subscribe.
+    let hadChannelError = false;
 
     // Stable, unique channel name per (column, value) so two screens filtered
     // on the same user share one logical channel identity rather than
@@ -100,10 +122,20 @@ export function useBookingsRealtime({
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           // Log once; the supabase-js client auto-reconnects, so do NOT
-          // implement a custom retry loop here.
+          // implement a custom retry loop here. 'CLOSED' is deliberately not
+          // treated as an error — it is what our own cleanup produces.
+          hadChannelError = true;
           console.warn(
             `[useBookingsRealtime] channel ${channelName} status: ${status}`
           );
+          return;
+        }
+        if (status === 'SUBSCRIBED' && hadChannelError) {
+          // Auto-rejoin after an outage: events from the gap were dropped,
+          // not queued — hand control back to the caller for a baseline
+          // refetch (ordering-contract rule 4).
+          hadChannelError = false;
+          onRecoveredRef.current?.();
         }
       });
 

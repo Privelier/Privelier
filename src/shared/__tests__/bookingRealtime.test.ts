@@ -14,7 +14,11 @@
  *    reducer must not reorder.
  */
 import type { BookingRow } from '../../types';
-import { applyBookingChange, type BookingChangeEvent } from '../bookingRealtime';
+import {
+  applyBookingChange,
+  applyBookingChangeSorted,
+  type BookingChangeEvent,
+} from '../bookingRealtime';
 
 function booking(overrides: Partial<BookingRow>): BookingRow {
   return {
@@ -133,5 +137,40 @@ describe('applyBookingChange', () => {
     const a = booking({ id: 'a' });
     expect(applyBookingChange([], event('INSERT', a))).toEqual([a]);
     expect(applyBookingChange([], event('DELETE', a))).toEqual([]);
+  });
+});
+
+describe('applyBookingChangeSorted (review finding F2)', () => {
+  const sortAsc = (rows: BookingRow[]) =>
+    [...rows].sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`));
+
+  it('skips the sort entirely on a proven no-op, preserving the array reference', () => {
+    const a = booking({ id: 'a' });
+    const input = [a];
+    const sort = jest.fn(sortAsc);
+
+    const next = applyBookingChangeSorted(input, event('UPDATE', { ...a }), sort);
+
+    expect(next).toBe(input);
+    expect(sort).not.toHaveBeenCalled();
+  });
+
+  it('sorts through the provided comparator on a real change', () => {
+    const early = booking({ id: 'early', time: '09:00:00' });
+    const late = booking({ id: 'late', time: '12:00:00' });
+    // Reducer appends unknown INSERTs at the end; the sort must move it.
+    const next = applyBookingChangeSorted([late], event('INSERT', early), sortAsc);
+
+    expect(next.map((b) => b.id)).toEqual(['early', 'late']);
+  });
+
+  it('a no-op DELETE (absent id) also preserves the reference without sorting', () => {
+    const input = [booking({ id: 'a' })];
+    const sort = jest.fn(sortAsc);
+
+    const next = applyBookingChangeSorted(input, event('DELETE', booking({ id: 'zzz' })), sort);
+
+    expect(next).toBe(input);
+    expect(sort).not.toHaveBeenCalled();
   });
 });

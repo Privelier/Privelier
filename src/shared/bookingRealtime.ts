@@ -77,6 +77,23 @@ export function applyBookingChange(
 }
 
 /**
+ * Merge one event and re-sort — WITHOUT paying for the sort (and the React
+ * re-render a fresh array reference forces) when the event was a proven
+ * no-op. `applyBookingChange` returns the same reference for no-ops
+ * precisely so callers can bail out; wrapping it in an unconditional sort
+ * throws that away (retroactive design review finding F2). All screen-side
+ * merge call sites should go through this instead of sorting inline.
+ */
+export function applyBookingChangeSorted(
+  current: BookingRow[],
+  event: BookingChangeEvent,
+  sort: (rows: BookingRow[]) => BookingRow[]
+): BookingRow[] {
+  const next = applyBookingChange(current, event);
+  return next === current ? current : sort(next);
+}
+
+/**
  * Shallow field-by-field equality over the known BookingRow columns. Used
  * only to short-circuit no-op upserts; BookingRow is a flat record of
  * primitives, so a shallow compare is exact here.

@@ -55,7 +55,11 @@ import {
   fetchOwnRequestsView,
   rejectBooking,
 } from '../requestsData';
-import { applyBookingChange, type BookingChangeEvent } from '../../shared/bookingRealtime';
+import {
+  applyBookingChange,
+  applyBookingChangeSorted,
+  type BookingChangeEvent,
+} from '../../shared/bookingRealtime';
 import { useBookingsRealtime } from '../../shared/useBookingsRealtime';
 import { BOOKING_STATUS_LABELS, formatBookingWhen, formatMoney } from '../../shared/format';
 
@@ -128,7 +132,9 @@ export default function RequestsScreen() {
           if (inFlightRef.current.has(row.id)) continue;
           next = applyBookingChange(next, { eventType: 'UPDATE', row });
         }
-        return sortAsc(next);
+        // An all-no-op snapshot (the common refocus/recovery case) keeps the
+        // same reference — no sort, no re-render.
+        return next === prev ? prev : sortAsc(next);
       });
     } else {
       setError(result.message);
@@ -146,13 +152,16 @@ export default function RequestsScreen() {
   );
 
   const onRealtimeChange = useCallback((event: BookingChangeEvent) => {
-    setBookings((prev) => sortAsc(applyBookingChange(prev, event)));
+    setBookings((prev) => applyBookingChangeSorted(prev, event, sortAsc));
   }, []);
 
   useBookingsRealtime({
     filterColumn: 'barber_id',
     filterValue: userId,
     onChange: onRealtimeChange,
+    // A reconnect after a network blip may have dropped events — refetch the
+    // baseline (idempotent merge makes this race-free; review finding F1).
+    onRecovered: load,
     enabled: focused,
   });
 
@@ -173,7 +182,7 @@ export default function RequestsScreen() {
 
       // Optimistic: show the predicted status immediately.
       setBookings((prev) =>
-        sortAsc(applyBookingChange(prev, { eventType: 'UPDATE', row: { ...row, status: nextStatus } }))
+        applyBookingChangeSorted(prev, { eventType: 'UPDATE', row: { ...row, status: nextStatus } }, sortAsc)
       );
 
       const result = await mutate(row.id);
@@ -189,11 +198,11 @@ export default function RequestsScreen() {
         // Re-apply the authoritative row — corrects any stale refetch that
         // raced past the write; the realtime echo then reconciles to a no-op.
         setBookings((prev) =>
-          sortAsc(applyBookingChange(prev, { eventType: 'UPDATE', row: result.booking }))
+          applyBookingChangeSorted(prev, { eventType: 'UPDATE', row: result.booking }, sortAsc)
         );
       } else {
         // Roll the card back to its prior state and surface the reason inline.
-        setBookings((prev) => sortAsc(applyBookingChange(prev, { eventType: 'UPDATE', row })));
+        setBookings((prev) => applyBookingChangeSorted(prev, { eventType: 'UPDATE', row }, sortAsc));
         const message =
           result.status === 'not_found'
             ? 'That booking could no longer be found. Refresh to see its current status.'

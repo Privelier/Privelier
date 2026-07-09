@@ -33,3 +33,5 @@
 ## 4. Verdict
 
 Approved retroactively. F1 and F2 are tracked in CLAUDE.md's backlog under Step 13-14; F1 blocks calling the step's gate fully passed, F2 rides along in the same change. Chat (step 15-16) should copy this architecture *including* the F1 fix.
+
+**Update 2026-07-09 (same day, founder-directed):** F1 and F2 are FIXED. `useBookingsRealtime` now takes `onRecovered` (fires only on a `SUBSCRIBED` that follows `CHANNEL_ERROR`/`TIMED_OUT`, never on the initial subscribe; `CLOSED` correctly treated as cleanup) and both screens pass their baseline `load` to it; `applyBookingChangeSorted` in `bookingRealtime.ts` preserves the reducer's same-reference no-op contract at every merge call site, and the two snapshot-fold loops bail out reference-equal too. Unit-tested (new `useBookingsRealtime.test.ts` covers the channel lifecycle, event normalization, and the full recovery matrix; `bookingRealtime.test.ts` covers the sorted-merge bailout). The on-device reconnect sanity check rides with the two-device realtime gate session.

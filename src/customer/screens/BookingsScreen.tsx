@@ -39,7 +39,11 @@ import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../theme/useTheme';
 import type { BarberDirectoryRow, BookingRow, ServiceRow } from '../../types';
 import { cancelBookingAsCustomer, fetchOwnBookingsView, isUpcomingBooking } from '../bookingsData';
-import { applyBookingChange, type BookingChangeEvent } from '../../shared/bookingRealtime';
+import {
+  applyBookingChange,
+  applyBookingChangeSorted,
+  type BookingChangeEvent,
+} from '../../shared/bookingRealtime';
 import { useBookingsRealtime } from '../../shared/useBookingsRealtime';
 import { BOOKING_STATUS_LABELS, formatBookingWhen, formatMoney } from '../format';
 
@@ -112,7 +116,9 @@ export default function BookingsScreen() {
           if (inFlightRef.current.has(row.id)) continue; // don't clobber optimistic cards
           next = applyBookingChange(next, { eventType: 'UPDATE', row });
         }
-        return sortDesc(next);
+        // An all-no-op snapshot (the common refocus/recovery case) keeps the
+        // same reference — no sort, no re-render.
+        return next === prev ? prev : sortDesc(next);
       });
     } else {
       setError(result.message);
@@ -129,13 +135,16 @@ export default function BookingsScreen() {
   );
 
   const onRealtimeChange = useCallback((event: BookingChangeEvent) => {
-    setBookings((prev) => sortDesc(applyBookingChange(prev, event)));
+    setBookings((prev) => applyBookingChangeSorted(prev, event, sortDesc));
   }, []);
 
   useBookingsRealtime({
     filterColumn: 'customer_id',
     filterValue: userId,
     onChange: onRealtimeChange,
+    // A reconnect after a network blip may have dropped events — refetch the
+    // baseline (idempotent merge makes this race-free; review finding F1).
+    onRecovered: load,
     enabled: focused,
   });
 
@@ -151,7 +160,7 @@ export default function BookingsScreen() {
 
     // Optimistic: show cancelled immediately (this re-buckets to Past).
     setBookings((prev) =>
-      sortDesc(applyBookingChange(prev, { eventType: 'UPDATE', row: { ...row, status: 'cancelled' } }))
+      applyBookingChangeSorted(prev, { eventType: 'UPDATE', row: { ...row, status: 'cancelled' } }, sortDesc)
     );
 
     const result = await cancelBookingAsCustomer(row.id);
@@ -165,11 +174,11 @@ export default function BookingsScreen() {
 
     if (result.status === 'ok') {
       setBookings((prev) =>
-        sortDesc(applyBookingChange(prev, { eventType: 'UPDATE', row: result.booking }))
+        applyBookingChangeSorted(prev, { eventType: 'UPDATE', row: result.booking }, sortDesc)
       );
     } else {
       // Roll back to the prior row and surface the reason inline.
-      setBookings((prev) => sortDesc(applyBookingChange(prev, { eventType: 'UPDATE', row })));
+      setBookings((prev) => applyBookingChangeSorted(prev, { eventType: 'UPDATE', row }, sortDesc));
       const message =
         result.status === 'not_found'
           ? 'That booking could no longer be found. Refresh to see its current status.'
