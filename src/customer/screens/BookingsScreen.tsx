@@ -13,10 +13,17 @@
  *
  * Upcoming = still alive in the state machine (pending/accepted) AND the
  * slot is in the future; everything else is Past (see isUpcomingBooking).
+ *
+ * Reloads on every FOCUS, not just on first mount (build-order step 11-12
+ * fix): bottom-tab screens stay mounted after their first visit, so a
+ * mount-only effect would mean a booking created just now via the new
+ * booking flow would not appear here until the app restarts. useFocusEffect
+ * re-runs fetchOwnBookingsView every time this tab becomes active again.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../theme/useTheme';
 import type { BarberDirectoryRow, BookingRow, ServiceRow } from '../../types';
 import { fetchOwnBookingsView, isUpcomingBooking } from '../bookingsData';
@@ -52,17 +59,11 @@ export default function BookingsScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    let active = true;
-    // Deferred via .then() (not called directly) for the same
-    // react-hooks/set-state-in-effect reason as the other data screens.
-    Promise.resolve().then(() => {
-      if (active) void load();
-    });
-    return () => {
-      active = false;
-    };
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load])
+  );
 
   const list = useMemo(() => {
     const now = new Date();

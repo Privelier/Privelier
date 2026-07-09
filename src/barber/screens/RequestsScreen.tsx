@@ -15,10 +15,18 @@
  * - Cards lead with the SERVICE name, not the customer's name: users RLS
  *   is own-row-only, so a barber cannot read a customer's name today. The
  *   counterpart-identity read path is tracked for step 13-14 in CLAUDE.md.
+ *
+ * Reloads on every FOCUS, not just on first mount (build-order step 11-12
+ * fix): bottom-tab screens stay mounted after their first visit, so a
+ * mount-only effect would mean a booking a customer just created via the
+ * new booking flow would not appear here until the app restarts.
+ * useFocusEffect re-runs fetchOwnRequestsView every time this tab becomes
+ * active again.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../theme/useTheme';
 import type { BookingRow, ServiceRow } from '../../types';
 import { fetchOwnRequestsView } from '../requestsData';
@@ -45,17 +53,11 @@ export default function RequestsScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    let active = true;
-    // Deferred via .then() (not called directly) for the same
-    // react-hooks/set-state-in-effect reason as the other data screens.
-    Promise.resolve().then(() => {
-      if (active) void load();
-    });
-    return () => {
-      active = false;
-    };
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load])
+  );
 
   return (
     <SafeAreaView

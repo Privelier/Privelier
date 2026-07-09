@@ -1,0 +1,204 @@
+# Booking flow (build-order step 11-12): log in as a customer -> tap an
+# approved, same-city barber -> tap "Book" on one of their services ->
+# pick a date and a time -> enter a location -> confirm the booking -> see
+# the success state -> confirm the new booking now appears on the customer's
+# own Bookings tab.
+#
+# NOT YET RUN. Same pre-existing tooling gap as every other flow in this
+# directory: there is no Maestro CLI / Android SDK / emulator on the
+# authoring machine — see .maestro/README.md. Once tooling is available:
+#   maestro test .maestro/customer-booking-create.yaml
+#
+# Prerequisites (in addition to the customer-discovery flow's own
+# prerequisites — a pre-confirmed test customer whose `users.city` matches an
+# approved test barber's city):
+# - The test barber must have EXACTLY ONE seeded service, named
+#   TEST_SERVICE_NAME below (via the barber-services-add-edit-delete flow, or
+#   manually) — see the "Book button" note further down for why this flow
+#   needs exactly one, not "at least one" like the discovery flow.
+# - The test barber's availability must cover every weekday (day_of_week
+#   0-6) with a single wide recurring window (e.g. 06:00-22:00), NOT a
+#   narrow one and NOT specific_date rows. This flow always picks the first
+#   day chip (index 0, i.e. "today" — see BookingDateTimeScreen's 14-day
+#   lookahead) and the first available time slot on it; since this flow can
+#   run on any real calendar day at any time of day, "every weekday, wide
+#   hours" is the only way to make day-0 reliably non-empty regardless of
+#   when the flow actually executes. A narrower recurring window (or one
+#   that only covers some weekdays) will make this flow fail on days/times
+#   outside it — that is expected, not a bug in the flow.
+# - No pre-existing pending/accepted booking should already occupy the
+#   barber's very first available slot of the day for this exact barber/
+#   service combination (the RPC-backed busy-slot subtraction in
+#   src/customer/availabilityData.ts would otherwise remove it) — practically
+#   always true for a freshly-seeded test barber with no bookings yet, but
+#   note this explicitly since it is not enforced by the flow itself.
+# - Same appId placeholder caveat as every other flow here — see below.
+#
+# Run with (see prerequisites above for what each value must correspond to):
+#   maestro test .maestro/customer-booking-create.yaml \
+#     -e TEST_CUSTOMER_EMAIL=... -e TEST_CUSTOMER_PASSWORD=... \
+#     -e TEST_BARBER_NAME="..." -e TEST_SERVICE_NAME="..." \
+#     -e TEST_LOCATION="..."
+appId: com.privelier.app # TODO: replace once app.json defines a real package/bundleIdentifier
+env:
+  TEST_CUSTOMER_EMAIL: customer.e2e@example.com
+  TEST_CUSTOMER_PASSWORD: ChangeMe123!
+  TEST_BARBER_NAME: Maestro test barber
+  TEST_SERVICE_NAME: Classic fade
+  TEST_LOCATION: 12 Maestro Test Street, Test City
+---
+- launchApp:
+    clearState: true
+
+# UNAUTHENTICATED: role-select is the very first screen.
+- assertVisible:
+    id: "role-select-customer"
+- tapOn:
+    id: "role-select-customer"
+
+# Per-role auth entry -> log in.
+- assertVisible:
+    id: "auth-entry-screen"
+- tapOn:
+    id: "auth-entry-login"
+
+- assertVisible:
+    id: "auth-login-screen"
+- tapOn:
+    id: "auth-login-email"
+- inputText: "${TEST_CUSTOMER_EMAIL}"
+- tapOn:
+    id: "auth-login-password"
+- inputText: "${TEST_CUSTOMER_PASSWORD}"
+- tapOn:
+    id: "auth-login-submit"
+
+# PROVISIONING is transient/may not appear at all on a returning user — wait
+# directly for the real destination, same approach as the other auth-first
+# flows in this directory.
+- extendedWaitUntil:
+    visible:
+      id: "customer-home-screen"
+    timeout: 15000
+
+# --- Discovery: navigate to the prerequisite same-city approved barber ---
+- extendedWaitUntil:
+    visible:
+      text: "${TEST_BARBER_NAME}"
+    timeout: 15000
+- tapOn:
+    text: "${TEST_BARBER_NAME}"
+
+- assertVisible:
+    id: "barber-profile-screen"
+- extendedWaitUntil:
+    notVisible:
+      id: "barber-profile-loading"
+    timeout: 15000
+- assertNotVisible:
+    id: "barber-profile-error"
+- assertNotVisible:
+    id: "barber-profile-not-found"
+
+# Services is the default tab (per .maestro/README.md), so the seeded
+# service and its Book button are visible without an extra tab tap.
+- assertVisible:
+    text: "${TEST_SERVICE_NAME}"
+
+# Book button testID is per-service (`barber-profile-book-{id}`, a
+# server-generated uuid unknown at authoring time) — same limitation as the
+# barber-services/availability row testIDs. Safe to match by regex here
+# because the prerequisite test barber has exactly one seeded service, so
+# exactly one Book button is ever on screen.
+- tapOn:
+    id: "barber-profile-book-.*"
+
+# --- BookingDateTimeScreen (step 1 of 3): pick a day, then a time ---
+- assertVisible:
+    id: "customer-booking-datetime-screen"
+- extendedWaitUntil:
+    notVisible:
+      id: "customer-booking-datetime-loading"
+    timeout: 15000
+- assertNotVisible:
+    id: "customer-booking-datetime-error"
+- assertNotVisible:
+    id: "customer-booking-datetime-empty"
+
+# Day index 0 is "today" (BookingDateTimeScreen's 14-day lookahead starts
+# today-inclusive) — see the prerequisite note above on why the test
+# barber's availability must make this reliably non-empty.
+- tapOn:
+    id: "customer-booking-datetime-day-0"
+
+# Slot testIDs are per-time (`customer-booking-datetime-slot-{HH:MM:SS}`,
+# unknown at authoring time since it depends on the current time of day and
+# the barber's availability). Multiple slot chips are legitimately on
+# screen at once (unlike the single-row barber/discovery cases elsewhere in
+# this directory), so `index: 0` disambiguates down to "the earliest
+# available time" rather than relying on an unknown exact value.
+- tapOn:
+    id: "customer-booking-datetime-slot-.*"
+    index: 0
+
+- tapOn:
+    id: "customer-booking-datetime-continue"
+
+# --- BookingLocationScreen (step 2 of 3): where the barber should come to ---
+- assertVisible:
+    id: "customer-booking-location-screen"
+- tapOn:
+    id: "customer-booking-location-input"
+# The field may already be prefilled with the signed-in customer's own city
+# (fetchOwnProfile, best-effort) — clear it first so the asserted value
+# below is exactly TEST_LOCATION, not city+TEST_LOCATION concatenated.
+- eraseText
+- inputText: "${TEST_LOCATION}"
+- tapOn:
+    id: "customer-booking-location-continue"
+
+# --- BookingConfirmScreen (step 3 of 3): itemized summary + the real write ---
+- assertVisible:
+    id: "customer-booking-confirm-screen"
+- assertVisible:
+    text: "${TEST_BARBER_NAME}"
+- assertVisible:
+    text: "${TEST_SERVICE_NAME}"
+- assertVisible:
+    text: "${TEST_LOCATION}"
+- assertNotVisible:
+    id: "customer-booking-confirm-error"
+
+- tapOn:
+    id: "customer-booking-confirm-submit"
+
+# --- Success state, then the auto-reset to CustomerTabs -> Bookings ---
+- extendedWaitUntil:
+    visible:
+      id: "customer-booking-confirm-success"
+    timeout: 10000
+
+# BookingConfirmScreen pauses briefly (SUCCESS_PAUSE_MS) then calls
+# navigation.reset(...) straight to the Bookings tab — wait for that
+# destination directly rather than asserting on the transient success view.
+- extendedWaitUntil:
+    visible:
+      id: "customer-bookings-screen"
+    timeout: 10000
+
+# --- Bookings tab: the just-created booking is now visible ---
+- extendedWaitUntil:
+    notVisible:
+      id: "customer-bookings-loading"
+    timeout: 15000
+- assertNotVisible:
+    id: "customer-bookings-error"
+# Upcoming is the default tab; a booking created moments ago for a
+# near-future slot is always Upcoming (see isUpcomingBooking), so the empty
+# state must not show.
+- assertNotVisible:
+    id: "customer-bookings-empty"
+- assertVisible:
+    text: "${TEST_SERVICE_NAME}"
+- assertVisible:
+    text: "${TEST_BARBER_NAME}"

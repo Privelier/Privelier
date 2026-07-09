@@ -1,5 +1,5 @@
 # Maestro E2E flows (auth, build-order step 5; customer discovery, build-order
-# step 9-10)
+# step 9-10; booking creation, build-order step 11-12)
 
 These flows were authored during pipeline stages 6-7 (test-engineer) but have
 **not been executed**: this development machine has no Maestro CLI, no
@@ -14,14 +14,15 @@ maestro test .maestro/signup-await-confirmation-resend.yaml
 maestro test .maestro/barber-services-add-edit-delete.yaml
 maestro test .maestro/barber-availability-add-edit-delete.yaml
 maestro test .maestro/customer-discovery-view-barber-profile.yaml
+maestro test .maestro/customer-booking-create.yaml
 ```
 
-All five flows use a placeholder `appId: com.privelier.app` — `app.json` does
+All six flows use a placeholder `appId: com.privelier.app` — `app.json` does
 not yet define `android.package` / `ios.bundleIdentifier`, so there is no real
 app id to target yet. Set a real one in `app.json` (and rebuild a dev client)
 before these can actually run, then update the `appId` in all files to match.
 
-All five flows also take credentials/emails via `env:` in the YAML with sane
+All six flows also take credentials/emails via `env:` in the YAML with sane
 placeholder defaults, overridable at the CLI with `-e KEY=value` — see the
 comments in each file for exactly what to provide.
 
@@ -84,6 +85,23 @@ matches it by visible name text (`TEST_BARBER_NAME`) rather than a
 spells out exactly what backend state (an approved, same-city test barber
 with a seeded service) the flow needs before it can run.
 
+For build-order step 11-12 (booking flow, authored in this pipeline stage),
+`customer-booking-create.yaml` covers the highest-value path: a customer
+taps "Book" on a barber's service, walks the three-screen booking flow
+(date/time -> location -> confirm), sees the success state, and the new
+booking is then actually visible on their own Bookings tab. It builds on the
+same discovery prerequisites (approved, same-city test barber) plus two more
+that are specific to this flow: exactly one seeded service (so the
+per-service `barber-profile-book-{id}` testID's regex match is unambiguous,
+the same "only one thing is visible when a regex selector is used" rule as
+the barber flows' row selectors), and availability windows covering every
+weekday with wide hours (so day-chip index 0, i.e. "today" — whatever day
+the flow happens to run on — reliably has an open slot; the flow always
+picks day index 0 and the earliest available time via `index: 0` on the
+per-time slot testID regex, since which times are open depends on the
+current time of day and cannot be known at authoring time). See the file's
+own header comment for the exact env vars and full reasoning.
+
 ## testIDs referenced (verified present in source as of this writing)
 
 `role-select-customer`, `role-select-barber`, `auth-entry-screen`,
@@ -135,7 +153,17 @@ the Lovable prototype's tabbed shell),
 `barber-profile-service-{id}`, `barber-profile-book-{id}`,
 `barber-profile-tab-{services|portfolio|reviews}` (Services is the default
 tab, so existing service assertions need no extra taps),
-`barber-profile-portfolio-placeholder`.
+`barber-profile-portfolio-placeholder`,
+`customer-booking-datetime-screen`, `customer-booking-datetime-back`,
+`customer-booking-datetime-loading`, `customer-booking-datetime-error`,
+`customer-booking-datetime-empty`, `customer-booking-datetime-day-{index}`,
+`customer-booking-datetime-no-times`, `customer-booking-datetime-slot-{time}`,
+`customer-booking-datetime-continue`,
+`customer-booking-location-screen`, `customer-booking-location-back`,
+`customer-booking-location-input`, `customer-booking-location-continue`,
+`customer-booking-confirm-screen`, `customer-booking-confirm-back`,
+`customer-booking-confirm-error`, `customer-booking-confirm-pick-another-time`,
+`customer-booking-confirm-submit`, `customer-booking-confirm-success`.
 
 If any of these have changed since, re-grep `testID=` under `src/` before
 trusting this list.

@@ -8,8 +8,10 @@
  * listServicesForBarber); rendering differences from the prototype are all
  * data-honesty ones:
  * - services have no description column → name + "N min · €X" only;
- * - the per-row Book button exists but booking is build-order step 11-12,
- *   so it explains itself ("Booking opens soon") instead of navigating;
+ * - the per-row Book button now navigates into the step 11-12 booking flow
+ *   (BookingDateTime -> BookingLocation -> BookingConfirm), carrying
+ *   barberId/barberName/the full service row forward so those screens never
+ *   need to re-fetch what is already loaded here;
  * - Portfolio (step 17) and Reviews (step 18) tabs render honest empty
  *   states, not the prototype's mock grids/distribution bars;
  * - no distance/years-experience lines (no such data).
@@ -22,7 +24,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -108,9 +109,13 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
     };
   }, [load]);
 
-  const onBook = useCallback(() => {
-    Alert.alert('Booking opens soon', 'Online booking is coming in an upcoming update.');
-  }, []);
+  const onBook = useCallback(
+    (service: ServiceRow) => {
+      if (!barber) return;
+      navigation.navigate('BookingDateTime', { barberId: barber.id, barberName: barber.name, service });
+    },
+    [navigation, barber]
+  );
 
   const goBack = useCallback(() => navigation.goBack(), [navigation]);
 
@@ -295,7 +300,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
                     </Text>
                   </View>
                   <Pressable
-                    onPress={onBook}
+                    onPress={() => onBook(service)}
                     accessibilityRole="button"
                     accessibilityLabel={`Book ${service.name}`}
                     testID={`barber-profile-book-${service.id}`}

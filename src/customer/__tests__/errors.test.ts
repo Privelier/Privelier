@@ -20,6 +20,14 @@ describe('customerDataErrorCopy (brand voice)', () => {
       expect(copy).not.toMatch(/^[A-Z\s]+$/); // not all-caps
     });
   });
+
+  it('has calm, on-brand copy for the conflict code (booking creation, build-order step 11-12)', () => {
+    const copy = customerDataErrorCopy.conflict;
+    expect(copy).toBe('That time was just booked by someone else. Pick another time.');
+    // Calm brand voice: no exclamation marks, no blame-the-user tone words.
+    expect(copy).not.toMatch(/!/);
+    expect(copy.toLowerCase()).not.toMatch(/error|failed|invalid|sorry/);
+  });
 });
 
 describe('failure()', () => {
@@ -38,6 +46,7 @@ describe('failure()', () => {
     ['forbidden', false],
     ['invalid_input', false],
     ['unknown', false],
+    ['conflict', false],
   ])('retryable set is correct for %s', (code, retryable) => {
     expect(failure(code).retryable).toBe(retryable);
   });
@@ -77,6 +86,15 @@ describe('mapPostgrestError', () => {
       failure('unknown')
     );
   });
+
+  // NOTE: 23505 is deliberately NOT special-cased inside mapPostgrestError
+  // itself (see the UNIQUE_VIOLATION export's own comment in errors.ts) —
+  // the test immediately above intentionally keeps proving that the global
+  // mapper's fallback-to-unknown behavior for 23505 is unchanged. The
+  // 'conflict' code below is wired only inside insertBooking's own local
+  // handling (src/customer/bookingCreateData.ts, tested in
+  // src/customer/__tests__/bookingCreateData.test.ts), never through this
+  // global mapper.
 
   it('falls back to unknown when raw is null', () => {
     expect(mapPostgrestError('ctx', null)).toEqual(failure('unknown'));

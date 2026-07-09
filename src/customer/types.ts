@@ -3,8 +3,9 @@
  * step 9-10). Every function returns a discriminated union the UI can
  * switch on; nothing here ever carries raw server error text.
  */
-import type { BarberDirectoryRow, BookingRow, ServiceRow } from '../types';
+import type { AvailabilityRow, BarberDirectoryRow, BookingRow, ServiceRow } from '../types';
 import type { InboxThread } from '../shared/threads';
+import type { BusySlot } from '../shared/slots';
 import type { CustomerDataFailure } from './errors';
 
 // ---------------------------------------------------------------------------
@@ -49,6 +50,35 @@ export type OwnBookingsViewResult =
       barbersById: Map<string, BarberDirectoryRow>;
       servicesById: Map<string, ServiceRow>;
     }
+  | CustomerDataFailure;
+
+// ---------------------------------------------------------------------------
+// Availability & busy slots (build-order step 11-12 booking flow)
+// ---------------------------------------------------------------------------
+
+export type ListBarberAvailabilityResult =
+  | { status: 'ok'; windows: AvailabilityRow[] }
+  | CustomerDataFailure;
+
+export type ListBusySlotsResult =
+  | { status: 'ok'; busy: BusySlot[] }
+  | CustomerDataFailure;
+
+// ---------------------------------------------------------------------------
+// Booking creation (public.bookings insert, build-order step 11-12)
+// ---------------------------------------------------------------------------
+
+/**
+ * 'conflict' means the partial unique index
+ * uq_bookings_barber_slot_active (migration 0009) rejected the insert with
+ * Postgres 23505 — a different customer already holds a pending/accepted
+ * booking for this exact barber/date/time. Distinct from the generic
+ * CustomerDataFailure error path so the Confirm screen can send the
+ * customer back to re-pick a slot instead of showing generic copy.
+ */
+export type InsertBookingResult =
+  | { status: 'ok'; booking: BookingRow }
+  | { status: 'conflict' }
   | CustomerDataFailure;
 
 // ---------------------------------------------------------------------------

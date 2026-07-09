@@ -9,7 +9,12 @@
  */
 
 /** Closed set of error codes the UI layer is allowed to switch on. */
-export type CustomerDataErrorCode = 'forbidden' | 'invalid_input' | 'network' | 'unknown';
+export type CustomerDataErrorCode =
+  | 'forbidden'
+  | 'invalid_input'
+  | 'network'
+  | 'unknown'
+  | 'conflict';
 
 /** The error arm shared by every discovery result union. */
 export interface CustomerDataFailure {
@@ -27,6 +32,7 @@ export const customerDataErrorCopy: Record<CustomerDataErrorCode, string> = {
   invalid_input: 'That entry is not valid. Check the values and try again.',
   network: 'We could not reach the server. Check your connection and try again.',
   unknown: 'Something went wrong on our side. Try again in a moment.',
+  conflict: 'That time was just booked by someone else. Pick another time.',
 };
 
 const retryableCodes: ReadonlySet<CustomerDataErrorCode> = new Set(['network']);
@@ -63,6 +69,18 @@ const RLS_DENIED = '42501';
  * module, so this should not normally occur, but is mapped defensively for
  * consistency with the barber-side data layer's error shape. */
 const CHECK_VIOLATION = '23514';
+/**
+ * Postgres unique-violation code. NOT mapped inside mapPostgrestError below
+ * — 23505 means something different depending on context: during auth
+ * provisioning it signals "another writer already created this same row,
+ * treat as idempotent success" (see src/auth/authService.ts), but for
+ * booking creation it means two different customers raced for the same
+ * barber/date/time slot (uq_bookings_barber_slot_active, migration 0009)
+ * and must surface as a real, user-facing conflict. Exported so
+ * insertBooking (src/customer/bookingCreateData.ts) can check it before
+ * falling back to the generic mapper.
+ */
+export const UNIQUE_VIOLATION = '23505';
 
 /**
  * Map a PostgREST error to a typed failure and log the raw details.
