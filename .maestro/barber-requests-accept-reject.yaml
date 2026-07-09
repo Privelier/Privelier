@@ -1,0 +1,144 @@
+# Barber requests flow (build-order step 13-14): log in as the barber ->
+# open the Requests tab -> ACCEPT one pending request (optimistic status
+# flip, then server reconciliation) -> REJECT a second pending request via
+# its confirmation alert -> confirm both rows show their final status label
+# and their action buttons are gone (terminal states have no actions).
+#
+# This is the highest-priority E2E target in CLAUDE.md (realtime/optimistic
+# UI is where flakiness lives). What it does NOT cover: the CUSTOMER side
+# updating live at the moment of acceptance — that needs two sessions at
+# once, which single-device Maestro can't do; that half of the step 13-14
+# gate stays a manual two-device check (see CLAUDE.md backlog).
+#
+# NOT YET RUN. Same pre-existing tooling gap as every other flow in this
+# directory: no Maestro CLI on the authoring machine — see .maestro/README.md.
+# Once tooling is available:
+#   maestro test .maestro/barber-requests-accept-reject.yaml
+#
+# Prerequisites:
+# - A pre-confirmed, APPROVED test barber (same seeding as the
+#   barber-services/availability flows).
+# - EXACTLY TWO bookings with status 'pending' for that barber, and NO other
+#   pending/accepted bookings (completed/rejected/cancelled rows are fine —
+#   they render without action buttons and don't interfere). Seed by running
+#   .maestro/customer-booking-create.yaml TWICE back-to-back (the second run
+#   books the next free slot — the busy-slot subtraction plus the partial
+#   unique index guarantee it can't collide with the first), or via two
+#   manual bookings from the test customer.
+# - Why exactly two: accept/reject button testIDs are per-booking
+#   (`request-accept-{uuid}` / `request-reject-{uuid}`, server-generated ids
+#   unknown at authoring time), so this flow matches them by regex + index.
+#   With exactly two pending rows, index 0 is deterministic both times: the
+#   list sorts soonest-first, accepting row 0 removes its buttons, and the
+#   remaining pending row is then the only reject target left.
+# - Same appId placeholder caveat as every other flow here.
+#
+# Run with:
+#   maestro test .maestro/barber-requests-accept-reject.yaml \
+#     -e TEST_BARBER_EMAIL=... -e TEST_BARBER_PASSWORD=...
+appId: com.privelier.app # TODO: replace once app.json defines a real package/bundleIdentifier
+env:
+  TEST_BARBER_EMAIL: barber.e2e@example.com
+  TEST_BARBER_PASSWORD: ChangeMe123!
+---
+- launchApp:
+    clearState: true
+
+# UNAUTHENTICATED: role-select is the very first screen.
+- assertVisible:
+    id: "role-select-barber"
+- tapOn:
+    id: "role-select-barber"
+
+# Per-role auth entry -> log in.
+- assertVisible:
+    id: "auth-entry-screen"
+- tapOn:
+    id: "auth-entry-login"
+
+- assertVisible:
+    id: "auth-login-screen"
+- tapOn:
+    id: "auth-login-email"
+- inputText: "${TEST_BARBER_EMAIL}"
+- tapOn:
+    id: "auth-login-password"
+- inputText: "${TEST_BARBER_PASSWORD}"
+- tapOn:
+    id: "auth-login-submit"
+
+# PROVISIONING is transient/may not appear on a returning user — wait for
+# the barber landing (Studio tab) directly, same as the other barber flows.
+- extendedWaitUntil:
+    visible:
+      id: "barber-dashboard-logout"
+    timeout: 15000
+
+# --- Requests tab ---
+- tapOn:
+    id: "barber-tab-requests"
+- assertVisible:
+    id: "barber-requests-screen"
+- extendedWaitUntil:
+    notVisible:
+      id: "barber-requests-loading"
+    timeout: 15000
+- assertNotVisible:
+    id: "barber-requests-error"
+# Two seeded pending bookings -> the empty state must not show.
+- assertNotVisible:
+    id: "barber-requests-empty"
+
+# --- ACCEPT the first (soonest) pending request ---
+# Accept is one-tap (not destructive, no confirmation alert). The card flips
+# to its optimistic 'Accepted' state immediately and shows a busy spinner on
+# its action row until the server write resolves.
+- tapOn:
+    id: "request-accept-.*"
+    index: 0
+
+# Wait out the in-flight window: the per-row busy spinner replaces the action
+# buttons while the mutation runs, then disappears on reconciliation.
+- extendedWaitUntil:
+    notVisible:
+      id: "barber-requests-row-busy-.*"
+    timeout: 15000
+
+# The accepted card must show the reconciled status label, no inline error,
+# and its Accept button must be gone (accepted rows offer Cancel / Mark
+# complete instead — asserting the label + absence of a second accept target
+# below pins the transition without needing the row's unknowable uuid).
+- assertVisible:
+    text: "Accepted"
+- assertNotVisible:
+    id: "barber-requests-row-error-.*"
+
+# --- REJECT the remaining pending request ---
+# Exactly one pending row is left, so index 0 of the remaining reject
+# targets is it. Reject is destructive -> a confirmation alert appears
+# (confirmDestructive); its confirm button carries the action label.
+- tapOn:
+    id: "request-reject-.*"
+    index: 0
+- assertVisible:
+    text: "Reject this booking?"
+- tapOn:
+    text: "Reject"
+
+- extendedWaitUntil:
+    notVisible:
+      id: "barber-requests-row-busy-.*"
+    timeout: 15000
+
+- assertVisible:
+    text: "Rejected"
+- assertNotVisible:
+    id: "barber-requests-row-error-.*"
+
+# Terminal check: with one accepted and one rejected row, no pending row
+# remains, so no Accept or Reject button is on screen at all (the accepted
+# row's actions are Cancel / Mark complete; the rejected row has none).
+- assertNotVisible:
+    id: "request-accept-.*"
+- assertNotVisible:
+    id: "request-reject-.*"

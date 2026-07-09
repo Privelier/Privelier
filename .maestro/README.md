@@ -15,14 +15,15 @@ maestro test .maestro/barber-services-add-edit-delete.yaml
 maestro test .maestro/barber-availability-add-edit-delete.yaml
 maestro test .maestro/customer-discovery-view-barber-profile.yaml
 maestro test .maestro/customer-booking-create.yaml
+maestro test .maestro/barber-requests-accept-reject.yaml
 ```
 
-All six flows use a placeholder `appId: com.privelier.app` — `app.json` does
+All seven flows use a placeholder `appId: com.privelier.app` — `app.json` does
 not yet define `android.package` / `ios.bundleIdentifier`, so there is no real
 app id to target yet. Set a real one in `app.json` (and rebuild a dev client)
 before these can actually run, then update the `appId` in all files to match.
 
-All six flows also take credentials/emails via `env:` in the YAML with sane
+All flows also take credentials/emails via `env:` in the YAML with sane
 placeholder defaults, overridable at the CLI with `-e KEY=value` — see the
 comments in each file for exactly what to provide.
 
@@ -101,6 +102,21 @@ picks day index 0 and the earliest available time via `index: 0` on the
 per-time slot testID regex, since which times are open depends on the
 current time of day and cannot be known at authoring time). See the file's
 own header comment for the exact env vars and full reasoning.
+
+For build-order step 13-14 (barber requests & realtime status, authored
+retroactively 2026-07-09 when that step's skipped pipeline stages were closed
+out), `barber-requests-accept-reject.yaml` covers the CLAUDE.md-designated
+highest-priority E2E target: the barber accepts one pending request (one-tap,
+optimistic flip, server reconciliation) and rejects a second through its
+destructive-confirmation alert, then the flow asserts both final status
+labels, the absence of inline rollback errors, and that no accept/reject
+button remains (terminal/accepted rows offer different actions). It needs
+EXACTLY TWO pending bookings seeded (run `customer-booking-create.yaml`
+twice) — the file's header explains why two, and why the per-uuid button
+testIDs are matched by regex + `index: 0`. Deliberately NOT covered: the
+customer's Bookings tab updating live at the moment of acceptance — that
+needs two simultaneous sessions, which single-device Maestro cannot do, so
+the realtime half of the step 13-14 gate remains a manual two-device check.
 
 ## testIDs referenced (verified present in source as of this writing)
 
