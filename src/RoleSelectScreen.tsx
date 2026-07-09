@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import { useTheme } from './theme/useTheme';
 import type { Role } from './types';
 
@@ -75,7 +76,7 @@ function RoleOption({
           {description}
         </Text>
       </View>
-      <Text style={[styles.chevron, { color: colors.accentText }]}>{'›'}</Text>
+      <Feather name="chevron-right" size={18} color={colors.accentText} />
     </Pressable>
   );
 }
@@ -118,8 +119,5 @@ const styles = StyleSheet.create({
   },
   optionDescription: {
     fontSize: 13,
-  },
-  chevron: {
-    fontSize: 22,
   },
 });

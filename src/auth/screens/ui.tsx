@@ -4,6 +4,13 @@
  *
  * Brand rules applied: flat design, 0.5px borders, brass accent restricted to
  * the primary CTA and active states, sentence case copy, serif headings.
+ *
+ * Visual pass (2026-07-09): headings moved to the editorial medium-weight
+ * serif, back navigation switched to the icon-circle button, and form inputs
+ * switched from boxed fields to hairline-underline fields (brass on focus) —
+ * matching the pattern already applied to Studio/Inbox/Account-section and
+ * the barber Services/Availability screens. No behavior, validation, or
+ * testID changed.
  */
 import { useState, type ReactNode } from 'react';
 import {
@@ -19,6 +26,7 @@ import {
   type TextInputProps,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../theme/useTheme';
 
 // ---------------------------------------------------------------------------
@@ -53,7 +61,7 @@ export function ScreenHeading({ title, subtitle }: { title: string; subtitle?: s
   const { colors, fonts } = useTheme();
   return (
     <View style={shellStyles.heading}>
-      <Text style={[shellStyles.title, { color: colors.textPrimary, fontFamily: fonts.heading }]}>
+      <Text style={[shellStyles.title, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
         {title}
       </Text>
       {subtitle ? (
@@ -68,19 +76,17 @@ export function ScreenHeading({ title, subtitle }: { title: string; subtitle?: s
 }
 
 export function BackLink({ onPress, testID }: { onPress: () => void; testID: string }) {
-  const { colors, fonts } = useTheme();
+  const { colors } = useTheme();
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel="Go back"
-      hitSlop={16}
+      hitSlop={12}
       testID={testID}
-      style={shellStyles.backLink}
+      style={[shellStyles.backLink, { backgroundColor: colors.surface }]}
     >
-      <Text style={[shellStyles.backText, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-        {'‹ Back'}
-      </Text>
+      <Feather name="arrow-left" size={16} color={colors.textPrimary} />
     </Pressable>
   );
 }
@@ -92,8 +98,14 @@ const shellStyles = StyleSheet.create({
   heading: { marginTop: 24, marginBottom: 32 },
   title: { fontSize: 30, marginBottom: 8 },
   subtitle: { fontSize: 15, lineHeight: 22 },
-  backLink: { alignSelf: 'flex-start' },
-  backText: { fontSize: 15 },
+  backLink: {
+    alignSelf: 'flex-start',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
 
 // ---------------------------------------------------------------------------
@@ -151,8 +163,7 @@ export function FormTextField({
         style={[
           fieldStyles.inputRow,
           {
-            backgroundColor: colors.surface,
-            borderColor: error ? colors.error : focused ? colors.accent : colors.border,
+            borderBottomColor: error ? colors.error : focused ? colors.accent : colors.border,
           },
         ]}
       >
@@ -209,17 +220,15 @@ export function FormTextField({
 
 const fieldStyles = StyleSheet.create({
   field: { marginBottom: 20 },
-  labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  label: { fontSize: 13 },
-  optional: { fontSize: 13 },
+  labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  label: { fontSize: 12, letterSpacing: 0.2 },
+  optional: { fontSize: 12 },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 0.5,
-    borderRadius: 10,
-    paddingHorizontal: 14,
+    borderBottomWidth: 1,
   },
-  input: { flex: 1, fontSize: 16, paddingVertical: 14 },
+  input: { flex: 1, fontSize: 16, paddingVertical: 10 },
   inputMultiline: { minHeight: 96, textAlignVertical: 'top' },
   toggle: { fontSize: 14, marginLeft: 12 },
   meta: { fontSize: 13, marginTop: 6, lineHeight: 18 },

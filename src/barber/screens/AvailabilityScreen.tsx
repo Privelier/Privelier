@@ -8,6 +8,12 @@
  * so the two inputs are always mutually exclusive from the user's point of
  * view. day_of_week follows the same convention as JS Date#getDay() /
  * Postgres extract(dow): 0 = Sunday .. 6 = Saturday.
+ *
+ * Visual pass (2026-07-09): restyled to the Lovable prototype's form look —
+ * hairline-underline inputs (brass on focus), a full-width brass submit
+ * button, and editorial serif section headers — matching the pattern already
+ * used on the Studio/Inbox/Account-section screens. No behavior, validation,
+ * or testID changed.
  */
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -21,9 +27,11 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../theme/useTheme';
+import type { Palette } from '../../theme/colors';
 import type { AvailabilityRow } from '../../types';
 import {
   createAvailabilityWindow,
@@ -36,6 +44,7 @@ import type { BarberStackParamList } from '../BarberNavigator';
 type Props = NativeStackScreenProps<BarberStackParamList, 'Availability'>;
 
 type Mode = 'day' | 'date';
+type FieldName = 'date' | 'startTime' | 'endTime';
 
 const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -66,6 +75,12 @@ function timeFieldError(value: string, label: string): string | undefined {
   return undefined;
 }
 
+function underlineColor(hasError: boolean, focused: boolean, colors: Palette): string {
+  if (hasError) return colors.error;
+  if (focused) return colors.accent;
+  return colors.border;
+}
+
 export default function AvailabilityScreen({ navigation }: Props) {
   const { colors, fonts } = useTheme();
 
@@ -83,6 +98,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [focusedField, setFocusedField] = useState<FieldName | null>(null);
 
   const loadWindows = useCallback(async (id: string) => {
     setListLoading(true);
@@ -237,14 +253,13 @@ export default function AvailabilityScreen({ navigation }: Props) {
           onPress={() => navigation.goBack()}
           accessibilityRole="button"
           accessibilityLabel="Go back"
-          hitSlop={16}
+          hitSlop={12}
           testID="barber-availability-back"
+          style={[styles.backButton, { backgroundColor: colors.surface }]}
         >
-          <Text style={[styles.backText, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-            {'‹ Back'}
-          </Text>
+          <Feather name="arrow-left" size={16} color={colors.textPrimary} />
         </Pressable>
-        <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.heading }]}>
+        <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
           Availability
         </Text>
       </View>
@@ -254,233 +269,246 @@ export default function AvailabilityScreen({ navigation }: Props) {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
-          <View style={[styles.form, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.formTitle, { color: colors.textPrimary, fontFamily: fonts.bodySemiBold }]}>
-              {editingId ? 'Edit window' : 'Add a window'}
-            </Text>
+          <>
+            <View style={[styles.form, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.formTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+                {editingId ? 'Edit window' : 'Add a window'}
+              </Text>
 
-            {formError ? (
-              <View
-                testID="barber-availability-form-error"
-                accessibilityRole="alert"
-                style={[styles.notice, { borderColor: colors.error, backgroundColor: colors.background }]}
-              >
-                <Text style={[styles.noticeText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-                  {formError}
-                </Text>
-              </View>
-            ) : null}
-
-            <View style={[styles.segmented, { borderColor: colors.border }]}>
-              <Pressable
-                onPress={() => switchMode('day')}
-                accessibilityRole="button"
-                accessibilityState={{ selected: mode === 'day' }}
-                accessibilityLabel="Repeat weekly on a day of the week"
-                testID="barber-availability-mode-day"
-                style={[styles.segment, mode === 'day' && { backgroundColor: colors.accent }]}
-              >
-                <Text
-                  style={[
-                    styles.segmentText,
-                    { color: mode === 'day' ? colors.onAccent : colors.textPrimary, fontFamily: fonts.bodyMedium },
-                  ]}
+              {formError ? (
+                <View
+                  testID="barber-availability-form-error"
+                  accessibilityRole="alert"
+                  style={[styles.notice, { borderColor: colors.error, backgroundColor: colors.background }]}
                 >
-                  Day of week
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => switchMode('date')}
-                accessibilityRole="button"
-                accessibilityState={{ selected: mode === 'date' }}
-                accessibilityLabel="A single specific date"
-                testID="barber-availability-mode-date"
-                style={[styles.segment, mode === 'date' && { backgroundColor: colors.accent }]}
-              >
-                <Text
-                  style={[
-                    styles.segmentText,
-                    { color: mode === 'date' ? colors.onAccent : colors.textPrimary, fontFamily: fonts.bodyMedium },
-                  ]}
-                >
-                  Specific date
-                </Text>
-              </Pressable>
-            </View>
+                  <Text style={[styles.noticeText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
+                    {formError}
+                  </Text>
+                </View>
+              ) : null}
 
-            {mode === 'day' ? (
-              <View style={styles.dayRow}>
-                {DAY_LABELS.map((label, index) => (
-                  <Pressable
-                    key={label}
-                    onPress={() => setSelectedDay(index)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: selectedDay === index }}
-                    accessibilityLabel={label}
-                    testID={`barber-availability-day-${index}`}
+              <View style={[styles.segmented, { borderColor: colors.border }]}>
+                <Pressable
+                  onPress={() => switchMode('day')}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: mode === 'day' }}
+                  accessibilityLabel="Repeat weekly on a day of the week"
+                  testID="barber-availability-mode-day"
+                  style={[styles.segment, mode === 'day' && { backgroundColor: colors.accent }]}
+                >
+                  <Text
                     style={[
-                      styles.dayChip,
-                      {
-                        borderColor: selectedDay === index ? colors.accent : colors.border,
-                        backgroundColor: selectedDay === index ? colors.accent : 'transparent',
-                      },
+                      styles.segmentText,
+                      { color: mode === 'day' ? colors.onAccent : colors.textPrimary, fontFamily: fonts.bodyMedium },
                     ]}
                   >
-                    <Text
+                    Day of week
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => switchMode('date')}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: mode === 'date' }}
+                  accessibilityLabel="A single specific date"
+                  testID="barber-availability-mode-date"
+                  style={[styles.segment, mode === 'date' && { backgroundColor: colors.accent }]}
+                >
+                  <Text
+                    style={[
+                      styles.segmentText,
+                      { color: mode === 'date' ? colors.onAccent : colors.textPrimary, fontFamily: fonts.bodyMedium },
+                    ]}
+                  >
+                    Specific date
+                  </Text>
+                </Pressable>
+              </View>
+
+              {mode === 'day' ? (
+                <View style={styles.dayRow}>
+                  {DAY_LABELS.map((label, index) => (
+                    <Pressable
+                      key={label}
+                      onPress={() => setSelectedDay(index)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: selectedDay === index }}
+                      accessibilityLabel={label}
+                      testID={`barber-availability-day-${index}`}
                       style={[
-                        styles.dayChipText,
+                        styles.dayChip,
                         {
-                          color: selectedDay === index ? colors.onAccent : colors.textPrimary,
-                          fontFamily: fonts.bodyMedium,
+                          borderColor: selectedDay === index ? colors.accent : colors.border,
+                          backgroundColor: selectedDay === index ? colors.accent : 'transparent',
                         },
                       ]}
                     >
-                      {label.slice(0, 3)}
+                      <Text
+                        style={[
+                          styles.dayChipText,
+                          {
+                            color: selectedDay === index ? colors.onAccent : colors.textPrimary,
+                            fontFamily: fonts.bodyMedium,
+                          },
+                        ]}
+                      >
+                        {label.slice(0, 3)}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : (
+                <>
+                  <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
+                    Date
+                  </Text>
+                  <TextInput
+                    value={specificDate}
+                    onChangeText={setSpecificDate}
+                    onFocus={() => setFocusedField('date')}
+                    onBlur={() => setFocusedField((current) => (current === 'date' ? null : current))}
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor={colors.textSecondary}
+                    accessibilityLabel="Date"
+                    style={[
+                      styles.input,
+                      {
+                        color: colors.textPrimary,
+                        borderBottomColor: underlineColor(!!fieldErrors.date, focusedField === 'date', colors),
+                        fontFamily: fonts.body,
+                      },
+                    ]}
+                    testID="barber-availability-date"
+                  />
+                </>
+              )}
+              {fieldErrors.day ? (
+                <Text style={[styles.errorText, { color: colors.errorText, fontFamily: fonts.body }]}>
+                  {fieldErrors.day}
+                </Text>
+              ) : null}
+              {fieldErrors.date ? (
+                <Text style={[styles.errorText, { color: colors.errorText, fontFamily: fonts.body }]}>
+                  {fieldErrors.date}
+                </Text>
+              ) : null}
+
+              <View style={styles.timeRow}>
+                <View style={styles.timeField}>
+                  <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
+                    Start time
+                  </Text>
+                  <TextInput
+                    value={startTime}
+                    onChangeText={setStartTime}
+                    onFocus={() => setFocusedField('startTime')}
+                    onBlur={() => setFocusedField((current) => (current === 'startTime' ? null : current))}
+                    placeholder="09:00"
+                    placeholderTextColor={colors.textSecondary}
+                    accessibilityLabel="Start time"
+                    style={[
+                      styles.input,
+                      {
+                        color: colors.textPrimary,
+                        borderBottomColor: underlineColor(!!fieldErrors.startTime, focusedField === 'startTime', colors),
+                        fontFamily: fonts.body,
+                      },
+                    ]}
+                    testID="barber-availability-start-time"
+                  />
+                  {fieldErrors.startTime ? (
+                    <Text style={[styles.errorText, { color: colors.errorText, fontFamily: fonts.body }]}>
+                      {fieldErrors.startTime}
                     </Text>
-                  </Pressable>
-                ))}
+                  ) : null}
+                </View>
+                <View style={styles.timeField}>
+                  <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
+                    End time
+                  </Text>
+                  <TextInput
+                    value={endTime}
+                    onChangeText={setEndTime}
+                    onFocus={() => setFocusedField('endTime')}
+                    onBlur={() => setFocusedField((current) => (current === 'endTime' ? null : current))}
+                    placeholder="17:00"
+                    placeholderTextColor={colors.textSecondary}
+                    accessibilityLabel="End time"
+                    style={[
+                      styles.input,
+                      {
+                        color: colors.textPrimary,
+                        borderBottomColor: underlineColor(!!fieldErrors.endTime, focusedField === 'endTime', colors),
+                        fontFamily: fonts.body,
+                      },
+                    ]}
+                    testID="barber-availability-end-time"
+                  />
+                  {fieldErrors.endTime ? (
+                    <Text style={[styles.errorText, { color: colors.errorText, fontFamily: fonts.body }]}>
+                      {fieldErrors.endTime}
+                    </Text>
+                  ) : null}
+                </View>
               </View>
-            ) : (
-              <>
-                <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-                  Date
-                </Text>
-                <TextInput
-                  value={specificDate}
-                  onChangeText={setSpecificDate}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={colors.textSecondary}
-                  accessibilityLabel="Date"
-                  style={[
-                    styles.input,
-                    {
-                      color: colors.textPrimary,
-                      borderColor: fieldErrors.date ? colors.error : colors.border,
-                      fontFamily: fonts.body,
-                    },
-                  ]}
-                  testID="barber-availability-date"
-                />
-              </>
-            )}
-            {fieldErrors.day ? (
-              <Text style={[styles.errorText, { color: colors.errorText, fontFamily: fonts.body }]}>
-                {fieldErrors.day}
-              </Text>
-            ) : null}
-            {fieldErrors.date ? (
-              <Text style={[styles.errorText, { color: colors.errorText, fontFamily: fonts.body }]}>
-                {fieldErrors.date}
-              </Text>
-            ) : null}
 
-            <View style={styles.timeRow}>
-              <View style={styles.timeField}>
-                <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-                  Start time
-                </Text>
-                <TextInput
-                  value={startTime}
-                  onChangeText={setStartTime}
-                  placeholder="09:00"
-                  placeholderTextColor={colors.textSecondary}
-                  accessibilityLabel="Start time"
-                  style={[
-                    styles.input,
-                    {
-                      color: colors.textPrimary,
-                      borderColor: fieldErrors.startTime ? colors.error : colors.border,
-                      fontFamily: fonts.body,
-                    },
-                  ]}
-                  testID="barber-availability-start-time"
-                />
-                {fieldErrors.startTime ? (
-                  <Text style={[styles.errorText, { color: colors.errorText, fontFamily: fonts.body }]}>
-                    {fieldErrors.startTime}
-                  </Text>
-                ) : null}
-              </View>
-              <View style={styles.timeField}>
-                <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-                  End time
-                </Text>
-                <TextInput
-                  value={endTime}
-                  onChangeText={setEndTime}
-                  placeholder="17:00"
-                  placeholderTextColor={colors.textSecondary}
-                  accessibilityLabel="End time"
-                  style={[
-                    styles.input,
-                    {
-                      color: colors.textPrimary,
-                      borderColor: fieldErrors.endTime ? colors.error : colors.border,
-                      fontFamily: fonts.body,
-                    },
-                  ]}
-                  testID="barber-availability-end-time"
-                />
-                {fieldErrors.endTime ? (
-                  <Text style={[styles.errorText, { color: colors.errorText, fontFamily: fonts.body }]}>
-                    {fieldErrors.endTime}
-                  </Text>
-                ) : null}
-              </View>
-            </View>
-
-            <View style={styles.formActions}>
-              <Pressable
-                onPress={onSubmit}
-                disabled={submitting}
-                accessibilityRole="button"
-                accessibilityLabel={editingId ? 'Save changes' : 'Add window'}
-                testID="barber-availability-submit"
-                style={[styles.primaryButton, { backgroundColor: colors.accent, opacity: submitting ? 0.6 : 1 }]}
-              >
-                {submitting ? (
-                  <ActivityIndicator size="small" color={colors.onAccent} />
-                ) : (
-                  <Text style={[styles.primaryButtonText, { color: colors.onAccent, fontFamily: fonts.bodySemiBold }]}>
-                    {editingId ? 'Save changes' : 'Add window'}
-                  </Text>
-                )}
-              </Pressable>
-              {editingId ? (
+              <View style={styles.formActions}>
                 <Pressable
-                  onPress={resetForm}
+                  onPress={onSubmit}
                   disabled={submitting}
                   accessibilityRole="button"
-                  accessibilityLabel="Cancel edit"
-                  testID="barber-availability-cancel-edit"
-                  style={styles.cancelButton}
+                  accessibilityLabel={editingId ? 'Save changes' : 'Add window'}
+                  testID="barber-availability-submit"
+                  style={[styles.primaryButton, { backgroundColor: colors.accent, opacity: submitting ? 0.6 : 1 }]}
                 >
-                  <Text style={[styles.cancelButtonText, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-                    Cancel
-                  </Text>
+                  {submitting ? (
+                    <ActivityIndicator size="small" color={colors.onAccent} />
+                  ) : (
+                    <>
+                      <Feather name={editingId ? 'check' : 'plus'} size={14} color={colors.onAccent} />
+                      <Text style={[styles.primaryButtonText, { color: colors.onAccent, fontFamily: fonts.bodySemiBold }]}>
+                        {editingId ? 'Save changes' : 'Add window'}
+                      </Text>
+                    </>
+                  )}
                 </Pressable>
-              ) : null}
+                {editingId ? (
+                  <Pressable
+                    onPress={resetForm}
+                    disabled={submitting}
+                    accessibilityRole="button"
+                    accessibilityLabel="Cancel edit"
+                    testID="barber-availability-cancel-edit"
+                    style={styles.cancelButton}
+                  >
+                    <Text style={[styles.cancelButtonText, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
+                      Cancel
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
             </View>
 
-            <Text style={[styles.listTitle, { color: colors.textPrimary, fontFamily: fonts.bodySemiBold }]}>
-              Your availability
-            </Text>
-            {listLoading ? <ActivityIndicator size="small" color={colors.accent} /> : null}
-            {listError ? (
-              <Text style={[styles.errorText, { color: colors.errorText, fontFamily: fonts.body }]}>
-                {listError}
+            <View style={styles.listHeader}>
+              <Text style={[styles.listTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+                Your availability
               </Text>
-            ) : null}
-            {!listLoading && !listError && windows.length === 0 ? (
-              <Text style={[styles.helperText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                You have not added any availability yet.
-              </Text>
-            ) : null}
-          </View>
+              {listLoading ? <ActivityIndicator size="small" color={colors.accent} /> : null}
+              {listError ? (
+                <Text style={[styles.errorText, { color: colors.errorText, fontFamily: fonts.body }]}>
+                  {listError}
+                </Text>
+              ) : null}
+              {!listLoading && !listError && windows.length === 0 ? (
+                <Text style={[styles.helperText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                  You have not added any availability yet.
+                </Text>
+              ) : null}
+            </View>
+          </>
         }
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
           <View
-            style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            style={[styles.row, index > 0 ? { borderTopWidth: 0.5, borderTopColor: colors.border } : null]}
             testID={`barber-availability-row-${item.id}`}
           >
             <View style={styles.rowInfo}>
@@ -524,14 +552,14 @@ export default function AvailabilityScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingTop: 12, gap: 16 },
-  backText: { fontSize: 15 },
-  heading: { fontSize: 22 },
+  header: { paddingHorizontal: 24, paddingTop: 12 },
+  backButton: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  heading: { fontSize: 24, marginTop: 16 },
   listContent: { paddingHorizontal: 24, paddingBottom: 32 },
-  form: { borderWidth: 0.5, borderRadius: 12, padding: 16, marginTop: 16, marginBottom: 16 },
-  formTitle: { fontSize: 16, marginBottom: 12 },
-  label: { fontSize: 13, marginBottom: 6, marginTop: 12 },
-  input: { borderWidth: 0.5, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16 },
+  form: { borderWidth: 0.5, borderRadius: 12, padding: 16, marginTop: 20, marginBottom: 28 },
+  formTitle: { fontSize: 19, marginBottom: 14 },
+  label: { fontSize: 12, marginBottom: 6, marginTop: 14, letterSpacing: 0.2 },
+  input: { borderBottomWidth: 1, paddingVertical: 10, fontSize: 16 },
   errorText: { fontSize: 13, marginTop: 4 },
   helperText: { fontSize: 13, marginTop: 4 },
   notice: { borderWidth: 0.5, borderRadius: 10, padding: 12, marginBottom: 12 },
@@ -544,20 +572,26 @@ const styles = StyleSheet.create({
   dayChipText: { fontSize: 13 },
   timeRow: { flexDirection: 'row', gap: 16 },
   timeField: { flex: 1 },
-  formActions: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 16 },
-  primaryButton: { borderRadius: 10, paddingVertical: 14, paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center' },
+  formActions: { marginTop: 20, gap: 12 },
+  primaryButton: {
+    flexDirection: 'row',
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    width: '100%',
+  },
   primaryButtonText: { fontSize: 15 },
-  cancelButton: { paddingVertical: 14, paddingHorizontal: 8 },
-  cancelButtonText: { fontSize: 15 },
-  listTitle: { fontSize: 15, marginTop: 24, marginBottom: 8 },
+  cancelButton: { paddingVertical: 8, alignItems: 'center' },
+  cancelButtonText: { fontSize: 14 },
+  listHeader: { marginBottom: 4 },
+  listTitle: { fontSize: 19, marginBottom: 10 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 0.5,
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 8,
+    paddingVertical: 14,
   },
   rowInfo: { flex: 1 },
   rowName: { fontSize: 15, marginBottom: 2 },
