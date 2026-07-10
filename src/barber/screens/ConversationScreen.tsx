@@ -226,6 +226,10 @@ export default function ConversationScreen({ route, navigation }: Props) {
             }
             contentContainerStyle={styles.listContent}
             ListEmptyComponent={
+              // NO manual counter-transform here — see the customer screen's
+              // identical note: RN counter-flips ListEmptyComponent itself,
+              // and Android's inversion is scale(-1), so a manual transform
+              // overrides it and mirrors the text (2026-07-10 fix).
               <View style={styles.empty}>
                 <Text style={styles.emptyText} testID="barber-conversation-empty">
                   No messages yet. Say hello.
@@ -330,7 +334,7 @@ function useStyles(colors: Palette) {
     noticeText: { fontSize: 14, color: colors.errorText, fontFamily: fonts.bodyMedium },
 
     listContent: { paddingHorizontal: 24, paddingVertical: 16, flexGrow: 1 },
-    empty: { flex: 1, alignItems: 'center', justifyContent: 'center', transform: [{ scaleY: -1 }] },
+    empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
     emptyText: { fontSize: 13, color: colors.textSecondary, fontFamily: fonts.body },
 
     bubble: {

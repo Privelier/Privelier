@@ -232,8 +232,13 @@ export default function ConversationScreen({ route, navigation }: Props) {
             }
             contentContainerStyle={styles.listContent}
             ListEmptyComponent={
+              // NO manual counter-transform here: VirtualizedList composes its
+              // own inversion style onto ListEmptyComponent, and on Android
+              // that inversion is scale(-1) (both axes), not scaleY(-1) — a
+              // manual transform overrides RN's counter-flip (same style key)
+              // and mirrors the text horizontally. Founder-reported bug,
+              // fixed 2026-07-10.
               <View style={styles.empty}>
-                {/* Inverted list flips children — plain text is unaffected. */}
                 <Text style={styles.emptyText} testID="customer-conversation-empty">
                   No messages yet. Say hello.
                 </Text>
@@ -337,7 +342,7 @@ function useStyles(colors: Palette) {
     noticeText: { fontSize: 14, color: colors.errorText, fontFamily: fonts.bodyMedium },
 
     listContent: { paddingHorizontal: 24, paddingVertical: 16, flexGrow: 1 },
-    empty: { flex: 1, alignItems: 'center', justifyContent: 'center', transform: [{ scaleY: -1 }] },
+    empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
     emptyText: { fontSize: 13, color: colors.textSecondary, fontFamily: fonts.body },
 
     bubble: {
