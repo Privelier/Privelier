@@ -31,6 +31,7 @@ import type { CustomerTabParamList } from '../CustomerTabs';
 import type { CustomerStackParamList } from '../CustomerNavigator';
 import { fetchOwnInboxView } from '../inboxData';
 import { formatShortDate } from '../format';
+import { useUnread } from '../UnreadContext';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<CustomerTabParamList, 'Inbox'>,
@@ -39,6 +40,9 @@ type Props = CompositeScreenProps<
 
 export default function InboxScreen({ navigation }: Props) {
   const { colors, fonts } = useTheme();
+  // Real per-user read state (provider in CustomerNavigator): unread rows
+  // render bold with a brass dot; the set updates live via realtime.
+  const { unreadRoomIds } = useUnread();
 
   const [threads, setThreads] = useState<InboxThread[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,6 +132,7 @@ export default function InboxScreen({ navigation }: Props) {
             const preview =
               item.lastMessage?.message ??
               (item.service ? `About: ${item.service.name}` : 'No messages yet.');
+            const unread = unreadRoomIds.has(item.room.id);
             return (
               <Pressable
                 onPress={() => onOpenThread(item)}
@@ -157,7 +162,12 @@ export default function InboxScreen({ navigation }: Props) {
                   </Text>
                   <Text
                     numberOfLines={1}
-                    style={[styles.rowPreview, { color: colors.textSecondary, fontFamily: fonts.body }]}
+                    style={[
+                      styles.rowPreview,
+                      unread
+                        ? { color: colors.textPrimary, fontFamily: fonts.bodySemiBold }
+                        : { color: colors.textSecondary, fontFamily: fonts.body },
+                    ]}
                   >
                     {preview}
                   </Text>
@@ -166,6 +176,14 @@ export default function InboxScreen({ navigation }: Props) {
                   <Text style={[styles.rowDate, { color: colors.textSecondary, fontFamily: fonts.body }]}>
                     {formatShortDate(item.lastActivityIso)}
                   </Text>
+                ) : null}
+                {unread ? (
+                  <View
+                    style={[styles.unreadDot, { backgroundColor: colors.accent }]}
+                    testID={`customer-inbox-unread-${item.room.id}`}
+                    accessible
+                    accessibilityLabel="Unread messages"
+                  />
                 ) : null}
               </Pressable>
             );
@@ -205,4 +223,5 @@ const styles = StyleSheet.create({
   rowName: { fontSize: 16 },
   rowPreview: { fontSize: 12, marginTop: 3 },
   rowDate: { fontSize: 10 },
+  unreadDot: { width: 8, height: 8, borderRadius: 4 },
 });

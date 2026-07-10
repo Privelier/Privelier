@@ -52,6 +52,7 @@ import {
 import { useMessagesRealtime } from '../../shared/useMessagesRealtime';
 import { useSendQueue, type PendingSend } from '../../shared/useSendQueue';
 import { formatMessageTime } from '../../shared/format';
+import { useUnread } from '../UnreadContext';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'Conversation'>;
 
@@ -115,14 +116,23 @@ export default function ConversationScreen({ route, navigation }: Props) {
     }
   }, [room.id]);
 
+  // Mark-as-read is owned by the unread provider; this screen only declares
+  // which room is being looked at (the founder's trigger: OPENING this
+  // specific conversation, not the thread list loading).
+  const { setActiveRoom } = useUnread();
+
   useFocusEffect(
     useCallback(() => {
       // Open the channel (focused -> enabled) BEFORE the refetch; tear it
       // down on blur.
       setFocused(true);
+      setActiveRoom(room.id);
       void load();
-      return () => setFocused(false);
-    }, [load])
+      return () => {
+        setFocused(false);
+        setActiveRoom(null);
+      };
+    }, [load, room.id, setActiveRoom])
   );
 
   const onRealtimeChange = useCallback((event: MessageChangeEvent) => {

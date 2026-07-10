@@ -7,6 +7,7 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../theme/useTheme';
+import { useUnread } from './UnreadContext';
 import DiscoverScreen from './screens/DiscoverScreen';
 import AccountScreen from './screens/AccountScreen';
 import BookingsScreen from './screens/BookingsScreen';
@@ -33,6 +34,9 @@ const TAB_ICONS: Record<keyof CustomerTabParamList, keyof typeof Feather.glyphMa
 
 export default function CustomerTabs() {
   const { colors, fonts } = useTheme();
+  // Unread thread count for the Inbox badge — a real count from real read
+  // state (provider in CustomerNavigator), hidden entirely at zero.
+  const { unreadCount } = useUnread();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -53,7 +57,19 @@ export default function CustomerTabs() {
       <Tab.Screen name="Discover" component={DiscoverScreen} />
       <Tab.Screen name="Explore" component={ExploreScreen} />
       <Tab.Screen name="Bookings" component={BookingsScreen} />
-      <Tab.Screen name="Inbox" component={InboxScreen} />
+      <Tab.Screen
+        name="Inbox"
+        component={InboxScreen}
+        options={{
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: colors.accent,
+            color: colors.onAccent,
+            fontSize: 10,
+            fontFamily: fonts.bodySemiBold,
+          },
+        }}
+      />
       <Tab.Screen name="Account" component={AccountScreen} />
     </Tab.Navigator>
   );

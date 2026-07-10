@@ -3,6 +3,7 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 import { RoleExitProvider } from '../RoleContext';
 import type { ChatRoomRow, ServiceRow } from '../types';
 import CustomerTabs, { type CustomerTabParamList } from './CustomerTabs';
+import { UnreadProvider } from './UnreadContext';
 import BarberProfileScreen from './screens/BarberProfileScreen';
 import AccountSectionScreen, { type AccountSectionKey } from './screens/AccountSectionScreen';
 import BookingDateTimeScreen from './screens/BookingDateTimeScreen';
@@ -48,15 +49,20 @@ const Stack = createNativeStackNavigator<CustomerStackParamList>();
 export default function CustomerNavigator({ onExit }: { onExit: () => void }) {
   return (
     <RoleExitProvider value={onExit}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="CustomerTabs" component={CustomerTabs} />
-        <Stack.Screen name="BarberProfile" component={BarberProfileScreen} />
-        <Stack.Screen name="AccountSection" component={AccountSectionScreen} />
-        <Stack.Screen name="BookingDateTime" component={BookingDateTimeScreen} />
-        <Stack.Screen name="BookingLocation" component={BookingLocationScreen} />
-        <Stack.Screen name="BookingConfirm" component={BookingConfirmScreen} />
-        <Stack.Screen name="Conversation" component={ConversationScreen} />
-      </Stack.Navigator>
+      {/* One unread-state instance for the whole customer app: the Inbox tab
+          badge, the bold thread rows, and the conversation screen's
+          mark-as-read all read the same source of truth. */}
+      <UnreadProvider>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="CustomerTabs" component={CustomerTabs} />
+          <Stack.Screen name="BarberProfile" component={BarberProfileScreen} />
+          <Stack.Screen name="AccountSection" component={AccountSectionScreen} />
+          <Stack.Screen name="BookingDateTime" component={BookingDateTimeScreen} />
+          <Stack.Screen name="BookingLocation" component={BookingLocationScreen} />
+          <Stack.Screen name="BookingConfirm" component={BookingConfirmScreen} />
+          <Stack.Screen name="Conversation" component={ConversationScreen} />
+        </Stack.Navigator>
+      </UnreadProvider>
     </RoleExitProvider>
   );
 }

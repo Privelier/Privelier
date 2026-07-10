@@ -7,6 +7,7 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../theme/useTheme';
+import { useUnread } from './UnreadContext';
 import StudioScreen from './screens/StudioScreen';
 import RequestsScreen from './screens/RequestsScreen';
 import PortfolioScreen from './screens/PortfolioScreen';
@@ -33,6 +34,9 @@ const TAB_ICONS: Record<keyof BarberTabParamList, keyof typeof Feather.glyphMap>
 
 export default function BarberTabs() {
   const { colors, fonts } = useTheme();
+  // Unread thread count for the Chats badge — a real count from real read
+  // state (provider in BarberNavigator), hidden entirely at zero.
+  const { unreadCount } = useUnread();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -53,7 +57,19 @@ export default function BarberTabs() {
       <Tab.Screen name="Studio" component={StudioScreen} />
       <Tab.Screen name="Requests" component={RequestsScreen} />
       <Tab.Screen name="Portfolio" component={PortfolioScreen} />
-      <Tab.Screen name="Chats" component={ChatsScreen} />
+      <Tab.Screen
+        name="Chats"
+        component={ChatsScreen}
+        options={{
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: colors.accent,
+            color: colors.onAccent,
+            fontSize: 10,
+            fontFamily: fonts.bodySemiBold,
+          },
+        }}
+      />
       <Tab.Screen name="Verify" component={VerifyScreen} />
     </Tab.Navigator>
   );
