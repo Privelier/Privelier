@@ -9,8 +9,9 @@
  *
  * The two things these tests pin hardest:
  *  - uploadVerificationDocument targets the PRIVATE `verification-docs` bucket
- *    at `{userId}/{docType}.jpg` with upsert, and classifies storage/read
- *    failures into the closed BarberDataErrorCode set.
+ *    at a UNIQUE `{userId}/{docType}-{stamp}.jpg` path (never a fixed name, so a
+ *    re-upload never overwrites a prior/approved object — Step 17 security fix),
+ *    and classifies storage/read failures into the closed BarberDataErrorCode set.
  *  - submitVerificationDocument writes ONLY `user_id` + the one image column
  *    and NEVER `status` / `reviewed_by` / `reviewed_at` (those are DB-trigger /
  *    admin-owned). The payload-shape assertions are the guardrail against a
@@ -78,31 +79,38 @@ function upsertChain(result: unknown) {
 // ---------------------------------------------------------------------------
 
 describe('uploadVerificationDocument', () => {
-  it('reads the file bytes and uploads to the private bucket at {userId}/id.jpg', async () => {
+  // Unique-per-upload object name in the barber's own folder — never a fixed
+  // path, and no upsert (nothing to overwrite). See uniqueObjectName.
+  const ID_PATH = /^u1\/id-\d+-[a-z0-9]+\.jpg$/;
+  const LICENSE_PATH = /^u1\/license-\d+-[a-z0-9]+\.jpg$/;
+
+  it('reads the file bytes and uploads a unique object under the barber folder', async () => {
     const fetchFn = fetchYields(4);
     const upload = storageUpload({ error: null });
 
     const result = await uploadVerificationDocument('u1', 'id', 'file:///tmp/pic.jpg');
 
-    expect(result).toEqual({ status: 'ok', path: 'u1/id.jpg' });
+    expect(result.status).toBe('ok');
+    const path = (result as { status: 'ok'; path: string }).path;
+    expect(path).toMatch(ID_PATH);
     expect(fetchFn).toHaveBeenCalledWith('file:///tmp/pic.jpg');
     expect(mockStorageFrom).toHaveBeenCalledWith('verification-docs');
-    expect(upload).toHaveBeenCalledWith('u1/id.jpg', expect.any(ArrayBuffer), {
+    // The returned path is exactly the one uploaded, and no upsert is requested.
+    expect(upload).toHaveBeenCalledWith(path, expect.any(ArrayBuffer), {
       contentType: 'image/jpeg',
-      upsert: true,
     });
   });
 
-  it('uploads the license doc to {userId}/license.jpg', async () => {
+  it('uploads the license doc under the barber folder', async () => {
     fetchYields();
     const upload = storageUpload({ error: null });
 
     const result = await uploadVerificationDocument('u1', 'license', 'file:///tmp/lic.jpg');
 
-    expect(result).toEqual({ status: 'ok', path: 'u1/license.jpg' });
-    expect(upload).toHaveBeenCalledWith('u1/license.jpg', expect.any(ArrayBuffer), {
+    expect(result.status).toBe('ok');
+    expect((result as { status: 'ok'; path: string }).path).toMatch(LICENSE_PATH);
+    expect(upload).toHaveBeenCalledWith(expect.stringMatching(LICENSE_PATH), expect.any(ArrayBuffer), {
       contentType: 'image/jpeg',
-      upsert: true,
     });
   });
 
@@ -112,9 +120,8 @@ describe('uploadVerificationDocument', () => {
 
     await uploadVerificationDocument('u1', 'id', 'file:///tmp/pic.png', 'image/png');
 
-    expect(upload).toHaveBeenCalledWith('u1/id.jpg', expect.any(ArrayBuffer), {
+    expect(upload).toHaveBeenCalledWith(expect.stringMatching(ID_PATH), expect.any(ArrayBuffer), {
       contentType: 'image/png',
-      upsert: true,
     });
   });
 
