@@ -17,6 +17,7 @@ maestro test .maestro/customer-discovery-view-barber-profile.yaml
 maestro test .maestro/customer-booking-create.yaml
 maestro test .maestro/barber-requests-accept-reject.yaml
 maestro test .maestro/customer-chat-send-message.yaml
+maestro test .maestro/barber-verify-upload-documents.yaml
 ```
 
 All seven flows use a placeholder `appId: com.privelier.app` — `app.json` does
@@ -130,6 +131,23 @@ as step 13-14's realtime half. New testIDs (documented for both apps, same
 shape with the `barber-` prefix): `customer-conversation-screen`, `-back`,
 `-loading`, `-error`, `-empty`, `-input`, `-send`,
 `customer-conversation-message-{id}`, `-sending-{key}`, `-failed-{key}`.
+
+For build-order step 17 (barber manual verification — document upload),
+`barber-verify-upload-documents.yaml` covers the single-device half: a
+`pending` barber opens the Verify tab and uploads both documents (government
+ID, then licence), each running the strict permission -> picker -> upload ->
+submit -> refetch chain, and the flow asserts each row reconciles to its
+'Uploaded' state with no "Upload failed" alert. It is DOUBLY blocked (the usual
+no-Maestro-CLI gap PLUS expo-image-picker being a native module that needs a
+dev-client rebuild), and its two system-surface taps — the OS photo-permission
+dialog and the gallery cell — are best-effort placeholders that will need
+adjusting on first real run (no stable testIDs exist on those OS surfaces). The
+founder-side review that sets `verification_status` is a dashboard action, not
+in scope for this flow (no client may write that column). Verify-tab testIDs
+used: `barber-tab-verify`, `barber-verify-screen`, `-loading`, `-error`,
+`barber-verify-status`, `barber-verify-doc-id`, `barber-verify-doc-license`,
+and the per-row in-flight ids `barber-verify-doc-id-uploading` /
+`barber-verify-doc-license-uploading`.
 
 ## testIDs referenced (verified present in source as of this writing)
 

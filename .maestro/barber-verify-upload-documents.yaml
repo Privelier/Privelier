@@ -1,0 +1,145 @@
+# Barber verification flow (build-order step 17): log in as the barber ->
+# open the Verify tab -> upload the government-ID document (permission prompt ->
+# system photo picker -> the strict upload -> submit -> refetch chain runs) ->
+# confirm the ID row reconciles to its 'Uploaded' state and no error alert
+# lingers, then repeat for the barber-licence document.
+#
+# This is the single-device half of the step 17 gate. What it does NOT cover:
+# the founder-side manual review that flips verification_status (that happens in
+# the Supabase dashboard, never in the app — no client may write that column),
+# and it cannot assert the private-bucket object actually landed (Maestro sees
+# only the UI). Those stay a manual/dashboard check.
+#
+# NOT YET RUN — and doubly blocked:
+#   1. Same pre-existing tooling gap as every other flow in this directory: no
+#      Maestro CLI on the authoring machine (see .maestro/README.md).
+#   2. Document upload uses expo-image-picker, a NATIVE module — the installed
+#      dev-client must be rebuilt to include it before this flow can drive the
+#      real picker on-device. The picker step below also depends on the OS photo
+#      permission dialog and the system gallery UI, whose exact button labels
+#      are platform/OS-version specific; the tapOn targets for those two system
+#      surfaces are best-effort and will likely need adjusting on first run
+#      against a real device (that is expected — same "authored, not verified"
+#      caveat as the other flows).
+# Once both are resolved:
+#   maestro test .maestro/barber-verify-upload-documents.yaml \
+#     -e TEST_BARBER_EMAIL=... -e TEST_BARBER_PASSWORD=...
+#
+# Prerequisites:
+# - A pre-confirmed test barber whose verification_status is 'pending' (the
+#   default for a freshly-provisioned barber, so no special seeding needed —
+#   just a signed-up, email-confirmed barber account that has NOT yet been
+#   approved/rejected by a founder). Pending is required so the status card and
+#   both document rows render (an approved/declined account still renders the
+#   rows, but pending is the honest step-17-entry state).
+# - At least one image in the device's photo library for the picker to return.
+# - Same appId placeholder caveat as every other flow here.
+appId: com.privelier.app # TODO: replace once app.json defines a real package/bundleIdentifier
+env:
+  TEST_BARBER_EMAIL: barber.e2e@example.com
+  TEST_BARBER_PASSWORD: ChangeMe123!
+---
+- launchApp:
+    clearState: true
+
+# UNAUTHENTICATED: role-select is the very first screen.
+- assertVisible:
+    id: "role-select-barber"
+- tapOn:
+    id: "role-select-barber"
+
+# Per-role auth entry -> log in.
+- assertVisible:
+    id: "auth-entry-screen"
+- tapOn:
+    id: "auth-entry-login"
+
+- assertVisible:
+    id: "auth-login-screen"
+- tapOn:
+    id: "auth-login-email"
+- inputText: "${TEST_BARBER_EMAIL}"
+- tapOn:
+    id: "auth-login-password"
+- inputText: "${TEST_BARBER_PASSWORD}"
+- tapOn:
+    id: "auth-login-submit"
+
+# PROVISIONING is transient on a returning user — wait for the barber landing
+# (Studio tab) directly, same as the other barber flows.
+- extendedWaitUntil:
+    visible:
+      id: "barber-dashboard-logout"
+    timeout: 15000
+
+# --- Verify tab ---
+- tapOn:
+    id: "barber-tab-verify"
+- assertVisible:
+    id: "barber-verify-screen"
+- extendedWaitUntil:
+    notVisible:
+      id: "barber-verify-loading"
+    timeout: 15000
+- assertNotVisible:
+    id: "barber-verify-error"
+# A pending barber -> the status card and both document rows are present.
+- assertVisible:
+    id: "barber-verify-status"
+- assertVisible:
+    id: "barber-verify-doc-id"
+- assertVisible:
+    id: "barber-verify-doc-license"
+
+# --- Upload the government-ID document ---
+# Tapping the row triggers: photo-permission request -> system picker -> the
+# upload -> submit -> refetch chain. The permission dialog and gallery UI are
+# SYSTEM surfaces, not app screens; their button text is OS-specific, so these
+# two taps are best-effort placeholders to adjust on first real run.
+- tapOn:
+    id: "barber-verify-doc-id"
+
+# Grant photo access if the OS permission dialog appears (first run only). It
+# may not appear if already granted — optional, so the flow does not fail when
+# it is absent.
+- runFlow:
+    when:
+      visible: "Allow"
+    commands:
+      - tapOn: "Allow"
+
+# Pick the first image from the system gallery. Placeholder selector — the real
+# gallery cell has no stable testID; adjust to the device's picker on first run.
+- tapOn:
+    point: "50%,35%"
+
+# In-flight: the id row shows its uploading indicator while the two-step chain
+# runs, then it clears on reconciliation.
+- extendedWaitUntil:
+    notVisible:
+      id: "barber-verify-doc-id-uploading"
+    timeout: 20000
+
+# No "Upload failed" alert must have appeared, and the id row must now read
+# 'Uploaded' (the refetch saw the freshly-written id_image_url path).
+- assertNotVisible: "Upload failed"
+- assertVisible: "Uploaded"
+
+# --- Upload the barber-licence document ---
+- tapOn:
+    id: "barber-verify-doc-license"
+- runFlow:
+    when:
+      visible: "Allow"
+    commands:
+      - tapOn: "Allow"
+- tapOn:
+    point: "50%,35%"
+- extendedWaitUntil:
+    notVisible:
+      id: "barber-verify-doc-license-uploading"
+    timeout: 20000
+- assertNotVisible: "Upload failed"
+# Both rows now uploaded -> at least two 'Uploaded' labels; asserting the
+# licence row's indicator cleared above already pins its success.
+- assertVisible: "Uploaded"
