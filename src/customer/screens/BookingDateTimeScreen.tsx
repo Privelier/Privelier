@@ -24,6 +24,13 @@
  * of 14 calls should not block booking via the other 13 dates); only a
  * failure of the single listBarberAvailability call surfaces as the
  * page-level error notice.
+ *
+ * UI (Ultra rebuild 2026-07-13): the date picker is the reusable
+ * CalendarDateStrip ultra-component; time slots are grouped by part of day
+ * (morning / afternoon / evening) to chunk choice (Hick's Law); and the
+ * current selection is echoed above the Continue bar so the customer never
+ * has to hold it in their head (recognition over recall). Behaviour, data
+ * flow, and every testID are unchanged.
  */
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -35,12 +42,25 @@ import { useTheme } from '../../theme/useTheme';
 import type { AvailabilityRow } from '../../types';
 import { listBarberAvailability, listBarberBusySlots } from '../availabilityData';
 import { deriveAvailableSlots } from '../../shared/slots';
+import CalendarDateStrip from '../components/CalendarDateStrip';
 import type { CustomerStackParamList } from '../CustomerNavigator';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'BookingDateTime'>;
 
 const LOOKAHEAD_DAYS = 14;
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
+const SHORT_MONTHS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+] as const;
+
+/** Ordered part-of-day buckets for grouping the time grid. */
+const PERIODS = [
+  { key: 'morning', label: 'Morning' },
+  { key: 'afternoon', label: 'Afternoon' },
+  { key: 'evening', label: 'Evening' },
+] as const;
+type PeriodKey = (typeof PERIODS)[number]['key'];
 
 interface Selection {
   date: string | null;
@@ -60,11 +80,19 @@ function buildLookaheadDates(now: Date = new Date()): string[] {
   return dates;
 }
 
-/** Local (not UTC) weekday label — same parsing rule as deriveAvailableSlots. */
-function dayLabel(date: string): { weekday: string; day: string } {
+/** Morning < 12:00 ≤ Afternoon < 17:00 ≤ Evening — by the slot's start hour. */
+function periodOf(time: string): PeriodKey {
+  const hour = Number(time.slice(0, 2));
+  if (hour < 12) return 'morning';
+  if (hour < 17) return 'afternoon';
+  return 'evening';
+}
+
+/** "Sat 19 Jul · 14:30" — reflected back above the Continue bar. */
+function formatSelection(date: string, time: string): string {
   const [y, m, d] = date.split('-').map(Number);
   const parsed = new Date(y, m - 1, d);
-  return { weekday: WEEKDAY_LABELS[parsed.getDay()], day: String(parsed.getDate()) };
+  return `${WEEKDAY_LABELS[parsed.getDay()]} ${d} ${SHORT_MONTHS[parsed.getMonth()]} · ${time.slice(0, 5)}`;
 }
 
 export default function BookingDateTimeScreen({ route, navigation }: Props) {
@@ -121,12 +149,29 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
     }, [load])
   );
 
-  const allEmpty = useMemo(
-    () => !loading && !error && dates.every((date) => (slotsByDate.get(date) ?? []).length === 0),
-    [loading, error, dates, slotsByDate]
+  const disabledDates = useMemo(
+    () => new Set(dates.filter((date) => (slotsByDate.get(date) ?? []).length === 0)),
+    [dates, slotsByDate]
   );
 
-  const selectedSlots = selection.date ? (slotsByDate.get(selection.date) ?? []) : [];
+  const allEmpty = useMemo(
+    () => !loading && !error && disabledDates.size === dates.length,
+    [loading, error, disabledDates, dates]
+  );
+
+  const selectedSlots = useMemo(
+    () => (selection.date ? (slotsByDate.get(selection.date) ?? []) : []),
+    [selection.date, slotsByDate]
+  );
+
+  /** Selected date's slots split into ordered part-of-day groups (empty groups dropped). */
+  const slotGroups = useMemo(() => {
+    return PERIODS.map((period) => ({
+      ...period,
+      slots: selectedSlots.filter((time) => periodOf(time) === period.key),
+    })).filter((group) => group.slots.length > 0);
+  }, [selectedSlots]);
+
   const canContinue = !!selection.date && !!selection.time;
 
   const onContinue = useCallback(() => {
@@ -153,7 +198,7 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
           accessibilityLabel="Go back"
           hitSlop={12}
           testID="customer-booking-datetime-back"
-          style={[styles.backButton, { backgroundColor: colors.surface }]}
+          style={[styles.backButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           <Feather name="arrow-left" size={16} color={colors.textPrimary} />
         </Pressable>
@@ -209,55 +254,13 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
             <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
               Date
             </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.dayStrip}
-            >
-              {dates.map((date, index) => {
-                const slots = slotsByDate.get(date) ?? [];
-                const disabled = slots.length === 0;
-                const active = selection.date === date;
-                const { weekday, day } = dayLabel(date);
-                return (
-                  <Pressable
-                    key={date}
-                    disabled={disabled}
-                    onPress={() => setSelection({ date, time: null })}
-                    accessibilityRole="button"
-                    accessibilityState={{ disabled, selected: active }}
-                    accessibilityLabel={`${weekday} ${day}`}
-                    testID={`customer-booking-datetime-day-${index}`}
-                    style={[
-                      styles.dayChip,
-                      {
-                        borderColor: active ? colors.accent : 'transparent',
-                        borderWidth: active ? 1 : 0,
-                        backgroundColor: active ? colors.accent : 'transparent',
-                        opacity: disabled ? 0.35 : 1,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.dayWeekday,
-                        { color: active ? colors.onAccent : colors.textSecondary, fontFamily: fonts.body },
-                      ]}
-                    >
-                      {weekday}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.dayNumber,
-                        { color: active ? colors.onAccent : colors.textPrimary, fontFamily: fonts.bodySemiBold },
-                      ]}
-                    >
-                      {day}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+            <CalendarDateStrip
+              dates={dates}
+              disabledDates={disabledDates}
+              selectedDate={selection.date}
+              onSelectDate={(date) => setSelection({ date, time: null })}
+              testIDPrefix="customer-booking-datetime"
+            />
 
             <Text style={[styles.sectionLabel, styles.timeLabel, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
               Time
@@ -271,37 +274,47 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
                   No times left on this date.
                 </Text>
               ) : (
-                <View style={styles.slotGrid}>
-                  {selectedSlots.map((time) => {
-                    const active = selection.time === time;
-                    return (
-                      <Pressable
-                        key={time}
-                        onPress={() => setSelection((current) => ({ ...current, time }))}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected: active }}
-                        testID={`customer-booking-datetime-slot-${time}`}
-                        style={[
-                          styles.slotChip,
-                          {
-                            borderWidth: active ? 0 : 0.5,
-                            borderColor: colors.border,
-                            backgroundColor: active ? colors.accent : 'transparent',
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.slotText,
-                            { color: active ? colors.onAccent : colors.textPrimary, fontFamily: fonts.bodyMedium },
-                          ]}
-                        >
-                          {time.slice(0, 5)}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
+                slotGroups.map((group) => (
+                  <View key={group.key} style={styles.timeGroup}>
+                    <Text style={[styles.periodLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                      {group.label}
+                    </Text>
+                    <View style={styles.slotGrid}>
+                      {group.slots.map((time) => {
+                        const active = selection.time === time;
+                        return (
+                          <Pressable
+                            key={time}
+                            onPress={() => setSelection((current) => ({ ...current, time }))}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected: active }}
+                            accessibilityLabel={time.slice(0, 5)}
+                            testID={`customer-booking-datetime-slot-${time}`}
+                            style={({ pressed }) => [
+                              styles.slotChip,
+                              {
+                                borderWidth: active ? 0 : 0.5,
+                                borderColor: colors.border,
+                                backgroundColor: active ? colors.accent : colors.surface,
+                                opacity: pressed && !active ? 0.85 : 1,
+                                transform: [{ scale: pressed && !active ? 0.97 : 1 }],
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.slotText,
+                                { color: active ? colors.onAccent : colors.textPrimary, fontFamily: fonts.bodyMedium },
+                              ]}
+                            >
+                              {time.slice(0, 5)}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+                ))
               )
             ) : (
               <Text style={[styles.hintText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
@@ -313,6 +326,14 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
       </ScrollView>
 
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
+        {canContinue && selection.date && selection.time ? (
+          <Text
+            style={[styles.summary, { color: colors.textSecondary, fontFamily: fonts.body }]}
+            testID="customer-booking-datetime-summary"
+          >
+            {formatSelection(selection.date, selection.time)}
+          </Text>
+        ) : null}
         <Pressable
           onPress={onContinue}
           disabled={!canContinue}
@@ -340,7 +361,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 12,
   },
-  backButton: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 0.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   stepIndicator: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   stepDots: { flexDirection: 'row', gap: 4 },
   stepDot: { width: 12, height: 3, borderRadius: 2 },
@@ -356,26 +384,18 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 13, textAlign: 'center', paddingVertical: 40 },
   hintText: { fontSize: 13, marginTop: 16 },
 
-  sectionLabel: { fontSize: 12, letterSpacing: 0.2, marginTop: 28, marginBottom: 12 },
-  timeLabel: { marginTop: 28 },
+  sectionLabel: { fontSize: 12, letterSpacing: 0.2, marginTop: 28, marginBottom: 14 },
+  timeLabel: { marginTop: 32 },
 
-  dayStrip: { gap: 18, paddingBottom: 4 },
-  dayChip: {
-    minWidth: 44,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderRadius: 22,
-    alignItems: 'center',
-    gap: 4,
-  },
-  dayWeekday: { fontSize: 11, letterSpacing: 0.3 },
-  dayNumber: { fontSize: 17 },
+  timeGroup: { marginBottom: 20 },
+  periodLabel: { fontSize: 12, letterSpacing: 0.3, marginBottom: 10 },
 
-  slotGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  slotChip: { borderRadius: 20, paddingHorizontal: 18, paddingVertical: 11 },
+  slotGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  slotChip: { borderRadius: 12, paddingHorizontal: 18, paddingVertical: 11, minWidth: 72, alignItems: 'center' },
   slotText: { fontSize: 14 },
 
   footer: { paddingHorizontal: 24, paddingTop: 14, paddingBottom: 20, borderTopWidth: 0.5 },
+  summary: { fontSize: 13, textAlign: 'center', marginBottom: 12 },
   primaryButton: { borderRadius: 10, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' },
   primaryButtonText: { fontSize: 16 },
 });
