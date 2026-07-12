@@ -124,6 +124,14 @@ export interface VerificationRequestRow {
 }
 
 /**
+ * The two document kinds a barber uploads for manual verification
+ * (build-order step 17). Each maps to one storage filename and one writable
+ * column on `verification_requests` (see src/barber/verificationData.ts). No
+ * selfie / biometric kind exists — deliberate, per the hard rules.
+ */
+export type VerificationDocType = 'id' | 'license';
+
+/**
  * Row shape of `public.chat_rooms` — one room per booking. Note: no
  * created_at column exists; a room's "age" is its booking's date or its
  * latest message. Reads gated by RLS (`chat_rooms_select_participants`).

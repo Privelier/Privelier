@@ -107,6 +107,20 @@ export type FetchOwnVerificationRequestResult =
   | { status: 'ok'; request: VerificationRequestRow | null }
   | BarberDataFailure;
 
+/**
+ * `path` is the uploaded object's storage PATH (`{userId}/{docType}.jpg`),
+ * never a URL — that path is what the DB column stores. See
+ * src/barber/verificationData.ts.
+ */
+export type UploadVerificationDocumentResult =
+  | { status: 'ok'; path: string }
+  | BarberDataFailure;
+
+/** `request` is the freshly-upserted row; `status` is DB-trigger-owned. */
+export type SubmitVerificationDocumentResult =
+  | { status: 'ok'; request: VerificationRequestRow }
+  | BarberDataFailure;
+
 // ---------------------------------------------------------------------------
 // Services
 // ---------------------------------------------------------------------------
