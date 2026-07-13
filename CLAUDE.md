@@ -204,9 +204,10 @@ Unread indicator (founder-directed 2026-07-10) — BUILT same day: migration 001
 - [ ] Open product question (independent design review 2026-07-11): the `messages_insert_participants` policy is participant-only with NO booking-status predicate, so a participant can still post into the thread of a rejected/cancelled/archived booking. This is consistent with the 2026-07-09 founder decision that chat opens at booking (pending) and is likely intentional, but the terminal-state behavior isn't explicitly recorded — confirm "messaging stays open regardless of final status" is intended, or add a status predicate (and a matching read-only UI state) if not. Not a defect until the founders decide.
 
 ### Step 17 — manual verification flow (one pipeline run)
-- [ ] Barber uploads ID photo + license photo to a PRIVATE storage bucket → VERIFICATION_REQUESTS row (no selfie, no biometrics — hard rule)
-- [ ] Founder review path (Supabase dashboard or minimal admin view) sets verification_status; approved barbers become discoverable
-- [ ] Portfolio upload (max 6 images, enforce the 6-row constraint) — barber profile
+Barber-upload half DONE (commits a0c0114→7e415fa): migration 0015 (private `verification-docs` bucket + storage RLS + resubmit re-queue trigger), upload data layer + `expo-image-picker`, Verify-tab upload wired/polished, security fix (unique per-upload object path, dropped upsert). 359 tests pass. Founder review path is dashboard-only (founder decision 2026-07-13) — procedure documented in `docs/design/step-17-founder-review-path.md`, discovery chain verified live (approved `barber_profile.verification_status` ⇒ `barber_directory`, the sole gate).
+- [ ] Founder review path GATE: run one real approval end to end on-device — barber uploads via Verify tab → founder approves in the Supabase dashboard per the doc → barber appears in the customer's Discover. (No app build required; this is a live-data + procedure verification, not code.)
+- [ ] Two-status-surface drift (flagged 2026-07-13, non-blocking): no trigger links `barber_profile.verification_status`/`verified` to `verification_requests.status`/`reviewed_by`/`reviewed_at`; the dashboard flow must set both by hand, and the resubmit trigger re-queues only the request, not the profile. Long-term fix = a single `service_role`-owned approval path (RPC/Edge Function) writing both tables atomically. `supabase-schema-architect`-owned when actioned.
+- [ ] Portfolio upload (max 6 images, enforce the 6-row constraint) — barber profile — NEXT sub-feature (founder-directed 2026-07-13); reuses the image-picker + storage patterns just built for verification. Full pipeline run.
 - [ ] Barber dashboard (bookings overview, profile completeness)
 
 ### Step 18 — MVP release gate
