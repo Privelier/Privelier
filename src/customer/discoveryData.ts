@@ -18,11 +18,12 @@
  * build-order step 11-12 booking flow), no screens.
  */
 import { supabase } from '../../lib/supabase';
-import type { BarberDirectoryRow, ServiceRow } from '../types';
+import type { BarberDirectoryRow, PortfolioRow, ServiceRow } from '../types';
 import { mapPostgrestError } from './errors';
 import type {
   GetBarberProfileResult,
   ListBarbersResult,
+  ListPortfolioForBarberResult,
   ListServicesForBarberResult,
 } from './types';
 
@@ -143,4 +144,24 @@ export async function listServicesForBarber(
 
   if (error) return mapPostgrestError('listServicesForBarber', error);
   return { status: 'ok', services: (data as ServiceRow[]) ?? [] };
+}
+
+/**
+ * A barber's portfolio images for the BarberProfileScreen Portfolio tab
+ * (build-order step 17). The table's `portfolio_select_all` RLS permits any
+ * authenticated caller, so any barberId a customer can navigate to is safe to
+ * pass. Ordered by `id` for a stable render order; the caller derives each
+ * public URL via src/shared/portfolioImages.ts.
+ */
+export async function listPortfolioForBarber(
+  barberId: string
+): Promise<ListPortfolioForBarberResult> {
+  const { data, error } = await supabase
+    .from('portfolio')
+    .select('*')
+    .eq('barber_id', barberId)
+    .order('id', { ascending: true });
+
+  if (error) return mapPostgrestError('listPortfolioForBarber', error);
+  return { status: 'ok', images: (data as PortfolioRow[]) ?? [] };
 }

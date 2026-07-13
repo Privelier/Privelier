@@ -10,7 +10,12 @@
  * behavior of `listBarbersByCity`) are shaped correctly.
  */
 import { supabase } from '../../../lib/supabase';
-import { getBarberProfile, listBarbersByCity, listServicesForBarber } from '../discoveryData';
+import {
+  getBarberProfile,
+  listBarbersByCity,
+  listPortfolioForBarber,
+  listServicesForBarber,
+} from '../discoveryData';
 
 jest.mock('../../../lib/supabase', () => ({
   supabase: {
@@ -217,6 +222,47 @@ describe('listServicesForBarber', () => {
     mockFrom.mockReturnValueOnce(builder);
 
     const result = await listServicesForBarber('b-1');
+    expect(result).toMatchObject({ status: 'error', code: 'forbidden' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// listPortfolioForBarber
+// ---------------------------------------------------------------------------
+
+describe('listPortfolioForBarber', () => {
+  it('returns ok with the images array on success, ordered by id', async () => {
+    const rows = [
+      { id: 'p-1', barber_id: 'b-1', image_url: 'b-1/img-1.jpg' },
+      { id: 'p-2', barber_id: 'b-1', image_url: 'b-1/img-2.jpg' },
+    ];
+    const builder = chainable({ data: rows, error: null });
+    mockFrom.mockReturnValueOnce(builder);
+
+    const result = await listPortfolioForBarber('b-1');
+
+    expect(result).toEqual({ status: 'ok', images: rows });
+    expect(mockFrom).toHaveBeenCalledWith('portfolio');
+    expect(builder.eq).toHaveBeenCalledWith('barber_id', 'b-1');
+    expect(builder.order).toHaveBeenCalledWith('id', { ascending: true });
+  });
+
+  it('defaults to an empty array when data is null (the 0-image empty state)', async () => {
+    const builder = chainable({ data: null, error: null });
+    mockFrom.mockReturnValueOnce(builder);
+
+    const result = await listPortfolioForBarber('b-1');
+    expect(result).toEqual({ status: 'ok', images: [] });
+  });
+
+  it('maps an RLS denial (42501) to forbidden', async () => {
+    const builder = chainable({
+      data: null,
+      error: { code: '42501', message: 'permission denied for table portfolio' },
+    });
+    mockFrom.mockReturnValueOnce(builder);
+
+    const result = await listPortfolioForBarber('b-1');
     expect(result).toMatchObject({ status: 'error', code: 'forbidden' });
   });
 });

@@ -8,6 +8,7 @@ import type {
   BarberDirectoryRow,
   BookingRow,
   MessageRow,
+  PortfolioRow,
   ServiceRow,
 } from '../types';
 import type { InboxThread } from '../shared/threads';
@@ -39,6 +40,20 @@ export type GetBarberProfileResult =
 
 export type ListServicesForBarberResult =
   | { status: 'ok'; services: ServiceRow[] }
+  | CustomerDataFailure;
+
+// ---------------------------------------------------------------------------
+// Portfolio (public.portfolio, read-only from the customer side)
+// ---------------------------------------------------------------------------
+
+/**
+ * A barber's portfolio images for the BarberProfileScreen Portfolio tab. The
+ * table's `portfolio_select_all` RLS permits any authenticated caller, so any
+ * barberId a customer can navigate to is safe to pass. `images` may be empty
+ * (the 0-image empty state is expected).
+ */
+export type ListPortfolioForBarberResult =
+  | { status: 'ok'; images: PortfolioRow[] }
   | CustomerDataFailure;
 
 // ---------------------------------------------------------------------------

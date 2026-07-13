@@ -24,6 +24,36 @@ export type ListOwnPortfolioResult =
   | { status: 'ok'; images: PortfolioRow[] }
   | BarberDataFailure;
 
+/**
+ * `path` is the uploaded object's storage PATH (`{barberId}/{unique}.jpg`),
+ * never a URL — that path is what the DB `image_url` column stores (design
+ * D2/D3). The caller passes it to `insertPortfolioRow` after the upload
+ * succeeds. See src/barber/portfolioData.ts.
+ */
+export type UploadPortfolioImageResult =
+  | { status: 'ok'; path: string }
+  | BarberDataFailure;
+
+/**
+ * `image` is the freshly-inserted portfolio row. A 'limit_reached'
+ * BarberDataFailure means the DB's `enforce_portfolio_max_six` trigger
+ * rejected the insert because the barber already holds 6 images — distinct
+ * from a generic failure so the UI can show honest at-the-cap copy.
+ */
+export type CreatePortfolioResult =
+  | { status: 'ok'; image: PortfolioRow }
+  | BarberDataFailure;
+
+/**
+ * Delete ordering is DB-row-first, storage-object-best-effort (design D5):
+ * once the row is gone the image is absent from every read path, so an
+ * `{ status: 'ok' }` is returned even if the storage object delete then
+ * fails (the orphan is logged and accepted — design D4).
+ */
+export type DeletePortfolioImageResult =
+  | { status: 'ok' }
+  | BarberDataFailure;
+
 // ---------------------------------------------------------------------------
 // Chats (public.chat_rooms + public.messages, read-only until step 15-16)
 // ---------------------------------------------------------------------------

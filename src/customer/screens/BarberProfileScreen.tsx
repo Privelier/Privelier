@@ -35,9 +35,11 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { PortfolioGrid } from '../../shared/components/PortfolioGrid';
+import { PortfolioTile } from '../../shared/components/PortfolioTile';
 import { useTheme } from '../../theme/useTheme';
-import type { BarberDirectoryRow, ServiceRow } from '../../types';
-import { getBarberProfile, listServicesForBarber } from '../discoveryData';
+import type { BarberDirectoryRow, PortfolioRow, ServiceRow } from '../../types';
+import { getBarberProfile, listPortfolioForBarber, listServicesForBarber } from '../discoveryData';
 import { formatMoney } from '../format';
 import type { CustomerStackParamList } from '../CustomerNavigator';
 
@@ -63,10 +65,12 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
 
   const [barber, setBarber] = useState<BarberDirectoryRow | null>(null);
   const [services, setServices] = useState<ServiceRow[]>([]);
+  const [portfolio, setPortfolio] = useState<PortfolioRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [servicesError, setServicesError] = useState<string | null>(null);
+  const [portfolioError, setPortfolioError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>('services');
 
   const load = useCallback(async () => {
@@ -74,6 +78,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
     setError(null);
     setNotFound(false);
     setServicesError(null);
+    setPortfolioError(null);
 
     const profileResult = await getBarberProfile(barberId);
     if (profileResult.status === 'error') {
@@ -88,12 +93,23 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
     }
     setBarber(profileResult.barber);
 
-    const servicesResult = await listServicesForBarber(barberId);
+    // Services and portfolio are independent secondary reads — fetch in
+    // parallel; a failure in either is a tab-local error, never a whole-screen
+    // one (the profile already loaded).
+    const [servicesResult, portfolioResult] = await Promise.all([
+      listServicesForBarber(barberId),
+      listPortfolioForBarber(barberId),
+    ]);
     setLoading(false);
     if (servicesResult.status === 'ok') {
       setServices(servicesResult.services);
     } else {
       setServicesError(servicesResult.message);
+    }
+    if (portfolioResult.status === 'ok') {
+      setPortfolio(portfolioResult.images);
+    } else {
+      setPortfolioError(portfolioResult.message);
     }
   }, [barberId]);
 
@@ -314,12 +330,34 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
               ))
             )
           ) : tab === 'portfolio' ? (
-            <Text
-              style={[styles.stateText, { color: colors.textSecondary, fontFamily: fonts.body }]}
-              testID="barber-profile-portfolio-placeholder"
-            >
-              No portfolio yet.
-            </Text>
+            portfolioError ? (
+              <Text
+                style={[styles.stateText, { color: colors.errorText, fontFamily: fonts.body }]}
+                accessibilityRole="alert"
+                testID="barber-profile-portfolio-error"
+              >
+                {portfolioError}
+              </Text>
+            ) : portfolio.length === 0 ? (
+              <View style={styles.portfolioEmpty} testID="barber-profile-portfolio-placeholder">
+                {/* Muted, never brass — an empty portfolio is a calm state,
+                    not a call to action on someone else's profile. */}
+                <Feather name="image" size={22} color={colors.border} />
+                <Text style={[styles.portfolioEmptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                  No portfolio to show yet.
+                </Text>
+              </View>
+            ) : (
+              <PortfolioGrid style={styles.portfolioGridSpacing}>
+                {portfolio.map((img) => (
+                  <PortfolioTile
+                    key={img.id}
+                    imagePath={img.image_url}
+                    testID={`barber-profile-portfolio-image-${img.id}`}
+                  />
+                ))}
+              </PortfolioGrid>
+            )
           ) : (
             <View>
               <Text style={[styles.reviewsRating, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
@@ -431,4 +469,8 @@ const styles = StyleSheet.create({
   bookButtonText: { fontSize: 12 },
 
   reviewsRating: { fontSize: 40, marginTop: 8 },
+
+  portfolioGridSpacing: { paddingVertical: 16 },
+  portfolioEmpty: { alignItems: 'center', gap: 12, paddingVertical: 48 },
+  portfolioEmptyText: { fontSize: 13 },
 });

@@ -24,7 +24,7 @@
  */
 import { supabase } from '../../lib/supabase';
 import type { VerificationDocType, VerificationRequestRow } from '../types';
-import { failure, logBarberDataError, mapPostgrestError } from './errors';
+import { failure, logBarberDataError, mapPostgrestError, mapStorageError } from './errors';
 import type {
   SubmitVerificationDocumentResult,
   UploadVerificationDocumentResult,
@@ -64,34 +64,6 @@ const DOC_TARGETS: Record<
  */
 function uniqueObjectName(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}.jpg`;
-}
-
-/** Minimal shape shared by a StorageError without importing its class. */
-interface StorageErrorLike {
-  message?: string | null;
-}
-
-/**
- * Map a Storage (bucket) error to a typed failure and log the raw details.
- * Styled after mapPostgrestError, but storage errors carry no PostgREST
- * `code`, so we classify by message text only:
- * - 'network' / 'failed to fetch' → network (retryable).
- * - permission / unauthorized / row-level security → forbidden.
- * - anything else → unknown.
- */
-function mapStorageError(context: string, raw: StorageErrorLike | null): ReturnType<typeof failure> {
-  logBarberDataError(context, raw);
-  if (!raw) return failure('unknown');
-  const msg = (raw.message ?? '').toLowerCase();
-  if (msg.includes('network') || msg.includes('failed to fetch')) return failure('network');
-  if (
-    msg.includes('permission') ||
-    msg.includes('unauthorized') ||
-    msg.includes('row-level security')
-  ) {
-    return failure('forbidden');
-  }
-  return failure('unknown');
 }
 
 /**

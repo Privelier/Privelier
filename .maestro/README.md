@@ -166,7 +166,11 @@ state ids; tab-bar buttons are
 the Requests tab has `barber-requests-screen`, `-loading`,
 `-error`, `-empty`, and `barber-requests-row-{id}`; the Portfolio
 tab has `barber-portfolio-screen`, `-loading`, `-error`,
-`barber-portfolio-add`, and `barber-portfolio-image-{id}`; the Chats tab
+`barber-portfolio-counter`, `barber-portfolio-add`,
+`barber-portfolio-uploading` (the in-flight tile shown while an upload+insert
+runs, replacing the add tile), `barber-portfolio-image-{id}`, and
+`barber-portfolio-delete-{id}` (the per-image delete affordance — confirm
+dialog then optimistic removal); the Chats tab
 has `barber-chats-screen`, `-loading`, `-error`, `-empty`, and
 `barber-chats-row-{id}`; the Verify tab has `barber-verify-screen`,
 `-loading`, `-error`, `barber-verify-status`, `barber-verify-doc-id`, and
@@ -200,7 +204,10 @@ the Lovable prototype's tabbed shell),
 `barber-profile-service-{id}`, `barber-profile-book-{id}`,
 `barber-profile-tab-{services|portfolio|reviews}` (Services is the default
 tab, so existing service assertions need no extra taps),
-`barber-profile-portfolio-placeholder`,
+`barber-profile-portfolio-placeholder` (still the 0-image empty state on the
+Portfolio tab; when the barber HAS images that tab instead renders
+`barber-profile-portfolio-image-{id}` tiles, or `barber-profile-portfolio-error`
+if the read fails),
 `customer-booking-datetime-screen`, `customer-booking-datetime-back`,
 `customer-booking-datetime-loading`, `customer-booking-datetime-error`,
 `customer-booking-datetime-empty`, `customer-booking-datetime-day-{index}`,

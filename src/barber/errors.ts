@@ -14,7 +14,8 @@ export type BarberDataErrorCode =
   | 'invalid_input'
   | 'network'
   | 'unknown'
-  | 'transition_rejected';
+  | 'transition_rejected'
+  | 'limit_reached';
 
 /** The error arm shared by every services/availability result union. */
 export interface BarberDataFailure {
@@ -35,6 +36,8 @@ export const barberDataErrorCopy: Record<BarberDataErrorCode, string> = {
   unknown: 'Something went wrong on our side. Try again in a moment.',
   transition_rejected:
     'That booking can no longer be changed that way. Refresh to see its current status.',
+  limit_reached:
+    'You can have at most 6 portfolio images. Delete one before adding another.',
 };
 
 const retryableCodes: ReadonlySet<BarberDataErrorCode> = new Set(['network']);
@@ -103,6 +106,38 @@ export function mapPostgrestError(context: string, raw: PostgrestErrorLike | nul
   if (msg.includes('row-level security')) return failure('forbidden');
   if (msg.includes('network request failed') || msg.includes('failed to fetch')) {
     return failure('network');
+  }
+  return failure('unknown');
+}
+
+/** Minimal shape shared by a StorageError without importing its class. */
+interface StorageErrorLike {
+  message?: string | null;
+}
+
+/**
+ * Map a Storage (bucket) error to a typed failure and log the raw details.
+ * Styled after mapPostgrestError, but storage errors carry no PostgREST
+ * `code`, so we classify by message text only:
+ * - 'network' / 'failed to fetch' → network (retryable).
+ * - permission / unauthorized / row-level security → forbidden.
+ * - anything else → unknown.
+ *
+ * Shared by every storage-writing barber data module (verification-document
+ * upload and portfolio-image upload) — extracted here (design D7) so the
+ * classification logic is defined once, never duplicated per module.
+ */
+export function mapStorageError(context: string, raw: StorageErrorLike | null): BarberDataFailure {
+  logBarberDataError(context, raw);
+  if (!raw) return failure('unknown');
+  const msg = (raw.message ?? '').toLowerCase();
+  if (msg.includes('network') || msg.includes('failed to fetch')) return failure('network');
+  if (
+    msg.includes('permission') ||
+    msg.includes('unauthorized') ||
+    msg.includes('row-level security')
+  ) {
+    return failure('forbidden');
   }
   return failure('unknown');
 }
