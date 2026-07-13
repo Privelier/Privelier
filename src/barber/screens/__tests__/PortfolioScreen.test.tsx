@@ -17,7 +17,7 @@
  * server-truth 'limit_reached' fallback.
  */
 import { AccessibilityInfo, Alert } from 'react-native';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import * as ImagePicker from 'expo-image-picker';
 import PortfolioScreen from '../PortfolioScreen';
 import { fetchOwnProfile } from '../../../auth/authService';
@@ -85,10 +85,17 @@ jest.mock('../../portfolioData', () => ({
 }));
 
 // react-native-safe-area-context is not in the jest transform allow-list; mock
-// its wrappers to a transparent passthrough (the screen's inner Views carry
-// every testID the tests query).
+// its wrappers to plain Views that FORWARD props — the screen's SafeAreaView
+// carries the `barber-portfolio-screen` testID, so a props-dropping passthrough
+// would hide it.
 jest.mock('react-native-safe-area-context', () => {
-  const passthrough = ({ children }: { children?: unknown }) => children ?? null;
+  // require (not import) is required inside a jest.mock factory — it is hoisted
+  // above the imports, so top-level import bindings aren't available here.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const React = require('react');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { View } = require('react-native');
+  const passthrough = (props: Record<string, unknown>) => React.createElement(View, props);
   return {
     SafeAreaProvider: passthrough,
     SafeAreaView: passthrough,
@@ -147,7 +154,9 @@ afterEach(() => {
 
 /** Render and wait out the initial load (spinner gone). */
 async function renderLoaded() {
-  render(<PortfolioScreen />);
+  // v14 render() is async — awaiting it binds `screen` and flushes the initial
+  // load's state updates inside act(), avoiding cross-test bleed.
+  await render(<PortfolioScreen />);
   await waitFor(() => expect(screen.queryByTestId('barber-portfolio-loading')).toBeNull());
 }
 
@@ -226,14 +235,20 @@ describe('PortfolioScreen', () => {
 
       const add = screen.getByTestId('barber-portfolio-add');
       // Two synchronous presses: the first sets busyRef before its first await;
-      // the second sees busyRef === true and returns immediately.
-      fireEvent.press(add);
-      fireEvent.press(add);
+      // the second sees busyRef === true and returns immediately. Wrap both in a
+      // single act() so the whole async add flow settles inside one act boundary
+      // — otherwise the two rapid presses spawn overlapping acts whose trailing
+      // state updates leak into (and corrupt the mount of) the next test.
+      await act(async () => {
+        fireEvent.press(add);
+        fireEvent.press(add);
+      });
 
-      await waitFor(() => expect(mockUpload).toHaveBeenCalled());
       expect(mockRequestPerm).toHaveBeenCalledTimes(1);
       expect(mockUpload).toHaveBeenCalledTimes(1);
       expect(mockInsert).toHaveBeenCalledTimes(1);
+      // The single upload's optimistic tile is reflected (flow fully settled).
+      expect(screen.getByTestId('barber-portfolio-image-p1')).toBeTruthy();
     });
   });
 

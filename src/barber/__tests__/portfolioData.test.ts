@@ -132,7 +132,7 @@ describe('uploadPortfolioImage', () => {
     });
     // Belt-and-suspenders: upload options must NOT ask for an upsert (unique
     // path means there is nothing to overwrite in place).
-    expect(upload.mock.calls[0][2]).not.toHaveProperty('upsert');
+    expect((upload.mock.calls[0] as unknown[])[2]).not.toHaveProperty('upsert');
   });
 
   it('produces a UNIQUE path per call (no fixed name / no in-place overwrite)', async () => {
