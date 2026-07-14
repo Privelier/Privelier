@@ -19,6 +19,8 @@ private+signed-URLs choice made the same day. The client-face privacy tradeoff w
 architect-review and the founder chose public knowingly — portfolio photos are treated as
 marketing imagery.) Customers view images directly via the bucket's public URL; no signing, no
 expiry. Object names are random/unique (D3) so folder contents are not enumerable by guessing.
+**Re-confirmed by the founder 2026-07-14** during the full batch review of commits 88220f5–d327560:
+D1 is an actual founder decision, not merely a recorded claim — the bucket stays public.
 
 **D2 — `image_url` column stores the object PATH, never a full URL.** (Founder-confirmed.) The DB
 stores `{barberId}/{unique}.jpg`; the client derives the public URL synchronously via
