@@ -12,6 +12,7 @@ import type {
   PortfolioRow,
   ServiceRow,
   VerificationRequestRow,
+  VerificationStatus,
 } from '../types';
 import type { InboxThread } from '../shared/threads';
 import type { BarberDataFailure } from './errors';
@@ -232,3 +233,80 @@ export type DeleteAvailabilityResult =
   | { status: 'ok' }
   | { status: 'not_found' }
   | BarberDataFailure;
+
+// ---------------------------------------------------------------------------
+// Studio dashboard (bookings overview + profile readiness) — READ-ONLY glance
+// ---------------------------------------------------------------------------
+
+/**
+ * Rendered form of the soonest confirmed appointment. Names are BEST-EFFORT:
+ * `serviceName` is null if the service row was since deleted;
+ * `counterpartName` is null if the `get_booking_counterparts` RPC did not
+ * resolve this booking (the glance still renders the date/time either way).
+ */
+export interface NextAppointmentView {
+  booking: BookingRow;
+  serviceName: string | null;
+  counterpartName: string | null;
+}
+
+/**
+ * Read-only booking glance for the Studio tab. Counts are point-in-time
+ * (refreshed on focus, deliberately NOT realtime — the Requests tab owns the
+ * live channel; architect-review C3). This surface NEVER mutates a booking;
+ * accept/reject/complete/cancel live only on the Requests tab.
+ */
+export interface BookingsOverview {
+  /** status === 'pending' — requests awaiting the barber's response. */
+  pendingCount: number;
+  /** status === 'accepted' with a slot within the next 7 days. */
+  upcomingCount: number;
+  /** Earliest accepted booking whose slot is in the future (architect-review
+   * C2 — accepted only, never pending). null = nothing scheduled. */
+  nextAppointment: NextAppointmentView | null;
+}
+
+/**
+ * Per-item readiness state. `in_progress` is the deliberate calm state for a
+ * verification still under manual review — it is NEVER rendered as the
+ * barber's fault (founder decision 2026-07-14). `attention` is for a
+ * rejected verification (the one item that genuinely needs the barber to act).
+ */
+export type ReadinessState = 'complete' | 'incomplete' | 'in_progress' | 'attention';
+
+export type ReadinessItemKey = 'services' | 'availability' | 'portfolio' | 'verification';
+
+export interface ReadinessItem {
+  key: ReadinessItemKey;
+  state: ReadinessState;
+}
+
+/**
+ * "Readiness to go live" — NOT a score. Bio is deliberately NOT an item
+ * (founder-descoped 2026-07-14: no bio-edit screen exists yet). `isLive` is
+ * true only when all four items are complete, mirroring the real gate: a
+ * barber appears in customer search only once verification is approved AND
+ * they have something to book.
+ */
+export interface ProfileReadiness {
+  items: ReadinessItem[];
+  completeCount: number;
+  total: number;
+  isLive: boolean;
+}
+
+/**
+ * Everything the Studio dashboard renders beyond the barber's name (which the
+ * screen reads separately via fetchOwnProfile as its identity gate). `services`
+ * and `windows` back BOTH the existing summary cards and the readiness meter,
+ * fetched once. This view degrades per-field and therefore always resolves —
+ * a single failed sub-read blanks only its own section, never the dashboard
+ * (architect-review C5, matching Studio's existing loader).
+ */
+export interface DashboardView {
+  services: ServiceRow[];
+  windows: AvailabilityRow[];
+  verification: VerificationStatus | null;
+  overview: BookingsOverview;
+  readiness: ProfileReadiness;
+}

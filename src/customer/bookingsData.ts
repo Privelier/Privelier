@@ -21,17 +21,12 @@ import type { CancelBookingResult, OwnBookingsViewResult } from './types';
 const NO_ROWS = 'PGRST116';
 
 /**
- * Pure split rule for the Upcoming/Past tabs: a booking is upcoming while
- * it can still happen — its slot is in the future AND it is still alive in
- * the state machine (pending or accepted). Everything else (done, declined,
- * cancelled, or simply expired without action) is past.
+ * Upcoming/Past split rule for the Bookings tabs. The composition + predicate
+ * now live in `src/shared/bookingTime.ts` so the barber Studio dashboard
+ * shares the exact same `${date}T${time}` interpretation; re-exported here to
+ * keep this module's existing import surface unchanged.
  */
-export function isUpcomingBooking(booking: BookingRow, now: Date): boolean {
-  if (booking.status !== 'pending' && booking.status !== 'accepted') return false;
-  const slot = new Date(`${booking.date}T${booking.time}`);
-  if (Number.isNaN(slot.getTime())) return false;
-  return slot.getTime() >= now.getTime();
-}
+export { isUpcomingBooking } from '../shared/bookingTime';
 
 /**
  * The signed-in customer's bookings plus best-effort barber/service lookup
