@@ -222,42 +222,70 @@ export default function StudioScreen({ navigation }: Props) {
             <Pressable
               onPress={() => navigation.navigate('Requests')}
               accessibilityRole="button"
-              accessibilityLabel="View booking requests"
+              accessibilityLabel={
+                view.overview.pendingCount > 0
+                  ? `${view.overview.pendingCount} pending requests. View booking requests.`
+                  : 'View booking requests'
+              }
               testID="barber-dashboard-overview"
-              style={[styles.card, styles.overview, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              style={({ pressed }) => [
+                styles.card,
+                styles.overview,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}
             >
               <View style={styles.overviewHeader}>
                 <Text style={[styles.cardTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
                   Bookings
                 </Text>
-                {view.overview.pendingCount > 0 ? (
-                  <View style={[styles.pendingPill, { backgroundColor: colors.accent }]}>
-                    <Text style={[styles.pendingPillText, { color: colors.onAccent, fontFamily: fonts.bodySemiBold }]}>
-                      {view.overview.pendingCount} pending
-                    </Text>
-                  </View>
-                ) : (
+                {/* Pill and chevron coexist — the nav affordance must not vanish
+                    exactly when the card is most worth tapping. */}
+                <View style={styles.overviewHeaderRight}>
+                  {view.overview.pendingCount > 0 ? (
+                    <View style={[styles.pendingPill, { backgroundColor: colors.accent }]}>
+                      <Text style={[styles.pendingPillText, { color: colors.onAccent, fontFamily: fonts.bodySemiBold }]}>
+                        {view.overview.pendingCount} pending
+                      </Text>
+                    </View>
+                  ) : null}
                   <Feather name="chevron-right" size={16} color={colors.textSecondary} />
-                )}
+                </View>
               </View>
               {view.overview.nextAppointment ? (
-                <Text style={[styles.overviewNext, { color: colors.textPrimary, fontFamily: fonts.body }]}>
-                  Next · {view.overview.nextAppointment.counterpartName ??
-                    view.overview.nextAppointment.serviceName ??
-                    'Appointment'}{' '}
-                  · {formatBookingWhen(
-                    view.overview.nextAppointment.booking.date,
-                    view.overview.nextAppointment.booking.time
-                  )}
-                </Text>
+                <>
+                  <Text style={[styles.overviewCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                    Next appointment
+                  </Text>
+                  <View style={styles.overviewNextRow}>
+                    <Text
+                      numberOfLines={1}
+                      style={[styles.overviewWho, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}
+                    >
+                      {view.overview.nextAppointment.counterpartName ??
+                        view.overview.nextAppointment.serviceName ??
+                        'Appointment'}
+                    </Text>
+                    <Text style={[styles.overviewWhen, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                      {' · '}
+                      {formatBookingWhen(
+                        view.overview.nextAppointment.booking.date,
+                        view.overview.nextAppointment.booking.time
+                      )}
+                    </Text>
+                  </View>
+                </>
               ) : (
-                <Text style={[styles.overviewMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                <Text style={[styles.overviewEmpty, { color: colors.textSecondary, fontFamily: fonts.body }]}>
                   Nothing scheduled yet.
                 </Text>
               )}
               {view.overview.upcomingCount > 0 ? (
                 <Text style={[styles.overviewMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                  {view.overview.upcomingCount} in the next 7 days
+                  {view.overview.upcomingCount} upcoming in the next 7 days
                 </Text>
               ) : null}
             </Pressable>
@@ -265,45 +293,76 @@ export default function StudioScreen({ navigation }: Props) {
             {/* Profile readiness meter. */}
             <View
               testID="barber-dashboard-readiness"
-              style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              style={[styles.card, styles.readiness, { backgroundColor: colors.surface, borderColor: colors.border }]}
             >
               <Text style={[styles.cardTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
                 Readiness to go live
               </Text>
-              <Text style={[styles.readinessStatus, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                {view.readiness.isLive
-                  ? "You're live — customers can find you."
-                  : `${view.readiness.completeCount} of ${view.readiness.total} complete`}
-              </Text>
-              <View style={[styles.meterTrack, { backgroundColor: colors.border }]}>
-                <View style={{ flex: view.readiness.completeCount, backgroundColor: colors.accent }} />
-                <View style={{ flex: view.readiness.total - view.readiness.completeCount }} />
+              {view.readiness.isLive ? (
+                // The screen's single green moment — the quiet, earned ending.
+                <View style={styles.liveRow}>
+                  <Feather name="check-circle" size={14} color={colors.successText} />
+                  <Text style={[styles.liveText, { color: colors.successText, fontFamily: fonts.bodyMedium }]}>
+                    {"You're live — customers can find you."}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={[styles.readinessStatus, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                  {view.readiness.completeCount} of {view.readiness.total} complete
+                </Text>
+              )}
+              {/* Four discrete segments mirror the four rows one-to-one — a
+                  countable fact, not a percentage (readiness, never a score).
+                  Hidden from the a11y tree: the status line above already
+                  carries the count, so color is never the sole signal. */}
+              <View style={styles.meter} accessible={false} importantForAccessibility="no-hide-descendants">
+                {view.readiness.items.map((item) => (
+                  <View
+                    key={item.key}
+                    style={[
+                      styles.meterSegment,
+                      { backgroundColor: item.state === 'complete' ? colors.accent : colors.border },
+                    ]}
+                  />
+                ))}
               </View>
 
               <View style={styles.readinessItems}>
-                {view.readiness.items.map((item) => {
+                {view.readiness.items.map((item, index) => {
                   const done = item.state === 'complete';
-                  const iconColor =
-                    item.state === 'complete'
-                      ? colors.successText
-                      : item.state === 'attention'
-                        ? colors.errorText
-                        : colors.textSecondary;
+                  const last = index === view.readiness.items.length - 1;
                   return (
                     <Pressable
                       key={item.key}
                       onPress={done ? undefined : () => openReadinessTarget(item.key)}
                       disabled={done}
                       accessibilityRole={done ? 'text' : 'button'}
+                      accessibilityState={{ disabled: done }}
                       accessibilityLabel={readinessLabel(item)}
                       testID={`barber-dashboard-readiness-${item.key}`}
-                      style={styles.readinessRow}
+                      style={({ pressed }) => [
+                        styles.readinessRow,
+                        {
+                          borderBottomWidth: last ? 0 : 0.5,
+                          borderColor: colors.border,
+                          opacity: pressed && !done ? 0.85 : 1,
+                        },
+                      ]}
                     >
-                      <Feather name={READINESS_ICONS[item.state]} size={15} color={iconColor} />
+                      {/* Done rows recede entirely (muted icon + label) — the
+                          checklist's job is to surface what REMAINS. Error
+                          color is reserved for the one attention state. */}
+                      <Feather
+                        name={READINESS_ICONS[item.state]}
+                        size={15}
+                        color={item.state === 'attention' ? colors.errorText : colors.textSecondary}
+                      />
                       <Text
                         style={[
                           styles.readinessLabel,
-                          { color: done ? colors.textSecondary : colors.textPrimary, fontFamily: fonts.body },
+                          done
+                            ? { color: colors.textSecondary, fontFamily: fonts.body }
+                            : { color: colors.textPrimary, fontFamily: fonts.bodyMedium },
                         ]}
                       >
                         {readinessLabel(item)}
@@ -322,7 +381,11 @@ export default function StudioScreen({ navigation }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel="Manage services"
                 testID="barber-dashboard-services"
-                style={[styles.card, styles.linkCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                style={({ pressed }) => [
+                  styles.card,
+                  styles.linkCard,
+                  { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 },
+                ]}
               >
                 <View style={styles.cardText}>
                   <Text style={[styles.cardTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
@@ -340,7 +403,11 @@ export default function StudioScreen({ navigation }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel="Manage availability"
                 testID="barber-dashboard-availability"
-                style={[styles.card, styles.linkCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                style={({ pressed }) => [
+                  styles.card,
+                  styles.linkCard,
+                  { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 },
+                ]}
               >
                 <View style={styles.cardText}>
                   <Text style={[styles.cardTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
@@ -382,15 +449,24 @@ const styles = StyleSheet.create({
 
   overview: { marginTop: 24 },
   overviewHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  overviewNext: { fontSize: 13, marginTop: 10 },
-  overviewMeta: { fontSize: 12, marginTop: 6 },
+  overviewHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  overviewCaption: { fontSize: 12, marginTop: 14 },
+  overviewNextRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: 3 },
+  overviewWho: { fontSize: 14, flexShrink: 1 },
+  overviewWhen: { fontSize: 14, flexShrink: 0 },
+  overviewEmpty: { fontSize: 13, marginTop: 12 },
+  overviewMeta: { fontSize: 12, marginTop: 10 },
   pendingPill: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
   pendingPillText: { fontSize: 11 },
 
+  readiness: { marginTop: 12 },
   readinessStatus: { fontSize: 12, marginTop: 6 },
-  meterTrack: { flexDirection: 'row', height: 4, borderRadius: 2, marginTop: 12, overflow: 'hidden' },
-  readinessItems: { marginTop: 16, gap: 12 },
-  readinessRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  liveRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  liveText: { fontSize: 13 },
+  meter: { flexDirection: 'row', gap: 4, marginTop: 12 },
+  meterSegment: { flex: 1, height: 3, borderRadius: 1.5 },
+  readinessItems: { marginTop: 8 },
+  readinessRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44 },
   readinessLabel: { flex: 1, fontSize: 14 },
 
   cards: { marginTop: 12, gap: 12 },

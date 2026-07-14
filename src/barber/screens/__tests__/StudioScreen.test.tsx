@@ -145,7 +145,7 @@ describe('StudioScreen dashboard', () => {
     expect(screen.getByText('2 pending')).toBeTruthy();
     expect(screen.getByText(/Sam/)).toBeTruthy();
     expect(screen.getByText(/14:30/)).toBeTruthy();
-    expect(screen.getByText('1 in the next 7 days')).toBeTruthy();
+    expect(screen.getByText('1 upcoming in the next 7 days')).toBeTruthy();
 
     // Readiness meter: the "N of 4" status and the four item rows.
     expect(screen.getByTestId('barber-dashboard-readiness')).toBeTruthy();
