@@ -1,26 +1,34 @@
 /**
- * Barber Studio tab (dashboard) — rebuild of the prototype's
- * barber.dashboard route header (time-of-day greeting, serif first name,
- * sign out top-right) on top of real data.
+ * Barber Studio tab (dashboard). Time-of-day greeting + serif first name +
+ * sign out, then two READ-ONLY glances on top of real data:
  *
- * Founder decision (2026-07-08): unlike the prototype, Services and
- * Availability are NOT managed inline here — they stay separate, fully
- * tested stack screens. Studio links to them through two summary cards
- * carrying real counts ("3 services · from €30" / "2 windows"), keeping the
- * barber-dashboard-services / barber-dashboard-availability testIDs the
- * step 7-8 Maestro flows navigate by.
+ *  1. Bookings overview — pending-request count, the next confirmed
+ *     appointment, and a next-7-days count, all sourced from the same
+ *     fetchOwnRequestsView() the Requests tab uses. It NEVER mutates a booking
+ *     (accept/reject/complete live only on the Requests tab); tapping it
+ *     deep-links there.
+ *  2. Profile readiness — a four-item "readiness to go live" meter
+ *     (service / availability / portfolio / verification; bio is
+ *     founder-descoped). A verification still under manual review renders as a
+ *     calm in-progress state, never the barber's fault (founder decision
+ *     2026-07-13). Each incomplete item deep-links to the screen that fixes it.
  *
- * The verification line under the greeting is real
- * (barber_profile.verification_status, read-only — the column is
- * admin-owned). The prototype's "N reviews" line is absent: reviews don't
- * exist until build-order step 18.
+ * Founder decision (2026-07-08): Services and Availability are managed on
+ * their own stack screens, not inline — the two summary cards here link to
+ * them. All data is composed by fetchDashboardView (src/barber/dashboardData.ts),
+ * which degrades per-field so one failed read never blanks the dashboard.
  *
- * barber-dashboard-logout keeps its testID (login E2E flow asserts on it).
+ * The dashboard refreshes on focus (matching the rest of the app); the spinner
+ * shows only on the first load, later focus refreshes update silently.
+ *
+ * Preserved testIDs (Maestro / login E2E depend on them): barber-dashboard-
+ * screen, -logout, -loading, -error, -verification, -services, -availability.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -28,10 +36,9 @@ import { fetchOwnProfile } from '../../auth/authService';
 import { useExitRole } from '../../RoleContext';
 import { useTheme } from '../../theme/useTheme';
 import type { AvailabilityRow, ServiceRow, VerificationStatus } from '../../types';
-import { listOwnServices } from '../servicesData';
-import { listOwnAvailability } from '../availabilityData';
-import { fetchOwnBarberProfile } from '../profileData';
-import { firstName, formatMoney, timeOfDayGreeting } from '../../shared/format';
+import { fetchDashboardView } from '../dashboardData';
+import { firstName, formatBookingWhen, formatMoney, timeOfDayGreeting } from '../../shared/format';
+import type { DashboardView, ReadinessItem, ReadinessItemKey, ReadinessState } from '../types';
 import type { BarberTabParamList } from '../BarberTabs';
 import type { BarberStackParamList } from '../BarberNavigator';
 
@@ -46,11 +53,36 @@ const VERIFICATION_LINES: Record<VerificationStatus, string> = {
   rejected: 'Verification declined — see the Verify tab.',
 };
 
+/** Per-item copy. Verification copy varies by state; the others toggle on
+ * done/not-done. Sentence case, never all-caps (brand). */
+function readinessLabel(item: ReadinessItem): string {
+  switch (item.key) {
+    case 'services':
+      return item.state === 'complete' ? 'Services added' : 'Add a service';
+    case 'availability':
+      return item.state === 'complete' ? 'Availability set' : 'Set your availability';
+    case 'portfolio':
+      return item.state === 'complete' ? 'Portfolio photos added' : 'Add portfolio photos';
+    case 'verification':
+      return item.state === 'complete'
+        ? 'Verified'
+        : item.state === 'attention'
+          ? 'Verification needs attention'
+          : 'Verification in review';
+  }
+}
+
+const READINESS_ICONS: Record<ReadinessState, keyof typeof Feather.glyphMap> = {
+  complete: 'check-circle',
+  incomplete: 'circle',
+  in_progress: 'clock',
+  attention: 'alert-circle',
+};
+
 function servicesSummary(services: ServiceRow[]): string {
   if (services.length === 0) return 'No services yet.';
   const count = services.length === 1 ? '1 service' : `${services.length} services`;
-  const from = formatMoney(Math.min(...services.map((s) => s.price)));
-  return `${count} · from ${from}`;
+  return `${count} · from ${formatMoney(Math.min(...services.map((s) => s.price)))}`;
 }
 
 function availabilitySummary(windows: AvailabilityRow[]): string {
@@ -63,58 +95,63 @@ export default function StudioScreen({ navigation }: Props) {
   const onSignOut = useExitRole();
 
   const [name, setName] = useState<string | null>(null);
-  const [verification, setVerification] = useState<VerificationStatus | null>(null);
-  const [services, setServices] = useState<ServiceRow[]>([]);
-  const [windows, setWindows] = useState<AvailabilityRow[]>([]);
+  const [view, setView] = useState<DashboardView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const loadedRef = useRef(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
     const profileResult = await fetchOwnProfile();
     if (profileResult.status === 'error' || !profileResult.profile) {
+      // Only surface an error screen if nothing has ever loaded — a failed
+      // focus refresh keeps the last good dashboard on screen.
+      if (!loadedRef.current) {
+        setError(
+          profileResult.status === 'error' ? profileResult.message : 'Could not load your profile.'
+        );
+      }
       setLoading(false);
-      setError(
-        profileResult.status === 'error'
-          ? profileResult.message
-          : 'Could not load your profile.'
-      );
       return;
     }
     setName(profileResult.profile.name);
-    const barberId = profileResult.profile.id;
-
-    // Summaries and the verification line are independent reads — each
-    // degrades on its own; a failure never blanks the whole dashboard.
-    const [barberProfileResult, servicesResult, availabilityResult] = await Promise.all([
-      fetchOwnBarberProfile(barberId),
-      listOwnServices(barberId),
-      listOwnAvailability(barberId),
-    ]);
-    setVerification(
-      barberProfileResult.status === 'ok'
-        ? (barberProfileResult.profile?.verification_status ?? null)
-        : null
-    );
-    setServices(servicesResult.status === 'ok' ? servicesResult.services : []);
-    setWindows(availabilityResult.status === 'ok' ? availabilityResult.windows : []);
+    const nextView = await fetchDashboardView(profileResult.profile.id);
+    setView(nextView);
+    setError(null);
+    loadedRef.current = true;
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    let active = true;
-    // Deferred via .then() (not called directly) for the same
-    // react-hooks/set-state-in-effect reason as the other data screens.
-    Promise.resolve().then(() => {
-      if (active) void load();
-    });
-    return () => {
-      active = false;
-    };
-  }, [load]);
+  // Refresh on every focus. useFocusEffect (unlike a bare useEffect) is not
+  // flagged by react-hooks/set-state-in-effect, so load() is called directly —
+  // no microtask deferral, which also keeps test act() scopes from overlapping.
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load])
+  );
 
+  /** Deep-link an incomplete readiness item to the screen that resolves it. */
+  const openReadinessTarget = useCallback(
+    (key: ReadinessItemKey) => {
+      switch (key) {
+        case 'services':
+          navigation.navigate('Services');
+          return;
+        case 'availability':
+          navigation.navigate('Availability');
+          return;
+        case 'portfolio':
+          navigation.navigate('Portfolio');
+          return;
+        case 'verification':
+          navigation.navigate('Verify');
+          return;
+      }
+    },
+    [navigation]
+  );
+
+  const verification = view?.verification ?? null;
   const verificationColor =
     verification === 'approved'
       ? colors.successText
@@ -153,14 +190,14 @@ export default function StudioScreen({ navigation }: Props) {
           </Pressable>
         </View>
 
-        {loading ? (
+        {loading && !view ? (
           <ActivityIndicator
             size="small"
             color={colors.accent}
             style={styles.spinner}
             testID="barber-dashboard-loading"
           />
-        ) : error ? (
+        ) : error && !view ? (
           <View
             testID="barber-dashboard-error"
             accessibilityRole="alert"
@@ -170,7 +207,7 @@ export default function StudioScreen({ navigation }: Props) {
               {error}
             </Text>
           </View>
-        ) : (
+        ) : view ? (
           <>
             {verification ? (
               <Text
@@ -181,20 +218,118 @@ export default function StudioScreen({ navigation }: Props) {
               </Text>
             ) : null}
 
+            {/* Bookings overview — read-only glance; taps go to Requests. */}
+            <Pressable
+              onPress={() => navigation.navigate('Requests')}
+              accessibilityRole="button"
+              accessibilityLabel="View booking requests"
+              testID="barber-dashboard-overview"
+              style={[styles.card, styles.overview, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            >
+              <View style={styles.overviewHeader}>
+                <Text style={[styles.cardTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+                  Bookings
+                </Text>
+                {view.overview.pendingCount > 0 ? (
+                  <View style={[styles.pendingPill, { backgroundColor: colors.accent }]}>
+                    <Text style={[styles.pendingPillText, { color: colors.onAccent, fontFamily: fonts.bodySemiBold }]}>
+                      {view.overview.pendingCount} pending
+                    </Text>
+                  </View>
+                ) : (
+                  <Feather name="chevron-right" size={16} color={colors.textSecondary} />
+                )}
+              </View>
+              {view.overview.nextAppointment ? (
+                <Text style={[styles.overviewNext, { color: colors.textPrimary, fontFamily: fonts.body }]}>
+                  Next · {view.overview.nextAppointment.counterpartName ??
+                    view.overview.nextAppointment.serviceName ??
+                    'Appointment'}{' '}
+                  · {formatBookingWhen(
+                    view.overview.nextAppointment.booking.date,
+                    view.overview.nextAppointment.booking.time
+                  )}
+                </Text>
+              ) : (
+                <Text style={[styles.overviewMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                  Nothing scheduled yet.
+                </Text>
+              )}
+              {view.overview.upcomingCount > 0 ? (
+                <Text style={[styles.overviewMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                  {view.overview.upcomingCount} in the next 7 days
+                </Text>
+              ) : null}
+            </Pressable>
+
+            {/* Profile readiness meter. */}
+            <View
+              testID="barber-dashboard-readiness"
+              style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            >
+              <Text style={[styles.cardTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+                Readiness to go live
+              </Text>
+              <Text style={[styles.readinessStatus, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                {view.readiness.isLive
+                  ? "You're live — customers can find you."
+                  : `${view.readiness.completeCount} of ${view.readiness.total} complete`}
+              </Text>
+              <View style={[styles.meterTrack, { backgroundColor: colors.border }]}>
+                <View style={{ flex: view.readiness.completeCount, backgroundColor: colors.accent }} />
+                <View style={{ flex: view.readiness.total - view.readiness.completeCount }} />
+              </View>
+
+              <View style={styles.readinessItems}>
+                {view.readiness.items.map((item) => {
+                  const done = item.state === 'complete';
+                  const iconColor =
+                    item.state === 'complete'
+                      ? colors.successText
+                      : item.state === 'attention'
+                        ? colors.errorText
+                        : colors.textSecondary;
+                  return (
+                    <Pressable
+                      key={item.key}
+                      onPress={done ? undefined : () => openReadinessTarget(item.key)}
+                      disabled={done}
+                      accessibilityRole={done ? 'text' : 'button'}
+                      accessibilityLabel={readinessLabel(item)}
+                      testID={`barber-dashboard-readiness-${item.key}`}
+                      style={styles.readinessRow}
+                    >
+                      <Feather name={READINESS_ICONS[item.state]} size={15} color={iconColor} />
+                      <Text
+                        style={[
+                          styles.readinessLabel,
+                          { color: done ? colors.textSecondary : colors.textPrimary, fontFamily: fonts.body },
+                        ]}
+                      >
+                        {readinessLabel(item)}
+                      </Text>
+                      {done ? null : <Feather name="chevron-right" size={15} color={colors.textSecondary} />}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Management cards (separate stack screens — founder 2026-07-08). */}
             <View style={styles.cards}>
               <Pressable
                 onPress={() => navigation.navigate('Services')}
                 accessibilityRole="button"
                 accessibilityLabel="Manage services"
                 testID="barber-dashboard-services"
-                style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                style={[styles.card, styles.linkCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
               >
                 <View style={styles.cardText}>
                   <Text style={[styles.cardTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
                     Services
                   </Text>
                   <Text style={[styles.cardMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                    {servicesSummary(services)}
+                    {servicesSummary(view.services)}
                   </Text>
                 </View>
                 <Feather name="chevron-right" size={16} color={colors.textSecondary} />
@@ -205,21 +340,21 @@ export default function StudioScreen({ navigation }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel="Manage availability"
                 testID="barber-dashboard-availability"
-                style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                style={[styles.card, styles.linkCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
               >
                 <View style={styles.cardText}>
                   <Text style={[styles.cardTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
                     Availability
                   </Text>
                   <Text style={[styles.cardMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                    {availabilitySummary(windows)}
+                    {availabilitySummary(view.windows)}
                   </Text>
                 </View>
                 <Feather name="chevron-right" size={16} color={colors.textSecondary} />
               </Pressable>
             </View>
           </>
-        )}
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -240,16 +375,25 @@ const styles = StyleSheet.create({
   noticeText: { fontSize: 14 },
 
   verification: { fontSize: 12, marginTop: 12 },
-  cards: { marginTop: 40, gap: 12 },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderWidth: 0.5,
-    borderRadius: 8,
-    padding: 16,
-  },
-  cardText: { flex: 1, minWidth: 0 },
+
+  card: { borderWidth: 0.5, borderRadius: 8, padding: 16 },
   cardTitle: { fontSize: 18 },
   cardMeta: { fontSize: 12, marginTop: 4 },
+
+  overview: { marginTop: 24 },
+  overviewHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  overviewNext: { fontSize: 13, marginTop: 10 },
+  overviewMeta: { fontSize: 12, marginTop: 6 },
+  pendingPill: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
+  pendingPillText: { fontSize: 11 },
+
+  readinessStatus: { fontSize: 12, marginTop: 6 },
+  meterTrack: { flexDirection: 'row', height: 4, borderRadius: 2, marginTop: 12, overflow: 'hidden' },
+  readinessItems: { marginTop: 16, gap: 12 },
+  readinessRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  readinessLabel: { flex: 1, fontSize: 14 },
+
+  cards: { marginTop: 12, gap: 12 },
+  linkCard: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  cardText: { flex: 1, minWidth: 0 },
 });
