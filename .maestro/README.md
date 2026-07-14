@@ -21,7 +21,7 @@ maestro test .maestro/barber-verify-upload-documents.yaml
 maestro test .maestro/barber-dashboard-overview-readiness.yaml
 ```
 
-All seven flows use a placeholder `appId: com.privelier.app` — `app.json` does
+All flows use a placeholder `appId: com.privelier.app` — `app.json` does
 not yet define `android.package` / `ios.bundleIdentifier`, so there is no real
 app id to target yet. Set a real one in `app.json` (and rebuild a dev client)
 before these can actually run, then update the `appId` in all files to match.
@@ -181,7 +181,7 @@ state ids, plus the step-17 dashboard sections `barber-dashboard-overview`
 `barber-dashboard-readiness-{services|availability|portfolio|verification}`
 (present in every completion state; incomplete rows deep-link to their fixer
 screen, complete rows are inert); tab-bar buttons are
-`barber-tab-{studio|requests|portfolio|chats|verify}` and the
+`barber-tab-{studio|requests|portfolio|chats|verify}` and
 the Requests tab has `barber-requests-screen`, `-loading`,
 `-error`, `-empty`, and `barber-requests-row-{id}`; the Portfolio
 tab has `barber-portfolio-screen`, `-loading`, `-error`,
