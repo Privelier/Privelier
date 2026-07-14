@@ -34,6 +34,7 @@
  * restart until a write succeeds — truthful, nothing fake persisted).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import type {
   RealtimeChannel,
   RealtimePostgresChangesPayload,
@@ -84,12 +85,23 @@ export function useUnreadThreads(): UnreadState {
     };
   }, []);
 
+  // True only while the app is genuinely in the foreground. Navigation focus
+  // does NOT blur on home-button backgrounding, so without this gate a
+  // pocketed phone with a conversation left open would keep marking incoming
+  // messages read — a fabricated, counterpart-visible receipt since 0017
+  // (realtime-optimizer finding M2, 2026-07-14). Only explicit
+  // 'background'/'inactive' count as away: iOS reports 'unknown' at cold
+  // start, when the app IS in front of the user.
+  const appActiveRef = useRef(
+    AppState.currentState !== 'background' && AppState.currentState !== 'inactive'
+  );
+
   /** Fire-and-forget write; optimistic local un-flag happens at the caller. */
   const writeReadMarker = useCallback((roomId: string, userId: string) => {
-    const marker = resolveReadMarker(
-      new Date().toISOString(),
-      latestByRoomRef.current.get(roomId)?.created_at ?? null
-    );
+    // The marker is the newest KNOWN message's server timestamp; an empty
+    // room writes nothing (finding M1 — see resolveReadMarker's contract).
+    const marker = resolveReadMarker(latestByRoomRef.current.get(roomId)?.created_at ?? null);
+    if (marker === null) return;
     void supabase
       .from('chat_read_state')
       .upsert(
@@ -107,6 +119,10 @@ export function useUnreadThreads(): UnreadState {
     (roomId: string) => {
       const userId = myIdRef.current;
       if (!userId) return;
+      // Backgrounded ⇒ no human is reading ⇒ neither the local un-flag nor
+      // the marker write may happen (M2). The foreground-return listener
+      // below catches the room up the moment the user actually looks again.
+      if (!appActiveRef.current) return;
       setUnreadRoomIds((prev) => {
         if (!prev.has(roomId)) return prev; // referential no-op
         const next = new Set(prev);
@@ -123,7 +139,11 @@ export function useUnreadThreads(): UnreadState {
     if (!userId) return;
     const [roomsResult, readResult, messagesResult] = await Promise.all([
       supabase.from('chat_rooms').select('id'),
-      supabase.from('chat_read_state').select('chat_id, last_read_at'),
+      // OWN rows only, explicitly: since migration 0017 widened SELECT to
+      // room participants (read receipts), an unfiltered read would also
+      // return counterpart rows and corrupt computeUnreadRoomIds (design
+      // condition C1).
+      supabase.from('chat_read_state').select('chat_id, last_read_at').eq('user_id', userId),
       supabase
         .from('messages')
         .select('chat_id, sender_id, created_at')
@@ -163,6 +183,23 @@ export function useUnreadThreads(): UnreadState {
     loadRef.current = load;
     markReadRef.current = markRead;
   }, [load, markRead]);
+
+  // Foreground/background transitions (M2): track the real AppState, and on
+  // RETURN to foreground with a conversation still active, mark it read then
+  // — that is the moment a human is actually looking again. (markRead itself
+  // reads appActiveRef, which this listener has already flipped to active.)
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (next) => {
+      // Mirror the initializer: only explicit background/inactive is "away".
+      const nowActive = next !== 'background' && next !== 'inactive';
+      const wasActive = appActiveRef.current;
+      appActiveRef.current = nowActive;
+      if (nowActive && !wasActive && activeRoomRef.current) {
+        markReadRef.current(activeRoomRef.current);
+      }
+    });
+    return () => subscription.remove();
+  }, []);
 
   useEffect(() => {
     if (!myId) return;

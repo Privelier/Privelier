@@ -157,6 +157,17 @@ export interface MessageRow {
 }
 
 /**
+ * Row shape of `public.chat_read_state` (migration 0014; Realtime-enabled
+ * and participant-readable since migration 0017 for read receipts). Writes
+ * stay own-row-only — the unread provider is the sole writer.
+ */
+export interface ChatReadStateRow {
+  chat_id: string;
+  user_id: string;
+  last_read_at: string;
+}
+
+/**
  * Row shape of `public.barber_directory` (see migration
  * 0006_require_authenticated_discovery_and_lock_users_columns.sql). This
  * view is the ONLY discovery surface: a hand-picked, non-sensitive column

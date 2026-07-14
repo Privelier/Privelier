@@ -99,20 +99,12 @@ describe('latestMessageByRoom', () => {
   });
 });
 
-describe('resolveReadMarker (clock-skew guard)', () => {
-  it('uses device time when it is at/after the newest message', () => {
-    expect(resolveReadMarker('2026-07-10T10:05:00+00:00', '2026-07-10T10:00:00+00:00')).toBe(
-      '2026-07-10T10:05:00+00:00'
-    );
+describe('resolveReadMarker (M1: server-timestamp receipts, never device time)', () => {
+  it('the marker is exactly the newest known message timestamp — device clock never participates', () => {
+    expect(resolveReadMarker('2026-07-10T10:00:00+00:00')).toBe('2026-07-10T10:00:00+00:00');
   });
 
-  it('uses the newest message time when the device clock is BEHIND the server — the marker may never undercut what was just read', () => {
-    expect(resolveReadMarker('2026-07-10T09:00:00+00:00', '2026-07-10T10:00:00+00:00')).toBe(
-      '2026-07-10T10:00:00+00:00'
-    );
-  });
-
-  it('falls back to device time for an empty room', () => {
-    expect(resolveReadMarker('2026-07-10T10:00:00+00:00', null)).toBe('2026-07-10T10:00:00+00:00');
+  it('an empty room resolves to null — write nothing, there is nothing read', () => {
+    expect(resolveReadMarker(null)).toBeNull();
   });
 });

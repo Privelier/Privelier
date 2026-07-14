@@ -14,6 +14,7 @@
  * - setActiveRoom un-flags and writes a marker; cleanup removes the channel.
  */
 import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { AppState } from 'react-native';
 import { supabase } from '../../../lib/supabase';
 import { useUnreadThreads } from '../useUnreadThreads';
 
@@ -76,27 +77,51 @@ function installTables(data: {
   const upsert = jest.fn(() => ({
     then: (resolve: (v: unknown) => unknown) => Promise.resolve({ error: null }).then(resolve),
   }));
-  const readBuilder = (result: unknown) => {
+  // One builder instance per from() call, recorded per table so tests can
+  // assert chain calls (e.g. the C1 own-rows eq filter on chat_read_state).
+  const builders: Record<string, Record<string, jest.Mock>[]> = {};
+  const readBuilder = (table: string, result: unknown) => {
     const obj: Record<string, unknown> = {};
     obj.select = jest.fn(() => obj);
     obj.order = jest.fn(() => obj);
     obj.limit = jest.fn(() => obj);
+    obj.eq = jest.fn(() => obj);
     obj.upsert = upsert;
     obj.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
       Promise.resolve(result).then(resolve, reject);
+    (builders[table] ??= []).push(obj as Record<string, jest.Mock>);
     return obj;
   };
   mockFrom.mockImplementation((table: string) => {
-    if (table === 'chat_rooms') return readBuilder({ data: data.rooms, error: null });
-    if (table === 'chat_read_state') return readBuilder({ data: data.readStates, error: null });
-    if (table === 'messages') return readBuilder({ data: data.messages, error: null });
+    if (table === 'chat_rooms') return readBuilder(table, { data: data.rooms, error: null });
+    if (table === 'chat_read_state')
+      return readBuilder(table, { data: data.readStates, error: null });
+    if (table === 'messages') return readBuilder(table, { data: data.messages, error: null });
     throw new Error(`unexpected table ${table}`);
   });
-  return { upsert };
+  return { upsert, builders };
 }
 
 function msg(chatId: string, senderId: string, createdAt: string) {
   return { chat_id: chatId, sender_id: senderId, created_at: createdAt };
+}
+
+/** Captures the hook's AppState change listener so tests can drive it. */
+function installAppState() {
+  let handler: ((state: string) => void) | null = null;
+  jest.spyOn(AppState, 'addEventListener').mockImplementation(((
+    _type: string,
+    cb: (state: string) => void
+  ) => {
+    handler = cb;
+    return { remove: jest.fn() };
+  }) as never);
+  return {
+    emit: (state: string) => {
+      if (!handler) throw new Error('AppState listener not registered');
+      handler(state);
+    },
+  };
 }
 
 /** Render, join the channel, and wait for the baseline to land. */
@@ -143,6 +168,22 @@ describe('baseline ordering (M2)', () => {
 
     await waitFor(() => expect(result.current.unreadRoomIds).toEqual(new Set(['r1'])));
     expect(result.current.unreadCount).toBe(1);
+  });
+
+  it('reads ONLY own read-state rows (design C1: migration 0017 widened SELECT to participants)', async () => {
+    const fake = installFakeChannel();
+    const { builders } = installTables({ rooms: [{ id: 'r1' }], readStates: [], messages: [] });
+
+    await renderJoined(fake);
+    await waitFor(() => expect(mockFrom).toHaveBeenCalledWith('chat_read_state'));
+
+    const baselineReads = (builders['chat_read_state'] ?? []).filter(
+      (b) => b.select.mock.calls.length > 0
+    );
+    expect(baselineReads.length).toBeGreaterThan(0);
+    for (const b of baselineReads) {
+      expect(b.eq).toHaveBeenCalledWith('user_id', ME);
+    }
   });
 });
 
@@ -215,11 +256,22 @@ describe('setActiveRoom / mark-as-read', () => {
 
     expect(result.current.unreadRoomIds.size).toBe(0);
     expect(upsert).toHaveBeenCalledWith(
-      // resolveReadMarker: the newest known (server) timestamp wins over the
-      // behind device clock, so the just-read message can never out-date it.
+      // resolveReadMarker (M1): the marker IS the newest known message's
+      // server timestamp — the device clock never participates, so skew in
+      // either direction cannot fabricate or undercut a receipt.
       { chat_id: 'r1', user_id: ME, last_read_at: '2999-01-01T00:00:00.000Z' },
       { onConflict: 'chat_id,user_id' }
     );
+  });
+
+  it('opening an EMPTY room writes no marker at all (M1: nothing was read)', async () => {
+    const fake = installFakeChannel();
+    const { upsert } = installTables({ rooms: [{ id: 'r1' }], readStates: [], messages: [] });
+    const { result } = await renderJoined(fake);
+
+    await act(() => result.current.setActiveRoom('r1'));
+
+    expect(upsert).not.toHaveBeenCalled();
   });
 
   it('clearing the active room (blur) writes nothing', async () => {
@@ -231,6 +283,63 @@ describe('setActiveRoom / mark-as-read', () => {
     await act(() => result.current.setActiveRoom(null));
 
     expect(upsert.mock.calls.length).toBe(before);
+  });
+});
+
+describe('AppState gating (M2: a pocketed phone must not produce receipts)', () => {
+  it('while backgrounded, opening a room neither un-flags nor writes; foreground return catches up', async () => {
+    const appState = installAppState();
+    const fake = installFakeChannel();
+    const { upsert } = installTables({
+      rooms: [{ id: 'r1' }],
+      readStates: [],
+      messages: [msg('r1', THEM, '2026-07-10T10:00:00+00:00')],
+    });
+    const { result } = await renderJoined(fake);
+    await waitFor(() => expect(result.current.unreadRoomIds).toEqual(new Set(['r1'])));
+
+    await act(() => appState.emit('background'));
+    await act(() => result.current.setActiveRoom('r1'));
+    expect(result.current.unreadRoomIds).toEqual(new Set(['r1'])); // still unread
+    expect(upsert).not.toHaveBeenCalled();
+
+    // The user actually looks again: NOW it is read.
+    await act(() => appState.emit('active'));
+    expect(result.current.unreadRoomIds.size).toBe(0);
+    expect(upsert).toHaveBeenCalledWith(
+      { chat_id: 'r1', user_id: ME, last_read_at: '2026-07-10T10:00:00+00:00' },
+      { onConflict: 'chat_id,user_id' }
+    );
+  });
+
+  it('an INSERT for the active room while backgrounded writes nothing; the marker lands on foreground return', async () => {
+    const appState = installAppState();
+    const fake = installFakeChannel();
+    const { upsert } = installTables({
+      rooms: [{ id: 'r1' }],
+      readStates: [],
+      messages: [msg('r1', THEM, '2026-07-10T10:00:00+00:00')],
+    });
+    const { result } = await renderJoined(fake);
+    await act(() => result.current.setActiveRoom('r1'));
+    const afterOpen = upsert.mock.calls.length;
+
+    await act(() => appState.emit('background'));
+    await act(() =>
+      fake.emitChange({
+        eventType: 'INSERT',
+        new: { id: 'm2', ...msg('r1', THEM, '2026-07-10T10:05:00+00:00') },
+        old: {},
+      })
+    );
+    expect(upsert.mock.calls.length).toBe(afterOpen); // pocketed: no receipt
+
+    await act(() => appState.emit('active'));
+    expect(upsert.mock.calls.length).toBe(afterOpen + 1);
+    expect(upsert).toHaveBeenLastCalledWith(
+      { chat_id: 'r1', user_id: ME, last_read_at: '2026-07-10T10:05:00+00:00' },
+      { onConflict: 'chat_id,user_id' }
+    );
   });
 });
 

@@ -1,0 +1,113 @@
+# Read-receipt flow (chat follow-on, founder-directed 2026-07-14): log in as
+# a customer -> open the (single) conversation -> send a message -> the quiet
+# "Read" marker must NOT be present (the counterpart has not read it) ->
+# with a PRE-SEEDED counterpart read marker covering everything (see
+# prerequisites), re-entering the conversation shows the "Read" marker under
+# the newest own message.
+#
+# What this deliberately does NOT cover — single-device limits, same as the
+# step 13-14/15-16 gates (soft blockers per founder decision 2026-07-14):
+# - The LIVE half of receipts: the marker flipping in real time while both
+#   sessions are open (needs two devices/sessions).
+# - The typing indicator entirely: it only renders from a counterpart's real
+#   broadcast event, which a single device can never produce (design honesty
+#   rule — nothing is fabricated). Typing is covered by fake-timer hook tests
+#   (useTypingBroadcast.test.ts) and the live RLS probes instead.
+#
+# NOT YET RUN. Same pre-existing tooling gap as every other flow here: no
+# Maestro CLI on the authoring machine — see .maestro/README.md.
+#
+# Prerequisites:
+# - A pre-confirmed test customer with EXACTLY ONE chat room (one booking).
+# - SEEDED COUNTERPART READ MARKER, FAR-FUTURE: before running, upsert (as
+#   the BARBER test user or via the dashboard) a chat_read_state row for the
+#   room with user_id = the barber's uuid and last_read_at far in the future
+#   (e.g. now() + interval '1 year'), so the marker also covers the message
+#   this flow sends mid-run. Without that seed the "Read" assertions below
+#   will fail — this flow asserts real data, not fabricated state.
+#
+# Run with:
+#   maestro test .maestro/customer-chat-read-receipt.yaml \
+#     -e TEST_CUSTOMER_EMAIL=... -e TEST_CUSTOMER_PASSWORD=... \
+#     -e TEST_MESSAGE="..."
+appId: com.privelier.app # TODO: replace once app.json defines a real package/bundleIdentifier
+env:
+  TEST_CUSTOMER_EMAIL: customer.e2e@example.com
+  TEST_CUSTOMER_PASSWORD: ChangeMe123!
+  TEST_MESSAGE: "Maestro receipt test message"
+---
+- launchApp:
+    clearState: true
+
+# UNAUTHENTICATED: role-select is the very first screen.
+- assertVisible:
+    id: "role-select-customer"
+- tapOn:
+    id: "role-select-customer"
+
+- assertVisible:
+    id: "auth-entry-screen"
+- tapOn:
+    id: "auth-entry-login"
+
+- assertVisible:
+    id: "auth-login-screen"
+- tapOn:
+    id: "auth-login-email"
+- inputText: "${TEST_CUSTOMER_EMAIL}"
+- tapOn:
+    id: "auth-login-password"
+- inputText: "${TEST_CUSTOMER_PASSWORD}"
+- tapOn:
+    id: "auth-login-submit"
+
+- extendedWaitUntil:
+    visible:
+      id: "customer-home-screen"
+    timeout: 15000
+
+# --- Inbox tab -> the single thread row ---
+- tapOn:
+    id: "customer-tab-inbox"
+- assertVisible:
+    id: "customer-inbox-screen"
+- extendedWaitUntil:
+    notVisible:
+      id: "customer-inbox-loading"
+    timeout: 15000
+- tapOn:
+    id: "customer-inbox-row-.*"
+
+# --- Conversation: send one message ---
+- assertVisible:
+    id: "customer-conversation-screen"
+- extendedWaitUntil:
+    notVisible:
+      id: "customer-conversation-loading"
+    timeout: 15000
+- tapOn:
+    id: "customer-conversation-input"
+- inputText: "${TEST_MESSAGE}"
+- tapOn:
+    id: "customer-conversation-send"
+- extendedWaitUntil:
+    notVisible:
+      id: "customer-conversation-sending-.*"
+    timeout: 15000
+- assertVisible:
+    text: "${TEST_MESSAGE}"
+
+# --- Receipt assertion (depends on the far-future seeded marker) ---
+# The receipt channel is already live (opened on focus, before the send), so
+# the seeded marker covers the just-sent message: the single quiet "Read"
+# marker must render under the newest own message.
+- extendedWaitUntil:
+    visible:
+      id: "customer-conversation-read-marker"
+    timeout: 15000
+
+# Exactly ONE marker ever renders (design D5: newest own message only) — the
+# testID is not indexed, so a duplicate would make this selector ambiguous
+# and fail the step in Maestro.
+- assertVisible:
+    id: "customer-conversation-read-marker"

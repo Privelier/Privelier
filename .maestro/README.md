@@ -17,6 +17,7 @@ maestro test .maestro/customer-discovery-view-barber-profile.yaml
 maestro test .maestro/customer-booking-create.yaml
 maestro test .maestro/barber-requests-accept-reject.yaml
 maestro test .maestro/customer-chat-send-message.yaml
+maestro test .maestro/customer-chat-read-receipt.yaml
 maestro test .maestro/barber-verify-upload-documents.yaml
 maestro test .maestro/barber-dashboard-overview-readiness.yaml
 ```
@@ -132,6 +133,11 @@ as step 13-14's realtime half. New testIDs (documented for both apps, same
 shape with the `barber-` prefix): `customer-conversation-screen`, `-back`,
 `-loading`, `-error`, `-empty`, `-input`, `-send`,
 `customer-conversation-message-{id}`, `-sending-{key}`, `-failed-{key}`.
+The 2026-07-14 receipts/typing follow-on adds (both apps, same shape with
+the `barber-` prefix): `customer-conversation-read-marker` (the single quiet
+"Read" under the newest own message — at most one exists by design) and
+`customer-conversation-typing` (the fixed-height indicator line above the
+input row, present only while a counterpart broadcast says so).
 
 For build-order step 17 (barber manual verification — document upload),
 `barber-verify-upload-documents.yaml` covers the single-device half: a
@@ -149,6 +155,19 @@ used: `barber-tab-verify`, `barber-verify-screen`, `-loading`, `-error`,
 `barber-verify-status`, `barber-verify-doc-id`, `barber-verify-doc-license`,
 and the per-row in-flight ids `barber-verify-doc-id-uploading` /
 `barber-verify-doc-license-uploading`.
+
+For the chat read-receipts + typing follow-on (founder-directed 2026-07-14),
+`customer-chat-read-receipt.yaml` covers what a single device can honestly
+assert: with a PRE-SEEDED far-future counterpart read marker (see the file's
+prerequisites — an upsert into `chat_read_state` as the barber), the customer
+sends a message and the single quiet "Read" marker
+(`customer-conversation-read-marker`) renders under it. Deliberately NOT
+covered, single-device limits: the marker flipping LIVE while both sessions
+are open, and the typing indicator entirely (`customer-conversation-typing` /
+`barber-conversation-typing` only render from a counterpart's real broadcast
+event, which one device can never produce — nothing is fabricated). Those
+halves live in the fake-timer/fake-channel hook tests plus the live RLS
+probes, and remain part of the two-device soft gate.
 
 For build-order step 17's last sub-feature (barber Studio dashboard —
 bookings overview + profile readiness), `barber-dashboard-overview-readiness.yaml`

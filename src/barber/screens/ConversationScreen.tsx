@@ -38,6 +38,9 @@ import {
   type MessageChangeEvent,
 } from '../../shared/messageRealtime';
 import { useMessagesRealtime } from '../../shared/useMessagesRealtime';
+import { useReadReceipt } from '../../shared/useReadReceipt';
+import { useTypingBroadcast } from '../../shared/useTypingBroadcast';
+import { deriveReadMarkerId } from '../../shared/readReceipts';
 import { useSendQueue, type PendingSend } from '../../shared/useSendQueue';
 import { formatMessageTime } from '../../shared/format';
 import { useUnread } from '../UnreadContext';
@@ -156,18 +159,46 @@ export default function ConversationScreen({ route, navigation }: Props) {
 
   const { pending, submit, retry } = useSendQueue<MessageRow>({ send: performSend, onSent });
 
-  const onChangeDraft = useCallback((text: string) => {
-    draftRef.current = text;
-    setDraft(text);
-  }, []);
+  // Read receipt (counterpart's marker, live) + typing indicator (private
+  // broadcast) — both real state only, nothing fabricated (design D5/C6).
+  const { counterpartLastReadAt } = useReadReceipt({
+    roomId: room.id,
+    myId,
+    enabled: focused,
+  });
+  const { counterpartTyping, notifyActivity, notifyStopped } = useTypingBroadcast({
+    roomId: room.id,
+    myId,
+    enabled: focused,
+  });
+
+  const onChangeDraft = useCallback(
+    (text: string) => {
+      draftRef.current = text;
+      setDraft(text);
+      if (text.trim().length > 0) {
+        notifyActivity(); // debounced inside the hook — never per-keystroke traffic
+      } else {
+        notifyStopped();
+      }
+    },
+    [notifyActivity, notifyStopped]
+  );
 
   const onSend = useCallback(() => {
     const text = draftRef.current.trim();
     if (text.length === 0) return;
     draftRef.current = ''; // synchronous — a double-fire sees '' and no-ops
     setDraft('');
+    notifyStopped();
     submit(text);
-  }, [submit]);
+  }, [submit, notifyStopped]);
+
+  // The single quiet "Read" marker (design D5) — shared derivation (L2).
+  const readMarkerId = useMemo(
+    () => deriveReadMarkerId(messages, myId, counterpartLastReadAt),
+    [messages, myId, counterpartLastReadAt]
+  );
 
   // Inverted list: newest first. Pending sends are newer than everything.
   const listData = useMemo<ListItem[]>(() => {
@@ -278,11 +309,26 @@ export default function ConversationScreen({ route, navigation }: Props) {
                 >
                   <Text style={styles.bubbleText}>{m.message}</Text>
                   <Text style={styles.bubbleMeta}>{formatMessageTime(m.created_at)}</Text>
+                  {own && m.id === readMarkerId ? (
+                    <Text style={styles.bubbleMeta} testID="barber-conversation-read-marker">
+                      Read
+                    </Text>
+                  ) : null}
                 </View>
               );
             }}
           />
         )}
+
+        {/* Fixed-height slot: the indicator appears/disappears without any
+            layout shift (typing state is ephemeral and frequent). */}
+        <View style={styles.typingSlot} accessibilityLiveRegion="polite">
+          {counterpartTyping ? (
+            <Text style={styles.typingText} testID="barber-conversation-typing">
+              Typing…
+            </Text>
+          ) : null}
+        </View>
 
         <View style={styles.inputRow}>
           <TextInput
@@ -362,6 +408,9 @@ function useStyles(colors: Palette) {
     bubbleText: { fontSize: 14, lineHeight: 20, color: colors.textPrimary, fontFamily: fonts.body },
     bubbleMeta: { fontSize: 10, marginTop: 4, color: colors.textSecondary, fontFamily: fonts.body },
     bubbleMetaFailed: { fontSize: 10, marginTop: 4, color: colors.errorText, fontFamily: fonts.bodyMedium },
+
+    typingSlot: { height: 18, justifyContent: 'center', paddingHorizontal: 24 },
+    typingText: { fontSize: 11, color: colors.textSecondary, fontFamily: fonts.body },
 
     inputRow: {
       flexDirection: 'row',

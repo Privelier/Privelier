@@ -57,13 +57,20 @@ export function computeUnreadRoomIds(params: {
 }
 
 /**
- * The timestamp to write when marking a room read: the LATER of device time
- * and the newest known message's (server-generated) timestamp. Message
- * timestamps come from the server clock; a device clock running behind would
- * otherwise stamp a marker OLDER than the message just read, leaving it
- * unread forever. String max is valid for same-format UTC ISO strings.
+ * The timestamp to write when marking a room read, or null for "write
+ * nothing". The marker is the newest KNOWN message's server-generated
+ * timestamp — never the device clock (realtime-optimizer finding M1,
+ * 2026-07-14): since migration 0017 the marker is a counterpart-visible
+ * receipt, and a device clock running AHEAD would stamp a future marker
+ * that "reads" messages sent after the reader left — a fabricated receipt.
+ * Pinning to the newest seen message is immune to skew in both directions:
+ * it claims exactly "I have seen everything up to this message", which is
+ * what a receipt means.
+ *
+ * Empty room ⇒ null ⇒ no write: there is nothing to have read, no unread
+ * computation needs the row to exist (no message ⇒ never unread), and any
+ * future first message must post-date an honest marker anyway.
  */
-export function resolveReadMarker(nowIso: string, latestMessageIso: string | null): string {
-  if (latestMessageIso !== null && latestMessageIso > nowIso) return latestMessageIso;
-  return nowIso;
+export function resolveReadMarker(latestMessageIso: string | null): string | null {
+  return latestMessageIso;
 }
