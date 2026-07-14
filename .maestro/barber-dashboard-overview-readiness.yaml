@@ -1,0 +1,113 @@
+# Barber Studio dashboard flow (build-order step 17, last sub-feature): log in
+# as the barber -> land on the Studio tab -> assert the dashboard's two new
+# read-only sections render (bookings-overview card + "Readiness to go live"
+# meter with all four item rows) -> tap the overview card and confirm it
+# deep-links to the Requests tab -> return to Studio via the tab bar and
+# confirm the dashboard re-renders cleanly (the focus refresh is silent — no
+# spinner blanks an already-loaded dashboard, so the assertion is simply that
+# the sections are still there with no error notice).
+#
+# Deliberately NOT asserted, because they depend on backend state unknown at
+# authoring time (the flow must pass for ANY signed-in barber):
+# - Which readiness rows are complete vs incomplete (all four row testIDs exist
+#   in every state, so presence is asserted; per-row deep-links are not, since
+#   complete rows are intentionally inert).
+# - The pending pill / next-appointment line (only rendered when such bookings
+#   exist; the overview card testID itself is state-independent).
+# - "N of 4 complete" vs the is-live line (state-dependent; the section title
+#   "Readiness to go live" is static and asserted instead).
+#
+# NOT YET RUN — same tooling gap as every other flow here: no Maestro CLI on
+# the authoring machine (see .maestro/README.md). Once available:
+#   maestro test .maestro/barber-dashboard-overview-readiness.yaml \
+#     -e TEST_BARBER_EMAIL=... -e TEST_BARBER_PASSWORD=...
+#
+# Prerequisites:
+# - A pre-confirmed test barber account (any verification/setup state — see
+#   the "deliberately not asserted" list above for why no seeding is needed).
+# - Same appId placeholder caveat as every other flow here.
+appId: com.privelier.app # TODO: replace once app.json defines a real package/bundleIdentifier
+env:
+  TEST_BARBER_EMAIL: barber.e2e@example.com
+  TEST_BARBER_PASSWORD: ChangeMe123!
+---
+- launchApp:
+    clearState: true
+
+# UNAUTHENTICATED: role-select is the very first screen.
+- assertVisible:
+    id: "role-select-barber"
+- tapOn:
+    id: "role-select-barber"
+
+# Per-role auth entry -> log in.
+- assertVisible:
+    id: "auth-entry-screen"
+- tapOn:
+    id: "auth-entry-login"
+
+- assertVisible:
+    id: "auth-login-screen"
+- tapOn:
+    id: "auth-login-email"
+- inputText: "${TEST_BARBER_EMAIL}"
+- tapOn:
+    id: "auth-login-password"
+- inputText: "${TEST_BARBER_PASSWORD}"
+- tapOn:
+    id: "auth-login-submit"
+
+# PROVISIONING is transient on a returning user — wait for the barber landing
+# (Studio tab) directly, same as the other barber flows.
+- extendedWaitUntil:
+    visible:
+      id: "barber-dashboard-logout"
+    timeout: 15000
+
+# --- Studio dashboard: first load ---
+- assertVisible:
+    id: "barber-dashboard-screen"
+- extendedWaitUntil:
+    notVisible:
+      id: "barber-dashboard-loading"
+    timeout: 15000
+- assertNotVisible:
+    id: "barber-dashboard-error"
+
+# The two new sections, plus the pre-existing management cards.
+- assertVisible:
+    id: "barber-dashboard-overview"
+- assertVisible:
+    id: "barber-dashboard-readiness"
+- assertVisible: "Readiness to go live"
+# All four readiness rows exist in every completion state.
+- assertVisible:
+    id: "barber-dashboard-readiness-services"
+- assertVisible:
+    id: "barber-dashboard-readiness-availability"
+- assertVisible:
+    id: "barber-dashboard-readiness-portfolio"
+- assertVisible:
+    id: "barber-dashboard-readiness-verification"
+- assertVisible:
+    id: "barber-dashboard-services"
+- assertVisible:
+    id: "barber-dashboard-availability"
+
+# --- Overview card deep-links to the Requests tab (always enabled) ---
+- tapOn:
+    id: "barber-dashboard-overview"
+- assertVisible:
+    id: "barber-requests-screen"
+
+# --- Return to Studio: focus refresh is silent over a loaded dashboard ---
+- tapOn:
+    id: "barber-tab-studio"
+- assertVisible:
+    id: "barber-dashboard-screen"
+- assertNotVisible:
+    id: "barber-dashboard-error"
+- assertVisible:
+    id: "barber-dashboard-overview"
+- assertVisible:
+    id: "barber-dashboard-readiness"

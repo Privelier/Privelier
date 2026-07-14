@@ -18,6 +18,7 @@ maestro test .maestro/customer-booking-create.yaml
 maestro test .maestro/barber-requests-accept-reject.yaml
 maestro test .maestro/customer-chat-send-message.yaml
 maestro test .maestro/barber-verify-upload-documents.yaml
+maestro test .maestro/barber-dashboard-overview-readiness.yaml
 ```
 
 All seven flows use a placeholder `appId: com.privelier.app` — `app.json` does
@@ -149,6 +150,19 @@ used: `barber-tab-verify`, `barber-verify-screen`, `-loading`, `-error`,
 and the per-row in-flight ids `barber-verify-doc-id-uploading` /
 `barber-verify-doc-license-uploading`.
 
+For build-order step 17's last sub-feature (barber Studio dashboard —
+bookings overview + profile readiness), `barber-dashboard-overview-readiness.yaml`
+covers the deterministic path: a barber lands on Studio, both new read-only
+sections render (the overview card and the four-row readiness meter — all
+four row testIDs exist in every completion state, so presence is asserted
+regardless of backend state), the overview card deep-links to the Requests
+tab, and returning to Studio re-renders cleanly (the focus refresh is silent
+over an already-loaded dashboard — no spinner, no error). Deliberately
+state-dependent and therefore NOT asserted: per-row readiness deep-links
+(complete rows are intentionally inert), the pending pill / next-appointment
+line, and "N of 4 complete" vs the is-live line. Needs no seeding beyond any
+signed-in barber account.
+
 ## testIDs referenced (verified present in source as of this writing)
 
 `role-select-customer`, `role-select-barber`, `auth-entry-screen`,
@@ -161,7 +175,12 @@ and the per-row in-flight ids `barber-verify-doc-id-uploading` /
 `barber-dashboard-services`, `barber-dashboard-availability`
 (all three now live on the Studio tab of the barber tab shell —
 `barber-dashboard-screen`, with `-loading`, `-error`, and `-verification`
-state ids; tab-bar buttons are
+state ids, plus the step-17 dashboard sections `barber-dashboard-overview`
+(the read-only bookings glance, taps through to the Requests tab) and
+`barber-dashboard-readiness` with its per-item rows
+`barber-dashboard-readiness-{services|availability|portfolio|verification}`
+(present in every completion state; incomplete rows deep-link to their fixer
+screen, complete rows are inert); tab-bar buttons are
 `barber-tab-{studio|requests|portfolio|chats|verify}` and the
 the Requests tab has `barber-requests-screen`, `-loading`,
 `-error`, `-empty`, and `barber-requests-row-{id}`; the Portfolio
