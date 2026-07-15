@@ -225,3 +225,4 @@ Barber-upload half DONE (commits a0c0114→7e415fa): migration 0015 (private `ve
 - [ ] Stripe Connect payments; dispute resolution + refund/cancellation-fee policy (undefined, blocks real money)
 - [ ] In-home safety features: live location sharing during appointment window, SOS button (highest-liability gap)
 - [ ] Revisit email-change flow (users.email is trigger-frozen; requires service_role-mediated sync)
+
