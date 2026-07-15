@@ -85,6 +85,7 @@ const MIXED_VIEW: DashboardView = {
   windows: [{ id: 'w1' }] as DashboardView['windows'],
   verification: 'pending',
   bio: 'Ten years of fades.',
+  locationAddress: 'Prinsengracht 263, Amsterdam',
   overview: {
     pendingCount: 2,
     upcomingCount: 1,
@@ -168,6 +169,11 @@ describe('StudioScreen dashboard', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('BioEdit');
     fireEvent.press(screen.getByTestId('barber-dashboard-bio'));
     expect(navigation.navigate).toHaveBeenCalledWith('BioEdit');
+
+    // Location card (Explore Run A): shows the saved address, links to LocationEdit.
+    expect(screen.getByText('Prinsengracht 263, Amsterdam')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('barber-dashboard-location'));
+    expect(navigation.navigate).toHaveBeenCalledWith('LocationEdit');
 
     // The overview deep-links to Requests (glance only — Requests owns mutations).
     fireEvent.press(screen.getByTestId('barber-dashboard-overview'));

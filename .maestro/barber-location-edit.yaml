@@ -1,0 +1,116 @@
+# Barber location entry flow (Explore/location Run A): log in as the barber ->
+# Studio tab -> tap the Location management card -> the LocationEdit screen
+# renders with its privacy consent copy -> type a well-known address -> the
+# debounced Mapbox geocode returns candidates -> pick the first one and assert
+# it fills the input.
+#
+# Deliberately NOT asserted (deterministic-path-only, same philosophy as
+# barber-dashboard-overview-readiness.yaml):
+# - The SAVE itself. Save-enablement is dirty-state-dependent: if the test
+#   barber's saved address already equals the picked candidate's label, save
+#   is correctly disabled and a save-tap assertion would flake on re-runs.
+#   The save/clear write paths are pinned by component tests
+#   (LocationEditScreen.test.tsx) and by the locationData unit tests.
+# - The Studio card's summary text (state-dependent: address vs the
+#   "Add your address" placeholder).
+#
+# REAL NETWORK: the candidate step calls the real Mapbox Geocoding API using
+# the EXPO_PUBLIC_MAPBOX_TOKEN baked into the dev build. A device without
+# network (or a build without the token) fails at the candidates step — that
+# is a genuine failure of the feature under test, not flakiness.
+#
+# NOT YET RUN — same tooling gap as every other flow here: no Maestro CLI on
+# the authoring machine (see .maestro/README.md). Once available:
+#   maestro test .maestro/barber-location-edit.yaml \
+#     -e TEST_BARBER_EMAIL=... -e TEST_BARBER_PASSWORD=...
+#
+# Prerequisites:
+# - A pre-confirmed test barber account.
+# - Same appId placeholder caveat as every other flow here.
+appId: com.privelier.app # TODO: replace once app.json defines a real package/bundleIdentifier
+env:
+  TEST_BARBER_EMAIL: barber.e2e@example.com
+  TEST_BARBER_PASSWORD: ChangeMe123!
+---
+- launchApp:
+    clearState: true
+
+# UNAUTHENTICATED: role-select is the very first screen.
+- assertVisible:
+    id: "role-select-barber"
+- tapOn:
+    id: "role-select-barber"
+
+# Per-role auth entry -> log in.
+- assertVisible:
+    id: "auth-entry-screen"
+- tapOn:
+    id: "auth-entry-login"
+
+- assertVisible:
+    id: "auth-login-screen"
+- tapOn:
+    id: "auth-login-email"
+- inputText: "${TEST_BARBER_EMAIL}"
+- tapOn:
+    id: "auth-login-password"
+- inputText: "${TEST_BARBER_PASSWORD}"
+- tapOn:
+    id: "auth-login-submit"
+
+# PROVISIONING is transient on a returning user — wait for the barber landing
+# (Studio tab) directly, same as the other barber flows.
+- extendedWaitUntil:
+    visible:
+      id: "barber-dashboard-logout"
+    timeout: 15000
+
+# --- Studio: reach the Location management card ---
+- extendedWaitUntil:
+    notVisible:
+      id: "barber-dashboard-loading"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "barber-dashboard-location"
+- tapOn:
+    id: "barber-dashboard-location"
+
+# --- LocationEdit screen: consent copy is mandatory (founder decision D2) ---
+- assertVisible:
+    id: "barber-location-screen"
+- extendedWaitUntil:
+    notVisible:
+      id: "barber-location-loading"
+    timeout: 15000
+- assertNotVisible:
+    id: "barber-location-load-error"
+- assertVisible:
+    id: "barber-location-consent"
+- assertVisible:
+    id: "barber-location-input"
+
+# --- Geocode a well-known address; candidates come from the REAL Mapbox API ---
+- tapOn:
+    id: "barber-location-input"
+# Clear whatever is seeded (a saved address from an earlier run) first.
+- eraseText
+- inputText: "Dam 1, Amsterdam"
+- extendedWaitUntil:
+    visible:
+      id: "barber-location-candidate-0"
+    timeout: 15000
+- tapOn:
+    id: "barber-location-candidate-0"
+
+# Picking a candidate fills the input with its label and hides the list.
+- assertNotVisible:
+    id: "barber-location-candidate-0"
+- assertNotVisible:
+    id: "barber-location-pick-hint"
+
+# Leave without saving (deterministic-path-only — see header).
+- tapOn:
+    id: "barber-location-back"
+- assertVisible:
+    id: "barber-dashboard-screen"

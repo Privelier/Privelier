@@ -19,6 +19,7 @@
 import { bookingSlotStart } from '../shared/bookingTime';
 import type { BookingRow, ServiceRow, VerificationStatus } from '../types';
 import { listOwnAvailability } from './availabilityData';
+import { fetchOwnLocation } from './locationData';
 import { fetchOwnBarberProfile } from './profileData';
 import { listOwnPortfolio } from './portfolioData';
 import { fetchOwnRequestsView } from './requestsData';
@@ -141,13 +142,14 @@ export function deriveProfileReadiness(input: {
 export async function fetchDashboardView(barberId: string): Promise<DashboardView> {
   const now = new Date();
 
-  const [requests, servicesResult, availabilityResult, portfolioResult, profileResult] =
+  const [requests, servicesResult, availabilityResult, portfolioResult, profileResult, locationResult] =
     await Promise.all([
       fetchOwnRequestsView(),
       listOwnServices(barberId),
       listOwnAvailability(barberId),
       listOwnPortfolio(barberId),
       fetchOwnBarberProfile(barberId),
+      fetchOwnLocation(barberId),
     ]);
 
   const services = servicesResult.status === 'ok' ? servicesResult.services : [];
@@ -156,6 +158,8 @@ export async function fetchDashboardView(barberId: string): Promise<DashboardVie
   const verification =
     profileResult.status === 'ok' ? (profileResult.profile?.verification_status ?? null) : null;
   const bio = profileResult.status === 'ok' ? (profileResult.profile?.bio ?? null) : null;
+  const locationAddress =
+    locationResult.status === 'ok' ? (locationResult.location?.address ?? null) : null;
 
   const overview =
     requests.status === 'ok'
@@ -175,5 +179,5 @@ export async function fetchDashboardView(barberId: string): Promise<DashboardVie
     verification,
   });
 
-  return { services, windows, verification, bio, overview, readiness };
+  return { services, windows, verification, bio, locationAddress, overview, readiness };
 }

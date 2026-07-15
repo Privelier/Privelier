@@ -340,6 +340,11 @@ export interface DashboardView {
   /** The barber's own bio (null = none set). Backs the Studio "Bio" launch
    * card's summary and the bio readiness item. */
   bio: string | null;
+  /** The barber's own saved address (null = no location set / read failed).
+   * Backs the Studio "Location" launch card's summary only — location is
+   * deliberately NOT a readiness item (the meter stays the founder-scoped
+   * five; revisit as an option once Explore ships). */
+  locationAddress: string | null;
   overview: BookingsOverview;
   readiness: ProfileReadiness;
 }

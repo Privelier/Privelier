@@ -20,6 +20,7 @@ maestro test .maestro/customer-chat-send-message.yaml
 maestro test .maestro/customer-chat-read-receipt.yaml
 maestro test .maestro/barber-verify-upload-documents.yaml
 maestro test .maestro/barber-dashboard-overview-readiness.yaml
+maestro test .maestro/barber-location-edit.yaml
 ```
 
 All flows use a placeholder `appId: com.privelier.app` — `app.json` does
@@ -182,6 +183,19 @@ state-dependent and therefore NOT asserted: per-row readiness deep-links
 line, and "N of 4 complete" vs the is-live line. Needs no seeding beyond any
 signed-in barber account.
 
+For the Explore/location feature's Run A (barber address entry),
+`barber-location-edit.yaml` covers the deterministic path: Studio's Location
+card opens the LocationEdit screen, the privacy consent copy renders
+(mandatory — founder decision D2), typing a well-known address produces
+geocode candidates from the REAL Mapbox API (a build without the
+`EXPO_PUBLIC_MAPBOX_TOKEN`, or a device without network, fails here — that is
+the feature genuinely broken, not flakiness), and picking a candidate fills
+the input. Deliberately NOT asserted: the save itself (save-enablement is
+dirty-state-dependent and would flake on re-runs when the saved address
+already equals the picked candidate) — the save/clear write paths are pinned
+by LocationEditScreen.test.tsx and the locationData unit tests. Needs no
+seeding beyond any signed-in barber account.
+
 ## testIDs referenced (verified present in source as of this writing)
 
 `role-select-customer`, `role-select-barber`, `auth-entry-screen`,
@@ -212,7 +226,12 @@ dialog then optimistic removal); the Chats tab
 has `barber-chats-screen`, `-loading`, `-error`, `-empty`, and
 `barber-chats-row-{id}`; the Verify tab has `barber-verify-screen`,
 `-loading`, `-error`, `barber-verify-status`, `barber-verify-doc-id`, and
-`barber-verify-doc-license`),
+`barber-verify-doc-license`; the Studio management cards also include
+`barber-dashboard-bio` and `barber-dashboard-location` — the latter opens
+the LocationEdit stack screen: `barber-location-screen`, `-back`, `-loading`,
+`-load-error`, `-error`, `-consent`, `-input`, `-searching`, `-search-error`,
+`-no-results`, `-candidates`, `barber-location-candidate-{index}`,
+`-pick-hint`, and `barber-location-save`),
 `barber-services-screen`, `barber-services-name`, `barber-services-price`,
 `barber-services-duration`, `barber-services-submit`,
 `barber-services-cancel-edit`, `barber-services-row-{id}`,

@@ -97,6 +97,11 @@ function bioSummary(bio: string | null): string {
   return trimmed.length === 0 ? 'Add a short introduction' : trimmed;
 }
 
+function locationSummary(address: string | null): string {
+  const trimmed = address?.trim() ?? '';
+  return trimmed.length === 0 ? 'Add your address for the Explore map' : trimmed;
+}
+
 export default function StudioScreen({ navigation }: Props) {
   const { colors, fonts } = useTheme();
   const onSignOut = useExitRole();
@@ -450,6 +455,31 @@ export default function StudioScreen({ navigation }: Props) {
                     style={[styles.cardMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}
                   >
                     {bioSummary(view.bio)}
+                  </Text>
+                </View>
+                <Feather name="chevron-right" size={16} color={colors.textSecondary} />
+              </Pressable>
+
+              <Pressable
+                onPress={() => navigation.navigate('LocationEdit')}
+                accessibilityRole="button"
+                accessibilityLabel="Edit your location"
+                testID="barber-dashboard-location"
+                style={({ pressed }) => [
+                  styles.card,
+                  styles.linkCard,
+                  { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 },
+                ]}
+              >
+                <View style={styles.cardText}>
+                  <Text style={[styles.cardTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+                    Location
+                  </Text>
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.cardMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}
+                  >
+                    {locationSummary(view.locationAddress)}
                   </Text>
                 </View>
                 <Feather name="chevron-right" size={16} color={colors.textSecondary} />

@@ -16,6 +16,7 @@ import { listOwnServices } from '../servicesData';
 import { listOwnAvailability } from '../availabilityData';
 import { listOwnPortfolio } from '../portfolioData';
 import { fetchOwnBarberProfile } from '../profileData';
+import { fetchOwnLocation } from '../locationData';
 
 // Factory mocks (not bare auto-mocks): a bare jest.mock still requires the real
 // sibling module to introspect its shape, which pulls in lib/supabase and
@@ -25,6 +26,7 @@ jest.mock('../servicesData', () => ({ listOwnServices: jest.fn() }));
 jest.mock('../availabilityData', () => ({ listOwnAvailability: jest.fn() }));
 jest.mock('../portfolioData', () => ({ listOwnPortfolio: jest.fn() }));
 jest.mock('../profileData', () => ({ fetchOwnBarberProfile: jest.fn() }));
+jest.mock('../locationData', () => ({ fetchOwnLocation: jest.fn() }));
 
 const NOW = new Date('2026-07-14T12:00:00');
 
@@ -217,6 +219,7 @@ describe('fetchDashboardView', () => {
   const mockAvailability = listOwnAvailability as jest.Mock;
   const mockPortfolio = listOwnPortfolio as jest.Mock;
   const mockProfile = fetchOwnBarberProfile as jest.Mock;
+  const mockLocation = fetchOwnLocation as jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -233,6 +236,10 @@ describe('fetchDashboardView', () => {
       status: 'ok',
       profile: { verification_status: 'approved', bio: 'A short bio' },
     });
+    mockLocation.mockResolvedValue({
+      status: 'ok',
+      location: { user_id: 'brb1', address: 'Teststraat 1, Amsterdam' },
+    });
   });
 
   it('composes overview + readiness + summary arrays when every read succeeds', async () => {
@@ -243,6 +250,17 @@ describe('fetchDashboardView', () => {
     expect(view.windows).toHaveLength(1);
     expect(view.verification).toBe('approved');
     expect(view.bio).toBe('A short bio');
+    expect(view.locationAddress).toBe('Teststraat 1, Amsterdam');
+    expect(view.readiness.isLive).toBe(true);
+  });
+
+  it('degrades locationAddress to null on a failed location read — and location is NOT a readiness item', async () => {
+    mockLocation.mockResolvedValue({ status: 'error', code: 'network', message: 'x' });
+    const view = await fetchDashboardView('brb1');
+    expect(view.locationAddress).toBeNull();
+    // The meter stays the founder-scoped five items; location joins Explore, not readiness.
+    expect(view.readiness.total).toBe(5);
+    expect(view.readiness.items.map((i) => i.key)).not.toContain('location');
     expect(view.readiness.isLive).toBe(true);
   });
 
