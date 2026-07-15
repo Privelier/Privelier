@@ -12,9 +12,11 @@ import type { AvailabilityRow, BarberDirectoryRow, ServiceRow } from '../../type
 import {
   applyExploreFilter,
   fromPrice,
+  pinBounds,
   toMapPin,
   UNDER_PRICE_THRESHOLD,
   windowCoversToday,
+  type ExploreMapPin,
 } from '../exploreData';
 
 // Monday 2026-07-13, noon local — matches no "today" drift ever.
@@ -142,5 +144,27 @@ describe('toMapPin (the D4 honesty rule)', () => {
 
   it('keeps the pin but nulls the price when no priced services are known', () => {
     expect(toMapPin(barber(), [])).toMatchObject({ fromPrice: null });
+  });
+});
+
+describe('pinBounds', () => {
+  const pin = (id: string, lat: number, lng: number): ExploreMapPin => ({
+    barberId: id,
+    latitude: lat,
+    longitude: lng,
+    fromPrice: null,
+  });
+
+  it('is null for no pins (the screen shows map-empty, never a globe)', () => {
+    expect(pinBounds([])).toBeNull();
+  });
+
+  it('centers on a single pin (a degenerate bounds would zoom to nothing)', () => {
+    expect(pinBounds([pin('a', 52.37, 4.9)])).toEqual({ kind: 'center', center: [4.9, 52.37] });
+  });
+
+  it('returns the ne/sw corners of the bounding box for several pins', () => {
+    const result = pinBounds([pin('a', 52.37, 4.9), pin('b', 52.35, 4.95), pin('c', 52.4, 4.88)]);
+    expect(result).toEqual({ kind: 'bounds', ne: [4.95, 52.4], sw: [4.88, 52.35] });
   });
 });

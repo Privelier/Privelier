@@ -22,16 +22,33 @@ export type ExploreFilterKey = 'all' | 'today' | 'under100' | 'verified';
 export const UNDER_PRICE_THRESHOLD = 100;
 
 /**
- * Map view availability. The current dev client does NOT contain the
- * @rnmapbox/maps native module, and the package cannot even be installed
- * until the founder creates the Mapbox secret download token (an installed-
- * but-tokenless package fails every EAS build at the Gradle SDK-download
- * step). Until that lands, the Explore map/list toggle renders an honest
- * "arrives with the next app update" state for the map — never a crash,
- * never a fake map. Flip this to real native-module feature detection in the
- * map-integration follow-up (tracked in CLAUDE.md).
+ * Where the camera should start for a set of pins. Pure — unit-tested.
+ * - No pins: null (the screen renders its map-empty state, never a globe).
+ * - One pin: center on it (a degenerate bounds would zoom to nothing).
+ * - Several: the ne/sw corners of the pins' bounding box (the Camera adds
+ *   its own padding).
  */
-export const MAP_VIEW_AVAILABLE = false;
+export type MapCameraTarget =
+  | { kind: 'center'; center: [number, number] }
+  | { kind: 'bounds'; ne: [number, number]; sw: [number, number] };
+
+export function pinBounds(pins: ExploreMapPin[]): MapCameraTarget | null {
+  if (pins.length === 0) return null;
+  if (pins.length === 1) {
+    return { kind: 'center', center: [pins[0].longitude, pins[0].latitude] };
+  }
+  let minLat = Infinity;
+  let maxLat = -Infinity;
+  let minLng = Infinity;
+  let maxLng = -Infinity;
+  for (const pin of pins) {
+    if (pin.latitude < minLat) minLat = pin.latitude;
+    if (pin.latitude > maxLat) maxLat = pin.latitude;
+    if (pin.longitude < minLng) minLng = pin.longitude;
+    if (pin.longitude > maxLng) maxLng = pin.longitude;
+  }
+  return { kind: 'bounds', ne: [maxLng, maxLat], sw: [minLng, minLat] };
+}
 
 /** Cheapest service price, or null when no services are known. */
 export function fromPrice(services: ServiceRow[]): number | null {

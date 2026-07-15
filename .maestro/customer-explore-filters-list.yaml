@@ -1,9 +1,9 @@
-# Customer Explore tab flow (Explore Run B): log in as the customer -> switch
-# to the Explore tab -> the screen loads without error -> the filter chip row
-# and the list/map view toggle render -> the Map side of the toggle shows the
-# honest "arrives with the next app update" state (the @rnmapbox/maps native
-# module is not in the dev client yet) -> back to list view -> tapping the
-# Verified chip re-renders without an error state.
+# Customer Explore tab flow (Explore Run B + map integration): log in as the
+# customer -> switch to the Explore tab -> the screen loads without error ->
+# the filter chip row and the list/map view toggle render -> the Map side of
+# the toggle renders its area without error (real map, map-empty, or the
+# map-soon state depending on build/data — see below) -> back to list view ->
+# tapping the Verified chip re-renders without an error state.
 #
 # Deliberately NOT asserted (deterministic-path-only, house philosophy):
 # - Row counts / which barbers match a chip (backend-state-dependent; the
@@ -81,15 +81,20 @@ env:
 - assertVisible:
     id: "customer-explore-toggle-map"
 
-# Map side of the toggle -> the honest no-native-module state, never a crash.
+# Map side of the toggle: the map AREA always renders — its content is
+# build/data-dependent (real map when the native module + located barbers
+# exist; map-empty when no pins; map-soon on a pre-Mapbox dev client) and
+# deliberately unasserted beyond "no error, never a crash".
 - tapOn:
     id: "customer-explore-toggle-map"
 - assertVisible:
-    id: "customer-explore-map-soon"
+    id: "customer-explore-map-area"
+- assertNotVisible:
+    id: "customer-explore-error"
 - tapOn:
     id: "customer-explore-toggle-list"
 - assertNotVisible:
-    id: "customer-explore-map-soon"
+    id: "customer-explore-map-area"
 
 # A chip tap re-renders without an error state (rows vs empty is backend-
 # dependent and deliberately unasserted).

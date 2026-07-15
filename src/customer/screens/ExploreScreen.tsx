@@ -12,12 +12,13 @@
  * read failed is HIDDEN rather than silently filtering everyone out — a
  * failed availability read must not render as "no one is available today".
  *
- * Map view: the @rnmapbox/maps native module is not in the current dev
- * client (and cannot be installed until the founder's secret download token
- * exists — see exploreData.MAP_VIEW_AVAILABLE), so the Map side of the
- * toggle renders a calm "arrives with the next app update" state. The pin
- * DATA path (toMapPin over display coordinates only) is built and tested;
- * the MapView itself is the follow-up.
+ * Map view (map-integration follow-up, 2026-07-15): three-way branch under
+ * one customer-explore-map-area wrapper — (a) native module absent (the
+ * pre-Mapbox dev client): calm "arrives with the next app update" state;
+ * (b) native present but zero pins: honest map-empty state (no pointless
+ * globe, and never a fake pin — D4); (c) the real ExploreMapView, lazily
+ * require()d because @rnmapbox/maps THROWS at import when native is absent.
+ * Pins derive from the FILTERED list, so chips govern map and list alike.
  *
  * Mount-load pattern mirrors DiscoverScreen (deferred plain useEffect —
  * component-testable, same set-state-in-effect rationale).
@@ -42,8 +43,10 @@ import { useTheme } from '../../theme/useTheme';
 import type { AvailabilityRow, BarberDirectoryRow, ServiceRow } from '../../types';
 import { listBarbersByCity, listServicesForBarberIds } from '../discoveryData';
 import { listAvailabilityForBarberIds } from '../availabilityData';
-import { applyExploreFilter, type ExploreFilterKey } from '../exploreData';
+import { applyExploreFilter, toMapPin, type ExploreFilterKey } from '../exploreData';
+import { isMapNativeAvailable } from '../mapRuntime';
 import BarberCard from '../components/BarberCard';
+import type ExploreMapViewType from '../components/ExploreMapView';
 import type { CustomerTabParamList } from '../CustomerTabs';
 import type { CustomerStackParamList } from '../CustomerNavigator';
 
@@ -168,6 +171,30 @@ export default function ExploreScreen({ navigation }: Props) {
     [navigation]
   );
 
+  // Map pins: OFFSET display coordinates only; a barber without location
+  // data yields null and simply has no pin (D4). Derived from the FILTERED
+  // list so the chips govern the map exactly like the list.
+  const pins = useMemo(
+    () =>
+      filtered
+        .map((b) => toMapPin(b, servicesByBarber.get(b.id) ?? []))
+        .filter((p): p is NonNullable<typeof p> => p !== null),
+    [filtered, servicesByBarber]
+  );
+
+  const barbersById = useMemo(() => new Map(barbers.map((b) => [b.id, b])), [barbers]);
+
+  // The @rnmapbox/maps JS package THROWS at import time when its native side
+  // is absent (pre-Mapbox dev client, jest) — so the map pane is require()d
+  // lazily, and only when the native module reports present.
+  const mapAvailable = useMemo(() => isMapNativeAvailable(), []);
+  const ExploreMapView = useMemo<typeof ExploreMapViewType | null>(() => {
+    if (!mapAvailable) return null;
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return (require('../components/ExploreMapView') as { default: typeof ExploreMapViewType })
+      .default;
+  }, [mapAvailable]);
+
   const selectChip = useCallback((key: ExploreFilterKey) => {
     setFilter((prev) => (prev === key && key !== 'all' ? 'all' : key));
   }, []);
@@ -272,17 +299,42 @@ export default function ExploreScreen({ navigation }: Props) {
           </Text>
         </View>
       ) : viewMode === 'map' ? (
-        // Honest state: the native map module is not in this build (see
-        // exploreData.MAP_VIEW_AVAILABLE). Never a crash, never a fake map.
-        <View style={styles.mapSoon} testID="customer-explore-map-soon">
-          <Feather name="map" size={22} color={colors.textSecondary} />
-          <Text style={[styles.mapSoonTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-            The map arrives with the next app update
-          </Text>
-          <Text style={[styles.mapSoonBlurb, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-            Barbers who have set their location will appear as price pins in their
-            approximate area. Use the list view meanwhile.
-          </Text>
+        <View style={styles.mapArea} testID="customer-explore-map-area">
+          {ExploreMapView === null ? (
+            // Honest state: the native map module is not in THIS build.
+            // Never a crash, never a fake map.
+            <View style={styles.mapSoon} testID="customer-explore-map-soon">
+              <Feather name="map" size={22} color={colors.textSecondary} />
+              <Text style={[styles.mapSoonTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+                The map arrives with the next app update
+              </Text>
+              <Text style={[styles.mapSoonBlurb, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                Barbers who have set their location will appear as price pins in their
+                approximate area. Use the list view meanwhile.
+              </Text>
+            </View>
+          ) : pins.length === 0 ? (
+            // Honest empty state: no located barbers ⇒ no pins ⇒ no pointless
+            // globe (D4 — a fake/default pin is never an option).
+            <View style={styles.mapSoon} testID="customer-explore-map-empty">
+              <Feather name="map-pin" size={22} color={colors.textSecondary} />
+              <Text style={[styles.mapSoonTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+                No barbers on the map yet
+              </Text>
+              <Text style={[styles.mapSoonBlurb, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                {filtered.length > 0
+                  ? 'Barbers appear here once they set their location. Use the list view meanwhile.'
+                  : 'No barbers match this filter.'}
+              </Text>
+            </View>
+          ) : (
+            <ExploreMapView
+              pins={pins}
+              barbersById={barbersById}
+              servicesByBarber={servicesByBarber}
+              onOpenProfile={openProfile}
+            />
+          )}
         </View>
       ) : filtered.length === 0 ? (
         <Text
@@ -356,6 +408,7 @@ const styles = StyleSheet.create({
   noticeText: { fontSize: 14 },
   emptyText: { fontSize: 14, textAlign: 'center', marginTop: 48, paddingHorizontal: 24 },
 
+  mapArea: { flex: 1, marginTop: 16 },
   mapSoon: {
     flex: 1,
     alignItems: 'center',

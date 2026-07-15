@@ -164,3 +164,45 @@ Run B (second pipeline run, after Run A's schema is live):
   `barber_directory` read path — no second query shape for the same data).
 
 ## Verdict: APPROVED WITH CONDITIONS (C1–C9). Schema stage may proceed.
+
+---
+
+## Addendum — map-integration architect review (2026-07-15, applied manually)
+
+Scope: the follow-up that turns Run B's map-soon state into the real map
+(founder-provided sk. download token → EAS secret `RNMAPBOX_DOWNLOAD_TOKEN`;
+`@rnmapbox/maps` ^10.3.2 installed; dynamic `app.config.js` injects the
+config plugin ONLY when the env var is present so the token never touches
+git and local tooling never breaks; new Android dev-client EAS build).
+
+Reviewed against C1–C9 and the house patterns:
+
+- **Import-safety boundary (the load-bearing decision):** the package THROWS
+  at import time when its native side is absent (verified in its
+  RNMBXModule.ts). `ExploreMapView.tsx` is the ONLY importer and is
+  require()d exclusively behind `isMapNativeAvailable()`
+  (`NativeModules.RNMBXModule != null` — the package's own check).
+  ExploreScreen's compile-time reference is type-only (erased). The
+  component header carries the never-static-import contract.
+- **Privacy structure holds:** `ExploreMapPin` is built from
+  `BarberDirectoryRow`, which cannot carry exact coordinates at the type or
+  RLS level — the map is structurally incapable of rendering anything but
+  the offset pair (C1/C3).
+- **Chips govern both views:** pins derive from the FILTERED list — map and
+  list can never disagree about who matches (C8: pure narrowing, no client
+  authz).
+- **Three-way map area** (soon / empty / real) keeps D4 absolute: no globe
+  without pins, no fake pins, no crash on the old dev client.
+- **Camera:** pure, unit-tested `pinBounds` (center for one pin, ne/sw box
+  for several) via `defaultSettings` — DELIBERATE: filter changes do not
+  yank the viewport; a list→map toggle remounts and re-fits.
+- **Brand:** brass only on the ACTIVE pin; hairline pin chips on surface;
+  serif/sans tokens; dark/light styleURL from the theme.
+
+Verdict: **APPROVED**, with three recorded LOW notes: (L-a) a docked card
+can overlap the Mapbox logo/attribution while open — check on-device and
+offset `logoPosition` if it does (ToS nicety); (L-b) a missing
+`EXPO_PUBLIC_MAPBOX_TOKEN` at runtime yields blank tiles (same
+missing-config class as the geocoder's `missing_token`, documented, not
+guarded further); (L-c) marker `allowOverlap` is fine at MVP density —
+revisit clustering only if a city's pin count makes it unreadable.

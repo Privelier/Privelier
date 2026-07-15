@@ -200,16 +200,21 @@ seeding beyond any signed-in barber account.
 For Run B (the customer Explore tab), `customer-explore-filters-list.yaml`
 covers the deterministic path: the tab loads without error, the
 state-independent chips (All, Verified) and the list/map toggle render, the
-Map toggle shows the honest "arrives with the next app update" state (the
-native map module is not in the dev client — founder-gated on the Mapbox
-download token), returning to list works, and a chip tap re-renders cleanly.
-Deliberately unasserted: row counts / per-chip matches (backend-dependent;
-the empty state is a legitimate filter result), the two data-backed chips
-individually (they hide when their batched read fails — by design), and
-anything about real map pins. New testIDs: `customer-explore-screen`,
-`-loading`, `-error`, `-empty`, `customer-explore-chip-{all|today|under100|verified}`,
-`customer-explore-toggle-{list|map}`, `customer-explore-map-soon`,
-`customer-explore-barber-{id}`; the tab button is `customer-tab-explore`.
+Map toggle renders its area without error, returning to list works, and a
+chip tap re-renders cleanly. The map AREA's content is build/data-dependent
+and deliberately unasserted: the real Mapbox map (post-Mapbox dev client
+with located barbers), the map-empty state (no pins), or the map-soon state
+(pre-Mapbox dev client) — all legitimate, none an error. Also unasserted:
+row counts / per-chip matches (backend-dependent; the empty state is a
+legitimate filter result) and the two data-backed chips individually (they
+hide when their batched read fails — by design). New testIDs:
+`customer-explore-screen`, `-loading`, `-error`, `-empty`,
+`customer-explore-chip-{all|today|under100|verified}`,
+`customer-explore-toggle-{list|map}`, `customer-explore-map-area`,
+`customer-explore-map-soon`, `customer-explore-map-empty`,
+`customer-explore-map`, `customer-explore-pin-{id}`,
+`customer-explore-docked-card`, `customer-explore-barber-{id}`; the tab
+button is `customer-tab-explore`.
 
 ## testIDs referenced (verified present in source as of this writing)
 
