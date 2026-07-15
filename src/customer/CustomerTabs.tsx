@@ -2,7 +2,7 @@
  * Customer bottom-tab shell, rebuilt from the prototype's CustomerBottomNav:
  * five tabs (Discover, Explore, Bookings, Inbox, Account), hairline top
  * border, brass active tint, 10px labels under 20px light-stroke icons.
- * Explore/Bookings/Inbox are placeholders until their build-order steps.
+ * All five tabs are real screens as of the Explore Run B build.
  */
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
@@ -12,7 +12,7 @@ import DiscoverScreen from './screens/DiscoverScreen';
 import AccountScreen from './screens/AccountScreen';
 import BookingsScreen from './screens/BookingsScreen';
 import InboxScreen from './screens/InboxScreen';
-import { ExploreScreen } from './screens/tabPlaceholders';
+import ExploreScreen from './screens/ExploreScreen';
 
 export type CustomerTabParamList = {
   Discover: undefined;

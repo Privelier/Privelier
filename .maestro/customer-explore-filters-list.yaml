@@ -1,0 +1,99 @@
+# Customer Explore tab flow (Explore Run B): log in as the customer -> switch
+# to the Explore tab -> the screen loads without error -> the filter chip row
+# and the list/map view toggle render -> the Map side of the toggle shows the
+# honest "arrives with the next app update" state (the @rnmapbox/maps native
+# module is not in the dev client yet) -> back to list view -> tapping the
+# Verified chip re-renders without an error state.
+#
+# Deliberately NOT asserted (deterministic-path-only, house philosophy):
+# - Row counts / which barbers match a chip (backend-state-dependent; the
+#   empty state is a legitimate render for a filter).
+# - The "Available today" / "Under €100" chips individually: they only render
+#   when their backing batched read succeeded — asserted as a group via the
+#   always-present All + Verified chips plus the absence of the error notice.
+# - Anything about real map pins (no native map module until the founder's
+#   Mapbox download token + new dev-client build — see CLAUDE.md).
+#
+# NOT YET RUN — same tooling gap as every other flow here: no Maestro CLI on
+# the authoring machine (see .maestro/README.md). Once available:
+#   maestro test .maestro/customer-explore-filters-list.yaml \
+#     -e TEST_CUSTOMER_EMAIL=... -e TEST_CUSTOMER_PASSWORD=...
+#
+# Prerequisites:
+# - A pre-confirmed test customer account with a city set.
+# - Same appId placeholder caveat as every other flow here.
+appId: com.privelier.app # TODO: replace once app.json defines a real package/bundleIdentifier
+env:
+  TEST_CUSTOMER_EMAIL: customer.e2e@example.com
+  TEST_CUSTOMER_PASSWORD: ChangeMe123!
+---
+- launchApp:
+    clearState: true
+
+# UNAUTHENTICATED: role-select is the very first screen.
+- assertVisible:
+    id: "role-select-customer"
+- tapOn:
+    id: "role-select-customer"
+
+# Per-role auth entry -> log in.
+- assertVisible:
+    id: "auth-entry-screen"
+- tapOn:
+    id: "auth-entry-login"
+
+- assertVisible:
+    id: "auth-login-screen"
+- tapOn:
+    id: "auth-login-email"
+- inputText: "${TEST_CUSTOMER_EMAIL}"
+- tapOn:
+    id: "auth-login-password"
+- inputText: "${TEST_CUSTOMER_PASSWORD}"
+- tapOn:
+    id: "auth-login-submit"
+
+# Land on Discover, then switch to the Explore tab.
+- extendedWaitUntil:
+    visible:
+      id: "customer-home-screen"
+    timeout: 15000
+- tapOn:
+    id: "customer-tab-explore"
+
+# --- Explore: first load ---
+- assertVisible:
+    id: "customer-explore-screen"
+- extendedWaitUntil:
+    notVisible:
+      id: "customer-explore-loading"
+    timeout: 15000
+- assertNotVisible:
+    id: "customer-explore-error"
+
+# Chips: All + Verified are state-independent; the view toggle is always there.
+- assertVisible:
+    id: "customer-explore-chip-all"
+- assertVisible:
+    id: "customer-explore-chip-verified"
+- assertVisible:
+    id: "customer-explore-toggle-list"
+- assertVisible:
+    id: "customer-explore-toggle-map"
+
+# Map side of the toggle -> the honest no-native-module state, never a crash.
+- tapOn:
+    id: "customer-explore-toggle-map"
+- assertVisible:
+    id: "customer-explore-map-soon"
+- tapOn:
+    id: "customer-explore-toggle-list"
+- assertNotVisible:
+    id: "customer-explore-map-soon"
+
+# A chip tap re-renders without an error state (rows vs empty is backend-
+# dependent and deliberately unasserted).
+- tapOn:
+    id: "customer-explore-chip-verified"
+- assertNotVisible:
+    id: "customer-explore-error"

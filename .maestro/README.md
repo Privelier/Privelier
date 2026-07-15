@@ -21,6 +21,7 @@ maestro test .maestro/customer-chat-read-receipt.yaml
 maestro test .maestro/barber-verify-upload-documents.yaml
 maestro test .maestro/barber-dashboard-overview-readiness.yaml
 maestro test .maestro/barber-location-edit.yaml
+maestro test .maestro/customer-explore-filters-list.yaml
 ```
 
 All flows use a placeholder `appId: com.privelier.app` — `app.json` does
@@ -195,6 +196,20 @@ dirty-state-dependent and would flake on re-runs when the saved address
 already equals the picked candidate) — the save/clear write paths are pinned
 by LocationEditScreen.test.tsx and the locationData unit tests. Needs no
 seeding beyond any signed-in barber account.
+
+For Run B (the customer Explore tab), `customer-explore-filters-list.yaml`
+covers the deterministic path: the tab loads without error, the
+state-independent chips (All, Verified) and the list/map toggle render, the
+Map toggle shows the honest "arrives with the next app update" state (the
+native map module is not in the dev client — founder-gated on the Mapbox
+download token), returning to list works, and a chip tap re-renders cleanly.
+Deliberately unasserted: row counts / per-chip matches (backend-dependent;
+the empty state is a legitimate filter result), the two data-backed chips
+individually (they hide when their batched read fails — by design), and
+anything about real map pins. New testIDs: `customer-explore-screen`,
+`-loading`, `-error`, `-empty`, `customer-explore-chip-{all|today|under100|verified}`,
+`customer-explore-toggle-{list|map}`, `customer-explore-map-soon`,
+`customer-explore-barber-{id}`; the tab button is `customer-tab-explore`.
 
 ## testIDs referenced (verified present in source as of this writing)
 

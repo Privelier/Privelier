@@ -39,6 +39,26 @@ export async function listBarberAvailability(
   return { status: 'ok', windows: (data as AvailabilityRow[]) ?? [] };
 }
 
+/**
+ * Batched availability read for a set of barbers (the Explore tab's
+ * "Available today" chip — Run B, design condition C9's batched-read shape,
+ * same pattern as discoveryData.listServicesForBarberIds). One query for the
+ * whole visible list; every id a customer can hold comes from the approved
+ * directory, so RLS-visible rows are exactly what comes back.
+ */
+export async function listAvailabilityForBarberIds(
+  barberIds: string[]
+): Promise<ListBarberAvailabilityResult> {
+  if (barberIds.length === 0) return { status: 'ok', windows: [] };
+  const { data, error } = await supabase
+    .from('availability')
+    .select('*')
+    .in('barber_id', barberIds);
+
+  if (error) return mapPostgrestError('listAvailabilityForBarberIds', error);
+  return { status: 'ok', windows: (data as AvailabilityRow[]) ?? [] };
+}
+
 /** This barber's busy (pending/accepted) slots for one date, via the
  * get_barber_busy_slots RPC — see module header for why this cannot be a
  * plain table read. */
