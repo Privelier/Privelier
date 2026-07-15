@@ -52,25 +52,15 @@ export default function ExploreMapView({
   const { colors, fonts, isDark } = useTheme();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  // Camera target from the pure, tested pinBounds. Applied as DIRECT Camera
+  // props, not defaultSettings: on-device (Android, v10.3) defaultSettings
+  // silently failed to apply, leaving the camera at the world-view (0,0)
+  // default with the pin far off screen (founder-reported 2026-07-15).
+  // Direct props apply on mount AND whenever the pin set changes, so filter
+  // chips re-frame the map to the barbers they match. The zero-pin case
+  // never reaches this component (ExploreScreen renders its map-empty state
+  // instead of a map), so there is no (0,0) fallback to have.
   const camera = useMemo(() => pinBounds(pins), [pins]);
-  const cameraSettings = useMemo(
-    () =>
-      camera?.kind === 'bounds'
-        ? {
-            bounds: {
-              ne: camera.ne,
-              sw: camera.sw,
-              paddingTop: CAMERA_PADDING,
-              paddingBottom: CAMERA_PADDING,
-              paddingLeft: CAMERA_PADDING,
-              paddingRight: CAMERA_PADDING,
-            },
-          }
-        : camera?.kind === 'center'
-          ? { centerCoordinate: camera.center, zoomLevel: 13 }
-          : {},
-    [camera]
-  );
 
   const selected = selectedId !== null ? (barbersById.get(selectedId) ?? null) : null;
 
@@ -84,7 +74,25 @@ export default function ExploreMapView({
         scaleBarEnabled={false}
         onPress={deselect}
       >
-        <Mapbox.Camera defaultSettings={cameraSettings} animationDuration={0} />
+        {camera?.kind === 'bounds' ? (
+          <Mapbox.Camera
+            bounds={{
+              ne: camera.ne,
+              sw: camera.sw,
+              paddingTop: CAMERA_PADDING,
+              paddingBottom: CAMERA_PADDING,
+              paddingLeft: CAMERA_PADDING,
+              paddingRight: CAMERA_PADDING,
+            }}
+            animationDuration={0}
+          />
+        ) : camera?.kind === 'center' ? (
+          <Mapbox.Camera
+            centerCoordinate={camera.center}
+            zoomLevel={13}
+            animationDuration={0}
+          />
+        ) : null}
         {pins.map((pin) => {
           const barber = barbersById.get(pin.barberId);
           const active = pin.barberId === selectedId;
