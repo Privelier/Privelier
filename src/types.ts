@@ -108,6 +108,25 @@ export interface PortfolioRow {
 }
 
 /**
+ * Row shape of `public.barber_location` (migration 0019, Explore/location
+ * run — design: docs/design/explore-location-design-approval.md). The exact
+ * `address`/`latitude`/`longitude` are own-row-RLS-only: the customer app can
+ * never read them. `display_latitude`/`display_longitude` are the stored
+ * randomized-offset coordinates (drawn server-side, 200–500 m) that the
+ * SECURITY DEFINER `barber_directory` view republishes; they are
+ * trigger-owned — a client-supplied value never survives a write.
+ */
+export interface BarberLocationRow {
+  user_id: string;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  display_latitude: number | null;
+  display_longitude: number | null;
+  location_updated_at: string | null;
+}
+
+/**
  * Row shape of `public.verification_requests` — barber-submitted ID +
  * license images for MANUAL founder review (no selfie, no biometrics —
  * hard rule). Reads gated by RLS (`verification_requests_select_own`);
@@ -188,4 +207,17 @@ export interface BarberDirectoryRow {
   profile_image: string | null;
   bio: string | null;
   rating: number;
+  /**
+   * Since migration 0019. All directory rows are approved by construction, so
+   * `verified` is expected true absent the tracked two-status drift — the
+   * Explore "Verified" chip filters on it anyway (founder decision 2026-07-15).
+   */
+  verified: boolean;
+  /**
+   * Stored randomized-offset coordinates (~200–500 m from the true location,
+   * migration 0019) — the ONLY coordinates customers ever see. Null when the
+   * barber has not set a location; the honesty rule renders no pin then.
+   */
+  display_latitude: number | null;
+  display_longitude: number | null;
 }

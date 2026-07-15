@@ -53,6 +53,9 @@ const barber: BarberDirectoryRow = {
   profile_image: null,
   bio: null,
   rating: 0,
+  verified: true,
+  display_latitude: null,
+  display_longitude: null,
 };
 
 describe('buildInboxThreads', () => {

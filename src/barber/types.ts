@@ -6,6 +6,7 @@
  */
 import type {
   AvailabilityRow,
+  BarberLocationRow,
   BarberProfileRow,
   BookingRow,
   MessageRow,
@@ -149,6 +150,21 @@ export type UpdateBioResult =
 /** `request: null` = no documents submitted yet (expected until step 17). */
 export type FetchOwnVerificationRequestResult =
   | { status: 'ok'; request: VerificationRequestRow | null }
+  | BarberDataFailure;
+
+/** `location: null` = no row yet (the barber has never set a location). */
+export type FetchOwnLocationResult =
+  | { status: 'ok'; location: BarberLocationRow | null }
+  | BarberDataFailure;
+
+/**
+ * Result of writing the barber's own location (Explore/location run —
+ * design: docs/design/explore-location-design-approval.md, condition C5).
+ * `location` is the freshly-written row, whose display coordinates were
+ * stamped by the 0019 trigger — never by this client.
+ */
+export type UpdateLocationResult =
+  | { status: 'ok'; location: BarberLocationRow }
   | BarberDataFailure;
 
 /**
