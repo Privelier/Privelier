@@ -90,6 +90,11 @@ function availabilitySummary(windows: AvailabilityRow[]): string {
   return windows.length === 1 ? '1 window' : `${windows.length} windows`;
 }
 
+function bioSummary(bio: string | null): string {
+  const trimmed = bio?.trim() ?? '';
+  return trimmed.length === 0 ? 'Add a short introduction' : trimmed;
+}
+
 export default function StudioScreen({ navigation }: Props) {
   const { colors, fonts } = useTheme();
   const onSignOut = useExitRole();
@@ -415,6 +420,31 @@ export default function StudioScreen({ navigation }: Props) {
                   </Text>
                   <Text style={[styles.cardMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}>
                     {availabilitySummary(view.windows)}
+                  </Text>
+                </View>
+                <Feather name="chevron-right" size={16} color={colors.textSecondary} />
+              </Pressable>
+
+              <Pressable
+                onPress={() => navigation.navigate('BioEdit')}
+                accessibilityRole="button"
+                accessibilityLabel="Edit your bio"
+                testID="barber-dashboard-bio"
+                style={({ pressed }) => [
+                  styles.card,
+                  styles.linkCard,
+                  { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 },
+                ]}
+              >
+                <View style={styles.cardText}>
+                  <Text style={[styles.cardTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+                    Bio
+                  </Text>
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.cardMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}
+                  >
+                    {bioSummary(view.bio)}
                   </Text>
                 </View>
                 <Feather name="chevron-right" size={16} color={colors.textSecondary} />

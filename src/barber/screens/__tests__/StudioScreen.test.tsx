@@ -84,6 +84,7 @@ const MIXED_VIEW: DashboardView = {
   services: [{ id: 's1', barber_id: 'b1', name: 'Fade', price: 40, duration_minutes: 45 }],
   windows: [{ id: 'w1' }] as DashboardView['windows'],
   verification: 'pending',
+  bio: 'Ten years of fades.',
   overview: {
     pendingCount: 2,
     upcomingCount: 1,

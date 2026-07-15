@@ -320,6 +320,9 @@ export interface DashboardView {
   services: ServiceRow[];
   windows: AvailabilityRow[];
   verification: VerificationStatus | null;
+  /** The barber's own bio (null = none set). Backs the Studio "Bio" launch
+   * card's summary and the bio readiness item. */
+  bio: string | null;
   overview: BookingsOverview;
   readiness: ProfileReadiness;
 }

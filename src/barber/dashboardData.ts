@@ -149,6 +149,7 @@ export async function fetchDashboardView(barberId: string): Promise<DashboardVie
   const portfolioCount = portfolioResult.status === 'ok' ? portfolioResult.images.length : 0;
   const verification =
     profileResult.status === 'ok' ? (profileResult.profile?.verification_status ?? null) : null;
+  const bio = profileResult.status === 'ok' ? (profileResult.profile?.bio ?? null) : null;
 
   const overview =
     requests.status === 'ok'
@@ -167,5 +168,5 @@ export async function fetchDashboardView(barberId: string): Promise<DashboardVie
     verification,
   });
 
-  return { services, windows, verification, overview, readiness };
+  return { services, windows, verification, bio, overview, readiness };
 }
