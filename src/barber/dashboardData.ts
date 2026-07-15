@@ -93,16 +93,19 @@ export function deriveBookingsOverview(
 }
 
 /**
- * Derive the four-item readiness meter (bio is founder-descoped). The three
- * content items are simple presence checks; verification maps its
- * admin-owned status onto a state that never blames the barber for a pending
- * manual review: approved → complete, rejected → attention, pending/absent →
- * in_progress (calm). `isLive` is true only when all four are complete.
+ * Derive the five-item readiness meter. The four content items (services,
+ * availability, portfolio, bio) are simple presence checks — bio counts only
+ * when non-empty after trimming, matching the DB CHECK and updateOwnBio's
+ * empty→NULL normalization. Verification maps its admin-owned status onto a
+ * state that never blames the barber for a pending manual review: approved →
+ * complete, rejected → attention, pending/absent → in_progress (calm).
+ * `isLive` is true only when all five are complete.
  */
 export function deriveProfileReadiness(input: {
   serviceCount: number;
   availabilityCount: number;
   portfolioCount: number;
+  bio: string | null;
   verification: VerificationStatus | null;
 }): ProfileReadiness {
   const verificationState: ReadinessState =
@@ -112,10 +115,13 @@ export function deriveProfileReadiness(input: {
         ? 'attention'
         : 'in_progress';
 
+  const bioComplete = (input.bio?.trim().length ?? 0) > 0;
+
   const items: ReadinessItem[] = [
     { key: 'services', state: input.serviceCount > 0 ? 'complete' : 'incomplete' },
     { key: 'availability', state: input.availabilityCount > 0 ? 'complete' : 'incomplete' },
     { key: 'portfolio', state: input.portfolioCount > 0 ? 'complete' : 'incomplete' },
+    { key: 'bio', state: bioComplete ? 'complete' : 'incomplete' },
     { key: 'verification', state: verificationState },
   ];
 
@@ -165,6 +171,7 @@ export async function fetchDashboardView(barberId: string): Promise<DashboardVie
     serviceCount: services.length,
     availabilityCount: windows.length,
     portfolioCount,
+    bio,
     verification,
   });
 

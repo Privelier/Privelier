@@ -120,15 +120,16 @@ describe('deriveBookingsOverview', () => {
 });
 
 describe('deriveProfileReadiness', () => {
-  it('is fully live only when all four items are complete (approved verification)', () => {
+  it('is fully live only when all five items are complete (approved verification)', () => {
     const r = deriveProfileReadiness({
       serviceCount: 2,
       availabilityCount: 1,
       portfolioCount: 3,
+      bio: 'Sharp fades since 2015.',
       verification: 'approved',
     });
-    expect(r.completeCount).toBe(4);
-    expect(r.total).toBe(4);
+    expect(r.completeCount).toBe(5);
+    expect(r.total).toBe(5);
     expect(r.isLive).toBe(true);
   });
 
@@ -137,12 +138,35 @@ describe('deriveProfileReadiness', () => {
       serviceCount: 0,
       availabilityCount: 0,
       portfolioCount: 0,
+      bio: null,
       verification: 'approved',
     });
     const byKey = Object.fromEntries(r.items.map((i) => [i.key, i.state]));
-    expect(byKey).toMatchObject({ services: 'incomplete', availability: 'incomplete', portfolio: 'incomplete' });
+    expect(byKey).toMatchObject({
+      services: 'incomplete',
+      availability: 'incomplete',
+      portfolio: 'incomplete',
+      bio: 'incomplete',
+    });
+    expect(r.total).toBe(5);
     expect(r.completeCount).toBe(1); // only verification
     expect(r.isLive).toBe(false);
+  });
+
+  it.each([
+    ['   ', 'incomplete'],
+    ['', 'incomplete'],
+    [null, 'incomplete'],
+    ['A real bio', 'complete'],
+  ] as const)('marks bio %j as %s (non-empty after trim)', (bio, expected) => {
+    const r = deriveProfileReadiness({
+      serviceCount: 1,
+      availabilityCount: 1,
+      portfolioCount: 1,
+      bio,
+      verification: 'approved',
+    });
+    expect(r.items.find((i) => i.key === 'bio')?.state).toBe(expected);
   });
 
   it.each([
@@ -155,6 +179,7 @@ describe('deriveProfileReadiness', () => {
       serviceCount: 1,
       availabilityCount: 1,
       portfolioCount: 1,
+      bio: 'x',
       verification,
     });
     const v = r.items.find((i) => i.key === 'verification');
@@ -166,6 +191,7 @@ describe('deriveProfileReadiness', () => {
       serviceCount: 1,
       availabilityCount: 1,
       portfolioCount: 1,
+      bio: null,
       verification: 'pending',
     });
     expect(r.completeCount).toBe(3);
@@ -191,7 +217,10 @@ describe('fetchDashboardView', () => {
     mockServices.mockResolvedValue({ status: 'ok', services: [service({})] });
     mockAvailability.mockResolvedValue({ status: 'ok', windows: [{ id: 'w1' }] });
     mockPortfolio.mockResolvedValue({ status: 'ok', images: [{ id: 'img1' }] });
-    mockProfile.mockResolvedValue({ status: 'ok', profile: { verification_status: 'approved' } });
+    mockProfile.mockResolvedValue({
+      status: 'ok',
+      profile: { verification_status: 'approved', bio: 'A short bio' },
+    });
   });
 
   it('composes overview + readiness + summary arrays when every read succeeds', async () => {
@@ -201,6 +230,7 @@ describe('fetchDashboardView', () => {
     expect(view.services).toHaveLength(1);
     expect(view.windows).toHaveLength(1);
     expect(view.verification).toBe('approved');
+    expect(view.bio).toBe('A short bio');
     expect(view.readiness.isLive).toBe(true);
   });
 

@@ -287,7 +287,7 @@ export interface BookingsOverview {
  */
 export type ReadinessState = 'complete' | 'incomplete' | 'in_progress' | 'attention';
 
-export type ReadinessItemKey = 'services' | 'availability' | 'portfolio' | 'verification';
+export type ReadinessItemKey = 'services' | 'availability' | 'portfolio' | 'bio' | 'verification';
 
 export interface ReadinessItem {
   key: ReadinessItemKey;
@@ -295,11 +295,12 @@ export interface ReadinessItem {
 }
 
 /**
- * "Readiness to go live" — NOT a score. Bio is deliberately NOT an item
- * (founder-descoped 2026-07-14: no bio-edit screen exists yet). `isLive` is
- * true only when all four items are complete, mirroring the real gate: a
- * barber appears in customer search only once verification is approved AND
- * they have something to book.
+ * "Readiness to go live" — NOT a score. Five items: services, availability,
+ * portfolio, bio, verification (bio was re-added 2026-07-15 once the bio-edit
+ * screen shipped). `isLive` is true only when ALL items are complete — this is
+ * the meter's soft "profile fully set up" notion, not the literal search gate
+ * (the DB gates customer visibility on approved verification alone). A barber
+ * can therefore be searchable while the meter still nudges an unset bio.
  */
 export interface ProfileReadiness {
   items: ReadinessItem[];

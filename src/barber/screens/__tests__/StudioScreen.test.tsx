@@ -110,10 +110,11 @@ const MIXED_VIEW: DashboardView = {
       { key: 'services', state: 'complete' },
       { key: 'availability', state: 'incomplete' },
       { key: 'portfolio', state: 'incomplete' },
+      { key: 'bio', state: 'incomplete' },
       { key: 'verification', state: 'in_progress' },
     ],
     completeCount: 1,
-    total: 4,
+    total: 5,
     isLive: false,
   },
 };
@@ -141,6 +142,7 @@ describe('StudioScreen dashboard', () => {
     expect(screen.getByTestId('barber-dashboard-verification')).toBeTruthy();
     expect(screen.getByTestId('barber-dashboard-services')).toBeTruthy();
     expect(screen.getByTestId('barber-dashboard-availability')).toBeTruthy();
+    expect(screen.getByTestId('barber-dashboard-bio')).toBeTruthy();
 
     // Overview glance: pending pill, next appointment (name + time), upcoming line.
     expect(screen.getByText('2 pending')).toBeTruthy();
@@ -148,10 +150,11 @@ describe('StudioScreen dashboard', () => {
     expect(screen.getByText(/14:30/)).toBeTruthy();
     expect(screen.getByText('1 upcoming in the next 7 days')).toBeTruthy();
 
-    // Readiness meter: the "N of 4" status and the four item rows.
+    // Readiness meter: the "N of 5" status and the five item rows.
     expect(screen.getByTestId('barber-dashboard-readiness')).toBeTruthy();
-    expect(screen.getByText('1 of 4 complete')).toBeTruthy();
+    expect(screen.getByText('1 of 5 complete')).toBeTruthy();
     expect(screen.getByTestId('barber-dashboard-readiness-verification')).toBeTruthy();
+    expect(screen.getByTestId('barber-dashboard-readiness-bio')).toBeTruthy();
 
     // A complete item is inert; an incomplete one deep-links to its fixer.
     expect(
@@ -159,6 +162,12 @@ describe('StudioScreen dashboard', () => {
     ).toBe(true);
     fireEvent.press(screen.getByTestId('barber-dashboard-readiness-availability'));
     expect(navigation.navigate).toHaveBeenCalledWith('Availability');
+
+    // Bio: both the readiness row and the management card deep-link to BioEdit.
+    fireEvent.press(screen.getByTestId('barber-dashboard-readiness-bio'));
+    expect(navigation.navigate).toHaveBeenCalledWith('BioEdit');
+    fireEvent.press(screen.getByTestId('barber-dashboard-bio'));
+    expect(navigation.navigate).toHaveBeenCalledWith('BioEdit');
 
     // The overview deep-links to Requests (glance only — Requests owns mutations).
     fireEvent.press(screen.getByTestId('barber-dashboard-overview'));
