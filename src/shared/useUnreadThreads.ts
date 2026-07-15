@@ -123,7 +123,15 @@ export function useUnreadThreads(): UnreadState {
     if (!userId) return;
     const [roomsResult, readResult, messagesResult] = await Promise.all([
       supabase.from('chat_rooms').select('id'),
-      supabase.from('chat_read_state').select('chat_id, last_read_at'),
+      // Own read-state only. The read-receipts migration (live DB
+      // 0017_read_receipts_and_typing_broadcast) widened chat_read_state's
+      // SELECT policy from own-row to both room participants, so without this
+      // filter the baseline pulls the counterpart's row too and
+      // computeUnreadRoomIds (last-write-wins per chat_id) would resolve
+      // badges against the wrong last_read_at. Filtering to our own id is
+      // correct regardless of the policy — only our own read-state can mark
+      // our unread.
+      supabase.from('chat_read_state').select('chat_id, last_read_at').eq('user_id', userId),
       supabase
         .from('messages')
         .select('chat_id, sender_id, created_at')

@@ -79,6 +79,7 @@ function installTables(data: {
   const readBuilder = (result: unknown) => {
     const obj: Record<string, unknown> = {};
     obj.select = jest.fn(() => obj);
+    obj.eq = jest.fn(() => obj);
     obj.order = jest.fn(() => obj);
     obj.limit = jest.fn(() => obj);
     obj.upsert = upsert;
