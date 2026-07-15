@@ -24,6 +24,19 @@ function window(overrides: Partial<AvailabilityRow>): AvailabilityRow {
 }
 
 describe('deriveAvailableSlots', () => {
+  // Pin the clock (tracked hygiene item, fixed 2026-07-15): most tests here
+  // omit `now`, so the function falls back to the real clock — and the
+  // today-only past-time filter engages whenever the real run date equals a
+  // fixture date (this whole suite failed on exactly 2026-07-13 for that
+  // reason). 2026-07-12 is a Sunday no fixture uses, so the filter can only
+  // engage where a test injects `now` deliberately.
+  beforeAll(() => {
+    jest.useFakeTimers({ now: new Date(2026, 6, 12, 12, 0) });
+  });
+  afterAll(() => {
+    jest.useRealTimers();
+  });
+
   describe('recurring day_of_week windows', () => {
     it('generates back-to-back slots for a matching weekday window', () => {
       // 2026-07-13 is a Monday (day_of_week 1).

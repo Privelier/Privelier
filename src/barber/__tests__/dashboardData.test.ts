@@ -28,6 +28,18 @@ jest.mock('../profileData', () => ({ fetchOwnBarberProfile: jest.fn() }));
 
 const NOW = new Date('2026-07-14T12:00:00');
 
+// Pin the real clock to NOW as well: the pure derivations take `now` as a
+// parameter, but fetchDashboardView reads the real clock internally — its
+// fixtures (dated 2026-07-15, "+1 day" when written) started failing the
+// moment the real date caught up (same date-fragility class as slots.test.ts,
+// fixed 2026-07-15).
+beforeAll(() => {
+  jest.useFakeTimers({ now: NOW });
+});
+afterAll(() => {
+  jest.useRealTimers();
+});
+
 function booking(overrides: Partial<BookingRow>): BookingRow {
   return {
     id: 'b1',
