@@ -7,11 +7,11 @@
  *     fetchOwnRequestsView() the Requests tab uses. It NEVER mutates a booking
  *     (accept/reject/complete live only on the Requests tab); tapping it
  *     deep-links there.
- *  2. Profile readiness — a four-item "readiness to go live" meter
- *     (service / availability / portfolio / verification; bio is
- *     founder-descoped). A verification still under manual review renders as a
- *     calm in-progress state, never the barber's fault (founder decision
- *     2026-07-13). Each incomplete item deep-links to the screen that fixes it.
+ *  2. Profile readiness — a five-item "readiness to go live" meter
+ *     (service / availability / portfolio / bio / verification). A verification
+ *     still under manual review renders as a calm in-progress state, never the
+ *     barber's fault (founder decision 2026-07-13). Each incomplete item
+ *     deep-links to the screen that fixes it (bio → BioEdit).
  *
  * Founder decision (2026-07-08): Services and Availability are managed on
  * their own stack screens, not inline — the two summary cards here link to
@@ -63,6 +63,8 @@ function readinessLabel(item: ReadinessItem): string {
       return item.state === 'complete' ? 'Availability set' : 'Set your availability';
     case 'portfolio':
       return item.state === 'complete' ? 'Portfolio photos added' : 'Add portfolio photos';
+    case 'bio':
+      return item.state === 'complete' ? 'Bio added' : 'Add a short bio';
     case 'verification':
       return item.state === 'complete'
         ? 'Verified'
@@ -88,6 +90,11 @@ function servicesSummary(services: ServiceRow[]): string {
 function availabilitySummary(windows: AvailabilityRow[]): string {
   if (windows.length === 0) return 'No windows set.';
   return windows.length === 1 ? '1 window' : `${windows.length} windows`;
+}
+
+function bioSummary(bio: string | null): string {
+  const trimmed = bio?.trim() ?? '';
+  return trimmed.length === 0 ? 'Add a short introduction' : trimmed;
 }
 
 export default function StudioScreen({ navigation }: Props) {
@@ -142,6 +149,9 @@ export default function StudioScreen({ navigation }: Props) {
           return;
         case 'portfolio':
           navigation.navigate('Portfolio');
+          return;
+        case 'bio':
+          navigation.navigate('BioEdit');
           return;
         case 'verification':
           navigation.navigate('Verify');
@@ -311,7 +321,7 @@ export default function StudioScreen({ navigation }: Props) {
                   {view.readiness.completeCount} of {view.readiness.total} complete
                 </Text>
               )}
-              {/* Four discrete segments mirror the four rows one-to-one — a
+              {/* Discrete segments mirror the readiness rows one-to-one — a
                   countable fact, not a percentage (readiness, never a score).
                   Hidden from the a11y tree: the status line above already
                   carries the count, so color is never the sole signal. */}
@@ -415,6 +425,31 @@ export default function StudioScreen({ navigation }: Props) {
                   </Text>
                   <Text style={[styles.cardMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}>
                     {availabilitySummary(view.windows)}
+                  </Text>
+                </View>
+                <Feather name="chevron-right" size={16} color={colors.textSecondary} />
+              </Pressable>
+
+              <Pressable
+                onPress={() => navigation.navigate('BioEdit')}
+                accessibilityRole="button"
+                accessibilityLabel="Edit your bio"
+                testID="barber-dashboard-bio"
+                style={({ pressed }) => [
+                  styles.card,
+                  styles.linkCard,
+                  { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 },
+                ]}
+              >
+                <View style={styles.cardText}>
+                  <Text style={[styles.cardTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+                    Bio
+                  </Text>
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.cardMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}
+                  >
+                    {bioSummary(view.bio)}
                   </Text>
                 </View>
                 <Feather name="chevron-right" size={16} color={colors.textSecondary} />

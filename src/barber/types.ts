@@ -133,6 +133,19 @@ export type FetchOwnBarberProfileResult =
   | { status: 'ok'; profile: BarberProfileRow | null }
   | BarberDataFailure;
 
+/**
+ * Result of writing the barber's own bio (build-order step 17, bio-edit run).
+ * `profile` is the freshly-updated row. 'not_found' means the update matched
+ * no visible row (defensive — the row always exists for a barber; RLS would
+ * also hide a non-owner's row, indistinguishable by design). An over-length
+ * bio (client-guarded, so only reachable via a raw caller) comes back through
+ * the DB CHECK as a mapped 'invalid_input' failure, never raw text.
+ */
+export type UpdateBioResult =
+  | { status: 'ok'; profile: BarberProfileRow }
+  | { status: 'not_found' }
+  | BarberDataFailure;
+
 /** `request: null` = no documents submitted yet (expected until step 17). */
 export type FetchOwnVerificationRequestResult =
   | { status: 'ok'; request: VerificationRequestRow | null }
@@ -274,7 +287,7 @@ export interface BookingsOverview {
  */
 export type ReadinessState = 'complete' | 'incomplete' | 'in_progress' | 'attention';
 
-export type ReadinessItemKey = 'services' | 'availability' | 'portfolio' | 'verification';
+export type ReadinessItemKey = 'services' | 'availability' | 'portfolio' | 'bio' | 'verification';
 
 export interface ReadinessItem {
   key: ReadinessItemKey;
@@ -282,11 +295,12 @@ export interface ReadinessItem {
 }
 
 /**
- * "Readiness to go live" — NOT a score. Bio is deliberately NOT an item
- * (founder-descoped 2026-07-14: no bio-edit screen exists yet). `isLive` is
- * true only when all four items are complete, mirroring the real gate: a
- * barber appears in customer search only once verification is approved AND
- * they have something to book.
+ * "Readiness to go live" — NOT a score. Five items: services, availability,
+ * portfolio, bio, verification (bio was re-added 2026-07-15 once the bio-edit
+ * screen shipped). `isLive` is true only when ALL items are complete — this is
+ * the meter's soft "profile fully set up" notion, not the literal search gate
+ * (the DB gates customer visibility on approved verification alone). A barber
+ * can therefore be searchable while the meter still nudges an unset bio.
  */
 export interface ProfileReadiness {
   items: ReadinessItem[];
@@ -307,6 +321,9 @@ export interface DashboardView {
   services: ServiceRow[];
   windows: AvailabilityRow[];
   verification: VerificationStatus | null;
+  /** The barber's own bio (null = none set). Backs the Studio "Bio" launch
+   * card's summary and the bio readiness item. */
+  bio: string | null;
   overview: BookingsOverview;
   readiness: ProfileReadiness;
 }
