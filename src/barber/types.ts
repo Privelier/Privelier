@@ -133,6 +133,19 @@ export type FetchOwnBarberProfileResult =
   | { status: 'ok'; profile: BarberProfileRow | null }
   | BarberDataFailure;
 
+/**
+ * Result of writing the barber's own bio (build-order step 17, bio-edit run).
+ * `profile` is the freshly-updated row. 'not_found' means the update matched
+ * no visible row (defensive — the row always exists for a barber; RLS would
+ * also hide a non-owner's row, indistinguishable by design). An over-length
+ * bio (client-guarded, so only reachable via a raw caller) comes back through
+ * the DB CHECK as a mapped 'invalid_input' failure, never raw text.
+ */
+export type UpdateBioResult =
+  | { status: 'ok'; profile: BarberProfileRow }
+  | { status: 'not_found' }
+  | BarberDataFailure;
+
 /** `request: null` = no documents submitted yet (expected until step 17). */
 export type FetchOwnVerificationRequestResult =
   | { status: 'ok'; request: VerificationRequestRow | null }
