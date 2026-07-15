@@ -1,351 +1,465 @@
 ---
 name: ui-ux-pro-max
-description: "UI/UX design intelligence. 50 styles, 21 palettes, 50 font pairings, 20 charts, 9 stacks (React, Next.js, Vue, Svelte, SwiftUI, React Native, Flutter, Tailwind, shadcn/ui). Actions: plan, build, create, design, implement, review, fix, improve, optimize, enhance, refactor, check UI/UX code. Projects: website, landing page, dashboard, admin panel, e-commerce, SaaS, portfolio, blog, mobile app, .html, .tsx, .vue, .svelte. Elements: button, modal, navbar, sidebar, card, table, form, chart. Styles: glassmorphism, claymorphism, minimalism, brutalism, neumorphism, bento grid, dark mode, responsive, skeuomorphism, flat design. Topics: color palette, accessibility, animation, layout, typography, font pairing, spacing, hover, shadow, gradient. Integrations: shadcn/ui MCP for component search and examples."
+description: >
+  Elite UI/UX design intelligence system for premium mobile and web applications.
+
+  Specialized in React Native + Expo first, with support for React, Next.js,
+  SwiftUI, Flutter, Vue, Svelte, Tailwind, and shadcn/ui.
+
+  Use for:
+  - Designing screens
+  - Creating reusable components
+  - Building design systems
+  - Reviewing UX
+  - Improving visual quality
+  - Creating premium interactions
+  - Translating UI inspiration into native application code
+
+  Design inspiration sources:
+  - shadcn/ui
+  - Radix UI
+  - Motion Primitives
+  - 21st.dev
+  - Origin UI
+
+  IMPORTANT:
+  These libraries are inspiration sources only.
+
+  Never copy their web implementation directly.
+
+  Always analyze:
+  - visual hierarchy
+  - spacing
+  - typography
+  - colors
+  - interaction patterns
+  - animations
+  - accessibility
+
+  Then rebuild the same experience using the application's actual technology stack.
+
+  For React Native applications:
+  Convert web concepts into:
+  - React Native components
+  - NativeWind
+  - Gluestack UI
+  - React Native Reanimated
+  - Expo Router
+  - React Navigation
+  - Native platform patterns
+
+  The final result should look and feel equivalent to the reference while
+  being written as production-quality native mobile code.
 ---
 
-# UI/UX Pro Max - Design Intelligence
+# UI/UX Pro Max - Mobile Design Intelligence
 
-Comprehensive design guide for web and mobile applications. Contains 50+ styles, 97 color palettes, 57 font pairings, 99 UX guidelines, and 25 chart types across 9 technology stacks. Searchable database with priority-based recommendations.
+You are an elite product designer and design engineer.
 
-## When to Apply
+Your mission is not creating visually impressive screens.
 
-Reference these guidelines when:
-- Designing new UI components or pages
-- Choosing color palettes and typography
-- Reviewing code for UX issues
-- Building landing pages or dashboards
-- Implementing accessibility requirements
+Your mission is creating products that feel:
+- premium
+- intentional
+- intuitive
+- trustworthy
+- fast
+- emotionally satisfying
 
-## Rule Categories by Priority
+A great interface is not created by adding effects.
 
-| Priority | Category | Impact | Domain |
-|----------|----------|--------|--------|
-| 1 | Accessibility | CRITICAL | `ux` |
-| 2 | Touch & Interaction | CRITICAL | `ux` |
-| 3 | Performance | HIGH | `ux` |
-| 4 | Layout & Responsive | HIGH | `ux` |
-| 5 | Typography & Color | MEDIUM | `typography`, `color` |
-| 6 | Animation | MEDIUM | `ux` |
-| 7 | Style Selection | MEDIUM | `style`, `product` |
-| 8 | Charts & Data | LOW | `chart` |
+A great interface is created through:
+- hierarchy
+- spacing
+- typography
+- interaction quality
+- consistency
+- restraint
 
-## Quick Reference
 
-### 1. Accessibility (CRITICAL)
+# Core Philosophy
 
-- `color-contrast` - Minimum 4.5:1 ratio for normal text
-- `focus-states` - Visible focus rings on interactive elements
-- `alt-text` - Descriptive alt text for meaningful images
-- `aria-labels` - aria-label for icon-only buttons
-- `keyboard-nav` - Tab order matches visual order
-- `form-labels` - Use label with for attribute
+## Design first. Code second.
 
-### 2. Touch & Interaction (CRITICAL)
+Before implementing:
 
-- `touch-target-size` - Minimum 44x44px touch targets
-- `hover-vs-tap` - Use click/tap for primary interactions
-- `loading-buttons` - Disable button during async operations
-- `error-feedback` - Clear error messages near problem
-- `cursor-pointer` - Add cursor-pointer to clickable elements
+1. Understand the user goal.
+2. Understand the business goal.
+3. Understand the platform.
+4. Analyze existing design system.
+5. Research appropriate patterns.
+6. Define component structure.
+7. Implement.
 
-### 3. Performance (HIGH)
 
-- `image-optimization` - Use WebP, srcset, lazy loading
-- `reduced-motion` - Check prefers-reduced-motion
-- `content-jumping` - Reserve space for async content
+Never immediately generate random UI.
 
-### 4. Layout & Responsive (HIGH)
 
-- `viewport-meta` - width=device-width initial-scale=1
-- `readable-font-size` - Minimum 16px body text on mobile
-- `horizontal-scroll` - Ensure content fits viewport width
-- `z-index-management` - Define z-index scale (10, 20, 30, 50)
+# Technology Priority
 
-### 5. Typography & Color (MEDIUM)
+## Default priority
 
-- `line-height` - Use 1.5-1.75 for body text
-- `line-length` - Limit to 65-75 characters per line
-- `font-pairing` - Match heading/body font personalities
+For mobile applications:
 
-### 6. Animation (MEDIUM)
+1. React Native + Expo
+2. Gluestack UI
+3. NativeWind
+4. React Native Reanimated
+5. React Navigation / Expo Router
 
-- `duration-timing` - Use 150-300ms for micro-interactions
-- `transform-performance` - Use transform/opacity, not width/height
-- `loading-states` - Skeleton screens or spinners
 
-### 7. Style Selection (MEDIUM)
+For web applications:
 
-- `style-match` - Match style to product type
-- `consistency` - Use same style across all pages
-- `no-emoji-icons` - Use SVG icons, not emojis
+1. React
+2. Next.js
+3. shadcn/ui
+4. Radix UI
+5. Tailwind
 
-### 8. Charts & Data (LOW)
 
-- `chart-type` - Match chart type to data type
-- `color-guidance` - Use accessible color palettes
-- `data-table` - Provide table alternative for accessibility
+Always detect the existing project stack before generating code.
 
-## How to Use
 
-Search specific domains using the CLI tool below.
+# Inspiration System
 
----
+Use these sources for design intelligence:
 
-## Prerequisites
+## shadcn/ui
 
-Check if Python is installed:
+Learn:
+- component composition
+- design consistency
+- reusable patterns
+- accessibility
 
-```bash
-python3 --version || python --version
-```
 
-If Python is not installed, install it based on user's OS:
+## Radix UI
 
-**macOS:**
-```bash
-brew install python3
-```
+Learn:
+- interaction behavior
+- accessibility patterns
+- state management
+- component logic
 
-**Ubuntu/Debian:**
-```bash
-sudo apt update && sudo apt install python3
-```
 
-**Windows:**
-```powershell
-winget install Python.Python.3.12
-```
+## Motion Primitives
 
----
+Learn:
+- subtle animation
+- transitions
+- micro-interactions
+- delightful feedback
 
-## How to Use This Skill
 
-When user requests UI/UX work (design, build, create, implement, review, fix, improve), follow this workflow:
+## 21st.dev
 
-### Step 1: Analyze User Requirements
+Learn:
+- premium layouts
+- modern product patterns
+- polished components
 
-Extract key information from user request:
-- **Product type**: SaaS, e-commerce, portfolio, dashboard, landing page, etc.
-- **Style keywords**: minimal, playful, professional, elegant, dark mode, etc.
-- **Industry**: healthcare, fintech, gaming, education, etc.
-- **Stack**: React, Vue, Next.js, or default to `html-tailwind`
 
-### Step 2: Generate Design System (REQUIRED)
+## Origin UI
 
-**Always start with `--design-system`** to get comprehensive recommendations with reasoning:
+Learn:
+- practical production components
+- clean interfaces
+- modern SaaS patterns
 
-```bash
-python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<product_type> <industry> <keywords>" --design-system [-p "Project Name"]
-```
 
-This command:
-1. Searches 5 domains in parallel (product, style, color, landing, typography)
-2. Applies reasoning rules from `ui-reasoning.csv` to select best matches
-3. Returns complete design system: pattern, style, colors, typography, effects
-4. Includes anti-patterns to avoid
+# Critical Conversion Rule
 
-**Example:**
-```bash
-python3 .claude/skills/ui-ux-pro-max/scripts/search.py "beauty spa wellness service" --design-system -p "Serenity Spa"
-```
+When using any inspiration:
 
-### Step 3: Supplement with Detailed Searches (as needed)
+DO NOT copy:
 
-After getting the design system, use domain searches to get additional details:
+- HTML
+- CSS
+- DOM structure
+- Tailwind classes
+- browser APIs
+- web-only components
 
-```bash
-python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <domain> [-n <max_results>]
-```
 
-**When to use detailed searches:**
+Instead:
 
-| Need | Domain | Example |
-|------|--------|---------|
-| More style options | `style` | `--domain style "glassmorphism dark"` |
-| Chart recommendations | `chart` | `--domain chart "real-time dashboard"` |
-| UX best practices | `ux` | `--domain ux "animation accessibility"` |
-| Alternative fonts | `typography` | `--domain typography "elegant luxury"` |
-| Landing structure | `landing` | `--domain landing "hero social-proof"` |
+Extract:
 
-### Step 4: Stack Guidelines (Default: html-tailwind)
+- Purpose
+- Layout
+- Visual hierarchy
+- Spacing
+- Typography
+- Motion
+- Interaction
 
-Get implementation-specific best practices. If user doesn't specify a stack, **default to `html-tailwind`**.
 
-```bash
-python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --stack html-tailwind
-```
+Then rebuild using:
 
-Available stacks: `html-tailwind`, `react`, `nextjs`, `vue`, `svelte`, `swiftui`, `react-native`, `flutter`, `shadcn`
+the application's own stack.
 
----
 
-## Search Reference
+Example:
 
-### Available Domains
+A shadcn Dialog component:
 
-| Domain | Use For | Example Keywords |
-|--------|---------|------------------|
-| `product` | Product type recommendations | SaaS, e-commerce, portfolio, healthcare, beauty, service |
-| `style` | UI styles, colors, effects | glassmorphism, minimalism, dark mode, brutalism |
-| `typography` | Font pairings, Google Fonts | elegant, playful, professional, modern |
-| `color` | Color palettes by product type | saas, ecommerce, healthcare, beauty, fintech, service |
-| `landing` | Page structure, CTA strategies | hero, hero-centric, testimonial, pricing, social-proof |
-| `chart` | Chart types, library recommendations | trend, comparison, timeline, funnel, pie |
-| `ux` | Best practices, anti-patterns | animation, accessibility, z-index, loading |
-| `react` | React/Next.js performance | waterfall, bundle, suspense, memo, rerender, cache |
-| `web` | Web interface guidelines | aria, focus, keyboard, semantic, virtualize |
-| `prompt` | AI prompts, CSS keywords | (style name) |
+DO NOT:
 
-### Available Stacks
+copy Dialog HTML/CSS.
 
-| Stack | Focus |
-|-------|-------|
-| `html-tailwind` | Tailwind utilities, responsive, a11y (DEFAULT) |
-| `react` | State, hooks, performance, patterns |
-| `nextjs` | SSR, routing, images, API routes |
-| `vue` | Composition API, Pinia, Vue Router |
-| `svelte` | Runes, stores, SvelteKit |
-| `swiftui` | Views, State, Navigation, Animation |
-| `react-native` | Components, Navigation, Lists |
-| `flutter` | Widgets, State, Layout, Theming |
-| `shadcn` | shadcn/ui components, theming, forms, patterns |
 
----
+DO:
 
-## Example Workflow
+create:
 
-**User request:** "Làm landing page cho dịch vụ chăm sóc da chuyên nghiệp"
+React Native Modal
++
+Reanimated transition
++
+Native accessibility
++
+Project theme tokens
 
-### Step 1: Analyze Requirements
-- Product type: Beauty/Spa service
-- Style keywords: elegant, professional, soft
-- Industry: Beauty/Wellness
-- Stack: html-tailwind (default)
 
-### Step 2: Generate Design System (REQUIRED)
+The user should experience the same quality.
 
-```bash
-python3 .claude/skills/ui-ux-pro-max/scripts/search.py "beauty spa wellness service elegant" --design-system -p "Serenity Spa"
-```
+The developer should receive native production code.
 
-**Output:** Complete design system with pattern, style, colors, typography, effects, and anti-patterns.
 
-### Step 3: Supplement with Detailed Searches (as needed)
+# Mobile UX Rules
 
-```bash
-# Get UX guidelines for animation and accessibility
-python3 .claude/skills/ui-ux-pro-max/scripts/search.py "animation accessibility" --domain ux
+## Touch
 
-# Get alternative typography options if needed
-python3 .claude/skills/ui-ux-pro-max/scripts/search.py "elegant luxury serif" --domain typography
-```
+Every interactive element:
 
-### Step 4: Stack Guidelines
+- minimum 44x44 touch area
+- clear pressed state
+- immediate feedback
+- accessible labels
 
-```bash
-python3 .claude/skills/ui-ux-pro-max/scripts/search.py "layout responsive form" --stack html-tailwind
-```
 
-**Then:** Synthesize design system + detailed searches and implement the design.
+## Navigation
 
----
+Prefer:
 
-## Output Formats
+- bottom navigation
+- reachable primary actions
+- clear hierarchy
+- predictable gestures
 
-The `--design-system` flag supports two output formats:
 
-```bash
-# ASCII box (default) - best for terminal display
-python3 .claude/skills/ui-ux-pro-max/scripts/search.py "fintech crypto" --design-system
+Avoid:
 
-# Markdown - best for documentation
-python3 .claude/skills/ui-ux-pro-max/scripts/search.py "fintech crypto" --design-system -f markdown
-```
+- hidden important actions
+- tiny controls
+- unnecessary screens
 
----
 
-## Tips for Better Results
+## Forms
 
-1. **Be specific with keywords** - "healthcare SaaS dashboard" > "app"
-2. **Search multiple times** - Different keywords reveal different insights
-3. **Combine domains** - Style + Typography + Color = Complete design system
-4. **Always check UX** - Search "animation", "z-index", "accessibility" for common issues
-5. **Use stack flag** - Get implementation-specific best practices
-6. **Iterate** - If first search doesn't match, try different keywords
+Forms should:
 
----
+- minimize typing
+- use smart defaults
+- validate instantly
+- explain errors clearly
 
-## Common Rules for Professional UI
 
-These are frequently overlooked issues that make UI look unprofessional:
+## Loading
 
-### Icons & Visual Elements
+Never only use spinners.
 
-| Rule | Do | Don't |
-|------|----|----- |
-| **No emoji icons** | Use SVG icons (Heroicons, Lucide, Simple Icons) | Use emojis like 🎨 🚀 ⚙️ as UI icons |
-| **Stable hover states** | Use color/opacity transitions on hover | Use scale transforms that shift layout |
-| **Correct brand logos** | Research official SVG from Simple Icons | Guess or use incorrect logo paths |
-| **Consistent icon sizing** | Use fixed viewBox (24x24) with w-6 h-6 | Mix different icon sizes randomly |
+Prefer:
 
-### Interaction & Cursor
+- skeleton screens
+- optimistic updates
+- progressive loading
 
-| Rule | Do | Don't |
-|------|----|----- |
-| **Cursor pointer** | Add `cursor-pointer` to all clickable/hoverable cards | Leave default cursor on interactive elements |
-| **Hover feedback** | Provide visual feedback (color, shadow, border) | No indication element is interactive |
-| **Smooth transitions** | Use `transition-colors duration-200` | Instant state changes or too slow (>500ms) |
 
-### Light/Dark Mode Contrast
+## Empty states
 
-| Rule | Do | Don't |
-|------|----|----- |
-| **Glass card light mode** | Use `bg-white/80` or higher opacity | Use `bg-white/10` (too transparent) |
-| **Text contrast light** | Use `#0F172A` (slate-900) for text | Use `#94A3B8` (slate-400) for body text |
-| **Muted text light** | Use `#475569` (slate-600) minimum | Use gray-400 or lighter |
-| **Border visibility** | Use `border-gray-200` in light mode | Use `border-white/10` (invisible) |
+Every empty state needs:
 
-### Layout & Spacing
+- explanation
+- useful action
+- emotional clarity
 
-| Rule | Do | Don't |
-|------|----|----- |
-| **Floating navbar** | Add `top-4 left-4 right-4` spacing | Stick navbar to `top-0 left-0 right-0` |
-| **Content padding** | Account for fixed navbar height | Let content hide behind fixed elements |
-| **Consistent max-width** | Use same `max-w-6xl` or `max-w-7xl` | Mix different container widths |
 
----
+# Premium Component Rules
 
-## Pre-Delivery Checklist
+A premium component must be:
 
-Before delivering UI code, verify these items:
+## Reusable
 
-### Visual Quality
-- [ ] No emojis used as icons (use SVG instead)
-- [ ] All icons from consistent icon set (Heroicons/Lucide)
-- [ ] Brand logos are correct (verified from Simple Icons)
-- [ ] Hover states don't cause layout shift
-- [ ] Use theme colors directly (bg-primary) not var() wrapper
+No duplicated styling.
 
-### Interaction
-- [ ] All clickable elements have `cursor-pointer`
-- [ ] Hover states provide clear visual feedback
-- [ ] Transitions are smooth (150-300ms)
-- [ ] Focus states visible for keyboard navigation
+Create:
 
-### Light/Dark Mode
-- [ ] Light mode text has sufficient contrast (4.5:1 minimum)
-- [ ] Glass/transparent elements visible in light mode
-- [ ] Borders visible in both modes
-- [ ] Test both modes before delivery
+Button
+Card
+Input
+Avatar
+Badge
+Modal
+Sheet
+Navigation
+List item
 
-### Layout
-- [ ] Floating elements have proper spacing from edges
-- [ ] No content hidden behind fixed navbars
-- [ ] Responsive at 375px, 768px, 1024px, 1440px
-- [ ] No horizontal scroll on mobile
 
-### Accessibility
-- [ ] All images have alt text
-- [ ] Form inputs have labels
-- [ ] Color is not the only indicator
-- [ ] `prefers-reduced-motion` respected
+as shared components.
+
+
+## Theme aware
+
+Never hardcode colors.
+
+Use:
+
+colors.primary
+colors.surface
+colors.text
+colors.border
+
+
+## Accessible
+
+Always include:
+
+- accessibilityRole
+- accessibilityLabel
+- accessibilityState
+
+
+## Animated carefully
+
+Motion should:
+
+- communicate state
+- improve understanding
+- feel natural
+
+Avoid:
+
+- excessive bouncing
+- unnecessary movement
+- animations everywhere
+
+
+# Design Quality Checklist
+
+Before delivering:
+
+## Visual
+
+✓ Clear hierarchy
+
+✓ Consistent spacing
+
+✓ Strong typography
+
+✓ Balanced composition
+
+✓ Professional color usage
+
+
+## UX
+
+✓ Clear user journey
+
+✓ Loading state
+
+✓ Error state
+
+✓ Empty state
+
+✓ Success state
+
+
+## Engineering
+
+✓ Reusable components
+
+✓ Correct architecture
+
+✓ Typed props
+
+✓ Maintainable code
+
+✓ Platform appropriate
+
+
+# Review Method
+
+When reviewing UI:
+
+## 1. First impression
+
+Does it immediately communicate:
+
+- what this screen does?
+- what action matters?
+
+
+## 2. Hierarchy
+
+Check:
+
+- headline
+- supporting information
+- primary action
+- secondary actions
+
+
+## 3. Interaction
+
+Check:
+
+- feedback
+- animations
+- touch targets
+- navigation
+
+
+## 4. Visual polish
+
+Check:
+
+- spacing
+- alignment
+- typography
+- consistency
+
+
+# Output Expectations
+
+When asked to create UI:
+
+Provide:
+
+1. Design reasoning
+
+2. Component architecture
+
+3. Design tokens
+
+4. Implementation plan
+
+5. Production-ready code
+
+
+Never provide only a visual idea.
+
+Always provide something that can be built.
+
+
+# Final Rule
+
+The objective is:
+
+"Create interfaces that feel designed by a world-class product team."
+
+Not:
+
+"Copy existing libraries."
+
+Use the best ideas from modern UI ecosystems, but always transform them into native, maintainable, production-quality application code.
