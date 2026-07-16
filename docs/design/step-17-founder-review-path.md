@@ -11,6 +11,14 @@ procedure. It was written against the live DB, not from assumption.
   never public; only the dashboard (service credentials) and the owning barber can read them.
 - A `verification_requests` row is created/updated for that barber with `status = 'pending'`,
   `id_image_url`, `license_image_url`.
+- **The two documents arrive INDEPENDENTLY, one at a time** (`VerifyScreen.handleUpload(docType)`
+  submits per document). Since migration 0020 both image columns are nullable, so a request row
+  legitimately exists with one document present and the other `NULL` — that is the normal
+  intermediate state between the barber's two picks, not a fault. (Before 0020 both columns were
+  `NOT NULL`, which made the first single-document submission impossible and meant verification
+  submission never worked at all — see that migration's header.) A CHECK
+  (`chk_verification_requests_has_document`) guarantees at least one document is present, so an
+  empty request cannot reach this queue; it does **not** guarantee both.
 - `barber_profile.verification_status` for a brand-new barber is `pending` (forced by the
   `protect_barber_verification_fields` trigger on insert).
 
@@ -26,6 +34,14 @@ and the audit trail respectively.
 
 ## Founder procedure — APPROVE a barber
 
+0. **Check the request is COMPLETE before anything else.** In **Table Editor →
+   `verification_requests`**, confirm the barber's row has **both** `id_image_url` **and**
+   `license_image_url` non-null. If either is `NULL` the barber has only submitted one document
+   so far — **do not approve, do not reject.** Leave it `pending` and wait; the barber's Verify
+   tab still shows the other document as not uploaded, and their next pick will fill it in.
+   Nothing in the database enforces this — the CHECK added in 0020 only requires *at least one*
+   document. **This step is a procedural control and it is the only thing standing between a
+   half-submitted request and an approval granted without ever seeing a licence.**
 1. **Storage → `verification-docs` bucket.** Open the barber's ID and license images and eyeball
    them. (Private bucket; the dashboard previews them with service credentials.)
 2. **Table Editor → `barber_profile`**, find the barber's row, set **both**:

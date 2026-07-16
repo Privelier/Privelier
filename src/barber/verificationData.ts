@@ -6,8 +6,9 @@
  *   1. `uploadVerificationDocument` puts the image bytes into the PRIVATE
  *      `verification-docs` bucket at a UNIQUE `{userId}/{docType}-{stamp}.jpg`
  *      path (never a fixed name — see uniqueObjectName) and returns the PATH.
- *   2. `submitVerificationDocument` upserts that PATH into the barber's own
- *      `verification_requests` row.
+ *   2. `submitVerificationDocument` writes that PATH into the barber's own
+ *      `verification_requests` row (UPDATE if it exists, else INSERT — never
+ *      an upsert; see that function).
  * The caller must only submit after the upload succeeds; a failed upload must
  * never reach step 2.
  *
@@ -106,11 +107,48 @@ export async function uploadVerificationDocument(
   return { status: 'ok', path };
 }
 
+/** Postgres unique_violation — here only ever UNIQUE(user_id). */
+const UNIQUE_VIOLATION = '23505';
+
 /**
- * Upsert the uploaded object PATH into the barber's own
- * `verification_requests` row (UNIQUE(user_id), so onConflict 'user_id').
- * Writes ONLY `user_id` + the one image column; `status` is set to 'pending'
- * by a DB trigger and must never be sent from the client.
+ * UPDATE the one image column on the barber's own row.
+ * Resolves to `null` when no row matched, which means either "no row yet"
+ * (first submission) or "a row exists that `verification_requests_update_own`
+ * won't match" (already approved — the policy is scoped to pending/rejected).
+ * The caller distinguishes the two.
+ */
+async function updateOwnDocumentColumn(
+  userId: string,
+  column: 'id_image_url' | 'license_image_url',
+  path: string
+): Promise<SubmitVerificationDocumentResult | null> {
+  const { data, error } = await supabase
+    .from('verification_requests')
+    .update({ [column]: path })
+    .eq('user_id', userId)
+    .select()
+    .maybeSingle();
+
+  if (error) return mapPostgrestError('submitVerificationDocument.update', error);
+  if (!data) return null;
+  return { status: 'ok', request: data as VerificationRequestRow };
+}
+
+/**
+ * Write the uploaded object PATH into the barber's own `verification_requests`
+ * row: UPDATE the image column if the row exists, else INSERT the first one.
+ *
+ * NOT an upsert, deliberately. PostgREST compiles `.upsert({ user_id, ... })`
+ * to `ON CONFLICT (user_id) DO UPDATE SET user_id = excluded.user_id, ...`,
+ * and `authenticated` holds UPDATE on ONLY the two image columns (0015's
+ * column-grant guardrail) — never on `user_id`. So the conflict arm raised
+ * 42501 and every RESUBMISSION failed, while first submissions (the INSERT
+ * arm, which does hold INSERT on `user_id`) worked. Splitting the two paths
+ * keeps each write inside the columns the client is actually granted; do not
+ * collapse this back into an upsert.
+ *
+ * `status` / `reviewed_by` / `reviewed_at` are never sent — `status` is flipped
+ * to 'pending' by the re-queue trigger whenever an image column changes.
  */
 export async function submitVerificationDocument(
   userId: string,
@@ -118,14 +156,27 @@ export async function submitVerificationDocument(
   path: string
 ): Promise<SubmitVerificationDocumentResult> {
   const { column } = DOC_TARGETS[docType];
-  const payload = { user_id: userId, [column]: path };
+
+  const updated = await updateOwnDocumentColumn(userId, column, path);
+  if (updated) return updated;
 
   const { data, error } = await supabase
     .from('verification_requests')
-    .upsert(payload, { onConflict: 'user_id' })
+    .insert({ user_id: userId, [column]: path })
     .select()
     .single();
 
-  if (error) return mapPostgrestError('submitVerificationDocument', error);
-  return { status: 'ok', request: data as VerificationRequestRow };
+  if (!error) return { status: 'ok', request: data as VerificationRequestRow };
+
+  if (error.code === UNIQUE_VIOLATION) {
+    // A row appeared between our UPDATE and INSERT — retry the update once.
+    const retried = await updateOwnDocumentColumn(userId, column, path);
+    if (retried) return retried;
+    // Still no match: the row exists but is out of the update policy's
+    // pending/rejected scope. A real denial, not a race.
+    logBarberDataError('submitVerificationDocument.insert', error);
+    return failure('forbidden');
+  }
+
+  return mapPostgrestError('submitVerificationDocument.insert', error);
 }
