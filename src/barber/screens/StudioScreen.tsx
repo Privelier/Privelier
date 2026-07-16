@@ -167,12 +167,13 @@ export default function StudioScreen({ navigation }: Props) {
   );
 
   const verification = view?.verification ?? null;
+  // Approved is deliberately NOT green here. isLive requires approved, so a
+  // green line here would always double the green "you're live" moment — and
+  // with bio as a 5th gate, "approved but 4 of 5" is the common state, where a
+  // green line would be marking an unfinished profile. Green stays the one
+  // earned moment; error stays reserved for the one attention state.
   const verificationColor =
-    verification === 'approved'
-      ? colors.successText
-      : verification === 'rejected'
-        ? colors.errorText
-        : colors.textSecondary;
+    verification === 'rejected' ? colors.errorText : colors.textSecondary;
 
   return (
     <SafeAreaView
@@ -438,7 +439,11 @@ export default function StudioScreen({ navigation }: Props) {
               <Pressable
                 onPress={() => navigation.navigate('BioEdit')}
                 accessibilityRole="button"
-                accessibilityLabel="Edit your bio"
+                // The label overrides the children, so it has to carry the
+                // state itself — reading 500 characters aloud would be worse.
+                accessibilityLabel={`Edit your bio. ${
+                  (view.bio?.trim().length ?? 0) > 0 ? 'Bio added' : 'No bio yet'
+                }.`}
                 testID="barber-dashboard-bio"
                 style={({ pressed }) => [
                   styles.card,
@@ -451,8 +456,15 @@ export default function StudioScreen({ navigation }: Props) {
                     Bio
                   </Text>
                   <Text
-                    numberOfLines={1}
-                    style={[styles.cardMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}
+                    // Two lines, unlike the fact-summarising cards beside it:
+                    // this one previews prose, and one line truncates mid-word
+                    // almost always.
+                    numberOfLines={2}
+                    style={[
+                      styles.cardMeta,
+                      styles.bioMeta,
+                      { color: colors.textSecondary, fontFamily: fonts.body },
+                    ]}
                   >
                     {bioSummary(view.bio)}
                   </Text>
@@ -511,6 +523,8 @@ const styles = StyleSheet.create({
   card: { borderWidth: 0.5, borderRadius: 8, padding: 16 },
   cardTitle: { fontSize: 18 },
   cardMeta: { fontSize: 12, marginTop: 4 },
+  // cardMeta has no lineHeight; two lines without one sets too tight.
+  bioMeta: { lineHeight: 17 },
 
   overview: { marginTop: 24 },
   overviewHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

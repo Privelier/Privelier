@@ -247,7 +247,12 @@ has `barber-chats-screen`, `-loading`, `-error`, `-empty`, and
 `barber-chats-row-{id}`; the Verify tab has `barber-verify-screen`,
 `-loading`, `-error`, `barber-verify-status`, `barber-verify-doc-id`, and
 `barber-verify-doc-license`; the Studio management cards also include
-`barber-dashboard-bio` and `barber-dashboard-location` — the latter opens
+`barber-dashboard-bio` (opens the BioEdit stack screen: `barber-bio-screen`,
+`-back`, `-loading`, `-load-error`, `-error`, `-input`, `-counter`,
+`-clear-hint` — rendered ONLY while clearing an existing bio, i.e. the field
+is empty and the loaded bio was not — and `-save`, whose label switches
+between "Save bio" and "Remove bio")
+and `barber-dashboard-location` — the latter opens
 the LocationEdit stack screen: `barber-location-screen`, `-back`, `-loading`,
 `-load-error`, `-error`, `-consent`, `-input`, `-searching`, `-search-error`,
 `-no-results`, `-candidates`, `barber-location-candidate-{index}`,

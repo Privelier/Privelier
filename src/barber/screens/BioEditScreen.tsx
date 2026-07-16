@@ -18,9 +18,10 @@
  * Authorization is entirely server-side RLS; this screen sends only the
  * caller's own id (their session user) as the row key.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -40,8 +41,16 @@ import type { BarberStackParamList } from '../BarberNavigator';
 
 type Props = NativeStackScreenProps<BarberStackParamList, 'BioEdit'>;
 
+/**
+ * The counter stays muted until the last 50 characters, then gains emphasis —
+ * never colour. maxLength already makes overflow impossible, so reaching 500 is
+ * not an error state and must not be dressed as one; and a cap is not an
+ * achievement, so it never goes brass either.
+ */
+const COUNTER_EMPHASIS_AT = MAX_BIO_LENGTH - 50;
+
 export default function BioEditScreen({ navigation }: Props) {
-  const { colors, fonts } = useTheme();
+  const { colors, fonts, isDark } = useTheme();
 
   const [barberId, setBarberId] = useState<string | null>(null);
   const [initialBio, setInitialBio] = useState('');
@@ -51,6 +60,10 @@ export default function BioEditScreen({ navigation }: Props) {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [focused, setFocused] = useState(false);
+  // Set the instant a save succeeds, so the pop it triggers is not mistaken for
+  // an abandon by the discard guard below (`dirty` is still true at that point —
+  // initialBio is never rewritten).
+  const savedRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -85,6 +98,27 @@ export default function BioEditScreen({ navigation }: Props) {
   // dirty, and updateOwnBio stores it as NULL).
   const dirty = text.trim() !== initialBio.trim();
   const canSave = !loading && !submitting && dirty && barberId !== null;
+  // Clearing an existing bio is a legitimate save, not a destruction — it gets
+  // honest labelling (below) but keeps the ordinary brass/check treatment.
+  const clearing = text.trim() === '' && initialBio.trim() !== '';
+
+  const nearLimit = text.length >= COUNTER_EMPHASIS_AT;
+  const atLimit = text.length >= MAX_BIO_LENGTH;
+  const remaining = MAX_BIO_LENGTH - text.length;
+
+  // Losing typed prose to a stray back tap IS destructive — unlike clearing,
+  // which the barber chose. Guards the header button and Android hardware back.
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (!dirty || submitting || savedRef.current) return;
+      e.preventDefault();
+      Alert.alert('Discard changes?', "Your bio changes won't be saved.", [
+        { text: 'Keep editing', style: 'cancel' },
+        { text: 'Discard', style: 'destructive', onPress: () => navigation.dispatch(e.data.action) },
+      ]);
+    });
+    return unsubscribe;
+  }, [navigation, dirty, submitting]);
 
   const onSave = useCallback(async () => {
     if (!barberId) return;
@@ -93,6 +127,7 @@ export default function BioEditScreen({ navigation }: Props) {
     const result = await updateOwnBio(barberId, text);
     setSubmitting(false);
     if (result.status === 'ok') {
+      savedRef.current = true;
       navigation.goBack();
     } else if (result.status === 'not_found') {
       setFormError('We could not find your profile. Try signing out and back in.');
@@ -113,7 +148,10 @@ export default function BioEditScreen({ navigation }: Props) {
           accessibilityLabel="Go back"
           hitSlop={12}
           testID="barber-bio-back"
-          style={[styles.backButton, { backgroundColor: colors.surface }]}
+          style={({ pressed }) => [
+            styles.backButton,
+            { backgroundColor: colors.surface, opacity: pressed ? 0.85 : 1 },
+          ]}
         >
           <Feather name="arrow-left" size={16} color={colors.textPrimary} />
         </Pressable>
@@ -144,7 +182,11 @@ export default function BioEditScreen({ navigation }: Props) {
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            contentContainerStyle={styles.body}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          >
             <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: fonts.body }]}>
               Tell customers a little about your style and experience. This shows on your profile.
             </Text>
@@ -153,7 +195,14 @@ export default function BioEditScreen({ navigation }: Props) {
               <View
                 testID="barber-bio-error"
                 accessibilityRole="alert"
-                style={[styles.notice, { borderColor: colors.error, backgroundColor: colors.surface }]}
+                style={[
+                  styles.notice,
+                  // The body already pads by 24; without this the form error
+                  // renders at a 48px inset. (The load error below sits OUTSIDE
+                  // the ScrollView and correctly keeps the base notice margins.)
+                  styles.noticeInline,
+                  { borderColor: colors.error, backgroundColor: colors.surface },
+                ]}
               >
                 <Text style={[styles.noticeText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
                   {formError}
@@ -163,7 +212,12 @@ export default function BioEditScreen({ navigation }: Props) {
 
             <TextInput
               value={text}
-              onChangeText={setText}
+              onChangeText={(next) => {
+                setText(next);
+                // Don't leave a stale red notice sitting above the field the
+                // barber is already fixing.
+                if (formError) setFormError(null);
+              }}
               onFocus={() => setFocused(true)}
               onBlur={() => setFocused(false)}
               placeholder="e.g. Ten years of sharp fades and classic cuts, brought to your door."
@@ -172,6 +226,9 @@ export default function BioEditScreen({ navigation }: Props) {
               maxLength={MAX_BIO_LENGTH}
               textAlignVertical="top"
               accessibilityLabel="Your bio"
+              selectionColor={colors.accent}
+              cursorColor={colors.accent}
+              keyboardAppearance={isDark ? 'dark' : 'light'}
               style={[
                 styles.input,
                 {
@@ -184,20 +241,50 @@ export default function BioEditScreen({ navigation }: Props) {
               testID="barber-bio-input"
             />
             <Text
-              style={[styles.counter, { color: colors.textSecondary, fontFamily: fonts.body }]}
+              accessibilityLabel={
+                atLimit
+                  ? "You've reached the 500 character limit"
+                  : nearLimit
+                    ? `${remaining} characters left`
+                    : `${text.length} of ${MAX_BIO_LENGTH} characters used`
+              }
+              accessibilityLiveRegion={atLimit ? 'polite' : 'none'}
+              style={[
+                styles.counter,
+                nearLimit
+                  ? { color: colors.textPrimary, fontFamily: fonts.bodyMedium }
+                  : { color: colors.textSecondary, fontFamily: fonts.body },
+              ]}
               testID="barber-bio-counter"
             >
               {text.length} / {MAX_BIO_LENGTH}
             </Text>
 
+            {clearing ? (
+              <Text
+                testID="barber-bio-clear-hint"
+                style={[styles.clearHint, { color: colors.textSecondary, fontFamily: fonts.body }]}
+              >
+                Saving with an empty bio removes it from your profile.
+              </Text>
+            ) : null}
+
             <Pressable
               onPress={onSave}
               disabled={!canSave}
               accessibilityRole="button"
-              accessibilityLabel="Save bio"
-              accessibilityState={{ disabled: !canSave }}
+              accessibilityLabel={clearing ? 'Remove bio' : 'Save bio'}
+              accessibilityState={{ disabled: !canSave, busy: submitting }}
               testID="barber-bio-save"
-              style={[styles.primaryButton, { backgroundColor: colors.accent, opacity: canSave ? 1 : 0.5 }]}
+              style={({ pressed }) => [
+                styles.primaryButton,
+                {
+                  backgroundColor: colors.accent,
+                  // Busy is active-but-working, never dead: canSave goes false
+                  // the moment submitting flips, so exempt it from the dim.
+                  opacity: !canSave && !submitting ? 0.5 : pressed ? 0.85 : 1,
+                },
+              ]}
             >
               {submitting ? (
                 <ActivityIndicator size="small" color={colors.onAccent} />
@@ -205,7 +292,7 @@ export default function BioEditScreen({ navigation }: Props) {
                 <>
                   <Feather name="check" size={14} color={colors.onAccent} />
                   <Text style={[styles.primaryButtonText, { color: colors.onAccent, fontFamily: fonts.bodySemiBold }]}>
-                    Save bio
+                    {clearing ? 'Remove bio' : 'Save bio'}
                   </Text>
                 </>
               )}
@@ -225,11 +312,14 @@ const styles = StyleSheet.create({
   heading: { fontSize: 24, marginTop: 16 },
   spinner: { marginTop: 48 },
   notice: { borderWidth: 0.5, borderRadius: 10, padding: 12, marginHorizontal: 24, marginTop: 20 },
+  // For a notice rendered INSIDE the already-padded ScrollView body.
+  noticeInline: { marginHorizontal: 0, marginTop: 0, marginBottom: 18 },
   noticeText: { fontSize: 14 },
   body: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 32 },
   subtitle: { fontSize: 14, lineHeight: 20, marginBottom: 18 },
   input: { borderWidth: 0.5, borderRadius: 12, padding: 14, minHeight: 160, fontSize: 16, lineHeight: 22 },
-  counter: { fontSize: 12, marginTop: 6, textAlign: 'right' },
+  counter: { fontSize: 12, marginTop: 8, textAlign: 'right' },
+  clearHint: { fontSize: 13, lineHeight: 18, marginTop: 12 },
   primaryButton: {
     flexDirection: 'row',
     borderRadius: 10,
