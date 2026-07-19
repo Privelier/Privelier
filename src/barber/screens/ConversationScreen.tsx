@@ -42,6 +42,7 @@ import { useReadReceipt } from '../../shared/useReadReceipt';
 import { useTypingBroadcast } from '../../shared/useTypingBroadcast';
 import { deriveReadMarkerId } from '../../shared/readReceipts';
 import { useSendQueue, type PendingSend } from '../../shared/useSendQueue';
+import { MAX_MESSAGE_LENGTH, MESSAGE_COUNTER_VISIBLE_AT } from '../../shared/messageLimits';
 import { formatMessageTime } from '../../shared/format';
 import { useUnread } from '../UnreadContext';
 
@@ -147,7 +148,8 @@ export default function ConversationScreen({ route, navigation }: Props) {
       const result = await sendMessage(room.id, text);
       return result.status === 'ok'
         ? ({ status: 'ok', row: result.message } as const)
-        : ({ status: 'failed' } as const);
+        : // Carry the already-mapped copy (never raw server text) to the bubble.
+          ({ status: 'failed', message: result.message } as const);
     },
     [room.id]
   );
@@ -297,6 +299,16 @@ export default function ConversationScreen({ route, navigation }: Props) {
                     <Text style={p.failed ? styles.bubbleMetaFailed : styles.bubbleMeta}>
                       {p.failed ? 'Not sent — tap to retry' : 'Sending…'}
                     </Text>
+                    {/* The reason, when the data layer gave one. Without it a
+                        failure retrying cannot fix is an undiagnosable dead end. */}
+                    {p.failed && p.failureMessage ? (
+                      <Text
+                        style={styles.bubbleFailureReason}
+                        testID={`barber-conversation-failure-reason-${p.key}`}
+                      >
+                        {p.failureMessage}
+                      </Text>
+                    ) : null}
                   </Pressable>
                 );
               }
@@ -330,6 +342,17 @@ export default function ConversationScreen({ route, navigation }: Props) {
           ) : null}
         </View>
 
+        {/* Quiet until the cap is actually near — see MESSAGE_COUNTER_VISIBLE_AT. */}
+        {draft.length >= MESSAGE_COUNTER_VISIBLE_AT ? (
+          <Text
+            style={styles.messageCounter}
+            accessibilityLabel={`${MAX_MESSAGE_LENGTH - draft.length} characters left`}
+            testID="barber-conversation-counter"
+          >
+            {draft.length} / {MAX_MESSAGE_LENGTH}
+          </Text>
+        ) : null}
+
         <View style={styles.inputRow}>
           <TextInput
             value={draft}
@@ -337,6 +360,10 @@ export default function ConversationScreen({ route, navigation }: Props) {
             placeholder="Write a message"
             placeholderTextColor={colors.textSecondary}
             multiline
+            // Mirrors the DB constraint so the server bound can never be the
+            // rejecter (migration 0018 shipped without this, which is what made
+            // an over-length paste permanently unsendable).
+            maxLength={MAX_MESSAGE_LENGTH}
             style={styles.input}
             testID="barber-conversation-input"
           />
@@ -408,6 +435,23 @@ function useStyles(colors: Palette) {
     bubbleText: { fontSize: 14, lineHeight: 20, color: colors.textPrimary, fontFamily: fonts.body },
     bubbleMeta: { fontSize: 10, marginTop: 4, color: colors.textSecondary, fontFamily: fonts.body },
     bubbleMetaFailed: { fontSize: 10, marginTop: 4, color: colors.errorText, fontFamily: fonts.bodyMedium },
+    bubbleFailureReason: {
+      fontSize: 11,
+      lineHeight: 15,
+      marginTop: 2,
+      color: colors.textSecondary,
+      fontFamily: fonts.body,
+    },
+    // Muted and weight-only near the cap — never red: maxLength makes overflow
+    // impossible, so reaching the limit is not an error state.
+    messageCounter: {
+      fontSize: 11,
+      textAlign: 'right',
+      paddingHorizontal: 16,
+      paddingBottom: 4,
+      color: colors.textSecondary,
+      fontFamily: fonts.body,
+    },
 
     typingSlot: { height: 18, justifyContent: 'center', paddingHorizontal: 24 },
     typingText: { fontSize: 11, color: colors.textSecondary, fontFamily: fonts.body },

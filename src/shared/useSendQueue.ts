@@ -22,10 +22,22 @@ export interface PendingSend {
   key: number;
   text: string;
   failed: boolean;
+  /**
+   * Why the last attempt failed, as already-mapped user-facing copy (never raw
+   * server text). Undefined until a failure, and cleared on retry so a stale
+   * reason never sits under an in-flight attempt.
+   *
+   * This carries the reason all the way to the bubble deliberately: a bare
+   * "tap to retry" on a failure that retrying cannot fix (an over-length
+   * message, a permission problem) is a dead end the user cannot diagnose.
+   */
+  failureMessage?: string;
 }
 
 /** What the caller's send function must resolve to. */
-export type SendOutcome<TRow> = { status: 'ok'; row: TRow } | { status: 'failed' };
+export type SendOutcome<TRow> =
+  | { status: 'ok'; row: TRow }
+  | { status: 'failed'; message?: string };
 
 export interface UseSendQueueArgs<TRow> {
   /** Performs the actual write; resolves ok with the authoritative row. */
@@ -72,7 +84,11 @@ export function useSendQueue<TRow>({ send, onSent }: UseSendQueueArgs<TRow>): Se
       setPending((prev) => prev.filter((p) => p.key !== key));
       onSentRef.current(result.row);
     } else {
-      setPending((prev) => prev.map((p) => (p.key === key ? { ...p, failed: true } : p)));
+      setPending((prev) =>
+        prev.map((p) =>
+          p.key === key ? { ...p, failed: true, failureMessage: result.message } : p
+        )
+      );
     }
   }, []);
 
@@ -92,7 +108,11 @@ export function useSendQueue<TRow>({ send, onSent }: UseSendQueueArgs<TRow>): Se
       if (inFlightRef.current.has(key)) return; // synchronous double-tap guard
       const entry = pendingRef.current.find((p) => p.key === key);
       if (!entry) return;
-      setPending((prev) => prev.map((p) => (p.key === key ? { ...p, failed: false } : p)));
+      // Drop the previous reason as the attempt restarts — a stale explanation
+      // under an in-flight "Sending…" bubble would be a lie.
+      setPending((prev) =>
+        prev.map((p) => (p.key === key ? { ...p, failed: false, failureMessage: undefined } : p))
+      );
       void runSend(key, entry.text);
     },
     [runSend]

@@ -68,6 +68,45 @@ describe('submit', () => {
     expect(result.current.pending).toEqual([{ key: 1, text: 'hi', failed: true }]);
   });
 
+  /**
+   * Regression guard for the dead end migration 0018 opened: the messages
+   * length CHECK could reject a send whose reason was then discarded here, so
+   * the bubble offered only "tap to retry" for a failure retrying could never
+   * fix. The reason must reach the entry, and must not outlive the retry.
+   */
+  it('carries a failure reason onto the entry and clears it on retry', async () => {
+    const { send, resolvers } = controllableSend();
+    const { result } = await renderQueue({ send, onSent: jest.fn() });
+
+    await act(() => {
+      result.current.submit('hi');
+    });
+    await act(async () => {
+      resolvers[0]({ status: 'failed', message: 'That message is too long.' });
+    });
+
+    expect(result.current.pending).toEqual([
+      { key: 1, text: 'hi', failed: true, failureMessage: 'That message is too long.' },
+    ]);
+
+    // Retrying restarts the attempt: a stale reason under a live "Sending…"
+    // bubble would be a lie.
+    await act(() => {
+      result.current.retry(1);
+    });
+    expect(result.current.pending).toEqual([
+      { key: 1, text: 'hi', failed: false, failureMessage: undefined },
+    ]);
+
+    // A reasonless failure still just fails — no fabricated explanation.
+    await act(async () => {
+      resolvers[1]({ status: 'failed' });
+    });
+    expect(result.current.pending).toEqual([
+      { key: 1, text: 'hi', failed: true, failureMessage: undefined },
+    ]);
+  });
+
   it('ignores empty/whitespace text', async () => {
     const { send } = controllableSend();
     const { result } = await renderQueue({ send, onSent: jest.fn() });
