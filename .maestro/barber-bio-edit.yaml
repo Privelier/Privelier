@@ -1,0 +1,124 @@
+# Barber bio entry flow (build-order step 17, bio-edit run): log in as the
+# barber -> Studio tab -> tap the Bio management card -> the BioEdit screen
+# renders -> type a bio -> the character counter tracks it -> tap back and get
+# the discard guard, which is the one navigation-level behaviour a component
+# test cannot fully prove (it needs a real React Navigation stack).
+#
+# WHY THIS FLOW NEVER SAVES (deterministic-path-only, same philosophy as
+# barber-location-edit.yaml and barber-dashboard-overview-readiness.yaml):
+# save-enablement is dirty-state-dependent — after a first run saved a bio, a
+# second run typing the SAME text would find the screen correctly not-dirty and
+# the save tap would fail. Exercising the discard path instead leaves zero
+# state behind, so every run starts identically. The save/clear write paths are
+# pinned by component tests (BioEditScreen.test.tsx) and by the updateOwnBio
+# unit tests.
+#
+# Also deliberately NOT asserted (state-dependent):
+# - The Studio Bio card's preview text (a real bio vs the "Add a short
+#   introduction" placeholder).
+# - barber-bio-clear-hint (only appears when a bio already exists to remove).
+# - The readiness meter's bio row state.
+#
+# NOT YET RUN — same tooling gap as every other flow here: no Maestro CLI on
+# the authoring machine (see .maestro/README.md). Once available:
+#   maestro test .maestro/barber-bio-edit.yaml \
+#     -e TEST_BARBER_EMAIL=... -e TEST_BARBER_PASSWORD=...
+#
+# Prerequisites:
+# - A pre-confirmed test barber account.
+# - Same appId placeholder caveat as every other flow here.
+appId: com.privelier.app # TODO: replace once app.json defines a real package/bundleIdentifier
+env:
+  TEST_BARBER_EMAIL: barber.e2e@example.com
+  TEST_BARBER_PASSWORD: ChangeMe123!
+---
+- launchApp:
+    clearState: true
+
+# UNAUTHENTICATED: role-select is the very first screen.
+- assertVisible:
+    id: "role-select-barber"
+- tapOn:
+    id: "role-select-barber"
+
+# Per-role auth entry -> log in.
+- assertVisible:
+    id: "auth-entry-screen"
+- tapOn:
+    id: "auth-entry-login"
+
+- assertVisible:
+    id: "auth-login-screen"
+- tapOn:
+    id: "auth-login-email"
+- inputText: "${TEST_BARBER_EMAIL}"
+- tapOn:
+    id: "auth-login-password"
+- inputText: "${TEST_BARBER_PASSWORD}"
+- tapOn:
+    id: "auth-login-submit"
+
+# PROVISIONING is transient on a returning user — wait for the barber landing
+# (Studio tab) directly, same as the other barber flows.
+- extendedWaitUntil:
+    visible:
+      id: "barber-dashboard-logout"
+    timeout: 15000
+
+# --- Studio: reach the Bio management card ---
+- extendedWaitUntil:
+    notVisible:
+      id: "barber-dashboard-loading"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "barber-dashboard-bio"
+- tapOn:
+    id: "barber-dashboard-bio"
+
+# --- BioEdit screen: the authoritative bio loads before anything is editable ---
+- assertVisible:
+    id: "barber-bio-screen"
+- extendedWaitUntil:
+    notVisible:
+      id: "barber-bio-loading"
+    timeout: 15000
+- assertNotVisible:
+    id: "barber-bio-load-error"
+- assertVisible:
+    id: "barber-bio-input"
+- assertVisible:
+    id: "barber-bio-counter"
+
+# --- Type a bio; the counter is live and no error notice appears ---
+- tapOn:
+    id: "barber-bio-input"
+# Clear whatever loaded (a bio saved by an earlier run) so the typed length,
+# and therefore the counter assertion below, is exact.
+- eraseText
+- inputText: "Maestro end to end bio."
+- assertVisible:
+    id: "barber-bio-counter"
+# 23 characters typed, well clear of the 450 emphasis threshold.
+- assertVisible: "23 / 500"
+- assertNotVisible:
+    id: "barber-bio-error"
+
+# --- The discard guard: unsaved prose must survive a stray back tap ---
+- tapOn:
+    id: "barber-bio-back"
+- assertVisible: "Discard changes?"
+- tapOn: "Keep editing"
+
+# Still on the editor, with the typed text intact.
+- assertVisible:
+    id: "barber-bio-screen"
+- assertVisible: "23 / 500"
+
+# Leave for real, writing nothing (see header).
+- tapOn:
+    id: "barber-bio-back"
+- assertVisible: "Discard changes?"
+- tapOn: "Discard"
+- assertVisible:
+    id: "barber-dashboard-screen"

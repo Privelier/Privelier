@@ -21,6 +21,7 @@ maestro test .maestro/customer-chat-read-receipt.yaml
 maestro test .maestro/barber-verify-upload-documents.yaml
 maestro test .maestro/barber-dashboard-overview-readiness.yaml
 maestro test .maestro/barber-location-edit.yaml
+maestro test .maestro/barber-bio-edit.yaml
 maestro test .maestro/customer-explore-filters-list.yaml
 ```
 
@@ -181,7 +182,7 @@ tab, and returning to Studio re-renders cleanly (the focus refresh is silent
 over an already-loaded dashboard — no spinner, no error). Deliberately
 state-dependent and therefore NOT asserted: per-row readiness deep-links
 (complete rows are intentionally inert), the pending pill / next-appointment
-line, and "N of 4 complete" vs the is-live line. Needs no seeding beyond any
+line, and "N of 5 complete" vs the is-live line. Needs no seeding beyond any
 signed-in barber account.
 
 For the Explore/location feature's Run A (barber address entry),
@@ -196,6 +197,21 @@ dirty-state-dependent and would flake on re-runs when the saved address
 already equals the picked candidate) — the save/clear write paths are pinned
 by LocationEditScreen.test.tsx and the locationData unit tests. Needs no
 seeding beyond any signed-in barber account.
+
+For the bio-edit run, `barber-bio-edit.yaml` covers the deterministic path:
+Studio's Bio card opens the BioEdit screen, the authoritative bio loads,
+typing tracks the live character counter, and — the point of the flow — the
+`beforeRemove` discard guard blocks a back tap over unsaved prose ("Keep
+editing" returns to the intact editor; "Discard" leaves). That guard is the
+one navigation-level behaviour BioEditScreen.test.tsx cannot fully prove,
+since it needs a real React Navigation stack rather than a mocked
+`addListener`. Deliberately NOT asserted, and for the same dirty-state reason
+as the location flow: the save itself — a second run typing the same text
+would find the screen correctly not-dirty and fail the tap. Because the flow
+never saves, it also leaves zero state behind, so re-runs start identically.
+Also not asserted: the Studio Bio card's preview text, `barber-bio-clear-hint`
+(only appears when a bio exists to remove), and the readiness meter's bio row.
+Needs no seeding beyond any signed-in barber account.
 
 For Run B (the customer Explore tab), `customer-explore-filters-list.yaml`
 covers the deterministic path: the tab loads without error, the
