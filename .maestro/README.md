@@ -141,6 +141,12 @@ the `barber-` prefix): `customer-conversation-read-marker` (the single quiet
 "Read" under the newest own message — at most one exists by design) and
 `customer-conversation-typing` (the fixed-height indicator line above the
 input row, present only while a counterpart broadcast says so).
+The 2026-07-19 message-length fix adds (both apps, same shape):
+`customer-conversation-counter` (appears only within 200 characters of the
+2000 cap, so it is absent in ordinary use — assert it only after typing a
+deliberately long draft) and `customer-conversation-failure-reason-{key}`
+(the explanation under a failed bubble, present only when the data layer
+supplied one — a bare network failure may legitimately have none).
 
 For build-order step 17 (barber manual verification — document upload),
 `barber-verify-upload-documents.yaml` covers the single-device half: a
