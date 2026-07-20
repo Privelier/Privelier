@@ -20,8 +20,13 @@
  * survive leaving the screen — nothing fake is ever persisted). Double-fire
  * protection is SYNCHRONOUS (review finding M1): the draft mirror ref here
  * plus the in-flight key guard inside useSendQueue — React state alone
- * commits too late, and a duplicate message insert would be permanent. No
- * read receipts, no typing indicator, no presence — none of those are real.
+ * commits too late, and a duplicate message insert would be permanent.
+ *
+ * READ RECEIPTS + TYPING are real as of the 2026-07-14 founder decision
+ * (migration 0017): the receipt comes from the counterpart's own
+ * `chat_read_state.last_read_at` via useReadReceipt, and typing from a
+ * private `typing:{chat_id}` broadcast via useTypingBroadcast — both are
+ * observed state, never fabricated. PRESENCE remains unbuilt.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {

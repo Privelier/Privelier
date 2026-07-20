@@ -42,12 +42,24 @@ export const barberDataErrorCopy: Record<BarberDataErrorCode, string> = {
 
 const retryableCodes: ReadonlySet<BarberDataErrorCode> = new Set(['network']);
 
-/** Build a typed failure for a known code. */
-export function failure(code: BarberDataErrorCode): BarberDataFailure {
+/**
+ * Per-caller copy overrides, keyed by code. The default copy is written for
+ * the surface that first needed it (e.g. `invalid_input` names day/date/times,
+ * which is right for an availability window and nonsense on a bio screen), so
+ * a caller whose surface would read wrong supplies its own sentence here. The
+ * CODE is unchanged — only the words the user sees.
+ */
+export type BarberDataErrorCopyOverrides = Partial<Record<BarberDataErrorCode, string>>;
+
+/** Build a typed failure for a known code, optionally with caller copy. */
+export function failure(
+  code: BarberDataErrorCode,
+  overrides?: BarberDataErrorCopyOverrides
+): BarberDataFailure {
   return {
     status: 'error',
     code,
-    message: barberDataErrorCopy[code],
+    message: overrides?.[code] ?? barberDataErrorCopy[code],
     retryable: retryableCodes.has(code),
   };
 }
@@ -95,19 +107,27 @@ const RAISE_EXCEPTION = 'P0001';
  * - P0001 (raise_exception): the booking status-transition trigger
  *   (migration 0011) rejected an illegal transition or wrong-actor attempt —
  *   surfaced as 'transition_rejected'.
+ *
+ * `overrides` lets a caller replace the user-facing sentence for a code whose
+ * default copy was written for a different surface (see
+ * BarberDataErrorCopyOverrides). It never changes which code is returned.
  */
-export function mapPostgrestError(context: string, raw: PostgrestErrorLike | null): BarberDataFailure {
+export function mapPostgrestError(
+  context: string,
+  raw: PostgrestErrorLike | null,
+  overrides?: BarberDataErrorCopyOverrides
+): BarberDataFailure {
   logBarberDataError(context, raw);
-  if (!raw) return failure('unknown');
-  if (raw.code === RLS_DENIED) return failure('forbidden');
-  if (raw.code === CHECK_VIOLATION) return failure('invalid_input');
-  if (raw.code === RAISE_EXCEPTION) return failure('transition_rejected');
+  if (!raw) return failure('unknown', overrides);
+  if (raw.code === RLS_DENIED) return failure('forbidden', overrides);
+  if (raw.code === CHECK_VIOLATION) return failure('invalid_input', overrides);
+  if (raw.code === RAISE_EXCEPTION) return failure('transition_rejected', overrides);
   const msg = (raw.message ?? '').toLowerCase();
-  if (msg.includes('row-level security')) return failure('forbidden');
+  if (msg.includes('row-level security')) return failure('forbidden', overrides);
   if (msg.includes('network request failed') || msg.includes('failed to fetch')) {
-    return failure('network');
+    return failure('network', overrides);
   }
-  return failure('unknown');
+  return failure('unknown', overrides);
 }
 
 /** Minimal shape shared by a StorageError without importing its class. */

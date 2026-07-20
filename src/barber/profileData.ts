@@ -69,7 +69,14 @@ export async function updateOwnBio(userId: string, bio: string): Promise<UpdateB
     .select()
     .maybeSingle();
 
-  if (error) return mapPostgrestError('updateOwnBio', error);
+  // The default 'invalid_input' copy names day/date/times — written for
+  // availability windows and meaningless on the bio screen. Same code, bio
+  // words (finding L1 from the bio-edit T8 security gate).
+  if (error) {
+    return mapPostgrestError('updateOwnBio', error, {
+      invalid_input: `That bio is not valid. Keep it under ${MAX_BIO_LENGTH} characters and try again.`,
+    });
+  }
   if (!data) return { status: 'not_found' };
   return { status: 'ok', profile: data as BarberProfileRow };
 }

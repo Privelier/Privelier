@@ -85,4 +85,31 @@ describe('mapPostgrestError', () => {
   it('falls back to unknown when raw has no code or message', () => {
     expect(mapPostgrestError('ctx', {})).toEqual(failure('unknown'));
   });
+
+  // Copy overrides (finding L1): a caller may replace the SENTENCE for a code
+  // whose default copy was written for another surface. The code, retryable
+  // flag, and every non-overridden code must be untouched.
+  describe('copy overrides', () => {
+    it('replaces only the overridden code’s message, never the code itself', () => {
+      const result = mapPostgrestError('ctx', { code: '23514' }, { invalid_input: 'Bio too long.' });
+      expect(result.code).toBe('invalid_input');
+      expect(result.message).toBe('Bio too long.');
+      expect(result.retryable).toBe(false);
+    });
+
+    it('leaves codes the caller did not override on the default copy', () => {
+      const result = mapPostgrestError('ctx', { code: '42501' }, { invalid_input: 'Bio too long.' });
+      expect(result).toEqual(failure('forbidden'));
+    });
+
+    it('keeps network retryable when its copy is overridden', () => {
+      const result = failure('network', { network: 'No connection.' });
+      expect(result).toEqual({
+        status: 'error',
+        code: 'network',
+        message: 'No connection.',
+        retryable: true,
+      });
+    });
+  });
 });

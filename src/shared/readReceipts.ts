@@ -8,10 +8,13 @@
  * (counterpart `last_read_at` vs own message `created_at`) crosses the
  * PostgREST/Realtime serialization boundary, so ISO-string comparison — valid
  * elsewhere in this codebase for same-source strings — is NOT safe here.
- * `Date.parse` normalizes both variants to epoch ms. Millisecond truncation
- * is safe because `resolveReadMarker` (unread.ts) writes the marker as
- * max(device now, newest message created_at), so a marker covering a message
- * is `>=` its timestamp by construction.
+ * `Date.parse` normalizes both variants to epoch ms. Millisecond truncation is
+ * safe because `resolveReadMarker` (unread.ts) writes the marker as EXACTLY
+ * the newest known message's server-generated `created_at` — the device clock
+ * is never consulted (realtime-optimizer finding M1, 2026-07-14: since
+ * migration 0017 the marker is a counterpart-visible receipt, and a fast
+ * device clock would fabricate one). A marker covering a message is therefore
+ * `>=` its timestamp by construction, with equality the normal case.
  *
  * Malformed/unparseable timestamps degrade to "not read" (the honest
  * default: never render a receipt that was not actually established).

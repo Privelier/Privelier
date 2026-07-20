@@ -46,9 +46,11 @@ F5 filtered-DELETE trap does not apply.
 The comparison (counterpart `last_read_at` vs own message `created_at`) crosses the
 PostgREST/Realtime serialization boundary — exactly the tracked L1 fragility. String compare is
 only valid for same-source strings; `Date.parse` normalizes both ISO variants. Millisecond
-truncation is safe because `resolveReadMarker` already writes the marker as
-`max(device now, newest message created_at)`, so a read marker is `>=` the message timestamp by
-construction. Malformed/unparseable input degrades to "not read" (honest default). This decision
+truncation is safe because `resolveReadMarker` writes the marker as EXACTLY the newest known
+message's server-generated `created_at` — the device clock is never consulted (that was the
+realtime-optimizer M1 correction of 2026-07-14; an earlier draft of this line said
+`max(device now, …)`, which never matched the shipped code) — so a read marker is `>=` the
+message timestamp by construction, with equality the normal case. Malformed/unparseable input degrades to "not read" (honest default). This decision
 neutralizes L1 for receipts; the separate L1 one-time echo check for messages stays tracked.
 
 **D4 — Typing uses a PRIVATE broadcast channel (`config.private = true`), authorized by new

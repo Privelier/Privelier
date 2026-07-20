@@ -151,6 +151,32 @@ describe('uploadPortfolioImage', () => {
     expect(p1).not.toBe(p2);
   });
 
+  // -------------------------------------------------------------------------
+  // Coupling to the DB, not just to today's helper (finding M2).
+  //
+  // Migration 0018's `chk_portfolio_image_url_folder` requires every
+  // portfolio.image_url to begin with `{barber_id}/`. Nothing in this module
+  // states that — it holds only because uniqueObjectName happens to be
+  // prefixed with the barber id at the call site. If that ever changes, every
+  // portfolio insert becomes a 23514 surfacing as a generic 'invalid_input',
+  // with no test pointing at the cause. This asserts the coupling directly,
+  // for an id that shares no characters with the fixtures above.
+  // -------------------------------------------------------------------------
+  it('puts the barber id in the FIRST path segment (chk_portfolio_image_url_folder, 0018)', async () => {
+    const barberId = '9f3c1e0a-7b21-4d55-8ac6-0e2d4f6a1b93';
+    fetchYields();
+    const upload = storageUpload({ error: null });
+
+    const result = await uploadPortfolioImage(barberId, 'file:///tmp/pic.jpg');
+
+    expect(result.status).toBe('ok');
+    const path = (result as { status: 'ok'; path: string }).path;
+    expect(path.split('/')[0]).toBe(barberId);
+    // The uploaded object path and the path handed to insertPortfolioRow are
+    // the same string, so pinning it here pins what reaches image_url.
+    expect(upload).toHaveBeenCalledWith(path, expect.any(ArrayBuffer), expect.anything());
+  });
+
   it('passes an explicit mimeType through as the contentType', async () => {
     fetchYields();
     const upload = storageUpload({ error: null });
