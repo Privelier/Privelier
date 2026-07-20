@@ -246,7 +246,11 @@ button is `customer-tab-explore`.
 `auth-signup-screen`, `auth-signup-name`, `auth-signup-email`,
 `auth-signup-password`, `auth-signup-city`, `auth-signup-submit`,
 `auth-confirm-screen`, `auth-confirm-resend`, `auth-confirm-success`,
-`auth-confirm-error`, `barber-dashboard-logout`,
+`auth-confirm-error`, `brandmark` (the shared Privelier Signet — default
+testID of `src/shared/components/Brandmark.tsx`; present on RoleSelect, the
+provisioning-loading view, and the await-confirmation screen. Note it is
+absent from the a11y tree only when `decorative`, which none of those three
+placements use), `barber-dashboard-logout`,
 `barber-dashboard-services`, `barber-dashboard-availability`
 (all three now live on the Studio tab of the barber tab shell —
 `barber-dashboard-screen`, with `-loading`, `-error`, and `-verification`
