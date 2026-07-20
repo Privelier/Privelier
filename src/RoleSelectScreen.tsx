@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from './theme/useTheme';
+import Brandmark from './shared/components/Brandmark';
 import type { Role } from './types';
 
 type Props = {
@@ -14,9 +15,10 @@ export default function RoleSelectScreen({ onSelectRole }: Props) {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <Text style={[styles.wordmark, { color: colors.textPrimary, fontFamily: fonts.heading }]}>
-          Privelier
-        </Text>
+        {/* The app's threshold — the one screen that most earns the full
+            lockup. Replaces the previous bare Playfair "Privelier" text (which
+            carried no testID, so nothing depends on it). */}
+        <Brandmark lockup="vertical" size="xl" />
         <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: fonts.body }]}>
           Choose how you&rsquo;d like to continue
         </Text>
@@ -89,13 +91,15 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 48,
-  },
-  wordmark: {
-    fontSize: 34,
-    marginBottom: 8,
+    // Centred only here. RoleSelect is the app's one pure threshold — no
+    // scroll, no content, full-width cards below — so a centred header
+    // creates no ragged edge. Other screens stay left-aligned.
+    alignItems: 'center',
   },
   subtitle: {
     fontSize: 15,
+    marginTop: 16,
+    textAlign: 'center',
   },
   optionList: {
     gap: 12,

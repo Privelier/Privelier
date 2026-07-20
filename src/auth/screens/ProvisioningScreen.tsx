@@ -8,6 +8,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { AuthFailure } from '../errors';
 import { useTheme } from '../../theme/useTheme';
+import Brandmark from '../../shared/components/Brandmark';
 import { PrimaryButton, TextLink } from './ui';
 
 interface Props {
@@ -26,6 +27,11 @@ export default function ProvisioningScreen({ view, onRetry, onSignOut }: Props) 
     >
       {view.kind === 'loading' ? (
         <View style={styles.center} testID="provisioning-loading">
+          {/* The normal first-login wait for every new user, in both apps —
+              a branded silence with nothing else on screen, which is exactly
+              where a seal belongs. Deliberately NOT animated: the spinner
+              already says "working"; a breathing logo would say "startup". */}
+          <Brandmark size="md" style={styles.markSpacing} />
           <ActivityIndicator size="small" color={colors.accent} />
           <Text style={[styles.loadingText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
             Setting up your account
@@ -52,6 +58,9 @@ export default function ProvisioningScreen({ view, onRetry, onSignOut }: Props) 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
   center: { alignItems: 'center', gap: 12 },
+  // The container's gap is 12; the mark wants a little more air beneath it
+  // than the spinner-to-caption rhythm.
+  markSpacing: { marginBottom: 8 },
   loadingText: { fontSize: 14 },
   title: { fontSize: 24, textAlign: 'center' },
   message: { fontSize: 14, lineHeight: 20, textAlign: 'center', marginBottom: 12 },

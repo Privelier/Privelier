@@ -9,6 +9,7 @@ import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { resendConfirmation } from '../authService';
+import Brandmark from '../../shared/components/Brandmark';
 import type { AuthStackParamList } from './AuthNavigator';
 import {
   AuthScreenShell,
@@ -44,6 +45,12 @@ export default function AwaitEmailConfirmationScreen({ navigation, route }: Prop
 
   return (
     <AuthScreenShell testID="auth-confirm-screen">
+      {/* The one auth screen that earns the mark: a dead-end waiting state
+          with no BackLink, where the user is leaving for their inbox. Aligned
+          LEFT, not centred — ScreenHeading and everything else in the auth
+          shell sit on a left grid, and a centred mark above them would break
+          that rhythm. */}
+      <Brandmark size="md" style={styles.mark} />
       <ScreenHeading
         title="Check your inbox"
         subtitle={`We’ve sent a confirmation link to ${email}. Open it to activate your account, then log in.`}
@@ -74,4 +81,7 @@ export default function AwaitEmailConfirmationScreen({ navigation, route }: Prop
 
 const styles = StyleSheet.create({
   actions: { gap: 12 },
+  // flex-start keeps the mark on the shell's left grid; without it the root
+  // View stretches and the mark would centre itself.
+  mark: { alignSelf: 'flex-start', marginBottom: 24 },
 });
