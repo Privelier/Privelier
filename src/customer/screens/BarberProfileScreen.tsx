@@ -381,9 +381,14 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
             </Text>
           ) : reviews.length === 0 ? (
             <View testID="barber-profile-reviews-empty">
-              <Text style={[styles.reviewsRating, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+              <Text
+                style={[styles.reviewsRating, styles.reviewsRatingEmpty, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}
+              >
                 New
               </Text>
+              {/* A muted 5-outline row so the empty and populated states share a
+                  silhouette — reads as "scale awaiting ratings", not "zero". */}
+              <StarRating rating={0} size={16} style={styles.reviewsEmptyStars} />
               <Text style={[styles.stateText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
                 Reviews arrive after the first completed bookings.
               </Text>
@@ -391,13 +396,22 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
           ) : (
             <View testID="barber-profile-reviews-list">
               {/* Aggregate header: the average (barber_profile.rating,
-                  server-owned) with a star row and the count. */}
-              <View style={[styles.reviewsSummary, { borderBottomColor: colors.border }]}>
+                  server-owned) with a star row and the count. One clean
+                  screen-reader announcement via the accessible container. */}
+              <View
+                style={[styles.reviewsSummary, { borderBottomColor: colors.border }]}
+                accessible
+                accessibilityRole="image"
+                accessibilityLabel={`${barber.rating.toFixed(1)} out of 5, ${
+                  reviews.length === 1 ? '1 review' : `${reviews.length} reviews`
+                }`}
+              >
                 <Text style={[styles.reviewsRating, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
                   {barber.rating.toFixed(1)}
                 </Text>
                 <View style={styles.reviewsSummaryMeta}>
-                  <StarRating rating={barber.rating} size={16} />
+                  {/* Legible empty tone here so the full 5-point scale shows. */}
+                  <StarRating rating={barber.rating} size={16} emptyColor={colors.textSecondary} />
                   <Text style={[styles.reviewsCount, { color: colors.textSecondary, fontFamily: fonts.body }]}>
                     {reviews.length === 1 ? '1 review' : `${reviews.length} reviews`}
                   </Text>
@@ -415,15 +429,25 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
                     ]}
                     testID={`barber-profile-review-${review.id}`}
                   >
+                    {/* Person leads (name + recency), then the brass star row,
+                        then prose — an editorial, trust-building review card. */}
                     <View style={styles.reviewHead}>
-                      <StarRating rating={review.rating} size={13} />
+                      <Text
+                        numberOfLines={1}
+                        style={[styles.reviewName, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}
+                      >
+                        {name ?? 'Verified booking'}
+                      </Text>
                       <Text style={[styles.reviewDate, { color: colors.textSecondary, fontFamily: fonts.body }]}>
                         {formatShortDate(review.created_at)}
                       </Text>
                     </View>
-                    <Text style={[styles.reviewAuthor, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                      {name ? `${name} · Verified booking` : 'Verified booking'}
-                    </Text>
+                    {name ? (
+                      <Text style={[styles.reviewVerified, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                        Verified booking
+                      </Text>
+                    ) : null}
+                    <StarRating rating={review.rating} size={14} style={styles.reviewStars} />
                     {review.comment ? (
                       <Text style={[styles.reviewComment, { color: colors.textPrimary, fontFamily: fonts.body }]}>
                         {review.comment}
@@ -534,7 +558,11 @@ const styles = StyleSheet.create({
   bookButton: { borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8 },
   bookButtonText: { fontSize: 12 },
 
-  reviewsRating: { fontSize: 40, marginTop: 8 },
+  // lineHeight 44 trims Playfair's leading slack so the big number optically
+  // centres against the 16px stars + count in the summary row.
+  reviewsRating: { fontSize: 40, lineHeight: 44 },
+  reviewsRatingEmpty: { marginTop: 8 },
+  reviewsEmptyStars: { marginTop: 10, marginBottom: 4 },
   reviewsSummary: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -545,10 +573,12 @@ const styles = StyleSheet.create({
   reviewsSummaryMeta: { gap: 6 },
   reviewsCount: { fontSize: 12 },
   reviewRow: { paddingVertical: 16 },
-  reviewHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  reviewHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  reviewName: { fontSize: 14, flex: 1, minWidth: 0 },
+  reviewVerified: { fontSize: 12, marginTop: 2 },
+  reviewStars: { marginTop: 10 },
   reviewDate: { fontSize: 12 },
-  reviewAuthor: { fontSize: 12, marginTop: 8 },
-  reviewComment: { fontSize: 14, lineHeight: 22, marginTop: 8 },
+  reviewComment: { fontSize: 14, lineHeight: 22, marginTop: 10 },
 
   portfolioGridSpacing: { paddingVertical: 16 },
   portfolioEmpty: { alignItems: 'center', gap: 12, paddingVertical: 48 },

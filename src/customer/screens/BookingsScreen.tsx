@@ -34,6 +34,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../../lib/supabase';
@@ -385,12 +386,12 @@ export default function BookingsScreen() {
                   )
                 ) : item.status === 'completed' ? (
                   reviewedBookingIds.has(item.id) ? (
-                    <Text
-                      style={[styles.reviewedText, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}
-                      testID={`customer-bookings-reviewed-${item.id}`}
-                    >
-                      Reviewed
-                    </Text>
+                    <View style={styles.reviewedRow} testID={`customer-bookings-reviewed-${item.id}`}>
+                      <Feather name="check" size={13} color={colors.textSecondary} />
+                      <Text style={[styles.reviewedText, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
+                        Reviewed
+                      </Text>
+                    </View>
                   ) : (
                     <Pressable
                       accessibilityRole="button"
@@ -400,7 +401,7 @@ export default function BookingsScreen() {
                       style={({ pressed }) => [
                         styles.reviewButton,
                         { borderColor: colors.accent },
-                        pressed ? styles.cancelPressed : null,
+                        pressed ? styles.reviewPressed : null,
                       ]}
                     >
                       <Text style={[styles.reviewText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
@@ -490,7 +491,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   reviewText: { fontSize: 14 },
-  reviewedText: { fontSize: 12, marginTop: 16, letterSpacing: 0.5 },
+  reviewPressed: { opacity: 0.85 },
+  reviewedRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16 },
+  reviewedText: { fontSize: 12, letterSpacing: 0.5 },
 
   rowError: { marginTop: 12, borderTopWidth: 0.5, paddingTop: 12 },
   rowErrorText: { fontSize: 12 },

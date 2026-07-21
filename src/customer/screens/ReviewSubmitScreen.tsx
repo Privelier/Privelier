@@ -55,12 +55,15 @@ const SUCCESS_PAUSE_MS = 700;
 
 export default function ReviewSubmitScreen({ route, navigation }: Props) {
   const { bookingId, barberId, barberName, serviceName } = route.params;
-  const { colors, fonts } = useTheme();
+  const { colors, fonts, isDark } = useTheme();
 
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 'error' = a genuine failure (red, role=alert); 'info' = a benign terminal
+  // state such as already-reviewed (neutral, no alarm).
+  const [noticeTone, setNoticeTone] = useState<'error' | 'info'>('error');
   const [success, setSuccess] = useState(false);
   const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -77,6 +80,7 @@ export default function ReviewSubmitScreen({ route, navigation }: Props) {
     if (rating < 1) return; // the button is gated, but guard the write too
     setSubmitting(true);
     setError(null);
+    setNoticeTone('error');
 
     const result = await submitReview({ bookingId, barberId, rating, comment });
     setSubmitting(false);
@@ -87,6 +91,9 @@ export default function ReviewSubmitScreen({ route, navigation }: Props) {
       return;
     }
     if (result.status === 'already_reviewed') {
+      // Benign terminal state — this booking already has a review (e.g. posted
+      // from another device). Show it calmly, not as a red failure.
+      setNoticeTone('info');
       setError(customerDataErrorCopy.already_reviewed);
       return;
     }
@@ -150,10 +157,26 @@ export default function ReviewSubmitScreen({ route, navigation }: Props) {
           {error ? (
             <View
               testID="customer-review-submit-error"
-              accessibilityRole="alert"
-              style={[styles.notice, { borderColor: colors.error, backgroundColor: colors.surface }]}
+              // Only a genuine failure is an alert; a benign terminal state is
+              // read out plainly, not as an alarm.
+              accessibilityRole={noticeTone === 'error' ? 'alert' : undefined}
+              style={[
+                styles.notice,
+                {
+                  borderColor: noticeTone === 'error' ? colors.error : colors.border,
+                  backgroundColor: colors.surface,
+                },
+              ]}
             >
-              <Text style={[styles.noticeText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
+              <Text
+                style={[
+                  styles.noticeText,
+                  {
+                    color: noticeTone === 'error' ? colors.errorText : colors.textSecondary,
+                    fontFamily: fonts.bodyMedium,
+                  },
+                ]}
+              >
                 {error}
               </Text>
             </View>
@@ -168,8 +191,13 @@ export default function ReviewSubmitScreen({ route, navigation }: Props) {
             disabled={submitting}
             testID="customer-review-submit-stars"
           />
+          {rating === 0 ? (
+            <Text style={[styles.hint, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+              Tap a star to rate — required to post.
+            </Text>
+          ) : null}
 
-          <Text style={[styles.label, styles.labelSpacing, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
+          <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
             Comment (optional)
           </Text>
           <TextInput
@@ -180,6 +208,9 @@ export default function ReviewSubmitScreen({ route, navigation }: Props) {
             maxLength={MAX_COMMENT_LENGTH}
             placeholder="Share a little about your experience"
             placeholderTextColor={colors.textSecondary}
+            selectionColor={colors.accent}
+            cursorColor={colors.accent}
+            keyboardAppearance={isDark ? 'dark' : 'light'}
             testID="customer-review-submit-comment"
             style={[
               styles.commentInput,
@@ -201,7 +232,10 @@ export default function ReviewSubmitScreen({ route, navigation }: Props) {
             accessibilityLabel="Post review"
             accessibilityState={{ disabled: !canSubmit, busy: submitting }}
             testID="customer-review-submit-submit"
-            style={[styles.primaryButton, { backgroundColor: colors.accent, opacity: canSubmit ? 1 : 0.6 }]}
+            style={({ pressed }) => [
+              styles.primaryButton,
+              { backgroundColor: colors.accent, opacity: !canSubmit ? 0.6 : pressed ? 0.9 : 1 },
+            ]}
           >
             {submitting ? (
               <ActivityIndicator size="small" color={colors.onAccent} />
@@ -231,7 +265,7 @@ const styles = StyleSheet.create({
   noticeText: { fontSize: 14, lineHeight: 20 },
 
   label: { fontSize: 13, marginTop: 28, marginBottom: 12 },
-  labelSpacing: { marginTop: 32 },
+  hint: { fontSize: 12, marginTop: 10, lineHeight: 16 },
 
   commentInput: {
     borderWidth: 0.5,
