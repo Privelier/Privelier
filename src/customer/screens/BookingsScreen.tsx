@@ -34,11 +34,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../theme/useTheme';
 import type { BarberDirectoryRow, BookingRow, ServiceRow } from '../../types';
 import { cancelBookingAsCustomer, fetchOwnBookingsView, isUpcomingBooking } from '../bookingsData';
+import { fetchOwnReviewedBookingIds } from '../reviewsData';
+import type { CustomerStackParamList } from '../CustomerNavigator';
 import {
   applyBookingChange,
   applyBookingChangeSorted,
@@ -75,10 +78,16 @@ function sortDesc(rows: BookingRow[]): BookingRow[] {
 
 export default function BookingsScreen() {
   const { colors, fonts } = useTheme();
+  const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
 
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [barbersById, setBarbersById] = useState<Map<string, BarberDirectoryRow>>(new Map());
   const [servicesById, setServicesById] = useState<Map<string, ServiceRow>>(new Map());
+  // Which of the shown completed bookings the customer has already reviewed —
+  // best-effort enrichment (a failed read leaves it empty; the card then offers
+  // "Leave a review", and a duplicate post is caught server-side as
+  // already_reviewed, so nothing is double-written).
+  const [reviewedBookingIds, setReviewedBookingIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>('upcoming');
@@ -120,6 +129,18 @@ export default function BookingsScreen() {
         // same reference — no sort, no re-render.
         return next === prev ? prev : sortDesc(next);
       });
+
+      // Which completed bookings already have a review — drives the "Leave a
+      // review" vs "Reviewed" card state. Scoped to just the completed ids the
+      // tab could show, so the round trip stays bounded. Enrichment only: a
+      // failure leaves the prior set (defaults to empty on first load).
+      const completedIds = result.bookings
+        .filter((b) => b.status === 'completed')
+        .map((b) => b.id);
+      const reviewedResult = await fetchOwnReviewedBookingIds(completedIds);
+      if (reviewedResult.status === 'ok') {
+        setReviewedBookingIds(reviewedResult.reviewedBookingIds);
+      }
     } else {
       setError(result.message);
     }
@@ -186,6 +207,20 @@ export default function BookingsScreen() {
       setRowErrors((p) => ({ ...p, [row.id]: message }));
     }
   }, []);
+
+  const leaveReview = useCallback(
+    (row: BookingRow) => {
+      const barber = barbersById.get(row.barber_id);
+      const service = servicesById.get(row.service_id);
+      navigation.navigate('ReviewSubmit', {
+        bookingId: row.id,
+        barberId: row.barber_id,
+        barberName: barber?.name ?? 'your barber',
+        serviceName: service?.name ?? 'your appointment',
+      });
+    },
+    [navigation, barbersById, servicesById]
+  );
 
   const list = useMemo(() => {
     const now = new Date();
@@ -348,6 +383,31 @@ export default function BookingsScreen() {
                       </Text>
                     </Pressable>
                   )
+                ) : item.status === 'completed' ? (
+                  reviewedBookingIds.has(item.id) ? (
+                    <Text
+                      style={[styles.reviewedText, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}
+                      testID={`customer-bookings-reviewed-${item.id}`}
+                    >
+                      Reviewed
+                    </Text>
+                  ) : (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Leave a review"
+                      testID={`booking-review-${item.id}`}
+                      onPress={() => leaveReview(item)}
+                      style={({ pressed }) => [
+                        styles.reviewButton,
+                        { borderColor: colors.accent },
+                        pressed ? styles.cancelPressed : null,
+                      ]}
+                    >
+                      <Text style={[styles.reviewText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
+                        Leave a review
+                      </Text>
+                    </Pressable>
+                  )
                 ) : null}
 
                 {rowError ? (
@@ -419,6 +479,18 @@ const styles = StyleSheet.create({
   },
   cancelPressed: { opacity: 0.7 },
   cancelText: { fontSize: 14 },
+
+  reviewButton: {
+    marginTop: 16,
+    borderWidth: 0.5,
+    borderRadius: 8,
+    paddingVertical: 14,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewText: { fontSize: 14 },
+  reviewedText: { fontSize: 12, marginTop: 16, letterSpacing: 0.5 },
 
   rowError: { marginTop: 12, borderTopWidth: 0.5, paddingTop: 12 },
   rowErrorText: { fontSize: 12 },

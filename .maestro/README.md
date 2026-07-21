@@ -23,6 +23,7 @@ maestro test .maestro/barber-dashboard-overview-readiness.yaml
 maestro test .maestro/barber-location-edit.yaml
 maestro test .maestro/barber-bio-edit.yaml
 maestro test .maestro/customer-explore-filters-list.yaml
+maestro test .maestro/customer-review-submit.yaml
 ```
 
 All flows use a placeholder `appId: com.privelier.app` — `app.json` does
@@ -238,6 +239,26 @@ hide when their batched read fails — by design). New testIDs:
 `customer-explore-docked-card`, `customer-explore-barber-{id}`; the tab
 button is `customer-tab-explore`.
 
+For build-order step 18 (reviews), `customer-review-submit.yaml` covers the
+happy path: a completed booking's "Leave a review" affordance on the Bookings
+Past tab -> the submission screen -> pick a star rating (required; submit is
+gated until then) -> optional comment -> post -> success -> back to Bookings
+where the same card now reads "Reviewed". Not asserted (state-dependent and
+seeding-sensitive): the aggregate rating on the barber profile's Reviews tab
+(a second device / re-navigation would be needed to see the just-posted review
+reflected), and the already-reviewed / generic-error branches (unit-tested in
+`src/customer/screens/__tests__/ReviewSubmitScreen.test.tsx` instead — a single
+mount there drives the gate + both failure states + success, since full-screen
+mounts degrade after the first per file). New testIDs:
+`customer-review-submit-screen`, `-back`, `-stars` (the StarRatingInput group)
+with per-star `customer-review-submit-stars-star-{1..5}`, `-comment`,
+`-submit`, `-error`, `-success`; on the Bookings Past cards,
+`booking-review-{id}` (the "Leave a review" button on a completed, not-yet-
+reviewed booking) and `customer-bookings-reviewed-{id}` (the inert "Reviewed"
+label once a review exists); on the barber profile Reviews tab,
+`barber-profile-reviews-list`, `barber-profile-reviews-empty`,
+`barber-profile-reviews-error`, and per-review `barber-profile-review-{id}`.
+
 ## testIDs referenced (verified present in source as of this writing)
 
 `role-select-customer`, `role-select-barber`, `auth-entry-screen`,
@@ -304,6 +325,9 @@ the Lovable prototype's tabbed shell),
 `customer-bookings-screen`, `customer-bookings-tab-{upcoming|past}`,
 `customer-bookings-loading`, `customer-bookings-error`,
 `customer-bookings-empty`, `customer-bookings-row-{id}`,
+`booking-review-{id}` (the "Leave a review" button on a completed, not-yet-
+reviewed Past card) and `customer-bookings-reviewed-{id}` (the inert
+"Reviewed" label once that booking has a review),
 `customer-inbox-screen`, `customer-inbox-loading`, `customer-inbox-error`,
 `customer-inbox-empty`, `customer-inbox-row-{id}`,
 `barber-profile-screen`, `barber-profile-back`, `barber-profile-loading`,
@@ -312,6 +336,13 @@ the Lovable prototype's tabbed shell),
 `barber-profile-service-{id}`, `barber-profile-book-{id}`,
 `barber-profile-tab-{services|portfolio|reviews}` (Services is the default
 tab, so existing service assertions need no extra taps),
+`barber-profile-reviews-list`, `barber-profile-reviews-empty`,
+`barber-profile-reviews-error`, `barber-profile-review-{id}` (per-review row
+on the Reviews tab), `customer-review-submit-screen`,
+`customer-review-submit-back`, `customer-review-submit-stars`,
+`customer-review-submit-stars-star-{1..5}`, `customer-review-submit-comment`,
+`customer-review-submit-submit`, `customer-review-submit-error`,
+`customer-review-submit-success`,
 `barber-profile-portfolio-placeholder` (still the 0-image empty state on the
 Portfolio tab; when the barber HAS images that tab instead renders
 `barber-profile-portfolio-image-{id}` tiles, or `barber-profile-portfolio-error`

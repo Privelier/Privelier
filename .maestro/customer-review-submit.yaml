@@ -1,0 +1,140 @@
+# Reviews (build-order step 18): log in as a customer -> Bookings tab -> Past
+# -> on a COMPLETED, not-yet-reviewed booking tap "Leave a review" -> pick a
+# star rating -> type a comment -> post -> see the success state -> land back on
+# the Bookings tab -> confirm that same booking's card now reads "Reviewed"
+# instead of offering a review.
+#
+# NOT YET RUN. Same pre-existing tooling gap as every other flow in this
+# directory: there is no Maestro CLI / Android SDK / emulator on the authoring
+# machine — see .maestro/README.md. Once tooling is available:
+#   maestro test .maestro/customer-review-submit.yaml
+#
+# Prerequisites:
+# - A pre-confirmed test customer (same as the other customer flows).
+# - That customer must have EXACTLY ONE booking in status 'completed' that has
+#   NO review yet, for the barber named TEST_BARBER_NAME with the service named
+#   TEST_SERVICE_NAME. "Exactly one" so the per-booking `booking-review-{uuid}`
+#   testID (a server uuid unknown at authoring time) can be matched by regex
+#   with a single match on screen — same limitation as the booking/service row
+#   testIDs elsewhere in this directory. To seed one: run the booking-create
+#   flow, have the barber accept then complete it (barber-requests flow), and do
+#   NOT review it beforehand. A booking still pending/accepted will NOT show the
+#   review affordance (only 'completed' does), and one already reviewed will
+#   show "Reviewed" — either makes this flow fail at the "Leave a review" tap,
+#   as intended.
+# - Reviews are IMMUTABLE (founder decision D3): this flow posts a real review
+#   that cannot be undone from the app. Re-running it against the same booking
+#   will land on the already-reviewed path (the card shows "Reviewed" and there
+#   is no review button) — re-seed a fresh completed booking for each run.
+# - Same appId placeholder caveat as every other flow here.
+#
+# Run with:
+#   maestro test .maestro/customer-review-submit.yaml \
+#     -e TEST_CUSTOMER_EMAIL=... -e TEST_CUSTOMER_PASSWORD=... \
+#     -e TEST_BARBER_NAME="..." -e TEST_SERVICE_NAME="..." -e TEST_COMMENT="..."
+appId: com.privelier.app # TODO: replace once app.json defines a real package/bundleIdentifier
+env:
+  TEST_CUSTOMER_EMAIL: customer.e2e@example.com
+  TEST_CUSTOMER_PASSWORD: ChangeMe123!
+  TEST_BARBER_NAME: Maestro test barber
+  TEST_SERVICE_NAME: Classic fade
+  TEST_COMMENT: Sharp, on time, would book again.
+---
+- launchApp:
+    clearState: true
+
+# UNAUTHENTICATED: role-select is the very first screen.
+- assertVisible:
+    id: "role-select-customer"
+- tapOn:
+    id: "role-select-customer"
+
+- assertVisible:
+    id: "auth-entry-screen"
+- tapOn:
+    id: "auth-entry-login"
+
+- assertVisible:
+    id: "auth-login-screen"
+- tapOn:
+    id: "auth-login-email"
+- inputText: "${TEST_CUSTOMER_EMAIL}"
+- tapOn:
+    id: "auth-login-password"
+- inputText: "${TEST_CUSTOMER_PASSWORD}"
+- tapOn:
+    id: "auth-login-submit"
+
+# PROVISIONING is transient/may not appear on a returning user — wait directly
+# for the home destination, same as the other auth-first flows here.
+- extendedWaitUntil:
+    visible:
+      id: "customer-home-screen"
+    timeout: 15000
+
+# --- Bookings tab -> Past ---
+- tapOn:
+    id: "customer-tab-bookings"
+- assertVisible:
+    id: "customer-bookings-screen"
+- extendedWaitUntil:
+    notVisible:
+      id: "customer-bookings-loading"
+    timeout: 15000
+- assertNotVisible:
+    id: "customer-bookings-error"
+- tapOn:
+    id: "customer-bookings-tab-past"
+
+# The seeded completed booking is on the Past tab.
+- assertVisible:
+    text: "${TEST_SERVICE_NAME}"
+
+# "Leave a review" — per-booking testID `booking-review-{uuid}` (a server uuid
+# unknown at authoring time). Safe to match by regex because the prerequisites
+# guarantee exactly one completed, not-yet-reviewed booking on screen.
+- tapOn:
+    id: "booking-review-.*"
+
+# --- ReviewSubmitScreen ---
+- assertVisible:
+    id: "customer-review-submit-screen"
+- assertVisible:
+    text: "${TEST_BARBER_NAME}"
+
+# Rating is required — the submit button is disabled until a star is picked.
+# Tap the 5th star, then type the optional comment.
+- tapOn:
+    id: "customer-review-submit-stars-star-5"
+- tapOn:
+    id: "customer-review-submit-comment"
+- inputText: "${TEST_COMMENT}"
+- assertNotVisible:
+    id: "customer-review-submit-error"
+- tapOn:
+    id: "customer-review-submit-submit"
+
+# --- Success, then auto-navigate back to the Bookings tab ---
+- extendedWaitUntil:
+    visible:
+      id: "customer-review-submit-success"
+    timeout: 10000
+
+# ReviewSubmitScreen pauses briefly (SUCCESS_PAUSE_MS) then navigation.goBack()
+# lands back on the Bookings tab — wait for that destination directly.
+- extendedWaitUntil:
+    visible:
+      id: "customer-bookings-screen"
+    timeout: 10000
+
+# The Bookings tab re-fetches reviewed-booking ids on focus, so the same card
+# now reads "Reviewed" and offers no further review button. Past is still the
+# active tab after goBack (state is preserved).
+- extendedWaitUntil:
+    notVisible:
+      id: "customer-bookings-loading"
+    timeout: 15000
+- assertVisible:
+    id: "customer-bookings-reviewed-.*"
+- assertNotVisible:
+    id: "booking-review-.*"

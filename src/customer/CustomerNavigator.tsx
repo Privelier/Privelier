@@ -10,6 +10,7 @@ import BookingDateTimeScreen from './screens/BookingDateTimeScreen';
 import BookingLocationScreen from './screens/BookingLocationScreen';
 import BookingConfirmScreen from './screens/BookingConfirmScreen';
 import ConversationScreen from './screens/ConversationScreen';
+import ReviewSubmitScreen from './screens/ReviewSubmitScreen';
 
 export type CustomerStackParamList = {
   CustomerTabs: NavigatorScreenParams<CustomerTabParamList> | undefined;
@@ -42,6 +43,17 @@ export type CustomerStackParamList = {
   // subtitle = service context (both best-effort strings, prepared by the
   // Inbox row).
   Conversation: { room: ChatRoomRow; title: string; subtitle: string | null };
+  // Review submission (build-order step 18): reached from a completed booking's
+  // Past card on the Bookings tab. barberName/serviceName ride along (already
+  // loaded on that card) purely for the summary; barberId is passed to the
+  // write but is NOT trusted — the 0022 RLS predicate re-checks the whole
+  // (booking, customer, barber) triple server-side.
+  ReviewSubmit: {
+    bookingId: string;
+    barberId: string;
+    barberName: string;
+    serviceName: string;
+  };
 };
 
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
@@ -61,6 +73,7 @@ export default function CustomerNavigator({ onExit }: { onExit: () => void }) {
           <Stack.Screen name="BookingLocation" component={BookingLocationScreen} />
           <Stack.Screen name="BookingConfirm" component={BookingConfirmScreen} />
           <Stack.Screen name="Conversation" component={ConversationScreen} />
+          <Stack.Screen name="ReviewSubmit" component={ReviewSubmitScreen} />
         </Stack.Navigator>
       </UnreadProvider>
     </RoleExitProvider>

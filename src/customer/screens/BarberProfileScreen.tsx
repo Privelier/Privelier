@@ -37,10 +37,12 @@ import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { PortfolioGrid } from '../../shared/components/PortfolioGrid';
 import { PortfolioTile } from '../../shared/components/PortfolioTile';
+import { StarRating } from '../../shared/components/StarRating';
 import { useTheme } from '../../theme/useTheme';
-import type { BarberDirectoryRow, PortfolioRow, ServiceRow } from '../../types';
+import type { BarberDirectoryRow, PortfolioRow, ReviewRow, ServiceRow } from '../../types';
 import { getBarberProfile, listPortfolioForBarber, listServicesForBarber } from '../discoveryData';
-import { formatMoney } from '../format';
+import { fetchReviewsForBarber } from '../reviewsData';
+import { formatMoney, formatShortDate } from '../format';
 import type { CustomerStackParamList } from '../CustomerNavigator';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'BarberProfile'>;
@@ -66,11 +68,14 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
   const [barber, setBarber] = useState<BarberDirectoryRow | null>(null);
   const [services, setServices] = useState<ServiceRow[]>([]);
   const [portfolio, setPortfolio] = useState<PortfolioRow[]>([]);
+  const [reviews, setReviews] = useState<ReviewRow[]>([]);
+  const [firstNameByReviewId, setFirstNameByReviewId] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [servicesError, setServicesError] = useState<string | null>(null);
   const [portfolioError, setPortfolioError] = useState<string | null>(null);
+  const [reviewsError, setReviewsError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>('services');
 
   const load = useCallback(async () => {
@@ -79,6 +84,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
     setNotFound(false);
     setServicesError(null);
     setPortfolioError(null);
+    setReviewsError(null);
 
     const profileResult = await getBarberProfile(barberId);
     if (profileResult.status === 'error') {
@@ -93,12 +99,13 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
     }
     setBarber(profileResult.barber);
 
-    // Services and portfolio are independent secondary reads — fetch in
-    // parallel; a failure in either is a tab-local error, never a whole-screen
+    // Services, portfolio and reviews are independent secondary reads — fetch
+    // in parallel; a failure in any is a tab-local error, never a whole-screen
     // one (the profile already loaded).
-    const [servicesResult, portfolioResult] = await Promise.all([
+    const [servicesResult, portfolioResult, reviewsResult] = await Promise.all([
       listServicesForBarber(barberId),
       listPortfolioForBarber(barberId),
+      fetchReviewsForBarber(barberId),
     ]);
     setLoading(false);
     if (servicesResult.status === 'ok') {
@@ -110,6 +117,12 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
       setPortfolio(portfolioResult.images);
     } else {
       setPortfolioError(portfolioResult.message);
+    }
+    if (reviewsResult.status === 'ok') {
+      setReviews(reviewsResult.reviews);
+      setFirstNameByReviewId(reviewsResult.firstNameByReviewId);
+    } else {
+      setReviewsError(reviewsResult.message);
     }
   }, [barberId]);
 
@@ -358,14 +371,67 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
                 ))}
               </PortfolioGrid>
             )
-          ) : (
-            <View>
+          ) : reviewsError ? (
+            <Text
+              style={[styles.stateText, { color: colors.errorText, fontFamily: fonts.body }]}
+              accessibilityRole="alert"
+              testID="barber-profile-reviews-error"
+            >
+              {reviewsError}
+            </Text>
+          ) : reviews.length === 0 ? (
+            <View testID="barber-profile-reviews-empty">
               <Text style={[styles.reviewsRating, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-                {barber.rating > 0 ? barber.rating.toFixed(1) : 'New'}
+                New
               </Text>
               <Text style={[styles.stateText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
                 Reviews arrive after the first completed bookings.
               </Text>
+            </View>
+          ) : (
+            <View testID="barber-profile-reviews-list">
+              {/* Aggregate header: the average (barber_profile.rating,
+                  server-owned) with a star row and the count. */}
+              <View style={[styles.reviewsSummary, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.reviewsRating, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+                  {barber.rating.toFixed(1)}
+                </Text>
+                <View style={styles.reviewsSummaryMeta}>
+                  <StarRating rating={barber.rating} size={16} />
+                  <Text style={[styles.reviewsCount, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                    {reviews.length === 1 ? '1 review' : `${reviews.length} reviews`}
+                  </Text>
+                </View>
+              </View>
+
+              {reviews.map((review, index) => {
+                const name = firstNameByReviewId.get(review.id);
+                return (
+                  <View
+                    key={review.id}
+                    style={[
+                      styles.reviewRow,
+                      index > 0 ? { borderTopWidth: 0.5, borderTopColor: colors.border } : null,
+                    ]}
+                    testID={`barber-profile-review-${review.id}`}
+                  >
+                    <View style={styles.reviewHead}>
+                      <StarRating rating={review.rating} size={13} />
+                      <Text style={[styles.reviewDate, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                        {formatShortDate(review.created_at)}
+                      </Text>
+                    </View>
+                    <Text style={[styles.reviewAuthor, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                      {name ? `${name} · Verified booking` : 'Verified booking'}
+                    </Text>
+                    {review.comment ? (
+                      <Text style={[styles.reviewComment, { color: colors.textPrimary, fontFamily: fonts.body }]}>
+                        {review.comment}
+                      </Text>
+                    ) : null}
+                  </View>
+                );
+              })}
             </View>
           )}
         </View>
@@ -469,6 +535,20 @@ const styles = StyleSheet.create({
   bookButtonText: { fontSize: 12 },
 
   reviewsRating: { fontSize: 40, marginTop: 8 },
+  reviewsSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    paddingBottom: 20,
+    borderBottomWidth: 0.5,
+  },
+  reviewsSummaryMeta: { gap: 6 },
+  reviewsCount: { fontSize: 12 },
+  reviewRow: { paddingVertical: 16 },
+  reviewHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  reviewDate: { fontSize: 12 },
+  reviewAuthor: { fontSize: 12, marginTop: 8 },
+  reviewComment: { fontSize: 14, lineHeight: 22, marginTop: 8 },
 
   portfolioGridSpacing: { paddingVertical: 16 },
   portfolioEmpty: { alignItems: 'center', gap: 12, paddingVertical: 48 },
