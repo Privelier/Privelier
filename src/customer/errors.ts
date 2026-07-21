@@ -15,7 +15,8 @@ export type CustomerDataErrorCode =
   | 'network'
   | 'unknown'
   | 'conflict'
-  | 'transition_rejected';
+  | 'transition_rejected'
+  | 'already_reviewed';
 
 /** The error arm shared by every discovery result union. */
 export interface CustomerDataFailure {
@@ -36,6 +37,7 @@ export const customerDataErrorCopy: Record<CustomerDataErrorCode, string> = {
   conflict: 'That time was just booked by someone else. Pick another time.',
   transition_rejected:
     'That booking can no longer be cancelled. Refresh to see its current status.',
+  already_reviewed: 'You have already reviewed this booking.',
 };
 
 const retryableCodes: ReadonlySet<CustomerDataErrorCode> = new Set(['network']);

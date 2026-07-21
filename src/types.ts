@@ -96,6 +96,26 @@ export interface BookingRow {
 }
 
 /**
+ * Row shape of `public.reviews` (build-order step 18). A review is allowed
+ * only for a completed booking the customer owns, with a non-forgeable barber
+ * attribution (migration 0022's hardened `reviews_insert_own_customer`).
+ * `rating` is 1–5 (DB CHECK); `comment` is optional (nullable). Reads are open
+ * to every authenticated caller (`reviews_select_all`); the reviewer's first
+ * name is projected separately via the `get_review_authors` RPC (0006 hides
+ * `users.name` from cross-user joins). Reviews are immutable once posted
+ * (founder decision D3 — no update/delete surface).
+ */
+export interface ReviewRow {
+  id: string;
+  booking_id: string;
+  customer_id: string;
+  barber_id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+}
+
+/**
  * Row shape of `public.portfolio`. Hard constraint: max 6 rows per
  * barber_id (DB-enforced). Reads are open to authenticated callers
  * (`portfolio_select_all`); writes are owner+barber-role only

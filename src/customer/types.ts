@@ -9,6 +9,7 @@ import type {
   BookingRow,
   MessageRow,
   PortfolioRow,
+  ReviewRow,
   ServiceRow,
 } from '../types';
 import type { InboxThread } from '../shared/threads';
@@ -144,4 +145,45 @@ export type FetchConversationResult =
 /** `message` is the authoritative inserted row (server id + created_at). */
 export type SendMessageResult =
   | { status: 'ok'; message: MessageRow }
+  | CustomerDataFailure;
+
+// ---------------------------------------------------------------------------
+// Reviews (public.reviews, build-order step 18)
+// ---------------------------------------------------------------------------
+
+/**
+ * One barber's reviews for the BarberProfileScreen Reviews tab, plus a
+ * best-effort first-name map keyed by review id (from the get_review_authors
+ * RPC). A review whose author name failed to resolve simply renders without a
+ * name ("Verified booking" alone) — the map is enrichment, never a gate.
+ * `reviews` may be empty (the no-reviews-yet empty state is expected).
+ */
+export type ReviewsForBarberResult =
+  | {
+      status: 'ok';
+      reviews: ReviewRow[];
+      firstNameByReviewId: Map<string, string>;
+    }
+  | CustomerDataFailure;
+
+/**
+ * The set of booking ids (from a given batch) the customer has already
+ * reviewed, so the Bookings tab can show "Leave a review" vs "Reviewed" on
+ * each completed booking. RLS scopes reviews to the caller's own rows for this
+ * read by customer_id, so the ids returned are exactly the caller's reviews.
+ */
+export type OwnReviewedBookingIdsResult =
+  | { status: 'ok'; reviewedBookingIds: Set<string> }
+  | CustomerDataFailure;
+
+/**
+ * `booking` is not returned — the fresh row carries no client-useful state
+ * beyond success (the aggregate lands server-side via the 0022 trigger).
+ * 'already_reviewed' means the reviews.booking_id UNIQUE index rejected a
+ * second review for this booking (Postgres 23505) — a real, user-facing state
+ * on a retry, distinct from the generic error path so the screen can say so.
+ */
+export type SubmitReviewResult =
+  | { status: 'ok'; review: ReviewRow }
+  | { status: 'already_reviewed' }
   | CustomerDataFailure;
