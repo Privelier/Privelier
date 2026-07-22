@@ -28,6 +28,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { fetchOwnProfile } from '../../auth/authService';
 import { useExitRole } from '../../RoleContext';
 import { useTheme } from '../../theme/useTheme';
+import { pressOpacity } from '../../theme/motion';
 import type { UsersRow } from '../../types';
 import { ACCOUNT_SECTIONS, type AccountSectionKey } from './AccountSectionScreen';
 import type { CustomerTabParamList } from '../CustomerTabs';
@@ -111,12 +112,15 @@ export default function AccountScreen({ navigation }: Props) {
               accessibilityRole="button"
               accessibilityLabel={ACCOUNT_SECTIONS[key].title}
               testID={`customer-account-row-${key}`}
-              style={[
+              style={({ pressed }) => [
                 styles.settingsRow,
                 index > 0 ? { borderTopWidth: 0.5, borderTopColor: colors.border } : null,
+                pressed ? { opacity: pressOpacity.soft } : null,
               ]}
             >
-              <Feather name={icon} size={16} color={colors.accentText} />
+              {/* Brass is rationed to the "Member" label only; row icons are muted
+                  so the accent reads as a badge, not decoration. */}
+              <Feather name={icon} size={16} color={colors.textSecondary} />
               <Text style={[styles.settingsLabel, { color: colors.textPrimary, fontFamily: fonts.body }]}>
                 {ACCOUNT_SECTIONS[key].title}
               </Text>
@@ -130,7 +134,11 @@ export default function AccountScreen({ navigation }: Props) {
           accessibilityRole="button"
           accessibilityLabel="Sign out"
           testID="customer-account-logout"
-          style={[styles.signOutRow, { borderTopColor: colors.border }]}
+          style={({ pressed }) => [
+            styles.signOutRow,
+            { borderTopColor: colors.border },
+            pressed ? { opacity: pressOpacity.soft } : null,
+          ]}
         >
           <Feather name="log-out" size={16} color={colors.errorText} />
           <Text style={[styles.signOutText, { color: colors.errorText, fontFamily: fonts.body }]}>
@@ -145,7 +153,7 @@ export default function AccountScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: 24, paddingBottom: 32 },
-  heading: { fontSize: 24, marginTop: 24 },
+  heading: { fontSize: 30, marginTop: 24 },
   profileRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 32 },
   avatar: { width: 64, height: 64, borderRadius: 32 },
   avatarFallback: { alignItems: 'center', justifyContent: 'center' },

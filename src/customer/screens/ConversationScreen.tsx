@@ -45,6 +45,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../theme/useTheme';
+import { pressOpacity } from '../../theme/motion';
+import { Notice } from '../../shared/components/Notice';
+import { BackButton } from '../../shared/components/ScreenBackHeader';
 import type { Palette } from '../../theme/colors';
 import type { MessageRow } from '../../types';
 import type { CustomerStackParamList } from '../CustomerNavigator';
@@ -235,15 +238,11 @@ export default function ConversationScreen({ route, navigation }: Props) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']} testID="customer-conversation-screen">
       <View style={styles.header}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back"
+        <BackButton
           onPress={() => navigation.goBack()}
-          hitSlop={12}
+          accessibilityLabel="Back"
           testID="customer-conversation-back"
-        >
-          <Text style={styles.backGlyph}>←</Text>
-        </Pressable>
+        />
         <View style={styles.headerText}>
           <Text numberOfLines={1} style={styles.headerTitle}>
             {title}
@@ -268,9 +267,7 @@ export default function ConversationScreen({ route, navigation }: Props) {
             testID="customer-conversation-loading"
           />
         ) : showError ? (
-          <View testID="customer-conversation-error" accessibilityRole="alert" style={styles.notice}>
-            <Text style={styles.noticeText}>{error}</Text>
-          </View>
+          <Notice testID="customer-conversation-error" message={error ?? ''} style={styles.noticeMargins} />
         ) : (
           <FlatList
             inverted
@@ -385,7 +382,10 @@ export default function ConversationScreen({ route, navigation }: Props) {
             accessibilityLabel="Send message"
             onPress={onSend}
             disabled={!canSend}
-            style={[styles.sendButton, !canSend ? styles.sendButtonDisabled : null]}
+            style={({ pressed }) => [
+              styles.sendButton,
+              !canSend ? styles.sendButtonDisabled : pressed ? { opacity: pressOpacity.firm } : null,
+            ]}
             testID="customer-conversation-send"
           >
             <Text style={styles.sendLabel}>Send</Text>
@@ -411,23 +411,13 @@ function useStyles(colors: Palette) {
       borderBottomWidth: 0.5,
       borderBottomColor: colors.border,
     },
-    backGlyph: { fontSize: 22, color: colors.textPrimary },
     headerText: { flex: 1, minWidth: 0 },
     headerTitle: { fontSize: 18, color: colors.textPrimary, fontFamily: fonts.headingMedium },
     headerSubtitle: { fontSize: 12, marginTop: 2, color: colors.textSecondary, fontFamily: fonts.body },
 
     body: { flex: 1 },
     spinner: { marginTop: 48 },
-    notice: {
-      borderWidth: 0.5,
-      borderRadius: 8,
-      padding: 12,
-      marginTop: 24,
-      marginHorizontal: 24,
-      borderColor: colors.error,
-      backgroundColor: colors.surface,
-    },
-    noticeText: { fontSize: 14, color: colors.errorText, fontFamily: fonts.bodyMedium },
+    noticeMargins: { marginTop: 24, marginHorizontal: 24 },
 
     listContent: { paddingHorizontal: 24, paddingVertical: 16, flexGrow: 1 },
     empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -500,7 +490,7 @@ function useStyles(colors: Palette) {
       justifyContent: 'center',
       backgroundColor: colors.accent,
     },
-    sendButtonDisabled: { opacity: 0.4 },
+    sendButtonDisabled: { opacity: 0.6 },
     sendLabel: { fontSize: 14, color: colors.onAccent, fontFamily: fonts.bodySemiBold },
   });
 }

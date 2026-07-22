@@ -40,6 +40,8 @@ import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { fetchOwnProfile } from '../../auth/authService';
 import { useTheme } from '../../theme/useTheme';
+import { pressOpacity } from '../../theme/motion';
+import { Notice } from '../../shared/components/Notice';
 import type { AvailabilityRow, BarberDirectoryRow, ServiceRow } from '../../types';
 import { listBarbersByCity, listServicesForBarberIds } from '../discoveryData';
 import { listAvailabilityForBarberIds } from '../availabilityData';
@@ -230,7 +232,7 @@ export default function ExploreScreen({ navigation }: Props) {
                 style={({ pressed }) => [
                   styles.toggleButton,
                   active && { backgroundColor: colors.surface },
-                  { opacity: pressed ? 0.85 : 1 },
+                  pressed ? { opacity: pressOpacity.soft } : null,
                 ]}
               >
                 <Feather
@@ -259,12 +261,13 @@ export default function ExploreScreen({ navigation }: Props) {
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
               testID={`customer-explore-chip-${key}`}
+              hitSlop={8}
               style={({ pressed }) => [
                 styles.chip,
                 active
                   ? { backgroundColor: colors.accent, borderColor: colors.accent }
                   : { borderColor: colors.border },
-                { opacity: pressed ? 0.85 : 1 },
+                pressed ? { opacity: pressOpacity.soft } : null,
               ]}
             >
               <Text
@@ -289,15 +292,7 @@ export default function ExploreScreen({ navigation }: Props) {
           testID="customer-explore-loading"
         />
       ) : error ? (
-        <View
-          testID="customer-explore-error"
-          accessibilityRole="alert"
-          style={[styles.notice, { borderColor: colors.error, backgroundColor: colors.surface }]}
-        >
-          <Text style={[styles.noticeText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-            {error}
-          </Text>
-        </View>
+        <Notice testID="customer-explore-error" message={error} style={styles.noticeMargins} />
       ) : viewMode === 'map' ? (
         <View style={styles.mapArea} testID="customer-explore-map-area">
           {ExploreMapView === null ? (
@@ -387,7 +382,7 @@ const styles = StyleSheet.create({
   },
   toggleButton: {
     minWidth: 44,
-    minHeight: 36,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 12,
@@ -404,8 +399,7 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 12 },
 
   spinner: { marginTop: 48 },
-  notice: { borderWidth: 0.5, borderRadius: 8, padding: 12, marginTop: 32, marginHorizontal: 24 },
-  noticeText: { fontSize: 14 },
+  noticeMargins: { marginTop: 32, marginHorizontal: 24 },
   emptyText: { fontSize: 14, textAlign: 'center', marginTop: 48, paddingHorizontal: 24 },
 
   mapArea: { flex: 1, marginTop: 16 },

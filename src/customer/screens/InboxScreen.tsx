@@ -26,6 +26,8 @@ import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../../theme/useTheme';
+import { pressOpacity } from '../../theme/motion';
+import { Notice } from '../../shared/components/Notice';
 import type { InboxThread } from '../types';
 import type { CustomerTabParamList } from '../CustomerTabs';
 import type { CustomerStackParamList } from '../CustomerNavigator';
@@ -100,15 +102,7 @@ export default function InboxScreen({ navigation }: Props) {
           testID="customer-inbox-loading"
         />
       ) : error ? (
-        <View
-          testID="customer-inbox-error"
-          accessibilityRole="alert"
-          style={[styles.notice, { borderColor: colors.error, backgroundColor: colors.surface }]}
-        >
-          <Text style={[styles.noticeText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-            {error}
-          </Text>
-        </View>
+        <Notice testID="customer-inbox-error" message={error} style={styles.noticeMargins} />
       ) : (
         <FlatList
           data={threads}
@@ -139,9 +133,10 @@ export default function InboxScreen({ navigation }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel={`Open conversation with ${name}`}
                 testID={`customer-inbox-row-${item.room.id}`}
-                style={[
+                style={({ pressed }) => [
                   styles.row,
                   index > 0 ? { borderTopWidth: 0.5, borderTopColor: colors.border } : null,
+                  pressed ? { opacity: pressOpacity.soft } : null,
                 ]}
               >
                 {item.barber?.profile_image ? (
@@ -197,12 +192,11 @@ export default function InboxScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { paddingHorizontal: 24, marginTop: 24 },
-  heading: { fontSize: 24 },
+  heading: { fontSize: 30 },
   subtitle: { fontSize: 12, marginTop: 4 },
 
   spinner: { marginTop: 48 },
-  notice: { borderWidth: 0.5, borderRadius: 8, padding: 12, marginTop: 24, marginHorizontal: 24 },
-  noticeText: { fontSize: 14 },
+  noticeMargins: { marginTop: 24, marginHorizontal: 24 },
 
   listContent: { paddingTop: 16, paddingBottom: 32 },
   empty: { alignItems: 'center', paddingVertical: 40, paddingHorizontal: 24 },

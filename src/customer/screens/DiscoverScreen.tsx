@@ -39,6 +39,8 @@ import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { fetchOwnProfile } from '../../auth/authService';
 import { useTheme } from '../../theme/useTheme';
+import { pressOpacity } from '../../theme/motion';
+import { Notice } from '../../shared/components/Notice';
 import type { BarberDirectoryRow, ServiceRow } from '../../types';
 import { listBarbersByCity, listServicesForBarberIds } from '../discoveryData';
 import { firstName, timeOfDayGreeting } from '../format';
@@ -218,11 +220,13 @@ export default function DiscoverScreen({ navigation }: Props) {
                   onPress={() => setActiveChip(active ? null : chip)}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
-                  style={[
+                  hitSlop={8}
+                  style={({ pressed }) => [
                     styles.chip,
                     active
                       ? { backgroundColor: colors.accent, borderColor: colors.accent }
                       : { borderColor: colors.border },
+                    pressed ? { opacity: pressOpacity.soft } : null,
                   ]}
                 >
                   <Text
@@ -248,15 +252,7 @@ export default function DiscoverScreen({ navigation }: Props) {
             testID="customer-home-loading"
           />
         ) : error ? (
-          <View
-            testID="customer-home-error"
-            accessibilityRole="alert"
-            style={[styles.pad, styles.notice, { borderColor: colors.error, backgroundColor: colors.surface }]}
-          >
-            <Text style={[styles.noticeText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-              {error}
-            </Text>
-          </View>
+          <Notice testID="customer-home-error" message={error} style={styles.noticeMargins} />
         ) : !featured ? (
           <Text
             style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}
@@ -362,8 +358,7 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 12 },
 
   spinner: { marginTop: 48 },
-  notice: { borderWidth: 0.5, borderRadius: 8, padding: 12, marginTop: 32, marginHorizontal: 24 },
-  noticeText: { fontSize: 14 },
+  noticeMargins: { marginTop: 32, marginHorizontal: 24 },
   emptyText: { fontSize: 14, textAlign: 'center', marginTop: 48, paddingHorizontal: 24 },
 
   featured: { marginTop: 30 },
