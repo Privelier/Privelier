@@ -20,11 +20,15 @@
  * - a generic CustomerDataFailure: its own `.message` is shown inline.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { PrimaryButton } from '../../shared/components/PrimaryButton';
+import { Notice } from '../../shared/components/Notice';
+import { ScreenBackHeader } from '../../shared/components/ScreenBackHeader';
 import { useTheme } from '../../theme/useTheme';
+import { space } from '../../theme/spacing';
 import { insertBooking } from '../bookingCreateData';
 import { formatBookingWhen, formatMoney } from '../format';
 import { customerDataErrorCopy } from '../errors';
@@ -110,29 +114,23 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
       edges={['top', 'left', 'right']}
       testID="customer-booking-confirm-screen"
     >
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          disabled={submitting}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          hitSlop={12}
-          testID="customer-booking-confirm-back"
-          style={[styles.backButton, { backgroundColor: colors.surface }]}
-        >
-          <Feather name="arrow-left" size={16} color={colors.textPrimary} />
-        </Pressable>
-        <View style={styles.stepIndicator}>
-          <View style={styles.stepDots}>
-            {[1, 2, 3].map((n) => (
-              <View key={n} style={[styles.stepDot, { backgroundColor: colors.accent }]} />
-            ))}
+      <ScreenBackHeader
+        onPress={() => navigation.goBack()}
+        backTestID="customer-booking-confirm-back"
+        backDisabled={submitting}
+        right={
+          <View style={styles.stepIndicator}>
+            <View style={styles.stepDots}>
+              {[1, 2, 3].map((n) => (
+                <View key={n} style={[styles.stepDot, { backgroundColor: colors.accent }]} />
+              ))}
+            </View>
+            <Text style={[styles.step, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+              Step 3 of 3
+            </Text>
           </View>
-          <Text style={[styles.step, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-            Step 3 of 3
-          </Text>
-        </View>
-      </View>
+        }
+      />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
@@ -140,14 +138,12 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
         </Text>
 
         {error ? (
-          <View
+          <Notice
+            message={error}
             testID="customer-booking-confirm-error"
-            accessibilityRole="alert"
-            style={[styles.notice, { borderColor: colors.error, backgroundColor: colors.surface }]}
+            variant="error"
+            style={styles.noticeSpacing}
           >
-            <Text style={[styles.noticeText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-              {error}
-            </Text>
             <Pressable
               onPress={onPickAnotherTime}
               accessibilityRole="button"
@@ -159,7 +155,7 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
                 Choose another time
               </Text>
             </Pressable>
-          </View>
+          </Notice>
         ) : null}
 
         <View style={[styles.summary, { borderColor: colors.border, backgroundColor: colors.surface }]}>
@@ -183,23 +179,12 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
       </ScrollView>
 
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
-        <Pressable
+        <PrimaryButton
+          label="Confirm booking"
           onPress={onConfirm}
-          disabled={submitting}
-          accessibilityRole="button"
-          accessibilityLabel="Confirm booking"
-          accessibilityState={{ disabled: submitting, busy: submitting }}
+          loading={submitting}
           testID="customer-booking-confirm-submit"
-          style={[styles.primaryButton, { backgroundColor: colors.accent, opacity: submitting ? 0.6 : 1 }]}
-        >
-          {submitting ? (
-            <ActivityIndicator size="small" color={colors.onAccent} />
-          ) : (
-            <Text style={[styles.primaryButtonText, { color: colors.onAccent, fontFamily: fonts.bodySemiBold }]}>
-              Confirm booking
-            </Text>
-          )}
-        </Pressable>
+        />
       </View>
     </SafeAreaView>
   );
@@ -222,14 +207,6 @@ function SummaryRow({ label, value, last = false }: { label: string; value: stri
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingTop: 12,
-  },
-  backButton: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   stepIndicator: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   stepDots: { flexDirection: 'row', gap: 4 },
   stepDot: { width: 12, height: 3, borderRadius: 2 },
@@ -238,8 +215,7 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 24 },
   heading: { fontSize: 24 },
 
-  notice: { borderWidth: 0.5, borderRadius: 10, paddingVertical: 12, paddingHorizontal: 14, marginTop: 20 },
-  noticeText: { fontSize: 14, lineHeight: 20 },
+  noticeSpacing: { marginTop: space.lg },
   noticeLink: { marginTop: 8 },
   noticeLinkText: { fontSize: 13 },
 
@@ -261,8 +237,6 @@ const styles = StyleSheet.create({
   priceHint: { fontSize: 12, marginTop: 8, lineHeight: 18 },
 
   footer: { paddingHorizontal: 24, paddingTop: 14, paddingBottom: 20, borderTopWidth: 0.5 },
-  primaryButton: { borderRadius: 10, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' },
-  primaryButtonText: { fontSize: 16 },
 
   successWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, gap: 12 },
   successIconRing: {

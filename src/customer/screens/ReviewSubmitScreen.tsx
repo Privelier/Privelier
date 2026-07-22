@@ -25,10 +25,8 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -39,7 +37,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { StarRatingInput } from '../../shared/components/StarRatingInput';
+import { PrimaryButton } from '../../shared/components/PrimaryButton';
+import { Notice } from '../../shared/components/Notice';
+import { ScreenBackHeader } from '../../shared/components/ScreenBackHeader';
 import { useTheme } from '../../theme/useTheme';
+import { space } from '../../theme/spacing';
 import { submitReview } from '../reviewsData';
 import { customerDataErrorCopy } from '../errors';
 import type { CustomerStackParamList } from '../CustomerNavigator';
@@ -73,8 +75,6 @@ export default function ReviewSubmitScreen({ route, navigation }: Props) {
     },
     []
   );
-
-  const canSubmit = rating > 0 && !submitting;
 
   const onSubmit = useCallback(async () => {
     if (rating < 1) return; // the button is gated, but guard the write too
@@ -128,19 +128,11 @@ export default function ReviewSubmitScreen({ route, navigation }: Props) {
       edges={['top', 'left', 'right']}
       testID="customer-review-submit-screen"
     >
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          disabled={submitting}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          hitSlop={12}
-          testID="customer-review-submit-back"
-          style={[styles.backButton, { backgroundColor: colors.surface }]}
-        >
-          <Feather name="arrow-left" size={16} color={colors.textPrimary} />
-        </Pressable>
-      </View>
+      <ScreenBackHeader
+        onPress={() => navigation.goBack()}
+        backTestID="customer-review-submit-back"
+        backDisabled={submitting}
+      />
 
       <KeyboardAvoidingView
         style={styles.flex}
@@ -155,31 +147,12 @@ export default function ReviewSubmitScreen({ route, navigation }: Props) {
           </Text>
 
           {error ? (
-            <View
+            <Notice
+              message={error}
               testID="customer-review-submit-error"
-              // Only a genuine failure is an alert; a benign terminal state is
-              // read out plainly, not as an alarm.
-              accessibilityRole={noticeTone === 'error' ? 'alert' : undefined}
-              style={[
-                styles.notice,
-                {
-                  borderColor: noticeTone === 'error' ? colors.error : colors.border,
-                  backgroundColor: colors.surface,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.noticeText,
-                  {
-                    color: noticeTone === 'error' ? colors.errorText : colors.textSecondary,
-                    fontFamily: fonts.bodyMedium,
-                  },
-                ]}
-              >
-                {error}
-              </Text>
-            </View>
+              variant={noticeTone}
+              style={styles.noticeSpacing}
+            />
           ) : null}
 
           <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
@@ -225,26 +198,13 @@ export default function ReviewSubmitScreen({ route, navigation }: Props) {
         </ScrollView>
 
         <View style={[styles.footer, { borderTopColor: colors.border }]}>
-          <Pressable
+          <PrimaryButton
+            label="Post review"
             onPress={onSubmit}
-            disabled={!canSubmit}
-            accessibilityRole="button"
-            accessibilityLabel="Post review"
-            accessibilityState={{ disabled: !canSubmit, busy: submitting }}
+            loading={submitting}
+            disabled={rating === 0}
             testID="customer-review-submit-submit"
-            style={({ pressed }) => [
-              styles.primaryButton,
-              { backgroundColor: colors.accent, opacity: !canSubmit ? 0.6 : pressed ? 0.9 : 1 },
-            ]}
-          >
-            {submitting ? (
-              <ActivityIndicator size="small" color={colors.onAccent} />
-            ) : (
-              <Text style={[styles.primaryButtonText, { color: colors.onAccent, fontFamily: fonts.bodySemiBold }]}>
-                Post review
-              </Text>
-            )}
-          </Pressable>
+          />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -254,15 +214,12 @@ export default function ReviewSubmitScreen({ route, navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1 },
-  header: { paddingHorizontal: 24, paddingTop: 12 },
-  backButton: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
 
   scrollContent: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 24 },
   heading: { fontSize: 24 },
   subheading: { fontSize: 14, marginTop: 8, lineHeight: 20 },
 
-  notice: { borderWidth: 0.5, borderRadius: 10, paddingVertical: 12, paddingHorizontal: 14, marginTop: 20 },
-  noticeText: { fontSize: 14, lineHeight: 20 },
+  noticeSpacing: { marginTop: space.lg },
 
   label: { fontSize: 13, marginTop: 28, marginBottom: 12 },
   hint: { fontSize: 12, marginTop: 10, lineHeight: 16 },
@@ -277,8 +234,6 @@ const styles = StyleSheet.create({
   },
 
   footer: { paddingHorizontal: 24, paddingTop: 14, paddingBottom: 20, borderTopWidth: 0.5 },
-  primaryButton: { borderRadius: 10, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' },
-  primaryButtonText: { fontSize: 16 },
 
   successWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, gap: 12 },
   successIconRing: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center' },
