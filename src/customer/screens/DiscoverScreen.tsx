@@ -22,7 +22,6 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Image,
   Pressable,
@@ -41,6 +40,7 @@ import { fetchOwnProfile } from '../../auth/authService';
 import { useTheme } from '../../theme/useTheme';
 import { pressOpacity } from '../../theme/motion';
 import { Notice } from '../../shared/components/Notice';
+import { Skeleton } from '../../shared/components/Skeleton';
 import type { BarberDirectoryRow, ServiceRow } from '../../types';
 import { listBarbersByCity, listServicesForBarberIds } from '../discoveryData';
 import { firstName, timeOfDayGreeting } from '../format';
@@ -245,12 +245,7 @@ export default function DiscoverScreen({ navigation }: Props) {
         ) : null}
 
         {loading ? (
-          <ActivityIndicator
-            size="small"
-            color={colors.accent}
-            style={styles.spinner}
-            testID="customer-home-loading"
-          />
+          <DiscoverSkeleton />
         ) : error ? (
           <Notice testID="customer-home-error" message={error} style={styles.noticeMargins} />
         ) : !featured ? (
@@ -327,6 +322,41 @@ export default function DiscoverScreen({ navigation }: Props) {
   );
 }
 
+/**
+ * Content-shaped loading placeholder — a featured-card block + a two-item
+ * rail preview, reusing the exact spacing (`pad`/`featured`/`section`) the
+ * real content renders with once loaded, so the swap-in is nearly seamless
+ * rather than a layout jump. Keeps the `customer-home-loading` testID.
+ */
+function DiscoverSkeleton() {
+  return (
+    <View testID="customer-home-loading">
+      <View style={[styles.pad, styles.featured]}>
+        <Skeleton style={styles.skeletonImageWide} />
+        <View style={styles.skeletonTextGroup}>
+          <Skeleton style={styles.skeletonLineWide} />
+          <Skeleton style={styles.skeletonLineNarrow} />
+        </View>
+      </View>
+      <View style={styles.section}>
+        <View style={[styles.pad, styles.skeletonRailHeader]}>
+          <Skeleton style={styles.skeletonLineTitle} />
+        </View>
+        <View style={[styles.pad, styles.skeletonRailRow]}>
+          <View style={styles.skeletonRailItem}>
+            <Skeleton style={styles.skeletonImageCompact} />
+            <Skeleton style={styles.skeletonLineCompact} />
+          </View>
+          <View style={styles.skeletonRailItem}>
+            <Skeleton style={styles.skeletonImageCompact} />
+            <Skeleton style={styles.skeletonLineCompact} />
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingTop: 24, paddingBottom: 32 },
@@ -357,7 +387,6 @@ const styles = StyleSheet.create({
   },
   chipText: { fontSize: 12 },
 
-  spinner: { marginTop: 48 },
   noticeMargins: { marginTop: 32, marginHorizontal: 24 },
   emptyText: { fontSize: 14, textAlign: 'center', marginTop: 48, paddingHorizontal: 24 },
 
@@ -367,6 +396,17 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 21 },
   sectionMeta: { fontSize: 12 },
   rail: { marginTop: 16 },
+
+  skeletonTextGroup: { marginTop: 12, gap: 8 },
+  skeletonImageWide: { width: '100%', aspectRatio: 16 / 10 },
+  skeletonLineWide: { height: 18, width: '55%' },
+  skeletonLineNarrow: { height: 12, width: '35%' },
+  skeletonRailHeader: { marginBottom: 16 },
+  skeletonLineTitle: { height: 18, width: 140 },
+  skeletonRailRow: { flexDirection: 'row', gap: 16 },
+  skeletonRailItem: { width: 256, gap: 8 },
+  skeletonImageCompact: { width: 256, aspectRatio: 4 / 5 },
+  skeletonLineCompact: { height: 14, width: '60%' },
   railContent: { gap: 16, paddingHorizontal: 24, paddingBottom: 2 },
 
   trendingGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 16 },
@@ -378,6 +418,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   trendingImage: { width: '100%', height: '100%' },
+  // Deliberately NOT the shared OVER_IMAGE_BG (rgba(18,18,20,0.72), see
+  // ScreenBackHeader): a lighter black scrim reads better under the smaller
+  // editorial labels here than the heavier hero-nav value would. Unifying
+  // the two remains an open founder design call, not made in this pass.
   trendingScrim: {
     position: 'absolute',
     left: 0,

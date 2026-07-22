@@ -20,10 +20,11 @@
  * (pure pinBounds; the empty case never reaches this component — the screen
  * renders its map-empty state instead of a pointless globe).
  */
-import { useCallback, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import Mapbox from '@rnmapbox/maps';
 import { useTheme } from '../../theme/useTheme';
+import { duration } from '../../theme/motion';
 import type { BarberDirectoryRow, ServiceRow } from '../../types';
 import { formatMoney } from '../format';
 import { pinBounds, type ExploreMapPin } from '../exploreData';
@@ -140,16 +141,64 @@ export default function ExploreMapView({
       </Mapbox.MapView>
 
       {selected ? (
-        <View style={styles.docked} testID="customer-explore-docked-card">
+        // Keyed by barber id so switching pins (not just first dock) remounts
+        // the wrapper and replays the entrance — a fresh docking each time,
+        // not just the first one.
+        <DockedCard key={selected.id} style={styles.docked} testID="customer-explore-docked-card">
           <BarberCard
             barber={selected}
             services={servicesByBarber.get(selected.id) ?? []}
             variant="wide"
             onPress={() => onOpenProfile(selected.id)}
           />
-        </View>
+        </DockedCard>
       ) : null}
     </View>
+  );
+}
+
+/**
+ * A calm, one-shot entrance for the docked card (fade + a short rise) —
+ * motion as a supporting signal, matching theme/motion.ts's "confirms a
+ * state change, then gets out of the way" philosophy. No bounce/spring.
+ */
+function DockedCard({
+  style,
+  testID,
+  children,
+}: {
+  style: StyleProp<ViewStyle>;
+  testID: string;
+  children: ReactNode;
+}) {
+  // useState's lazy initializer (not useRef) — see Skeleton.tsx for why:
+  // react-hooks/refs flags a ref's `.current` read during render, and
+  // Animated.Value is mutated by the animation engine itself, so holding it
+  // as never-set state is the correct, lint-clean equivalent.
+  const [opacity] = useState(() => new Animated.Value(0));
+  const [translateY] = useState(() => new Animated.Value(8));
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: duration.base,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: duration.base,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [opacity, translateY]);
+
+  return (
+    <Animated.View testID={testID} style={[style, { opacity, transform: [{ translateY }] }]}>
+      {children}
+    </Animated.View>
   );
 }
 

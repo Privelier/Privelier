@@ -38,7 +38,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { PortfolioGrid } from '../../shared/components/PortfolioGrid';
 import { PortfolioTile } from '../../shared/components/PortfolioTile';
 import { StarRating } from '../../shared/components/StarRating';
-import { BackButton } from '../../shared/components/ScreenBackHeader';
+import { BackButton, OVER_IMAGE_BG, OVER_IMAGE_ICON } from '../../shared/components/ScreenBackHeader';
 import { useTheme } from '../../theme/useTheme';
 import { pressOpacity } from '../../theme/motion';
 import type { BarberDirectoryRow, PortfolioRow, ReviewRow, ServiceRow } from '../../types';
@@ -58,9 +58,11 @@ const TABS: { key: TabKey; label: string }[] = [
 
 // Text overlaid on the hero image sits on a flat dark scrim, so its color is
 // fixed regardless of theme (same approach as the Discover trending tiles).
-const HERO_TEXT = '#F5F1E8';
+// HERO_TEXT/HERO_SCRIM are the shared ScreenBackHeader over-image constants
+// (renamed on import — see that file for why this is the one shared source).
+const HERO_TEXT = OVER_IMAGE_ICON;
 const HERO_TEXT_DIM = 'rgba(245,241,232,0.72)';
-const HERO_SCRIM = 'rgba(18,18,20,0.72)';
+const HERO_SCRIM = OVER_IMAGE_BG;
 
 export default function BarberProfileScreen({ route, navigation }: Props) {
   const { barberId } = route.params;

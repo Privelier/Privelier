@@ -17,10 +17,16 @@ import { useTheme } from '../../theme/useTheme';
 import { space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 
-// Theme-INDEPENDENT: a disc over a photo hero must read the same in both modes
-// (lifted verbatim from BarberProfileScreen's HERO_SCRIM / HERO_TEXT).
-const OVER_IMAGE_BG = 'rgba(18,18,20,0.72)';
-const OVER_IMAGE_ICON = '#F5F1E8';
+// Theme-INDEPENDENT: a disc (or any overlay) over a photo hero must read the
+// same in both modes. Exported so any screen with its own hero — currently
+// BarberProfileScreen's title-block scrim/text — shares this ONE value
+// instead of carrying a byte-identical local copy (Step-18 Ultra pass,
+// increment-4 mop-up: this dedup was the mechanical half of the tracked
+// "shared HERO_SCRIM constant" item; unifying it with Discover's differently-
+// valued trending-tile scrim, rgba(0,0,0,0.55), is a separate, real design
+// call and is deliberately NOT made here).
+export const OVER_IMAGE_BG = 'rgba(18,18,20,0.72)';
+export const OVER_IMAGE_ICON = '#F5F1E8';
 
 export function BackButton({
   onPress,
