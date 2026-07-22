@@ -16,6 +16,7 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/useTheme';
+import { pressOpacity } from '../../theme/motion';
 import type { BarberDirectoryRow, ServiceRow } from '../../types';
 import { formatMoney } from '../format';
 
@@ -23,6 +24,12 @@ type Props = {
   barber: BarberDirectoryRow;
   services: ServiceRow[];
   variant?: 'wide' | 'compact';
+  /**
+   * Only a genuinely-featured wide card shows the "Editor's pick" mark. Discover
+   * passes it on its lead card alone; Explore (a plain list) never does — so the
+   * label means something and brass stays rationed.
+   */
+  featured?: boolean;
   onPress: () => void;
 };
 
@@ -73,7 +80,7 @@ function RatingLine({ rating, size }: { rating: number; size: number }) {
   );
 }
 
-export default function BarberCard({ barber, services, variant = 'wide', onPress }: Props) {
+export default function BarberCard({ barber, services, variant = 'wide', featured = false, onPress }: Props) {
   const { colors, fonts } = useTheme();
   const from = startingPrice(services);
   const specialties = services
@@ -88,7 +95,7 @@ export default function BarberCard({ barber, services, variant = 'wide', onPress
         accessibilityRole="button"
         accessibilityLabel={`View ${barber.name}'s profile`}
         testID={`customer-home-barber-${barber.id}`}
-        style={styles.compact}
+        style={({ pressed }) => [styles.compact, { opacity: pressed ? pressOpacity.soft : 1 }]}
       >
         <CardImage barber={barber} aspectRatio={4 / 5} />
         <View style={styles.compactMetaRow}>
@@ -116,7 +123,10 @@ export default function BarberCard({ barber, services, variant = 'wide', onPress
             <RatingLine rating={barber.rating} size={11} />
             {from !== null ? (
               <Text style={[styles.compactPrice, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                from {formatMoney(from)}
+                from{' '}
+                <Text style={{ color: colors.textPrimary, fontFamily: fonts.bodyMedium }}>
+                  {formatMoney(from)}
+                </Text>
               </Text>
             ) : null}
           </View>
@@ -131,13 +141,16 @@ export default function BarberCard({ barber, services, variant = 'wide', onPress
       accessibilityRole="button"
       accessibilityLabel={`View ${barber.name}'s profile`}
       testID={`customer-home-barber-${barber.id}`}
+      style={({ pressed }) => ({ opacity: pressed ? pressOpacity.soft : 1 })}
     >
       <CardImage barber={barber} aspectRatio={16 / 10} />
       <View style={styles.wideMetaRow}>
         <View style={styles.wideMetaLeft}>
-          <Text style={[styles.editorsPick, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
-            {'Editor’s pick'}
-          </Text>
+          {featured ? (
+            <Text style={[styles.editorsPick, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
+              {'Editor’s pick'}
+            </Text>
+          ) : null}
           <View style={styles.nameRow}>
             <Text
               numberOfLines={1}
@@ -158,7 +171,10 @@ export default function BarberCard({ barber, services, variant = 'wide', onPress
           <RatingLine rating={barber.rating} size={13} />
           {from !== null ? (
             <Text style={[styles.widePrice, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-              from {formatMoney(from)}
+              from{' '}
+              <Text style={{ color: colors.textPrimary, fontFamily: fonts.bodyMedium }}>
+                {formatMoney(from)}
+              </Text>
             </Text>
           ) : null}
         </View>

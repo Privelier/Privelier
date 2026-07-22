@@ -273,6 +273,7 @@ export default function DiscoverScreen({ navigation }: Props) {
                 barber={featured}
                 services={servicesByBarber.get(featured.id) ?? []}
                 variant="wide"
+                featured
                 onPress={() => openProfile(featured.id)}
               />
             </View>

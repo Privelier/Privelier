@@ -38,7 +38,9 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { PortfolioGrid } from '../../shared/components/PortfolioGrid';
 import { PortfolioTile } from '../../shared/components/PortfolioTile';
 import { StarRating } from '../../shared/components/StarRating';
+import { BackButton } from '../../shared/components/ScreenBackHeader';
 import { useTheme } from '../../theme/useTheme';
+import { pressOpacity } from '../../theme/motion';
 import type { BarberDirectoryRow, PortfolioRow, ReviewRow, ServiceRow } from '../../types';
 import { getBarberProfile, listPortfolioForBarber, listServicesForBarber } from '../discoveryData';
 import { fetchReviewsForBarber } from '../reviewsData';
@@ -158,7 +160,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
         testID="barber-profile-screen"
       >
         <View style={styles.plainHeader}>
-          <BackButton onPress={goBack} background={colors.surface} color={colors.textPrimary} />
+          <BackButton onPress={goBack} testID="barber-profile-back" tone="surface" />
         </View>
         {loading ? (
           <ActivityIndicator
@@ -280,7 +282,11 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
                 accessibilityRole="tab"
                 accessibilityState={{ selected: active }}
                 testID={`barber-profile-tab-${key}`}
-                style={[styles.tabButton, active ? { borderBottomColor: colors.accent } : null]}
+                style={({ pressed }) => [
+                  styles.tabButton,
+                  active ? { borderBottomColor: colors.accent } : null,
+                  pressed ? { opacity: pressOpacity.soft } : null,
+                ]}
               >
                 <Text
                   style={[
@@ -333,7 +339,10 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
                     accessibilityRole="button"
                     accessibilityLabel={`Book ${service.name}`}
                     testID={`barber-profile-book-${service.id}`}
-                    style={[styles.bookButton, { backgroundColor: colors.accent }]}
+                    style={({ pressed }) => [
+                      styles.bookButton,
+                      { backgroundColor: colors.accent, opacity: pressed ? pressOpacity.firm : 1 },
+                    ]}
                   >
                     <Text style={[styles.bookButtonText, { color: colors.onAccent, fontFamily: fonts.bodyMedium }]}>
                       Book
@@ -463,32 +472,9 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
 
       {/* Back button floats over the hero, clear of the status bar. */}
       <View style={[styles.backWrap, { top: insets.top + 8 }]}>
-        <BackButton onPress={goBack} background={HERO_SCRIM} color={HERO_TEXT} />
+        <BackButton onPress={goBack} testID="barber-profile-back" tone="overImage" />
       </View>
     </SafeAreaView>
-  );
-}
-
-function BackButton({
-  onPress,
-  background,
-  color,
-}: {
-  onPress: () => void;
-  background: string;
-  color: string;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel="Go back"
-      hitSlop={12}
-      testID="barber-profile-back"
-      style={[styles.backButton, { backgroundColor: background }]}
-    >
-      <Feather name="arrow-left" size={16} color={color} />
-    </Pressable>
   );
 }
 
@@ -520,14 +506,6 @@ const styles = StyleSheet.create({
   heroRating: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 
   backWrap: { position: 'absolute', left: 24 },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
   bioBlock: { paddingHorizontal: 24, paddingVertical: 24 },
   bio: { fontSize: 14, lineHeight: 22 },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16 },
@@ -555,7 +533,7 @@ const styles = StyleSheet.create({
   serviceInfo: { flex: 1, minWidth: 0 },
   serviceName: { fontSize: 18 },
   serviceMeta: { fontSize: 12, marginTop: 6 },
-  bookButton: { borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8 },
+  bookButton: { borderRadius: 8, paddingHorizontal: 16, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   bookButtonText: { fontSize: 12 },
 
   // lineHeight 44 trims Playfair's leading slack so the big number optically
