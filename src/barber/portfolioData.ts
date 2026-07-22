@@ -17,6 +17,7 @@
  * error (design D5).
  */
 import { supabase } from '../../lib/supabase';
+import { uniqueObjectName } from '../shared/objectNames';
 import type { PortfolioRow } from '../types';
 import { failure, logBarberDataError, mapPostgrestError, mapStorageError } from './errors';
 import type {
@@ -36,17 +37,6 @@ export const MAX_PORTFOLIO_IMAGES = 6;
  * mitigated by unique random object names (see uniqueObjectName).
  */
 const PORTFOLIO_BUCKET = 'portfolio';
-
-/**
- * A fresh, collision-resistant object name per upload — same shape as
- * verificationData.ts. Unique names (never a fixed path) mean no upload ever
- * overwrites another object in place, so a superseded image simply becomes an
- * orphan in the barber's own folder (MVP-acceptable, design D4) rather than
- * clobbering live bytes.
- */
-function uniqueObjectName(prefix: string): string {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}.jpg`;
-}
 
 /** Postgres raise_exception SQLSTATE — the max-6 trigger raises this. */
 const RAISE_EXCEPTION = 'P0001';

@@ -25,6 +25,7 @@
  */
 import { supabase } from '../../lib/supabase';
 import type { VerificationDocType, VerificationRequestRow } from '../types';
+import { uniqueObjectName } from '../shared/objectNames';
 import { failure, logBarberDataError, mapPostgrestError, mapStorageError } from './errors';
 import type {
   SubmitVerificationDocumentResult,
@@ -49,7 +50,8 @@ const DOC_TARGETS: Record<
 };
 
 /**
- * A fresh, collision-resistant object name per upload. A DETERMINISTIC path plus
+ * Object names come from the shared `uniqueObjectName` (src/shared/objectNames):
+ * a fresh, UNGUESSABLE name per upload. A DETERMINISTIC path plus
  * upsert would break two guarantees (security-auditor finding, Step 17 gate):
  *  1. Re-queue — the DB trigger re-queues a resubmission only when the stored
  *     image-column value changes. A fixed path is byte-identical across
@@ -63,9 +65,6 @@ const DOC_TARGETS: Record<
  * just becomes an orphan in the barber's own private folder (MVP-acceptable; a
  * service-role cleanup is a later job).
  */
-function uniqueObjectName(prefix: string): string {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}.jpg`;
-}
 
 /**
  * Upload one verification image to the private bucket at
