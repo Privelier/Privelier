@@ -28,7 +28,9 @@ import { PrimaryButton } from '../../shared/components/PrimaryButton';
 import { Notice } from '../../shared/components/Notice';
 import { ScreenBackHeader } from '../../shared/components/ScreenBackHeader';
 import { useTheme } from '../../theme/useTheme';
-import { space } from '../../theme/spacing';
+import { radius, space } from '../../theme/spacing';
+import { pressOpacity } from '../../theme/motion';
+import { BookingStepIndicator } from '../components/BookingStepIndicator';
 import { insertBooking } from '../bookingCreateData';
 import { formatBookingWhen, formatMoney } from '../format';
 import { customerDataErrorCopy } from '../errors';
@@ -118,18 +120,7 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
         onPress={() => navigation.goBack()}
         backTestID="customer-booking-confirm-back"
         backDisabled={submitting}
-        right={
-          <View style={styles.stepIndicator}>
-            <View style={styles.stepDots}>
-              {[1, 2, 3].map((n) => (
-                <View key={n} style={[styles.stepDot, { backgroundColor: colors.accent }]} />
-              ))}
-            </View>
-            <Text style={[styles.step, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-              Step 3 of 3
-            </Text>
-          </View>
-        }
+        right={<BookingStepIndicator current={3} />}
       />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -149,7 +140,7 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
               accessibilityRole="button"
               accessibilityLabel="Choose another time"
               testID="customer-booking-confirm-pick-another-time"
-              style={styles.noticeLink}
+              style={({ pressed }) => [styles.noticeLink, pressed ? { opacity: pressOpacity.soft } : null]}
             >
               <Text style={[styles.noticeLinkText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
                 Choose another time
@@ -207,20 +198,16 @@ function SummaryRow({ label, value, last = false }: { label: string; value: stri
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  stepIndicator: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  stepDots: { flexDirection: 'row', gap: 4 },
-  stepDot: { width: 12, height: 3, borderRadius: 2 },
-  step: { fontSize: 12, letterSpacing: 0.5 },
 
   scrollContent: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 24 },
   heading: { fontSize: 24 },
 
   noticeSpacing: { marginTop: space.lg },
-  noticeLink: { marginTop: 8 },
+  noticeLink: { marginTop: space.sm },
   noticeLinkText: { fontSize: 13 },
 
-  summary: { borderWidth: 0.5, borderRadius: 12, marginTop: 28 },
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 16, padding: 14 },
+  summary: { borderWidth: 0.5, borderRadius: radius.lg, marginTop: 28 },
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', gap: space.base, padding: 14 },
   summaryLabel: { fontSize: 13 },
   summaryValue: { fontSize: 14, flexShrink: 1, textAlign: 'right' },
 

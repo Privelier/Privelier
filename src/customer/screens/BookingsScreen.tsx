@@ -39,6 +39,9 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../theme/useTheme';
+import { radius, space } from '../../theme/spacing';
+import { pressOpacity } from '../../theme/motion';
+import { Notice } from '../../shared/components/Notice';
 import type { BarberDirectoryRow, BookingRow, ServiceRow } from '../../types';
 import { cancelBookingAsCustomer, fetchOwnBookingsView, isUpcomingBooking } from '../bookingsData';
 import { fetchOwnReviewedBookingIds } from '../reviewsData';
@@ -254,7 +257,11 @@ export default function BookingsScreen() {
               accessibilityRole="tab"
               accessibilityState={{ selected: active }}
               testID={`customer-bookings-tab-${key}`}
-              style={[styles.tabButton, active ? { borderBottomColor: colors.accent } : null]}
+              style={({ pressed }) => [
+                styles.tabButton,
+                active ? { borderBottomColor: colors.accent } : null,
+                pressed ? { opacity: pressOpacity.soft } : null,
+              ]}
             >
               <Text
                 style={[
@@ -278,15 +285,7 @@ export default function BookingsScreen() {
           testID="customer-bookings-loading"
         />
       ) : showError ? (
-        <View
-          testID="customer-bookings-error"
-          accessibilityRole="alert"
-          style={[styles.notice, { borderColor: colors.error, backgroundColor: colors.surface }]}
-        >
-          <Text style={[styles.noticeText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-            {error}
-          </Text>
-        </View>
+        <Notice testID="customer-bookings-error" message={error ?? ''} style={styles.noticeMargins} />
       ) : (
         <FlatList
           data={list}
@@ -308,6 +307,17 @@ export default function BookingsScreen() {
             const actionable = item.status === 'pending' || item.status === 'accepted';
             const busy = inFlight[item.id] === true;
             const rowError = rowErrors[item.id];
+            // Ration brass to the one live/awaiting state; green for confirmed;
+            // mute the receded/neutral (completed, cancelled); error only for a
+            // genuine negative (rejected). Text colour + weight, never a fill.
+            const statusTone =
+              item.status === 'pending'
+                ? colors.accentText
+                : item.status === 'accepted'
+                  ? colors.successText
+                  : item.status === 'rejected'
+                    ? colors.errorText
+                    : colors.textSecondary;
             return (
               <View
                 style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
@@ -331,7 +341,7 @@ export default function BookingsScreen() {
                       >
                         {barber?.name ?? 'Barber'}
                       </Text>
-                      <Text style={[styles.cardStatus, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
+                      <Text style={[styles.cardStatus, { color: statusTone, fontFamily: fonts.bodyMedium }]}>
                         {BOOKING_STATUS_LABELS[item.status]}
                       </Text>
                     </View>
@@ -433,7 +443,7 @@ export default function BookingsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  heading: { fontSize: 24, marginTop: 24, paddingHorizontal: 24 },
+  heading: { fontSize: 30, marginTop: 24, paddingHorizontal: 24 },
   tabStrip: {
     flexDirection: 'row',
     gap: 24,
@@ -442,7 +452,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
   },
   tabButton: {
-    paddingBottom: 12,
+    paddingTop: space.md,
+    paddingBottom: space.md,
     marginBottom: -0.5,
     borderBottomWidth: 1,
     borderBottomColor: 'transparent',
@@ -450,14 +461,13 @@ const styles = StyleSheet.create({
   tabLabel: { fontSize: 12, letterSpacing: 1.5 },
 
   spinner: { marginTop: 48 },
-  notice: { borderWidth: 0.5, borderRadius: 8, padding: 12, marginTop: 24, marginHorizontal: 24 },
-  noticeText: { fontSize: 14 },
+  noticeMargins: { marginTop: space.xl, marginHorizontal: space.xl },
   emptyText: { fontSize: 13, textAlign: 'center', paddingVertical: 40 },
 
   listContent: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 32 },
-  card: { borderWidth: 0.5, borderRadius: 8, padding: 16, marginBottom: 12 },
+  card: { borderWidth: 0.5, borderRadius: radius.sm, padding: 16, marginBottom: 12 },
   cardMain: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: { width: 56, height: 56, borderRadius: 4 },
+  avatar: { width: 56, height: 56, borderRadius: radius.xs },
   avatarFallback: { alignItems: 'center', justifyContent: 'center' },
   avatarInitial: { fontSize: 20 },
   cardInfo: { flex: 1, minWidth: 0 },
@@ -472,26 +482,26 @@ const styles = StyleSheet.create({
   cancelButton: {
     marginTop: 16,
     borderWidth: 0.5,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     paddingVertical: 14,
     minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cancelPressed: { opacity: 0.7 },
+  cancelPressed: { opacity: pressOpacity.firm },
   cancelText: { fontSize: 14 },
 
   reviewButton: {
     marginTop: 16,
     borderWidth: 0.5,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     paddingVertical: 14,
     minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
   reviewText: { fontSize: 14 },
-  reviewPressed: { opacity: 0.85 },
+  reviewPressed: { opacity: pressOpacity.soft },
   reviewedRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16 },
   reviewedText: { fontSize: 12, letterSpacing: 0.5 },
 

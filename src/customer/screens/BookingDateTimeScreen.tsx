@@ -35,14 +35,19 @@
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../../theme/useTheme';
+import { radius, space } from '../../theme/spacing';
+import { pressOpacity } from '../../theme/motion';
+import { PrimaryButton } from '../../shared/components/PrimaryButton';
+import { ScreenBackHeader } from '../../shared/components/ScreenBackHeader';
+import { Notice } from '../../shared/components/Notice';
 import type { AvailabilityRow } from '../../types';
 import { listBarberAvailability, listBarberBusySlots } from '../availabilityData';
 import { deriveAvailableSlots } from '../../shared/slots';
 import CalendarDateStrip from '../components/CalendarDateStrip';
+import { BookingStepIndicator } from '../components/BookingStepIndicator';
 import type { CustomerStackParamList } from '../CustomerNavigator';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'BookingDateTime'>;
@@ -191,31 +196,11 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
       edges={['top', 'left', 'right']}
       testID="customer-booking-datetime-screen"
     >
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          hitSlop={12}
-          testID="customer-booking-datetime-back"
-          style={[styles.backButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-        >
-          <Feather name="arrow-left" size={16} color={colors.textPrimary} />
-        </Pressable>
-        <View style={styles.stepIndicator}>
-          <View style={styles.stepDots}>
-            {[1, 2, 3].map((n) => (
-              <View
-                key={n}
-                style={[styles.stepDot, { backgroundColor: n <= 1 ? colors.accent : colors.border }]}
-              />
-            ))}
-          </View>
-          <Text style={[styles.step, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-            Step 1 of 3
-          </Text>
-        </View>
-      </View>
+      <ScreenBackHeader
+        onPress={() => navigation.goBack()}
+        backTestID="customer-booking-datetime-back"
+        right={<BookingStepIndicator current={1} />}
+      />
 
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
@@ -233,15 +218,12 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
             testID="customer-booking-datetime-loading"
           />
         ) : error ? (
-          <View
+          <Notice
+            message={error}
             testID="customer-booking-datetime-error"
-            accessibilityRole="alert"
-            style={[styles.notice, { borderColor: colors.error, backgroundColor: colors.surface }]}
-          >
-            <Text style={[styles.noticeText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-              {error}
-            </Text>
-          </View>
+            variant="error"
+            style={styles.noticeSpacing}
+          />
         ) : allEmpty ? (
           <Text
             style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}
@@ -296,7 +278,7 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
                                 borderWidth: active ? 0 : 0.5,
                                 borderColor: colors.border,
                                 backgroundColor: active ? colors.accent : colors.surface,
-                                opacity: pressed && !active ? 0.85 : 1,
+                                opacity: pressed && !active ? pressOpacity.soft : 1,
                                 transform: [{ scale: pressed && !active ? 0.97 : 1 }],
                               },
                             ]}
@@ -334,19 +316,12 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
             {formatSelection(selection.date, selection.time)}
           </Text>
         ) : null}
-        <Pressable
+        <PrimaryButton
+          label="Continue"
           onPress={onContinue}
           disabled={!canContinue}
-          accessibilityRole="button"
-          accessibilityLabel="Continue"
-          accessibilityState={{ disabled: !canContinue }}
           testID="customer-booking-datetime-continue"
-          style={[styles.primaryButton, { backgroundColor: colors.accent, opacity: canContinue ? 1 : 0.5 }]}
-        >
-          <Text style={[styles.primaryButtonText, { color: colors.onAccent, fontFamily: fonts.bodySemiBold }]}>
-            Continue
-          </Text>
-        </Pressable>
+        />
       </View>
     </SafeAreaView>
   );
@@ -354,48 +329,26 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingTop: 12,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 0.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepIndicator: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  stepDots: { flexDirection: 'row', gap: 4 },
-  stepDot: { width: 12, height: 3, borderRadius: 2 },
-  step: { fontSize: 12, letterSpacing: 0.5 },
 
-  scrollContent: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 24 },
+  scrollContent: { paddingHorizontal: space.xl, paddingTop: space.base, paddingBottom: space.xl },
   heading: { fontSize: 24 },
   subheading: { fontSize: 13, marginTop: 6 },
 
-  spinner: { marginTop: 48 },
-  notice: { borderWidth: 0.5, borderRadius: 10, paddingVertical: 12, paddingHorizontal: 14, marginTop: 24 },
-  noticeText: { fontSize: 14, lineHeight: 20 },
-  emptyText: { fontSize: 13, textAlign: 'center', paddingVertical: 40 },
-  hintText: { fontSize: 13, marginTop: 16 },
+  spinner: { marginTop: space['4xl'] },
+  noticeSpacing: { marginTop: space.xl },
+  emptyText: { fontSize: 13, textAlign: 'center', paddingVertical: space['3xl'] },
+  hintText: { fontSize: 13, marginTop: space.base },
 
   sectionLabel: { fontSize: 12, letterSpacing: 0.2, marginTop: 28, marginBottom: 14 },
-  timeLabel: { marginTop: 32 },
+  timeLabel: { marginTop: space['2xl'] },
 
-  timeGroup: { marginBottom: 20 },
+  timeGroup: { marginBottom: space.lg },
   periodLabel: { fontSize: 12, letterSpacing: 0.3, marginBottom: 10 },
 
   slotGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  slotChip: { borderRadius: 12, paddingHorizontal: 18, paddingVertical: 11, minWidth: 72, alignItems: 'center' },
+  slotChip: { borderRadius: radius.lg, paddingHorizontal: 18, paddingVertical: space.md, minWidth: 72, alignItems: 'center' },
   slotText: { fontSize: 14 },
 
-  footer: { paddingHorizontal: 24, paddingTop: 14, paddingBottom: 20, borderTopWidth: 0.5 },
-  summary: { fontSize: 13, textAlign: 'center', marginBottom: 12 },
-  primaryButton: { borderRadius: 10, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' },
-  primaryButtonText: { fontSize: 16 },
+  footer: { paddingHorizontal: space.xl, paddingTop: 14, paddingBottom: space.lg, borderTopWidth: 0.5 },
+  summary: { fontSize: 13, textAlign: 'center', marginBottom: space.md },
 });
