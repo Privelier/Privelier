@@ -12,8 +12,8 @@
  * Password: at least 8 characters enforced client-side (Supabase's default
  * server minimum is 6 — deliberate premium-product decision, see validation.ts).
  */
-import { useCallback, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { StyleSheet, Text, View, type TextInput } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { signUpBarber, signUpCustomer } from '../authService';
 import { useTheme } from '../../theme/useTheme';
@@ -54,6 +54,11 @@ export default function SignupScreen({ navigation, route }: Props) {
   const [formError, setFormError] = useState<string | null>(null);
   const [emailInUse, setEmailInUse] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Focus chain for the required fields: name → email → password → city → submit
+  // (optional country/phone/bio are left out of the keyboard chain).
+  const emailRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+  const cityRef = useRef<TextInput>(null);
 
   const onSubmit = useCallback(async () => {
     const errors: FieldErrors = {
@@ -120,6 +125,9 @@ export default function SignupScreen({ navigation, route }: Props) {
         autoCapitalize="words"
         autoComplete="name"
         textContentType="name"
+        returnKeyType="next"
+        onSubmitEditing={() => emailRef.current?.focus()}
+        blurOnSubmit={false}
         testID="auth-signup-name"
       />
       <FormTextField
@@ -131,6 +139,10 @@ export default function SignupScreen({ navigation, route }: Props) {
         keyboardType="email-address"
         autoComplete="email"
         textContentType="emailAddress"
+        inputRef={emailRef}
+        returnKeyType="next"
+        onSubmitEditing={() => passwordRef.current?.focus()}
+        blurOnSubmit={false}
         testID="auth-signup-email"
       />
       {emailInUse ? (
@@ -152,6 +164,10 @@ export default function SignupScreen({ navigation, route }: Props) {
         autoCapitalize="none"
         autoComplete="new-password"
         textContentType="newPassword"
+        inputRef={passwordRef}
+        returnKeyType="next"
+        onSubmitEditing={() => cityRef.current?.focus()}
+        blurOnSubmit={false}
         testID="auth-signup-password"
       />
       <FormTextField
@@ -160,6 +176,9 @@ export default function SignupScreen({ navigation, route }: Props) {
         onChangeText={setCity}
         error={fieldErrors.city}
         autoCapitalize="words"
+        inputRef={cityRef}
+        returnKeyType="done"
+        onSubmitEditing={onSubmit}
         testID="auth-signup-city"
       />
       <FormTextField

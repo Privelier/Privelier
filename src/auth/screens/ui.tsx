@@ -12,7 +12,7 @@
  * the barber Services/Availability screens. No behavior, validation, or
  * testID changed.
  */
-import { useState, type ReactNode } from 'react';
+import { useState, type ReactNode, type Ref } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -26,8 +26,15 @@ import {
   type TextInputProps,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../theme/useTheme';
+import { HAIRLINE, space } from '../../theme/spacing';
+import { Notice as SharedNotice } from '../../shared/components/Notice';
+import { BackButton } from '../../shared/components/ScreenBackHeader';
+
+// PrimaryButton is now the shared canonical CTA — re-exported so existing auth
+// call sites (label/onPress/testID/loading/disabled) are unchanged, and they
+// inherit the shared behaviour (full opacity while loading, soft press dim).
+export { PrimaryButton } from '../../shared/components/PrimaryButton';
 
 // ---------------------------------------------------------------------------
 // Screen shell — safe area + keyboard avoidance + tap-to-dismiss scroll
@@ -76,18 +83,13 @@ export function ScreenHeading({ title, subtitle }: { title: string; subtitle?: s
 }
 
 export function BackLink({ onPress, testID }: { onPress: () => void; testID: string }) {
-  const { colors } = useTheme();
+  // The shared BackButton, left-aligned. Geometry is byte-identical (36×36,
+  // radius 18, surface, arrow-left 16, hitSlop 12) and it adds the pressed dim
+  // the local disc lacked.
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel="Go back"
-      hitSlop={12}
-      testID={testID}
-      style={[shellStyles.backLink, { backgroundColor: colors.surface }]}
-    >
-      <Feather name="arrow-left" size={16} color={colors.textPrimary} />
-    </Pressable>
+    <View style={shellStyles.backLink}>
+      <BackButton onPress={onPress} testID={testID} tone="surface" />
+    </View>
   );
 }
 
@@ -98,14 +100,7 @@ const shellStyles = StyleSheet.create({
   heading: { marginTop: 24, marginBottom: 32 },
   title: { fontSize: 30, marginBottom: 8 },
   subtitle: { fontSize: 15, lineHeight: 22 },
-  backLink: {
-    alignSelf: 'flex-start',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  backLink: { alignSelf: 'flex-start' },
 });
 
 // ---------------------------------------------------------------------------
@@ -126,6 +121,12 @@ interface FormTextFieldProps {
   keyboardType?: TextInputProps['keyboardType'];
   autoComplete?: TextInputProps['autoComplete'];
   textContentType?: TextInputProps['textContentType'];
+  // Focus-chaining: a screen forwards a ref and a submit handler so the
+  // keyboard's next/go/done key advances the form without leaving the keyboard.
+  inputRef?: Ref<TextInput>;
+  returnKeyType?: TextInputProps['returnKeyType'];
+  onSubmitEditing?: () => void;
+  blurOnSubmit?: boolean;
 }
 
 export function FormTextField({
@@ -142,6 +143,10 @@ export function FormTextField({
   keyboardType,
   autoComplete,
   textContentType,
+  inputRef,
+  returnKeyType,
+  onSubmitEditing,
+  blurOnSubmit,
 }: FormTextFieldProps) {
   const { colors, fonts } = useTheme();
   const [hidden, setHidden] = useState(true);
@@ -168,6 +173,7 @@ export function FormTextField({
         ]}
       >
         <TextInput
+          ref={inputRef}
           style={[
             fieldStyles.input,
             multiline && fieldStyles.inputMultiline,
@@ -178,12 +184,17 @@ export function FormTextField({
           secureTextEntry={secure && hidden}
           multiline={multiline}
           placeholderTextColor={colors.textSecondary}
-          accessibilityLabel={label}
+          // Extend the label with the error so VoiceOver surfaces the invalid
+          // state when the field is focused (iOS has no live-region equivalent).
+          accessibilityLabel={error ? `${label}, ${error}` : label}
           testID={testID}
           autoCapitalize={autoCapitalize}
           keyboardType={keyboardType}
           autoComplete={autoComplete}
           textContentType={textContentType}
+          returnKeyType={returnKeyType}
+          onSubmitEditing={onSubmitEditing}
+          blurOnSubmit={blurOnSubmit}
           autoCorrect={false}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
@@ -205,6 +216,7 @@ export function FormTextField({
       {error ? (
         <Text
           testID={`${testID}-error`}
+          accessibilityLiveRegion="polite"
           style={[fieldStyles.meta, { color: colors.errorText, fontFamily: fonts.body }]}
         >
           {error}
@@ -226,7 +238,8 @@ const fieldStyles = StyleSheet.create({
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderBottomWidth: 1,
+    borderBottomWidth: HAIRLINE,
+    minHeight: 44,
   },
   input: { flex: 1, fontSize: 16, paddingVertical: 10 },
   inputMultiline: { minHeight: 96, textAlignVertical: 'top' },
@@ -244,34 +257,6 @@ interface ButtonProps {
   testID: string;
   loading?: boolean;
   disabled?: boolean;
-}
-
-/** Brass primary CTA — the ONLY place the accent appears as a fill. */
-export function PrimaryButton({ label, onPress, testID, loading = false, disabled = false }: ButtonProps) {
-  const { colors, fonts } = useTheme();
-  const inactive = disabled || loading;
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={inactive}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled: inactive, busy: loading }}
-      testID={testID}
-      style={({ pressed }) => [
-        buttonStyles.primary,
-        { backgroundColor: colors.accent, opacity: inactive ? 0.6 : pressed ? 0.85 : 1 },
-      ]}
-    >
-      {loading ? (
-        <ActivityIndicator size="small" color={colors.onAccent} />
-      ) : (
-        <Text style={[buttonStyles.primaryLabel, { color: colors.onAccent, fontFamily: fonts.bodySemiBold }]}>
-          {label}
-        </Text>
-      )}
-    </Pressable>
-  );
 }
 
 export function SecondaryButton({ label, onPress, testID, loading = false, disabled = false }: ButtonProps) {
@@ -328,14 +313,6 @@ export function TextLink({ label, onPress, testID, disabled = false }: ButtonPro
 }
 
 const buttonStyles = StyleSheet.create({
-  primary: {
-    borderRadius: 10,
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 52,
-  },
-  primaryLabel: { fontSize: 16 },
   secondary: {
     borderRadius: 10,
     borderWidth: 0.5,
@@ -353,6 +330,12 @@ const buttonStyles = StyleSheet.create({
 // Calm inline notice (error / success feedback)
 // ---------------------------------------------------------------------------
 
+/**
+ * Thin shim over the shared Notice: preserves the auth `kind` API and the
+ * built-in bottom margin (space.lg = 20) so no auth call site changes. The
+ * shared component marks the `error` variant as an a11y alert, so error banners
+ * keep announcing.
+ */
 export function Notice({
   kind,
   message,
@@ -362,27 +345,7 @@ export function Notice({
   message: string;
   testID: string;
 }) {
-  const { colors, fonts } = useTheme();
-  const tone = kind === 'error' ? colors.error : colors.success;
-  const toneText = kind === 'error' ? colors.errorText : colors.successText;
-  return (
-    <View
-      testID={testID}
-      accessibilityRole="alert"
-      style={[noticeStyles.box, { borderColor: tone, backgroundColor: colors.surface }]}
-    >
-      <Text style={[noticeStyles.text, { color: toneText, fontFamily: fonts.bodyMedium }]}>{message}</Text>
-    </View>
-  );
+  return <SharedNotice variant={kind} message={message} testID={testID} style={noticeShimStyle} />;
 }
 
-const noticeStyles = StyleSheet.create({
-  box: {
-    borderWidth: 0.5,
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    marginBottom: 20,
-  },
-  text: { fontSize: 14, lineHeight: 20 },
-});
+const noticeShimStyle = { marginBottom: space.lg } as const;

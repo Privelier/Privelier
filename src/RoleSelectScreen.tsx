@@ -60,6 +60,8 @@ function RoleOption({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
+      // The description is otherwise invisible to screen readers (label-only).
+      accessibilityHint={description}
       testID={testID}
       style={({ pressed }) => [
         styles.option,

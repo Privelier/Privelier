@@ -9,8 +9,8 @@
  * public.users.role — a barber logging in through the customer login still
  * lands in the barber app.
  */
-import { useCallback, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { StyleSheet, View, type TextInput } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { signIn } from '../authService';
 import type { AuthStackParamList } from './AuthNavigator';
@@ -39,6 +39,7 @@ export default function LoginScreen({ navigation, route }: Props) {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const passwordRef = useRef<TextInput>(null);
 
   const onSubmit = useCallback(async () => {
     const errors: FieldErrors = {
@@ -87,6 +88,9 @@ export default function LoginScreen({ navigation, route }: Props) {
         keyboardType="email-address"
         autoComplete="email"
         textContentType="emailAddress"
+        returnKeyType="next"
+        onSubmitEditing={() => passwordRef.current?.focus()}
+        blurOnSubmit={false}
         testID="auth-login-email"
       />
       <FormTextField
@@ -98,6 +102,9 @@ export default function LoginScreen({ navigation, route }: Props) {
         autoCapitalize="none"
         autoComplete="current-password"
         textContentType="password"
+        inputRef={passwordRef}
+        returnKeyType="go"
+        onSubmitEditing={onSubmit}
         testID="auth-login-password"
       />
       <View style={styles.actions}>
