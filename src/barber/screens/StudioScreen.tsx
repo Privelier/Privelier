@@ -36,6 +36,7 @@ import { fetchOwnProfile } from '../../auth/authService';
 import { useExitRole } from '../../RoleContext';
 import { useTheme } from '../../theme/useTheme';
 import { HAIRLINE, radius, space } from '../../theme/spacing';
+import { pressOpacity } from '../../theme/motion';
 import { Notice } from '../../shared/components/Notice';
 import type { AvailabilityRow, ServiceRow, VerificationStatus } from '../../types';
 import { fetchDashboardView } from '../dashboardData';
@@ -244,7 +245,7 @@ export default function StudioScreen({ navigation }: Props) {
                 {
                   backgroundColor: colors.surface,
                   borderColor: colors.border,
-                  opacity: pressed ? 0.85 : 1,
+                  opacity: pressed ? pressOpacity.soft : 1,
                 },
               ]}
             >
@@ -355,7 +356,7 @@ export default function StudioScreen({ navigation }: Props) {
                         {
                           borderBottomWidth: last ? 0 : 0.5,
                           borderColor: colors.border,
-                          opacity: pressed && !done ? 0.85 : 1,
+                          opacity: pressed && !done ? pressOpacity.soft : 1,
                         },
                       ]}
                     >
@@ -389,12 +390,14 @@ export default function StudioScreen({ navigation }: Props) {
               <Pressable
                 onPress={() => navigation.navigate('Services')}
                 accessibilityRole="button"
-                accessibilityLabel="Manage services"
+                // The label overrides the children, so it has to carry the
+                // state itself (same shape as the bio card's fix).
+                accessibilityLabel={`Manage services. ${servicesSummary(view.services)}.`}
                 testID="barber-dashboard-services"
                 style={({ pressed }) => [
                   styles.card,
                   styles.linkCard,
-                  { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 },
+                  { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? pressOpacity.soft : 1 },
                 ]}
               >
                 <View style={styles.cardText}>
@@ -411,12 +414,12 @@ export default function StudioScreen({ navigation }: Props) {
               <Pressable
                 onPress={() => navigation.navigate('Availability')}
                 accessibilityRole="button"
-                accessibilityLabel="Manage availability"
+                accessibilityLabel={`Manage availability. ${availabilitySummary(view.windows)}.`}
                 testID="barber-dashboard-availability"
                 style={({ pressed }) => [
                   styles.card,
                   styles.linkCard,
-                  { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 },
+                  { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? pressOpacity.soft : 1 },
                 ]}
               >
                 <View style={styles.cardText}>
@@ -442,7 +445,7 @@ export default function StudioScreen({ navigation }: Props) {
                 style={({ pressed }) => [
                   styles.card,
                   styles.linkCard,
-                  { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 },
+                  { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? pressOpacity.soft : 1 },
                 ]}
               >
                 <View style={styles.cardText}>
@@ -469,12 +472,12 @@ export default function StudioScreen({ navigation }: Props) {
               <Pressable
                 onPress={() => navigation.navigate('LocationEdit')}
                 accessibilityRole="button"
-                accessibilityLabel="Edit your location"
+                accessibilityLabel={`Edit your location. ${locationSummary(view.locationAddress)}.`}
                 testID="barber-dashboard-location"
                 style={({ pressed }) => [
                   styles.card,
                   styles.linkCard,
-                  { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 },
+                  { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? pressOpacity.soft : 1 },
                 ]}
               >
                 <View style={styles.cardText}>

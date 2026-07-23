@@ -36,6 +36,11 @@ import { Feather } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../theme/useTheme';
+import { HAIRLINE, radius, space } from '../../theme/spacing';
+import { pressOpacity } from '../../theme/motion';
+import { PrimaryButton } from '../../shared/components/PrimaryButton';
+import { BackButton } from '../../shared/components/ScreenBackHeader';
+import { Notice } from '../../shared/components/Notice';
 import { forwardGeocode, type GeocodeCandidate } from '../../shared/geocoding';
 import { MAX_ADDRESS_LENGTH, fetchOwnLocation, updateOwnLocation } from '../locationData';
 import type { BarberStackParamList } from '../BarberNavigator';
@@ -48,7 +53,7 @@ const SEARCH_DEBOUNCE_MS = 450;
 const MIN_QUERY_LENGTH = 4;
 
 export default function LocationEditScreen({ navigation }: Props) {
-  const { colors, fonts } = useTheme();
+  const { colors, fonts, isDark } = useTheme();
 
   const [barberId, setBarberId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -209,19 +214,7 @@ export default function LocationEditScreen({ navigation }: Props) {
       testID="barber-location-screen"
     >
       <View style={styles.header}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          hitSlop={12}
-          testID="barber-location-back"
-          style={({ pressed }) => [
-            styles.backButton,
-            { backgroundColor: colors.surface, opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <Feather name="arrow-left" size={16} color={colors.textPrimary} />
-        </Pressable>
+        <BackButton onPress={() => navigation.goBack()} testID="barber-location-back" />
         <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
           Your location
         </Text>
@@ -235,15 +228,7 @@ export default function LocationEditScreen({ navigation }: Props) {
           testID="barber-location-loading"
         />
       ) : loadError ? (
-        <View
-          testID="barber-location-load-error"
-          accessibilityRole="alert"
-          style={[styles.notice, { borderColor: colors.error, backgroundColor: colors.surface }]}
-        >
-          <Text style={[styles.noticeText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-            {loadError}
-          </Text>
-        </View>
+        <Notice testID="barber-location-load-error" message={loadError} style={styles.noticeMargins} />
       ) : (
         <KeyboardAvoidingView
           style={styles.flex}
@@ -267,15 +252,7 @@ export default function LocationEditScreen({ navigation }: Props) {
             </View>
 
             {formError ? (
-              <View
-                testID="barber-location-error"
-                accessibilityRole="alert"
-                style={[styles.notice, styles.noticeInline, { borderColor: colors.error, backgroundColor: colors.surface }]}
-              >
-                <Text style={[styles.noticeText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-                  {formError}
-                </Text>
-              </View>
+              <Notice testID="barber-location-error" message={formError} style={styles.noticeInline} />
             ) : null}
 
             <TextInput
@@ -288,6 +265,9 @@ export default function LocationEditScreen({ navigation }: Props) {
               maxLength={MAX_ADDRESS_LENGTH}
               autoCorrect={false}
               accessibilityLabel="Your address"
+              selectionColor={colors.accent}
+              cursorColor={colors.accent}
+              keyboardAppearance={isDark ? 'dark' : 'light'}
               style={[
                 styles.input,
                 {
@@ -341,8 +321,8 @@ export default function LocationEditScreen({ navigation }: Props) {
                     testID={`barber-location-candidate-${index}`}
                     style={({ pressed }) => [
                       styles.candidateRow,
-                      index < candidates.length - 1 && { borderBottomWidth: 0.5, borderBottomColor: colors.border },
-                      { opacity: pressed ? 0.85 : 1 },
+                      index < candidates.length - 1 && { borderBottomWidth: HAIRLINE, borderBottomColor: colors.border },
+                      { opacity: pressed ? pressOpacity.soft : 1 },
                     ]}
                   >
                     <Feather name="map-pin" size={14} color={colors.textSecondary} />
@@ -366,29 +346,16 @@ export default function LocationEditScreen({ navigation }: Props) {
               </Text>
             ) : null}
 
-            <Pressable
-              onPress={onSave}
-              disabled={!canSave}
-              accessibilityRole="button"
-              accessibilityLabel={clearing ? 'Remove your location' : 'Save location'}
-              accessibilityState={{ disabled: !canSave }}
-              testID="barber-location-save"
-              style={({ pressed }) => [
-                styles.primaryButton,
-                { backgroundColor: colors.accent, opacity: !canSave ? 0.5 : pressed ? 0.85 : 1 },
-              ]}
-            >
-              {submitting ? (
-                <ActivityIndicator size="small" color={colors.onAccent} />
-              ) : (
-                <>
-                  <Feather name={clearing ? 'trash-2' : 'check'} size={14} color={colors.onAccent} />
-                  <Text style={[styles.primaryButtonText, { color: colors.onAccent, fontFamily: fonts.bodySemiBold }]}>
-                    {clearing ? 'Remove location' : 'Save location'}
-                  </Text>
-                </>
-              )}
-            </Pressable>
+            <View style={styles.formActions}>
+              <PrimaryButton
+                label={clearing ? 'Remove location' : 'Save location'}
+                icon={clearing ? 'trash-2' : 'check'}
+                onPress={onSave}
+                loading={submitting}
+                disabled={!canSave}
+                testID="barber-location-save"
+              />
+            </View>
           </ScrollView>
         </KeyboardAvoidingView>
       )}
@@ -399,48 +366,36 @@ export default function LocationEditScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1 },
-  header: { paddingHorizontal: 24, paddingTop: 12 },
-  backButton: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  header: { paddingHorizontal: space.xl, paddingTop: space.md },
   heading: { fontSize: 24, marginTop: 16 },
   spinner: { marginTop: 48 },
-  notice: { borderWidth: 0.5, borderRadius: 10, padding: 12, marginHorizontal: 24, marginTop: 20 },
+  noticeMargins: { marginHorizontal: space.xl, marginTop: space.lg },
   noticeInline: { marginHorizontal: 0, marginTop: 0, marginBottom: 18 },
-  noticeText: { fontSize: 14 },
-  body: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 32 },
+  body: { paddingHorizontal: space.xl, paddingTop: space.lg, paddingBottom: space['2xl'] },
   subtitle: { fontSize: 14, lineHeight: 20, marginBottom: 14 },
   consent: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
-    borderWidth: 0.5,
-    borderRadius: 10,
-    padding: 12,
+    gap: space.sm,
+    borderWidth: HAIRLINE,
+    borderRadius: radius.md,
+    padding: space.md,
     marginBottom: 18,
   },
   consentIcon: { marginTop: 2 },
   consentText: { flex: 1, fontSize: 13, lineHeight: 18 },
-  input: { borderWidth: 0.5, borderRadius: 12, padding: 14, fontSize: 16 },
-  searchStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
+  input: { borderWidth: HAIRLINE, borderRadius: radius.lg, padding: 14, fontSize: 16 },
+  searchStatusRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: 10 },
   searchStatusText: { fontSize: 13, lineHeight: 18, marginTop: 10 },
-  candidates: { borderWidth: 0.5, borderRadius: 12, marginTop: 10 },
+  candidates: { borderWidth: HAIRLINE, borderRadius: radius.lg, marginTop: 10 },
   candidateRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: space.md,
     minHeight: 44,
   },
   candidateText: { flex: 1, fontSize: 14, lineHeight: 19 },
-  primaryButton: {
-    flexDirection: 'row',
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    width: '100%',
-    marginTop: 24,
-  },
-  primaryButtonText: { fontSize: 15 },
+  formActions: { marginTop: space.xl },
 });

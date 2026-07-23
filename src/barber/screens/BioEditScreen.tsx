@@ -24,7 +24,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -32,10 +31,13 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../theme/useTheme';
+import { HAIRLINE, radius, space } from '../../theme/spacing';
+import { PrimaryButton } from '../../shared/components/PrimaryButton';
+import { BackButton } from '../../shared/components/ScreenBackHeader';
+import { Notice } from '../../shared/components/Notice';
 import { MAX_BIO_LENGTH, fetchOwnBarberProfile, updateOwnBio } from '../profileData';
 import type { BarberStackParamList } from '../BarberNavigator';
 
@@ -142,19 +144,7 @@ export default function BioEditScreen({ navigation }: Props) {
       testID="barber-bio-screen"
     >
       <View style={styles.header}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          hitSlop={12}
-          testID="barber-bio-back"
-          style={({ pressed }) => [
-            styles.backButton,
-            { backgroundColor: colors.surface, opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <Feather name="arrow-left" size={16} color={colors.textPrimary} />
-        </Pressable>
+        <BackButton onPress={() => navigation.goBack()} testID="barber-bio-back" />
         <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
           Your bio
         </Text>
@@ -168,15 +158,7 @@ export default function BioEditScreen({ navigation }: Props) {
           testID="barber-bio-loading"
         />
       ) : loadError ? (
-        <View
-          testID="barber-bio-load-error"
-          accessibilityRole="alert"
-          style={[styles.notice, { borderColor: colors.error, backgroundColor: colors.surface }]}
-        >
-          <Text style={[styles.noticeText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-            {loadError}
-          </Text>
-        </View>
+        <Notice testID="barber-bio-load-error" message={loadError} style={styles.noticeMargins} />
       ) : (
         <KeyboardAvoidingView
           style={styles.flex}
@@ -192,22 +174,7 @@ export default function BioEditScreen({ navigation }: Props) {
             </Text>
 
             {formError ? (
-              <View
-                testID="barber-bio-error"
-                accessibilityRole="alert"
-                style={[
-                  styles.notice,
-                  // The body already pads by 24; without this the form error
-                  // renders at a 48px inset. (The load error below sits OUTSIDE
-                  // the ScrollView and correctly keeps the base notice margins.)
-                  styles.noticeInline,
-                  { borderColor: colors.error, backgroundColor: colors.surface },
-                ]}
-              >
-                <Text style={[styles.noticeText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-                  {formError}
-                </Text>
-              </View>
+              <Notice testID="barber-bio-error" message={formError} style={styles.noticeInline} />
             ) : null}
 
             <TextInput
@@ -269,34 +236,16 @@ export default function BioEditScreen({ navigation }: Props) {
               </Text>
             ) : null}
 
-            <Pressable
-              onPress={onSave}
-              disabled={!canSave}
-              accessibilityRole="button"
-              accessibilityLabel={clearing ? 'Remove bio' : 'Save bio'}
-              accessibilityState={{ disabled: !canSave, busy: submitting }}
-              testID="barber-bio-save"
-              style={({ pressed }) => [
-                styles.primaryButton,
-                {
-                  backgroundColor: colors.accent,
-                  // Busy is active-but-working, never dead: canSave goes false
-                  // the moment submitting flips, so exempt it from the dim.
-                  opacity: !canSave && !submitting ? 0.5 : pressed ? 0.85 : 1,
-                },
-              ]}
-            >
-              {submitting ? (
-                <ActivityIndicator size="small" color={colors.onAccent} />
-              ) : (
-                <>
-                  <Feather name="check" size={14} color={colors.onAccent} />
-                  <Text style={[styles.primaryButtonText, { color: colors.onAccent, fontFamily: fonts.bodySemiBold }]}>
-                    {clearing ? 'Remove bio' : 'Save bio'}
-                  </Text>
-                </>
-              )}
-            </Pressable>
+            <View style={styles.formActions}>
+              <PrimaryButton
+                label={clearing ? 'Remove bio' : 'Save bio'}
+                icon={clearing ? 'trash-2' : 'check'}
+                onPress={onSave}
+                loading={submitting}
+                disabled={!canSave}
+                testID="barber-bio-save"
+              />
+            </View>
           </ScrollView>
         </KeyboardAvoidingView>
       )}
@@ -307,28 +256,23 @@ export default function BioEditScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1 },
-  header: { paddingHorizontal: 24, paddingTop: 12 },
-  backButton: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  header: { paddingHorizontal: space.xl, paddingTop: space.md },
   heading: { fontSize: 24, marginTop: 16 },
   spinner: { marginTop: 48 },
-  notice: { borderWidth: 0.5, borderRadius: 10, padding: 12, marginHorizontal: 24, marginTop: 20 },
+  noticeMargins: { marginHorizontal: space.xl, marginTop: space.lg },
   // For a notice rendered INSIDE the already-padded ScrollView body.
   noticeInline: { marginHorizontal: 0, marginTop: 0, marginBottom: 18 },
-  noticeText: { fontSize: 14 },
-  body: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 32 },
+  body: { paddingHorizontal: space.xl, paddingTop: space.lg, paddingBottom: space['2xl'] },
   subtitle: { fontSize: 14, lineHeight: 20, marginBottom: 18 },
-  input: { borderWidth: 0.5, borderRadius: 12, padding: 14, minHeight: 160, fontSize: 16, lineHeight: 22 },
-  counter: { fontSize: 12, marginTop: 8, textAlign: 'right' },
-  clearHint: { fontSize: 13, lineHeight: 18, marginTop: 12 },
-  primaryButton: {
-    flexDirection: 'row',
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    width: '100%',
-    marginTop: 24,
+  input: {
+    borderWidth: HAIRLINE,
+    borderRadius: radius.lg,
+    padding: 14,
+    minHeight: 160,
+    fontSize: 16,
+    lineHeight: 22,
   },
-  primaryButtonText: { fontSize: 15 },
+  counter: { fontSize: 12, marginTop: space.sm, textAlign: 'right' },
+  clearHint: { fontSize: 13, lineHeight: 18, marginTop: space.md },
+  formActions: { marginTop: space.xl },
 });

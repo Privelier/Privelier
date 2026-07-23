@@ -25,6 +25,9 @@ import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../theme/useTheme';
+import { HAIRLINE, space } from '../../theme/spacing';
+import { pressOpacity } from '../../theme/motion';
+import { Notice } from '../../shared/components/Notice';
 import type { InboxThread } from '../../shared/threads';
 import type { BarberTabParamList } from '../BarberTabs';
 import type { BarberStackParamList } from '../BarberNavigator';
@@ -96,15 +99,7 @@ export default function ChatsScreen({ navigation }: Props) {
           testID="barber-chats-loading"
         />
       ) : error ? (
-        <View
-          testID="barber-chats-error"
-          accessibilityRole="alert"
-          style={[styles.notice, { borderColor: colors.error, backgroundColor: colors.surface }]}
-        >
-          <Text style={[styles.noticeText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-            {error}
-          </Text>
-        </View>
+        <Notice testID="barber-chats-error" message={error} style={styles.noticeMargins} />
       ) : (
         <FlatList
           data={threads}
@@ -133,9 +128,10 @@ export default function ChatsScreen({ navigation }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel={`Open conversation about ${title}`}
                 testID={`barber-chats-row-${item.room.id}`}
-                style={[
+                style={({ pressed }) => [
                   styles.row,
-                  index > 0 ? { borderTopWidth: 0.5, borderTopColor: colors.border } : null,
+                  index > 0 ? { borderTopWidth: HAIRLINE, borderTopColor: colors.border } : null,
+                  pressed ? { opacity: pressOpacity.soft } : null,
                 ]}
               >
                 <View style={[styles.avatar, { backgroundColor: colors.surface }]}>
@@ -184,28 +180,27 @@ export default function ChatsScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  heading: { fontSize: 24, marginTop: 24, paddingHorizontal: 24 },
+  heading: { fontSize: 30, marginTop: space.xl, paddingHorizontal: space.xl },
 
   spinner: { marginTop: 48 },
-  notice: { borderWidth: 0.5, borderRadius: 8, padding: 12, marginTop: 24, marginHorizontal: 24 },
-  noticeText: { fontSize: 14 },
+  noticeMargins: { marginTop: space.xl, marginHorizontal: space.xl },
 
-  listContent: { paddingTop: 16, paddingBottom: 32 },
-  empty: { alignItems: 'center', paddingVertical: 40, paddingHorizontal: 24 },
+  listContent: { paddingTop: space.base, paddingBottom: space['2xl'] },
+  empty: { alignItems: 'center', paddingVertical: 40, paddingHorizontal: space.xl },
   emptyText: { fontSize: 13 },
   emptyHint: { fontSize: 12, marginTop: 6 },
 
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    gap: space.md,
+    paddingHorizontal: space.xl,
+    paddingVertical: space.base,
   },
   avatar: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 24, // circular disc — half its own size, computed inline (spacing.ts convention)
     alignItems: 'center',
     justifyContent: 'center',
   },

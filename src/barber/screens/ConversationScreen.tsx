@@ -28,6 +28,10 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../theme/useTheme';
+import { HAIRLINE, radius, space } from '../../theme/spacing';
+import { pressOpacity } from '../../theme/motion';
+import { Notice } from '../../shared/components/Notice';
+import { BackButton } from '../../shared/components/ScreenBackHeader';
 import type { Palette } from '../../theme/colors';
 import type { MessageRow } from '../../types';
 import type { BarberStackParamList } from '../BarberNavigator';
@@ -224,15 +228,11 @@ export default function ConversationScreen({ route, navigation }: Props) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']} testID="barber-conversation-screen">
       <View style={styles.header}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back"
+        <BackButton
           onPress={() => navigation.goBack()}
-          hitSlop={12}
+          accessibilityLabel="Back"
           testID="barber-conversation-back"
-        >
-          <Text style={styles.backGlyph}>←</Text>
-        </Pressable>
+        />
         <View style={styles.headerText}>
           <Text numberOfLines={1} style={styles.headerTitle}>
             {headerTitle}
@@ -257,9 +257,7 @@ export default function ConversationScreen({ route, navigation }: Props) {
             testID="barber-conversation-loading"
           />
         ) : showError ? (
-          <View testID="barber-conversation-error" accessibilityRole="alert" style={styles.notice}>
-            <Text style={styles.noticeText}>{error}</Text>
-          </View>
+          <Notice testID="barber-conversation-error" message={error ?? ''} style={styles.noticeMargins} />
         ) : (
           <FlatList
             inverted
@@ -372,7 +370,10 @@ export default function ConversationScreen({ route, navigation }: Props) {
             accessibilityLabel="Send message"
             onPress={onSend}
             disabled={!canSend}
-            style={[styles.sendButton, !canSend ? styles.sendButtonDisabled : null]}
+            style={({ pressed }) => [
+              styles.sendButton,
+              !canSend ? styles.sendButtonDisabled : pressed ? { opacity: pressOpacity.firm } : null,
+            ]}
             testID="barber-conversation-send"
           >
             <Text style={styles.sendLabel}>Send</Text>
@@ -391,42 +392,32 @@ function useStyles(colors: Palette) {
     header: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
-      paddingHorizontal: 24,
-      paddingTop: 12,
-      paddingBottom: 12,
-      borderBottomWidth: 0.5,
+      gap: space.md,
+      paddingHorizontal: space.xl,
+      paddingTop: space.md,
+      paddingBottom: space.md,
+      borderBottomWidth: HAIRLINE,
       borderBottomColor: colors.border,
     },
-    backGlyph: { fontSize: 22, color: colors.textPrimary },
     headerText: { flex: 1, minWidth: 0 },
     headerTitle: { fontSize: 18, color: colors.textPrimary, fontFamily: fonts.headingMedium },
     headerSubtitle: { fontSize: 12, marginTop: 2, color: colors.textSecondary, fontFamily: fonts.body },
 
     body: { flex: 1 },
     spinner: { marginTop: 48 },
-    notice: {
-      borderWidth: 0.5,
-      borderRadius: 8,
-      padding: 12,
-      marginTop: 24,
-      marginHorizontal: 24,
-      borderColor: colors.error,
-      backgroundColor: colors.surface,
-    },
-    noticeText: { fontSize: 14, color: colors.errorText, fontFamily: fonts.bodyMedium },
+    noticeMargins: { marginTop: space.xl, marginHorizontal: space.xl },
 
-    listContent: { paddingHorizontal: 24, paddingVertical: 16, flexGrow: 1 },
+    listContent: { paddingHorizontal: space.xl, paddingVertical: space.base, flexGrow: 1 },
     empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
     emptyText: { fontSize: 13, color: colors.textSecondary, fontFamily: fonts.body },
 
     bubble: {
       maxWidth: '80%',
-      borderWidth: 0.5,
-      borderRadius: 10,
+      borderWidth: HAIRLINE,
+      borderRadius: radius.md,
       paddingHorizontal: 14,
-      paddingVertical: 10,
-      marginBottom: 10,
+      paddingVertical: space.md,
+      marginBottom: space.md,
       backgroundColor: colors.surface,
     },
     bubbleTheirs: { alignSelf: 'flex-start', borderColor: colors.border },
@@ -453,26 +444,26 @@ function useStyles(colors: Palette) {
       fontFamily: fonts.body,
     },
 
-    typingSlot: { height: 18, justifyContent: 'center', paddingHorizontal: 24 },
+    typingSlot: { height: 18, justifyContent: 'center', paddingHorizontal: space.xl },
     typingText: { fontSize: 11, color: colors.textSecondary, fontFamily: fonts.body },
 
     inputRow: {
       flexDirection: 'row',
       alignItems: 'flex-end',
-      gap: 12,
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      borderTopWidth: 0.5,
+      gap: space.md,
+      paddingHorizontal: space.base,
+      paddingVertical: space.md,
+      borderTopWidth: HAIRLINE,
       borderTopColor: colors.border,
     },
     input: {
       flex: 1,
       minHeight: 44,
       maxHeight: 120,
-      borderWidth: 0.5,
-      borderRadius: 10,
+      borderWidth: HAIRLINE,
+      borderRadius: radius.md,
       paddingHorizontal: 14,
-      paddingVertical: 10,
+      paddingVertical: space.md,
       fontSize: 14,
       borderColor: colors.border,
       backgroundColor: colors.surface,
@@ -480,14 +471,14 @@ function useStyles(colors: Palette) {
       fontFamily: fonts.body,
     },
     sendButton: {
-      borderRadius: 8,
+      borderRadius: radius.sm,
       paddingHorizontal: 18,
       minHeight: 44,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.accent,
     },
-    sendButtonDisabled: { opacity: 0.4 },
+    sendButtonDisabled: { opacity: 0.6 },
     sendLabel: { fontSize: 14, color: colors.onAccent, fontFamily: fonts.bodySemiBold },
   });
 }

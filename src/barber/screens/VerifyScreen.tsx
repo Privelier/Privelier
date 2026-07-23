@@ -26,6 +26,9 @@ import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { fetchOwnProfile } from '../../auth/authService';
 import { useTheme } from '../../theme/useTheme';
+import { HAIRLINE, radius, space } from '../../theme/spacing';
+import { pressOpacity } from '../../theme/motion';
+import { Notice } from '../../shared/components/Notice';
 import type { VerificationDocType, VerificationRequestRow, VerificationStatus } from '../../types';
 import { fetchOwnBarberProfile, fetchOwnVerificationRequest } from '../profileData';
 import { submitVerificationDocument, uploadVerificationDocument } from '../verificationData';
@@ -174,15 +177,7 @@ export default function VerifyScreen() {
             testID="barber-verify-loading"
           />
         ) : error ? (
-          <View
-            testID="barber-verify-error"
-            accessibilityRole="alert"
-            style={[styles.notice, { borderColor: colors.error, backgroundColor: colors.surface }]}
-          >
-            <Text style={[styles.noticeText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-              {error}
-            </Text>
-          </View>
+          <Notice testID="barber-verify-error" message={error} style={styles.noticeMargins} />
         ) : status ? (
           <>
             <View
@@ -264,7 +259,7 @@ function DocRow({
           borderColor: colors.border,
           // Active uploading row is `disabled`, so `pressed` can never fire on
           // it — no scale mid-upload. Idle sibling dims to 0.5 while disabled.
-          opacity: dimmed ? 0.5 : pressed ? 0.85 : 1,
+          opacity: dimmed ? 0.5 : pressed ? pressOpacity.soft : 1,
           transform: [{ scale: pressed ? 0.98 : 1 }],
         },
       ]}
@@ -288,9 +283,13 @@ function DocRow({
           </Text>
         </View>
       ) : (
+        // Idle state — brass is reserved for the one genuinely active upload
+        // (above); with two rows visible at once, an idle "Upload"/"Replace"
+        // affordance in brass would double it for no reason (Step-18 Ultra
+        // pass, increment 6).
         <View style={styles.docAction}>
-          <Feather name="upload" size={14} color={colors.accentText} />
-          <Text style={[styles.docActionText, { color: colors.accentText, fontFamily: fonts.body }]}>
+          <Feather name="upload" size={14} color={colors.textSecondary} />
+          <Text style={[styles.docActionText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
             {uploaded ? 'Replace' : 'Upload'}
           </Text>
         </View>
@@ -301,35 +300,34 @@ function DocRow({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 32 },
-  heading: { fontSize: 24 },
+  scrollContent: { paddingHorizontal: space.xl, paddingTop: space.xl, paddingBottom: space['2xl'] },
+  heading: { fontSize: 30 },
   subtitle: { fontSize: 12, marginTop: 4 },
 
   spinner: { marginTop: 48, alignSelf: 'center' },
-  notice: { borderWidth: 0.5, borderRadius: 8, padding: 12, marginTop: 24 },
-  noticeText: { fontSize: 14 },
+  noticeMargins: { marginTop: space.xl },
 
   statusCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    borderWidth: 0.5,
-    borderRadius: 8,
-    padding: 20,
-    marginTop: 24,
+    gap: space.base,
+    borderWidth: HAIRLINE,
+    borderRadius: radius.sm,
+    padding: space.lg,
+    marginTop: space.xl,
   },
   statusText: { flexShrink: 1, minWidth: 0 },
   statusWord: { fontSize: 18 },
   statusLine: { fontSize: 12, marginTop: 4 },
 
-  docs: { marginTop: 32, gap: 12 },
+  docs: { marginTop: 32, gap: space.md },
   docRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    borderWidth: 0.5,
-    borderRadius: 8,
-    padding: 16,
+    gap: space.md,
+    borderWidth: HAIRLINE,
+    borderRadius: radius.sm,
+    padding: space.base,
   },
   docText: { flex: 1, minWidth: 0 },
   docLabel: { fontSize: 14 },

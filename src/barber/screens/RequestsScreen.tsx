@@ -45,6 +45,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../theme/useTheme';
+import { HAIRLINE, radius, space } from '../../theme/spacing';
+import { pressOpacity } from '../../theme/motion';
+import { Notice } from '../../shared/components/Notice';
 import type { Palette } from '../../theme/colors';
 import type { BookingCounterpart, TransitionBookingResult } from '../types';
 import type { BookingRow, ServiceRow } from '../../types';
@@ -235,9 +238,7 @@ export default function RequestsScreen() {
           testID="barber-requests-loading"
         />
       ) : showError ? (
-        <View testID="barber-requests-error" accessibilityRole="alert" style={styles.notice}>
-          <Text style={styles.noticeText}>{error}</Text>
-        </View>
+        <Notice testID="barber-requests-error" message={error ?? ''} style={styles.noticeMargins} />
       ) : (
         <FlatList
           data={bookings}
@@ -261,6 +262,18 @@ export default function RequestsScreen() {
             // Lead with the customer's name when known; fall back to service.
             const title = counterpart?.name ?? service?.name ?? 'Booking';
             const subline = counterpart ? service?.name ?? 'Service' : formatBookingWhen(item.date, item.time);
+            // Brass is reserved for the one live "awaiting you" state; every
+            // other status recedes (accepted/rejected read via their own
+            // success/error tone, completed/cancelled are muted) — mirrors the
+            // rationing fix BookingsScreen already applied on the customer side.
+            const statusTone =
+              item.status === 'pending'
+                ? colors.accentText
+                : item.status === 'accepted'
+                  ? colors.successText
+                  : item.status === 'rejected'
+                    ? colors.errorText
+                    : colors.textSecondary;
 
             return (
               <View style={styles.card} testID={`barber-requests-row-${item.id}`}>
@@ -290,7 +303,9 @@ export default function RequestsScreen() {
                   </View>
                   <View style={styles.cardRight}>
                     <Text style={styles.cardPrice}>{formatMoney(item.price)}</Text>
-                    <Text style={styles.cardStatus}>{BOOKING_STATUS_LABELS[item.status]}</Text>
+                    <Text style={[styles.cardStatus, { color: statusTone }]}>
+                      {BOOKING_STATUS_LABELS[item.status]}
+                    </Text>
                   </View>
                 </View>
 
@@ -414,37 +429,28 @@ function useStyles(colors: Palette) {
   const { fonts } = useTheme();
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    header: { paddingHorizontal: 24, marginTop: 24 },
-    heading: { fontSize: 24, color: colors.textPrimary, fontFamily: fonts.headingMedium },
+    header: { paddingHorizontal: space.xl, marginTop: space.xl },
+    heading: { fontSize: 30, color: colors.textPrimary, fontFamily: fonts.headingMedium },
     subtitle: { fontSize: 12, marginTop: 4, color: colors.textSecondary, fontFamily: fonts.body },
 
     spinner: { marginTop: 48 },
-    notice: {
-      borderWidth: 0.5,
-      borderRadius: 8,
-      padding: 12,
-      marginTop: 24,
-      marginHorizontal: 24,
-      borderColor: colors.error,
-      backgroundColor: colors.surface,
-    },
-    noticeText: { fontSize: 14, color: colors.errorText, fontFamily: fonts.bodyMedium },
+    noticeMargins: { marginTop: space.xl, marginHorizontal: space.xl },
 
-    listContent: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 32 },
+    listContent: { paddingHorizontal: space.xl, paddingTop: space.xl, paddingBottom: space['2xl'] },
     empty: { alignItems: 'center', paddingVertical: 40 },
     emptyText: { fontSize: 13, color: colors.textSecondary, fontFamily: fonts.body },
     emptyHint: { fontSize: 12, marginTop: 6, color: colors.textSecondary, fontFamily: fonts.body },
 
     card: {
-      borderWidth: 0.5,
-      borderRadius: 8,
-      padding: 16,
-      marginBottom: 12,
+      borderWidth: HAIRLINE,
+      borderRadius: radius.sm,
+      padding: space.base,
+      marginBottom: space.md,
       borderColor: colors.border,
       backgroundColor: colors.surface,
     },
-    cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-    avatar: { width: 44, height: 44, borderRadius: 4 },
+    cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
+    avatar: { width: 44, height: 44, borderRadius: radius.xs },
     avatarFallback: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
     avatarInitial: { fontSize: 16, color: colors.textSecondary, fontFamily: fonts.headingMedium },
     cardInfo: { flex: 1, minWidth: 0 },
@@ -452,37 +458,38 @@ function useStyles(colors: Palette) {
     cardMeta: { fontSize: 12, marginTop: 4, color: colors.textSecondary, fontFamily: fonts.body },
     cardRight: { alignItems: 'flex-end' },
     cardPrice: { fontSize: 14, color: colors.textPrimary, fontFamily: fonts.body },
+    // Colour is applied inline per-row via `statusTone` — rationed brass, not a
+    // static accent (Step-18 Ultra pass, increment 6).
     cardStatus: {
       fontSize: 10,
       letterSpacing: 1.5,
       marginTop: 4,
-      color: colors.accentText,
       fontFamily: fonts.bodyMedium,
     },
 
-    actions: { flexDirection: 'row', gap: 12, marginTop: 16, alignItems: 'center' },
-    actionSpinner: { paddingVertical: 10 },
+    actions: { flexDirection: 'row', gap: space.md, marginTop: space.base, alignItems: 'center' },
+    actionSpinner: { paddingVertical: space.md },
     actionButton: {
       flex: 1,
-      borderRadius: 8,
-      paddingVertical: 14,
+      borderRadius: radius.sm,
+      paddingVertical: space.base,
       minHeight: 44,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    actionPressed: { opacity: 0.7 },
+    actionPressed: { opacity: pressOpacity.firm },
     actionPrimary: { backgroundColor: colors.accent },
     actionPrimaryText: { fontSize: 14, color: colors.onAccent, fontFamily: fonts.bodySemiBold },
-    actionSecondary: { borderWidth: 0.5, borderColor: colors.error },
+    actionSecondary: { borderWidth: HAIRLINE, borderColor: colors.error },
     actionSecondaryText: { fontSize: 14, color: colors.errorText, fontFamily: fonts.bodyMedium },
-    actionSuccess: { borderWidth: 0.5, borderColor: colors.success },
+    actionSuccess: { borderWidth: HAIRLINE, borderColor: colors.success },
     actionSuccessText: { fontSize: 14, color: colors.successText, fontFamily: fonts.bodyMedium },
 
     rowError: {
-      marginTop: 12,
-      borderTopWidth: 0.5,
+      marginTop: space.md,
+      borderTopWidth: HAIRLINE,
       borderTopColor: colors.border,
-      paddingTop: 12,
+      paddingTop: space.md,
     },
     rowErrorText: { fontSize: 12, color: colors.errorText, fontFamily: fonts.bodyMedium },
   });

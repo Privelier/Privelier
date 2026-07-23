@@ -31,6 +31,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../theme/useTheme';
 import { HAIRLINE, radius, space } from '../../theme/spacing';
+import { pressOpacity } from '../../theme/motion';
 import { PrimaryButton } from '../../shared/components/PrimaryButton';
 import { BackButton } from '../../shared/components/ScreenBackHeader';
 import { Notice } from '../../shared/components/Notice';
@@ -280,7 +281,11 @@ export default function AvailabilityScreen({ navigation }: Props) {
                   accessibilityState={{ selected: mode === 'day' }}
                   accessibilityLabel="Repeat weekly on a day of the week"
                   testID="barber-availability-mode-day"
-                  style={[styles.segment, mode === 'day' && { backgroundColor: colors.accent }]}
+                  style={({ pressed }) => [
+                    styles.segment,
+                    mode === 'day' && { backgroundColor: colors.accent },
+                    pressed ? { opacity: pressOpacity.soft } : null,
+                  ]}
                 >
                   <Text
                     style={[
@@ -297,7 +302,11 @@ export default function AvailabilityScreen({ navigation }: Props) {
                   accessibilityState={{ selected: mode === 'date' }}
                   accessibilityLabel="A single specific date"
                   testID="barber-availability-mode-date"
-                  style={[styles.segment, mode === 'date' && { backgroundColor: colors.accent }]}
+                  style={({ pressed }) => [
+                    styles.segment,
+                    mode === 'date' && { backgroundColor: colors.accent },
+                    pressed ? { opacity: pressOpacity.soft } : null,
+                  ]}
                 >
                   <Text
                     style={[
@@ -321,11 +330,12 @@ export default function AvailabilityScreen({ navigation }: Props) {
                       accessibilityLabel={label}
                       hitSlop={6}
                       testID={`barber-availability-day-${index}`}
-                      style={[
+                      style={({ pressed }) => [
                         styles.dayChip,
                         {
                           borderColor: selectedDay === index ? colors.accent : colors.border,
                           backgroundColor: selectedDay === index ? colors.accent : 'transparent',
+                          opacity: pressed ? pressOpacity.soft : 1,
                         },
                       ]}
                     >
@@ -463,7 +473,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
                     accessibilityRole="button"
                     accessibilityLabel="Cancel edit"
                     testID="barber-availability-cancel-edit"
-                    style={styles.cancelButton}
+                    style={({ pressed }) => [styles.cancelButton, pressed ? { opacity: pressOpacity.soft } : null]}
                   >
                     <Text style={[styles.cancelButtonText, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
                       Cancel
@@ -511,8 +521,10 @@ export default function AvailabilityScreen({ navigation }: Props) {
                 accessibilityLabel="Edit window"
                 hitSlop={14}
                 testID={`barber-availability-edit-${item.id}`}
+                style={({ pressed }) => (pressed ? { opacity: pressOpacity.soft } : null)}
               >
-                <Text style={[styles.rowActionText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
+                {/* Plain, non-brass — see ServicesScreen's identical fix. */}
+                <Text style={[styles.rowActionText, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>
                   Edit
                 </Text>
               </Pressable>
@@ -522,6 +534,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
                 accessibilityLabel="Delete window"
                 hitSlop={14}
                 testID={`barber-availability-delete-${item.id}`}
+                style={({ pressed }) => (pressed ? { opacity: pressOpacity.firm } : null)}
               >
                 <Text style={[styles.rowActionText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
                   Delete

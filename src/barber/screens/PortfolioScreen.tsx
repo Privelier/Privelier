@@ -47,6 +47,9 @@ import { fetchOwnProfile } from '../../auth/authService';
 import { PortfolioGrid, portfolioTileStyle } from '../../shared/components/PortfolioGrid';
 import { PortfolioTile } from '../../shared/components/PortfolioTile';
 import { useTheme } from '../../theme/useTheme';
+import { HAIRLINE, space } from '../../theme/spacing';
+import { pressOpacity } from '../../theme/motion';
+import { Notice } from '../../shared/components/Notice';
 import type { PortfolioRow } from '../../types';
 import {
   deletePortfolioImage,
@@ -228,15 +231,7 @@ export default function PortfolioScreen() {
             testID="barber-portfolio-loading"
           />
         ) : error ? (
-          <View
-            testID="barber-portfolio-error"
-            accessibilityRole="alert"
-            style={[styles.notice, { borderColor: colors.error, backgroundColor: colors.surface }]}
-          >
-            <Text style={[styles.noticeText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-              {error}
-            </Text>
-          </View>
+          <Notice testID="barber-portfolio-error" message={error} style={styles.noticeMargins} />
         ) : (
           <>
             <PortfolioGrid style={styles.gridSpacing}>
@@ -274,7 +269,7 @@ export default function PortfolioScreen() {
                   style={({ pressed }) => [
                     portfolioTileStyle,
                     styles.addTile,
-                    { borderColor: colors.border, opacity: pressed ? 0.85 : 1 },
+                    { borderColor: colors.border, opacity: pressed ? pressOpacity.soft : 1 },
                   ]}
                 >
                   <Feather name="plus" size={20} color={colors.accentText} />
@@ -303,15 +298,14 @@ const UPLOAD_SCRIM = 'rgba(18,18,20,0.45)';
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 32 },
-  heading: { fontSize: 24 },
+  scrollContent: { paddingHorizontal: space.xl, paddingTop: space.xl, paddingBottom: space['2xl'] },
+  heading: { fontSize: 30 },
   subtitle: { fontSize: 12, marginTop: 4 },
 
   spinner: { marginTop: 48 },
-  notice: { borderWidth: 0.5, borderRadius: 8, padding: 12, marginTop: 24 },
-  noticeText: { fontSize: 14 },
+  noticeMargins: { marginTop: space.xl },
 
-  gridSpacing: { marginTop: 24 },
+  gridSpacing: { marginTop: space.xl },
   uploadingImage: { width: '100%', height: '100%' },
   uploadingScrim: {
     position: 'absolute',
@@ -323,10 +317,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   addTile: {
-    borderWidth: 0.5,
+    borderWidth: HAIRLINE,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: space.sm,
   },
   addLabel: { fontSize: 12 },
   emptyHint: { fontSize: 12, marginTop: 16 },

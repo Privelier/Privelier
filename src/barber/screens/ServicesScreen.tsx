@@ -30,6 +30,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../theme/useTheme';
 import { HAIRLINE, radius, space } from '../../theme/spacing';
+import { pressOpacity } from '../../theme/motion';
 import { PrimaryButton } from '../../shared/components/PrimaryButton';
 import { BackButton } from '../../shared/components/ScreenBackHeader';
 import { Notice } from '../../shared/components/Notice';
@@ -355,7 +356,7 @@ export default function ServicesScreen({ navigation }: Props) {
                     accessibilityRole="button"
                     accessibilityLabel="Cancel edit"
                     testID="barber-services-cancel-edit"
-                    style={styles.cancelButton}
+                    style={({ pressed }) => [styles.cancelButton, pressed ? { opacity: pressOpacity.soft } : null]}
                   >
                     <Text style={[styles.cancelButtonText, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
                       Cancel
@@ -403,8 +404,12 @@ export default function ServicesScreen({ navigation }: Props) {
                 accessibilityLabel={`Edit ${item.name}`}
                 hitSlop={14}
                 testID={`barber-services-edit-${item.id}`}
+                style={({ pressed }) => (pressed ? { opacity: pressOpacity.soft } : null)}
               >
-                <Text style={[styles.rowActionText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
+                {/* Plain, non-brass — brass is rationed for the app's genuinely
+                    active/live states, not a repeated per-row link (Step-18
+                    Ultra pass, increment 6). */}
+                <Text style={[styles.rowActionText, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>
                   Edit
                 </Text>
               </Pressable>
@@ -414,6 +419,7 @@ export default function ServicesScreen({ navigation }: Props) {
                 accessibilityLabel={`Delete ${item.name}`}
                 hitSlop={14}
                 testID={`barber-services-delete-${item.id}`}
+                style={({ pressed }) => (pressed ? { opacity: pressOpacity.firm } : null)}
               >
                 <Text style={[styles.rowActionText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
                   Delete
