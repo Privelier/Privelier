@@ -35,6 +35,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { fetchOwnProfile } from '../../auth/authService';
 import { useExitRole } from '../../RoleContext';
 import { useTheme } from '../../theme/useTheme';
+import { HAIRLINE, radius, space } from '../../theme/spacing';
+import { Notice } from '../../shared/components/Notice';
 import type { AvailabilityRow, ServiceRow, VerificationStatus } from '../../types';
 import { fetchDashboardView } from '../dashboardData';
 import { firstName, formatBookingWhen, formatMoney, timeOfDayGreeting } from '../../shared/format';
@@ -214,15 +216,7 @@ export default function StudioScreen({ navigation }: Props) {
             testID="barber-dashboard-loading"
           />
         ) : error && !view ? (
-          <View
-            testID="barber-dashboard-error"
-            accessibilityRole="alert"
-            style={[styles.notice, { borderColor: colors.error, backgroundColor: colors.surface }]}
-          >
-            <Text style={[styles.noticeText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-              {error}
-            </Text>
-          </View>
+          <Notice testID="barber-dashboard-error" message={error} style={styles.noticeMargins} />
         ) : view ? (
           <>
             {verification ? (
@@ -506,7 +500,7 @@ export default function StudioScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 32 },
+  scrollContent: { paddingHorizontal: space.xl, paddingTop: space.xl, paddingBottom: space['2xl'] },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   headerText: { flexShrink: 1 },
   greeting: { fontSize: 13 },
@@ -515,12 +509,11 @@ const styles = StyleSheet.create({
   signOutText: { fontSize: 12 },
 
   spinner: { marginTop: 48 },
-  notice: { borderWidth: 0.5, borderRadius: 8, padding: 12, marginTop: 24 },
-  noticeText: { fontSize: 14 },
+  noticeMargins: { marginTop: space.xl },
 
   verification: { fontSize: 12, marginTop: 12 },
 
-  card: { borderWidth: 0.5, borderRadius: 8, padding: 16 },
+  card: { borderWidth: HAIRLINE, borderRadius: radius.sm, padding: space.base },
   cardTitle: { fontSize: 18 },
   cardMeta: { fontSize: 12, marginTop: 4 },
   // cardMeta has no lineHeight; two lines without one sets too tight.

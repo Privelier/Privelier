@@ -27,10 +27,13 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../theme/useTheme';
+import { HAIRLINE, radius, space } from '../../theme/spacing';
+import { PrimaryButton } from '../../shared/components/PrimaryButton';
+import { BackButton } from '../../shared/components/ScreenBackHeader';
+import { Notice } from '../../shared/components/Notice';
 import type { Palette } from '../../theme/colors';
 import type { AvailabilityRow } from '../../types';
 import {
@@ -82,7 +85,7 @@ function underlineColor(hasError: boolean, focused: boolean, colors: Palette): s
 }
 
 export default function AvailabilityScreen({ navigation }: Props) {
-  const { colors, fonts } = useTheme();
+  const { colors, fonts, isDark } = useTheme();
 
   const [barberId, setBarberId] = useState<string | null>(null);
   const [windows, setWindows] = useState<AvailabilityRow[]>([]);
@@ -249,16 +252,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
       testID="barber-availability-screen"
     >
       <View style={styles.header}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          hitSlop={12}
-          testID="barber-availability-back"
-          style={[styles.backButton, { backgroundColor: colors.surface }]}
-        >
-          <Feather name="arrow-left" size={16} color={colors.textPrimary} />
-        </Pressable>
+        <BackButton onPress={() => navigation.goBack()} testID="barber-availability-back" />
         <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
           Availability
         </Text>
@@ -276,15 +270,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
               </Text>
 
               {formError ? (
-                <View
-                  testID="barber-availability-form-error"
-                  accessibilityRole="alert"
-                  style={[styles.notice, { borderColor: colors.error, backgroundColor: colors.background }]}
-                >
-                  <Text style={[styles.noticeText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-                    {formError}
-                  </Text>
-                </View>
+                <Notice testID="barber-availability-form-error" message={formError} style={styles.noticeMargins} />
               ) : null}
 
               <View style={[styles.segmented, { borderColor: colors.border }]}>
@@ -333,6 +319,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
                       accessibilityRole="button"
                       accessibilityState={{ selected: selectedDay === index }}
                       accessibilityLabel={label}
+                      hitSlop={6}
                       testID={`barber-availability-day-${index}`}
                       style={[
                         styles.dayChip,
@@ -369,6 +356,9 @@ export default function AvailabilityScreen({ navigation }: Props) {
                     placeholder="YYYY-MM-DD"
                     placeholderTextColor={colors.textSecondary}
                     accessibilityLabel="Date"
+                    selectionColor={colors.accent}
+                    cursorColor={colors.accent}
+                    keyboardAppearance={isDark ? 'dark' : 'light'}
                     style={[
                       styles.input,
                       {
@@ -405,6 +395,9 @@ export default function AvailabilityScreen({ navigation }: Props) {
                     placeholder="09:00"
                     placeholderTextColor={colors.textSecondary}
                     accessibilityLabel="Start time"
+                    selectionColor={colors.accent}
+                    cursorColor={colors.accent}
+                    keyboardAppearance={isDark ? 'dark' : 'light'}
                     style={[
                       styles.input,
                       {
@@ -433,6 +426,9 @@ export default function AvailabilityScreen({ navigation }: Props) {
                     placeholder="17:00"
                     placeholderTextColor={colors.textSecondary}
                     accessibilityLabel="End time"
+                    selectionColor={colors.accent}
+                    cursorColor={colors.accent}
+                    keyboardAppearance={isDark ? 'dark' : 'light'}
                     style={[
                       styles.input,
                       {
@@ -452,25 +448,14 @@ export default function AvailabilityScreen({ navigation }: Props) {
               </View>
 
               <View style={styles.formActions}>
-                <Pressable
+                <PrimaryButton
+                  label={editingId ? 'Save changes' : 'Add window'}
+                  icon={editingId ? 'check' : 'plus'}
                   onPress={onSubmit}
+                  loading={submitting}
                   disabled={submitting}
-                  accessibilityRole="button"
-                  accessibilityLabel={editingId ? 'Save changes' : 'Add window'}
                   testID="barber-availability-submit"
-                  style={[styles.primaryButton, { backgroundColor: colors.accent, opacity: submitting ? 0.6 : 1 }]}
-                >
-                  {submitting ? (
-                    <ActivityIndicator size="small" color={colors.onAccent} />
-                  ) : (
-                    <>
-                      <Feather name={editingId ? 'check' : 'plus'} size={14} color={colors.onAccent} />
-                      <Text style={[styles.primaryButtonText, { color: colors.onAccent, fontFamily: fonts.bodySemiBold }]}>
-                        {editingId ? 'Save changes' : 'Add window'}
-                      </Text>
-                    </>
-                  )}
-                </Pressable>
+                />
                 {editingId ? (
                   <Pressable
                     onPress={resetForm}
@@ -508,7 +493,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
         }
         renderItem={({ item, index }) => (
           <View
-            style={[styles.row, index > 0 ? { borderTopWidth: 0.5, borderTopColor: colors.border } : null]}
+            style={[styles.row, index > 0 ? { borderTopWidth: HAIRLINE, borderTopColor: colors.border } : null]}
             testID={`barber-availability-row-${item.id}`}
           >
             <View style={styles.rowInfo}>
@@ -524,7 +509,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
                 onPress={() => startEdit(item)}
                 accessibilityRole="button"
                 accessibilityLabel="Edit window"
-                hitSlop={8}
+                hitSlop={14}
                 testID={`barber-availability-edit-${item.id}`}
               >
                 <Text style={[styles.rowActionText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
@@ -535,7 +520,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
                 onPress={() => onDelete(item)}
                 accessibilityRole="button"
                 accessibilityLabel="Delete window"
-                hitSlop={8}
+                hitSlop={14}
                 testID={`barber-availability-delete-${item.id}`}
               >
                 <Text style={[styles.rowActionText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
@@ -552,38 +537,26 @@ export default function AvailabilityScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { paddingHorizontal: 24, paddingTop: 12 },
-  backButton: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  header: { paddingHorizontal: space.xl, paddingTop: space.md },
   heading: { fontSize: 24, marginTop: 16 },
-  listContent: { paddingHorizontal: 24, paddingBottom: 32 },
-  form: { borderWidth: 0.5, borderRadius: 12, padding: 16, marginTop: 20, marginBottom: 28 },
+  listContent: { paddingHorizontal: space.xl, paddingBottom: space['2xl'] },
+  form: { borderWidth: HAIRLINE, borderRadius: radius.lg, padding: space.base, marginTop: 20, marginBottom: 28 },
   formTitle: { fontSize: 19, marginBottom: 14 },
   label: { fontSize: 12, marginBottom: 6, marginTop: 14, letterSpacing: 0.2 },
-  input: { borderBottomWidth: 1, paddingVertical: 10, fontSize: 16 },
+  input: { borderBottomWidth: HAIRLINE, paddingVertical: space.md, fontSize: 16 },
   errorText: { fontSize: 13, marginTop: 4 },
   helperText: { fontSize: 13, marginTop: 4 },
-  notice: { borderWidth: 0.5, borderRadius: 10, padding: 12, marginBottom: 12 },
-  noticeText: { fontSize: 14 },
-  segmented: { flexDirection: 'row', borderWidth: 0.5, borderRadius: 10, overflow: 'hidden', marginTop: 4 },
-  segment: { flex: 1, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
+  noticeMargins: { marginBottom: space.md },
+  segmented: { flexDirection: 'row', borderWidth: HAIRLINE, borderRadius: radius.md, overflow: 'hidden', marginTop: 4 },
+  segment: { flex: 1, paddingVertical: space.md, alignItems: 'center', justifyContent: 'center' },
   segmentText: { fontSize: 14 },
-  dayRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
-  dayChip: { borderWidth: 0.5, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 10 },
+  dayRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: 12 },
+  dayChip: { borderWidth: HAIRLINE, borderRadius: radius.sm, paddingVertical: space.sm, paddingHorizontal: 10 },
   dayChipText: { fontSize: 13 },
   timeRow: { flexDirection: 'row', gap: 16 },
   timeField: { flex: 1 },
-  formActions: { marginTop: 20, gap: 12 },
-  primaryButton: {
-    flexDirection: 'row',
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    width: '100%',
-  },
-  primaryButtonText: { fontSize: 15 },
-  cancelButton: { paddingVertical: 8, alignItems: 'center' },
+  formActions: { marginTop: 20, gap: space.md },
+  cancelButton: { paddingVertical: space.sm, alignItems: 'center' },
   cancelButtonText: { fontSize: 14 },
   listHeader: { marginBottom: 4 },
   listTitle: { fontSize: 19, marginBottom: 10 },

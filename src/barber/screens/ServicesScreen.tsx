@@ -26,10 +26,13 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../theme/useTheme';
+import { HAIRLINE, radius, space } from '../../theme/spacing';
+import { PrimaryButton } from '../../shared/components/PrimaryButton';
+import { BackButton } from '../../shared/components/ScreenBackHeader';
+import { Notice } from '../../shared/components/Notice';
 import type { Palette } from '../../theme/colors';
 import type { ServiceRow } from '../../types';
 import { createService, deleteService, listOwnServices, updateService } from '../servicesData';
@@ -70,7 +73,7 @@ function underlineColor(hasError: boolean, focused: boolean, colors: Palette): s
 }
 
 export default function ServicesScreen({ navigation }: Props) {
-  const { colors, fonts } = useTheme();
+  const { colors, fonts, isDark } = useTheme();
 
   const [barberId, setBarberId] = useState<string | null>(null);
   const [services, setServices] = useState<ServiceRow[]>([]);
@@ -219,16 +222,7 @@ export default function ServicesScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} testID="barber-services-screen">
       <View style={styles.header}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          hitSlop={12}
-          testID="barber-services-back"
-          style={[styles.backButton, { backgroundColor: colors.surface }]}
-        >
-          <Feather name="arrow-left" size={16} color={colors.textPrimary} />
-        </Pressable>
+        <BackButton onPress={() => navigation.goBack()} testID="barber-services-back" />
         <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
           Services
         </Text>
@@ -246,15 +240,7 @@ export default function ServicesScreen({ navigation }: Props) {
               </Text>
 
               {formError ? (
-                <View
-                  testID="barber-services-form-error"
-                  accessibilityRole="alert"
-                  style={[styles.notice, { borderColor: colors.error, backgroundColor: colors.background }]}
-                >
-                  <Text style={[styles.noticeText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-                    {formError}
-                  </Text>
-                </View>
+                <Notice testID="barber-services-form-error" message={formError} style={styles.noticeMargins} />
               ) : null}
 
               <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
@@ -268,6 +254,9 @@ export default function ServicesScreen({ navigation }: Props) {
                 placeholder="e.g. Classic haircut"
                 placeholderTextColor={colors.textSecondary}
                 accessibilityLabel="Name"
+                selectionColor={colors.accent}
+                cursorColor={colors.accent}
+                keyboardAppearance={isDark ? 'dark' : 'light'}
                 style={[
                   styles.input,
                   {
@@ -300,6 +289,9 @@ export default function ServicesScreen({ navigation }: Props) {
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="decimal-pad"
                 accessibilityLabel="Price"
+                selectionColor={colors.accent}
+                cursorColor={colors.accent}
+                keyboardAppearance={isDark ? 'dark' : 'light'}
                 style={[
                   styles.input,
                   {
@@ -328,6 +320,9 @@ export default function ServicesScreen({ navigation }: Props) {
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="number-pad"
                 accessibilityLabel="Duration in minutes"
+                selectionColor={colors.accent}
+                cursorColor={colors.accent}
+                keyboardAppearance={isDark ? 'dark' : 'light'}
                 style={[
                   styles.input,
                   {
@@ -345,25 +340,14 @@ export default function ServicesScreen({ navigation }: Props) {
               ) : null}
 
               <View style={styles.formActions}>
-                <Pressable
+                <PrimaryButton
+                  label={editingId ? 'Save changes' : 'Add service'}
+                  icon={editingId ? 'check' : 'plus'}
                   onPress={onSubmit}
+                  loading={submitting}
                   disabled={submitting}
-                  accessibilityRole="button"
-                  accessibilityLabel={editingId ? 'Save changes' : 'Add service'}
                   testID="barber-services-submit"
-                  style={[styles.primaryButton, { backgroundColor: colors.accent, opacity: submitting ? 0.6 : 1 }]}
-                >
-                  {submitting ? (
-                    <ActivityIndicator size="small" color={colors.onAccent} />
-                  ) : (
-                    <>
-                      <Feather name={editingId ? 'check' : 'plus'} size={14} color={colors.onAccent} />
-                      <Text style={[styles.primaryButtonText, { color: colors.onAccent, fontFamily: fonts.bodySemiBold }]}>
-                        {editingId ? 'Save changes' : 'Add service'}
-                      </Text>
-                    </>
-                  )}
-                </Pressable>
+                />
                 {editingId ? (
                   <Pressable
                     onPress={resetForm}
@@ -401,7 +385,7 @@ export default function ServicesScreen({ navigation }: Props) {
         }
         renderItem={({ item, index }) => (
           <View
-            style={[styles.row, index > 0 ? { borderTopWidth: 0.5, borderTopColor: colors.border } : null]}
+            style={[styles.row, index > 0 ? { borderTopWidth: HAIRLINE, borderTopColor: colors.border } : null]}
             testID={`barber-services-row-${item.id}`}
           >
             <View style={styles.rowInfo}>
@@ -417,7 +401,7 @@ export default function ServicesScreen({ navigation }: Props) {
                 onPress={() => startEdit(item)}
                 accessibilityRole="button"
                 accessibilityLabel={`Edit ${item.name}`}
-                hitSlop={8}
+                hitSlop={14}
                 testID={`barber-services-edit-${item.id}`}
               >
                 <Text style={[styles.rowActionText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
@@ -428,7 +412,7 @@ export default function ServicesScreen({ navigation }: Props) {
                 onPress={() => onDelete(item)}
                 accessibilityRole="button"
                 accessibilityLabel={`Delete ${item.name}`}
-                hitSlop={8}
+                hitSlop={14}
                 testID={`barber-services-delete-${item.id}`}
               >
                 <Text style={[styles.rowActionText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
@@ -445,30 +429,18 @@ export default function ServicesScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { paddingHorizontal: 24, paddingTop: 12 },
-  backButton: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  header: { paddingHorizontal: space.xl, paddingTop: space.md },
   heading: { fontSize: 24, marginTop: 16 },
-  listContent: { paddingHorizontal: 24, paddingBottom: 32 },
-  form: { borderWidth: 0.5, borderRadius: 12, padding: 16, marginTop: 20, marginBottom: 28 },
+  listContent: { paddingHorizontal: space.xl, paddingBottom: space['2xl'] },
+  form: { borderWidth: HAIRLINE, borderRadius: radius.lg, padding: space.base, marginTop: 20, marginBottom: 28 },
   formTitle: { fontSize: 19, marginBottom: 14 },
   label: { fontSize: 12, marginBottom: 6, marginTop: 14, letterSpacing: 0.2 },
-  input: { borderBottomWidth: 1, paddingVertical: 10, fontSize: 16 },
+  input: { borderBottomWidth: HAIRLINE, paddingVertical: space.md, fontSize: 16 },
   errorText: { fontSize: 13, marginTop: 4 },
   helperText: { fontSize: 13, marginTop: 4 },
-  notice: { borderWidth: 0.5, borderRadius: 10, padding: 12, marginBottom: 12 },
-  noticeText: { fontSize: 14 },
-  formActions: { marginTop: 20, gap: 12 },
-  primaryButton: {
-    flexDirection: 'row',
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    width: '100%',
-  },
-  primaryButtonText: { fontSize: 15 },
-  cancelButton: { paddingVertical: 8, alignItems: 'center' },
+  noticeMargins: { marginBottom: space.md },
+  formActions: { marginTop: 20, gap: space.md },
+  cancelButton: { paddingVertical: space.sm, alignItems: 'center' },
   cancelButtonText: { fontSize: 14 },
   listHeader: { marginBottom: 4 },
   listTitle: { fontSize: 19, marginBottom: 10 },
