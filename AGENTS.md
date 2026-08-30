@@ -219,6 +219,7 @@ Full pipeline run complete: design gate (docs/design/step-11-12-booking-flow-des
 
 Tracked follow-ups (not blocking, do not let them silently disappear):
 - [ ] Double-booking guard only catches identical `(barber_id, date, time)`, not overlapping durations — e.g. a 60-min booking at 10:00 and a 30-min booking at 10:15 for the same barber both insert successfully today (flagged by security-auditor 2026-07-09, non-blocking since the app UI's `deriveAvailableSlots` never offers an overlapping slot in normal use, but the DB is not actually authoritative for this case despite its own migration comment claiming so). Fix: a `btree_gist` exclusion constraint on the booking's actual time range, not just a point-equality index. Should land before Phase 2 real-money bookings make an accidental overlap costly.
+- [ ] RELEASE BLOCKER — server-side appointment validation: raw API clients can create a pending booking in the past or outside the barber's active availability because slot derivation exists only in `BookingDateTimeScreen`. The booking/schema pipeline must add a database-owned future-time, availability-window, and variable-duration overlap guard without weakening the existing state machine or RLS. Resolve how duration is snapshotted for historical bookings before choosing the constraint/trigger shape; verify with authenticated adversarial probes for invalid, overlapping, adjacent, and cancelled/rejected cases before Step 18.
 - [ ] `AVAILABILITY` has no "closed"/blackout row type — a barber cannot express "normally open this weekday, but closed this one date," only additive `specific_date` overrides (design doc Decision 1, 2026-07-09). Fast-follow candidate, route through `supabase-schema-architect`.
 - [ ] Customer-booking E2E flow (`.maestro/customer-booking-create.yaml`) authored but unexecuted — same Maestro CLI gap as Steps 6–10.
 
@@ -287,4 +288,3 @@ Barber-upload half DONE (commits a0c0114→7e415fa): migration 0015 (private `ve
 - [ ] Stripe Connect payments; dispute resolution + refund/cancellation-fee policy (undefined, blocks real money)
 - [ ] In-home safety features: live location sharing during appointment window, SOS button (highest-liability gap)
 - [ ] Revisit email-change flow (users.email is trigger-frozen; requires service_role-mediated sync)
-

@@ -26,10 +26,9 @@ maestro test .maestro/customer-explore-filters-list.yaml
 maestro test .maestro/customer-review-submit.yaml
 ```
 
-All flows use a placeholder `appId: com.privelier.app` — `app.json` does
-not yet define `android.package` / `ios.bundleIdentifier`, so there is no real
-app id to target yet. Set a real one in `app.json` (and rebuild a dev client)
-before these can actually run, then update the `appId` in all files to match.
+All flows target `appId: com.privelier.app`, the real Android package and iOS
+bundle identifier in `app.json`. They still require a matching installed
+development build and seeded test data before execution.
 
 All flows also take credentials/emails via `env:` in the YAML with sane
 placeholder defaults, overridable at the CLI with `-e KEY=value` — see the
