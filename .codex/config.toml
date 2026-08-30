@@ -34,5 +34,5 @@ args = [
 env_vars = ["SUPABASE_ACCESS_TOKEN"]
 
 trusted_projects = [
-    "c:\\users\\original\\documents\\privelier"
+    "c:\users\original\documents\privelier"
 ]
