@@ -14,7 +14,7 @@ This is the canonical execution and evidence ledger for the Privelier Legendary 
 | Baseline checkpoint | Historical P00 evidence was collected at `4353237`; it remains provenance only |
 | Current checkpoint | The P00-013 blocker commit containing this ledger, whose parent is `bdfd266` |
 | Checkpoint payload | `PRIVELIER_REBUILD_PLAN.md`, `PRIVELIER_EVIDENCE_INDEX.md`, `PRIVELIER_REBUILD_DECISIONS.md`, `PRIVELIER_RISK_REGISTER.md`, and `P00_013_SCHEMA_RECONCILIATION_READ_ONLY.sql` |
-| Current working tree | After the checkpoint commit, only unrelated untracked `.claude/settings.local.json` and `.tmp-pharmacy-schedules/` remain; both are protected and out of scope |
+| Current working tree | After checkpoint commit `67ec4ea`, only unrelated untracked `.tmp-pharmacy-schedules/` is currently reported; harness-regenerated `.claude/settings.local.json` remains protected and out of scope whenever present |
 | Intended files for active task | None while externally blocked; on resume, only redacted execution evidence may change until the schema architect passes the read-only reconciliation |
 | Live impact | None; P00 hosted Supabase, provider, EAS, store, and production access is read-only |
 | Last known-good checkpoint | Commit `bdfd266` contains the architecture-approved ledger and P00-001 through P00-012 evidence |
