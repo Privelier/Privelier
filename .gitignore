@@ -38,6 +38,9 @@ yarn-error.*
 # graphify -- regenerable knowledge graph, rebuild locally with `graphify update .`
 graphify-out/
 
+# Privelier rebuild -- bulky local evidence; commit only the redacted manifest in docs/execution
+/artifacts/privelier-rebuild/
+
 # generated native folders
 /ios
 /android
