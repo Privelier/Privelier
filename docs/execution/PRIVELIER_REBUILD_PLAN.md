@@ -10,17 +10,17 @@ This is the canonical execution and evidence ledger for the Privelier Legendary 
 |---|---|
 | Program status | `in_progress` |
 | Active portfolio | `P00` - frozen baseline and execution bootstrap |
-| Active writing task | None; `P00-013` is `blocked_external` on the missing Supabase metadata tool |
+| Active writing task | None; `P00-013` is `blocked_external` pending a fresh Codex session that loads the new connector |
 | Baseline checkpoint | Historical P00 evidence was collected at `4353237`; it remains provenance only |
-| Current checkpoint | The P00-013 blocker commit containing this ledger, whose parent is `bdfd266` |
-| Checkpoint payload | `PRIVELIER_REBUILD_PLAN.md`, `PRIVELIER_EVIDENCE_INDEX.md`, `PRIVELIER_REBUILD_DECISIONS.md`, `PRIVELIER_RISK_REGISTER.md`, and `P00_013_SCHEMA_RECONCILIATION_READ_ONLY.sql` |
-| Current working tree | After checkpoint commit `67ec4ea`, only unrelated untracked `.tmp-pharmacy-schedules/` is currently reported; harness-regenerated `.claude/settings.local.json` remains protected and out of scope whenever present |
+| Current checkpoint | The P00 connector-configuration checkpoint commit containing this ledger, whose parent is `2412d6e` |
+| Last blocker checkpoint | `67ec4ea` contains the P00-013 inventory and read-only reconciliation query; `2412d6e` clarifies its handoff state |
+| Current working tree | After this checkpoint, unrestricted Git is expected to report only unrelated untracked `.tmp-pharmacy-schedules/`; sandboxed Git may also surface globally ignored `.claude/settings.local.json`; both remain protected and out of scope |
 | Intended files for active task | None while externally blocked; on resume, only redacted execution evidence may change until the schema architect passes the read-only reconciliation |
 | Live impact | None; P00 hosted Supabase, provider, EAS, store, and production access is read-only |
-| Last known-good checkpoint | Commit `bdfd266` contains the architecture-approved ledger and P00-001 through P00-012 evidence |
-| Safe recovery | Revert only the five named P00-013 files to commit `bdfd266`; preserve `.claude/settings.local.json` and `.tmp-pharmacy-schedules/`; never mutate hosted state |
-| Resume point | Restore the connected Supabase metadata tool and run `docs/execution/P00_013_SCHEMA_RECONCILIATION_READ_ONLY.sql`; do not start P00-014 before the schema architect reviews the redacted result |
-| Exact next task/command | Run the saved read-only query against confirmed project `ajcsanrepboqcjgpzsaa`, record redacted metadata as EVID-P00-021, and re-run the P00-013 schema gate |
+| Last known-good checkpoint | The P00 connector-configuration checkpoint commit whose parent is `2412d6e`; P00-001 through P00-012 remain passed and no live mutation occurred |
+| Safe recovery | Restore only tracked `AGENTS.md`, `PRIVELIER_REBUILD_PLAN.md`, `PRIVELIER_EVIDENCE_INDEX.md`, and `PRIVELIER_RISK_REGISTER.md` to `2412d6e`; separately verify `.codex/config.toml` resolves inside this repository before removing only that new file; preserve both unrelated paths and never mutate hosted state |
+| Resume point | Start a fresh Codex session from this trusted repository, verify the effective Supabase endpoint and read-only tool inventory, then run `docs/execution/P00_013_SCHEMA_RECONCILIATION_READ_ONLY.sql` |
+| Exact next task/command | Restart Codex; confirm only `list_tables`, `list_migrations`, and `execute_sql` are exposed for project `ajcsanrepboqcjgpzsaa`, then manually approve only the saved read-only reconciliation query |
 
 ## Scoped authority model
 
@@ -397,15 +397,15 @@ P00 is program bootstrap, not an app feature run. Its deterministic order is P00
 - Atomic outcome: Reconcile repository, controls, dependencies, Graphify, and read-only live/local schema inventories into stable dispositions.
 - Status / release class: `blocked_external` / required.
 - Source references: all SRC-AG IDs; EVID-P00-011; RISK-003, RISK-008, RISK-014.
-- Dependencies / blockers: P00-012 / the current harness exposes no Supabase MCP catalog or SQL tool; Supabase CLI, Docker, `supabase/config.toml`, local DB tests, and seed configuration are also absent.
+- Dependencies / blockers: P00-012 / the least-privilege project Codex entry is configured and locally validated, but this running session cannot reload it. A fresh session must verify the effective endpoint and allowlist before any query. Supabase CLI, Docker, `supabase/config.toml`, local DB tests, and seed configuration are also absent.
 - Owner / approver: program owner; schema findings to `supabase-schema-architect` / founder for any later live mutation.
-- Intended files and live impact: execution docs and read-only catalog metadata; no hosted write.
+- Intended files and live impact: redacted execution evidence after restart; no hosted write.
 - Exact validation command: tracked file/control/config/dependency inventories; current Graphify availability/update query if installed; then run `docs/execution/P00_013_SCHEMA_RECONCILIATION_READ_ONLY.sql` through the connected Supabase metadata tool and perform a clean local reset when the P02 harness exists.
 - Acceptance: Remote-only waitlist migration, suspected `reviews.created_at` drift, graph absence, controls/screens/config/dependencies, and every crosswalk source have an evidence-linked disposition or compliant future run.
-- Decision / risk / evidence: DEC-0006; RISK-003, RISK-008, RISK-014, RISK-020; EVID-P00-011, EVID-P00-019, EVID-P00-020, EVID-P00-021; terminal live evidence pending as EVID-P00-022.
-- Recovery / last known good: revert only `PRIVELIER_REBUILD_PLAN.md`, `PRIVELIER_EVIDENCE_INDEX.md`, `PRIVELIER_REBUILD_DECISIONS.md`, `PRIVELIER_RISK_REGISTER.md`, and `P00_013_SCHEMA_RECONCILIATION_READ_ONLY.sql` to commit `bdfd266`; preserve `.claude/settings.local.json` and `.tmp-pharmacy-schedules/`. No live rollback is needed because no live write was performed.
-- Dates: started and updated 2026-09-01; blocked 2026-09-01; completion pending.
-- Exact next task: restore the connected Supabase read tool, run the saved catalog-and-aggregate query, obtain schema-architect PASS, then start P00-014.
+- Decision / risk / evidence: DEC-0006; RISK-003, RISK-008, RISK-014, RISK-020, RISK-023; EVID-P00-011, EVID-P00-019 through EVID-P00-023; terminal live evidence pending as EVID-P00-024.
+- Recovery / last known good: restore only tracked `AGENTS.md`, `PRIVELIER_REBUILD_PLAN.md`, `PRIVELIER_EVIDENCE_INDEX.md`, and `PRIVELIER_RISK_REGISTER.md` to `2412d6e`; separately verify `.codex/config.toml` resolves inside this repository before removing only that new file; preserve `.claude/settings.local.json` and `.tmp-pharmacy-schedules/`. No live rollback is needed because no live write was performed.
+- Dates: started, blocked, resumed, configured, and blocked again 2026-09-01; completion pending.
+- Exact next task: start a fresh Codex session, verify the effective project/read-only endpoint and exact allowlist, manually approve the saved catalog-and-aggregate query, obtain schema-architect PASS, then start P00-014.
 
 #### P00-013 reconciliation record
 
@@ -421,7 +421,7 @@ P00 is program bootstrap, not an app feature run. Its deterministic order is P00
 | Local database reproducibility | Supabase CLI, Docker, `supabase/config.toml`, `supabase/tests`, and `supabase/seed.sql` are absent | RISK-008 confirmed; P02 must establish the local reset/pgTAP harness before any schema Build or hosted proposal |
 | Reviews schema | All 23 local migrations omit `reviews.created_at`; the typed client requires it, sorts by it, and formats it | RISK-003 confirmed locally; RUN-P02-003 owns the forward-only repair after live metadata and row-count/backfill evidence |
 | Waitlist schema | No local migration or app reference exists; EVID-P00-011 records all 23 local migrations remotely plus `20260728141752_create_waitlist_table`; EVID-P00-004 is consistent with one extra public table | ODEC-005 decides retain versus decommission. Retention routes to RUN-P02-004; destructive removal would require a separate newly decomposed run and explicit approval |
-| Live catalog refresh | The current root and schema-architect tool registries expose no Supabase MCP/SQL tool | P00-013 remains `blocked_external`; run the committed read-only catalog-and-aggregate query when the connector is restored and retain only redacted results |
+| Live catalog refresh | Project `.codex/config.toml` now defines a least-privilege remote connector, but this running session still exposes no Supabase MCP/SQL tool because MCP configuration does not hot-reload | P00-013 remains `blocked_external`; a fresh session must verify the effective endpoint/tool inventory before manually approving the committed read-only query and retaining only redacted results |
 
 ### P00-014 - P00 Secure, Integrate, and Release gate
 
@@ -442,7 +442,7 @@ P00 is program bootstrap, not an app feature run. Its deterministic order is P00
 
 ## AGENTS.md source snapshot and crosswalk
 
-Snapshot rule: `SRC-AG-0001` through `SRC-AG-0064` are immutable identifiers assigned on 2026-09-01. Their numbers are never recomputed from line numbers. The fingerprint is the durable normalized anchor. A source may later map to several atomic child tasks, but no source may be deleted from `AGENTS.md` until all mapped children pass.
+Snapshot rule: `SRC-AG-0001` through `SRC-AG-0064` are immutable identifiers assigned on 2026-09-01; `SRC-AG-0065` was appended the same day when P00-013 discovered cross-client MCP configuration drift. IDs are never recomputed from line numbers. The fingerprint is the durable normalized anchor. A source may later map to several atomic child tasks, but no source may be deleted from `AGENTS.md` until all mapped children pass.
 
 The `Mapped task` values in this crosswalk are stable routing placeholders, not executable atomic task records and not status-bearing work items. Their dispositions are source metadata. Before any placeholder becomes executable, its portfolio must create a task record conforming to the atomic-task contract, including owner, approver, dependencies, blocker status, exact unblock action, validation, evidence, and recovery. The compliant blocked-decision/external owners and unblock actions known today are centralized in "Open decisions and external approvals."
 
@@ -512,6 +512,7 @@ The `Mapped task` values in this crosswalk are stable routing placeholders, not 
 | SRC-AG-0062 | `phase2-payments-disputes` | Stripe, disputes, refunds, cancellation-fee policy | DEF-BL-006 | Deferred | `deferred_out_of_scope`; Phase 2 founder decision |
 | SRC-AG-0063 | `phase2-inhome-safety` | Live location and SOS safety features | DEF-BL-007 | Deferred | `deferred_out_of_scope`; Phase 2/3 liability gate |
 | SRC-AG-0064 | `phase2-email-change` | Service-owned email-change synchronization | DEF-BL-008 | Deferred | `deferred_out_of_scope`; Phase 2 |
+| SRC-AG-0065 | `mcp-client-config-reconciliation` | Reconcile Codex read-only and legacy Claude Supabase MCP paths | P00-013 / P01-BL-008 | P00/P01 | P00 adds a separate least-privilege Codex path; legacy `.mcp.json` deprecation/hardening and version pinning remain a separate P01 tooling/security task |
 
 ## Open decisions and external approvals
 
@@ -533,7 +534,7 @@ Run from the repository root. These checks are read-only.
 ```powershell
 $agents = Get-Content -LiteralPath '.\AGENTS.md'
 $checkboxCount = ($agents | Where-Object { $_ -match '^- \[ \] ' }).Count
-if ($checkboxCount -ne 61) { throw "Expected 61 AGENTS checkbox sources; found $checkboxCount" }
+if ($checkboxCount -ne 62) { throw "Expected 62 AGENTS checkbox sources; found $checkboxCount" }
 
 $proseHeadings = @(
   '### Google + Apple sign-in',
@@ -552,12 +553,12 @@ $ids = $sourceRows | ForEach-Object { (($_ -split '\|')[1].Trim()) -replace '^SR
 $fingerprints = $sourceRows | ForEach-Object { ($_ -split '\|')[2].Trim().Trim('`') }
 $mappings = $sourceRows | ForEach-Object { ($_ -split '\|')[4].Trim() }
 $dispositions = $sourceRows | ForEach-Object { ($_ -split '\|')[6].Trim() }
-if ($ids.Count -ne 64) { throw "Expected 64 crosswalk rows; found $($ids.Count)" }
-if (($ids | Sort-Object -Unique).Count -ne 64) { throw 'Duplicate source ID' }
-if (($fingerprints | Sort-Object -Unique).Count -ne 64) { throw 'Duplicate source fingerprint' }
+if ($ids.Count -ne 65) { throw "Expected 65 crosswalk rows; found $($ids.Count)" }
+if (($ids | Sort-Object -Unique).Count -ne 65) { throw 'Duplicate source ID' }
+if (($fingerprints | Sort-Object -Unique).Count -ne 65) { throw 'Duplicate source fingerprint' }
 if (($mappings | Where-Object { [string]::IsNullOrWhiteSpace($_) }).Count -ne 0) { throw 'Blank task mapping' }
 if (($dispositions | Where-Object { [string]::IsNullOrWhiteSpace($_) }).Count -ne 0) { throw 'Blank disposition' }
-$expected = 1..64 | ForEach-Object { '{0:D4}' -f $_ }
+$expected = 1..65 | ForEach-Object { '{0:D4}' -f $_ }
 if (Compare-Object -ReferenceObject $expected -DifferenceObject $ids) { throw 'Non-contiguous source IDs' }
 
 $wip = $plan | Select-String -Pattern '^- Status / release class: `in_progress` /'
@@ -579,8 +580,8 @@ git status --short --branch
 
 Acceptance for P00-007/P00-008/P00-009:
 
-- The AGENTS checkbox count is 61 and the three named prose sources are present.
-- The crosswalk count and unique count are 64; the contiguous comparison emits no differences.
+- The AGENTS checkbox count is 62 and the three named prose sources are present.
+- The crosswalk count and unique count are 65; the contiguous comparison emits no differences.
 - The executable task-record WIP count is at most one and matches "Current program checkpoint"; the explicit P00-013 external-blocker checkpoint has zero WIP tasks.
 - P00 dependencies are strictly sequential; P01 is not ready before P00-014.
 - All blocked work has an owner and exact unblock action.
@@ -589,4 +590,4 @@ Acceptance for P00-007/P00-008/P00-009:
 
 ## Current handoff
 
-P00-001 through P00-012 passed. P00-013 completed the repository, controls, config, dependency, Graphify, orchestration, and local-schema inventories. It confirmed the `reviews.created_at` local migration defect, the Customer Account placeholder surface, stale orchestration/tooling prose, and the absence of local Supabase reset infrastructure. The schema-architect gate is a conditional FAIL because this session exposes no Supabase MCP/SQL tool: the exact hosted `reviews` and `waitlist` definitions cannot be freshly reconciled. The read-only catalog-and-aggregate unblock query is committed at `docs/execution/P00_013_SCHEMA_RECONCILIATION_READ_ONLY.sql`. No task is in progress, P00-014 and P01 remain unstarted, and hosted access remains read-only. Exact resume action: restore the connector, run the saved query against confirmed project `ajcsanrepboqcjgpzsaa`, retain only a redacted summary, and obtain schema-architect PASS.
+P00-001 through P00-012 passed. P00-013 completed the repository and local-schema inventories, then added and validated a secret-free project Codex connector with exact project scope, remote `read_only=true`, the database feature group, prompt approval, and an allowlist limited to `list_tables`, `list_migrations`, and `execute_sql`. Architecture and security reviews passed; the legacy Claude-oriented `.mcp.json` remains an explicit P01 hardening task and is not authoritative for P00. No task is in progress because this running session cannot reload MCP configuration. P00-014 and P01 remain unstarted until a fresh session verifies the effective endpoint/tool inventory, manually approves the saved query against project `ajcsanrepboqcjgpzsaa`, retains only a redacted summary, and obtains schema-architect PASS.

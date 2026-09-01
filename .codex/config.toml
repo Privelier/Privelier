@@ -1,0 +1,13 @@
+# Trusted project configuration for P00 read-only schema reconciliation.
+# Authentication is inherited from the local SUPABASE_ACCESS_TOKEN environment
+# variable. Never place its value in this file, repository .env files, or logs.
+
+[mcp_servers.supabase]
+url = "https://mcp.supabase.com/mcp?project_ref=ajcsanrepboqcjgpzsaa&read_only=true&features=database"
+bearer_token_env_var = "SUPABASE_ACCESS_TOKEN"
+enabled = true
+startup_timeout_sec = 30
+tool_timeout_sec = 120
+default_tools_approval_mode = "prompt"
+enabled_tools = ["list_tables", "list_migrations", "execute_sql"]
+disabled_tools = ["apply_migration"]
