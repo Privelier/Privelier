@@ -10,16 +10,17 @@ This is the canonical execution and evidence ledger for the Privelier Legendary 
 |---|---|
 | Program status | `in_progress` |
 | Active portfolio | `P00` - frozen baseline and execution bootstrap |
-| Active writing task | `P00-013` - reconcile repository and live/local inventories |
+| Active writing task | None; `P00-013` is `blocked_external` on the missing Supabase metadata tool |
 | Baseline checkpoint | Historical P00 evidence was collected at `4353237`; it remains provenance only |
-| Current checkpoint | `main` at `6f5654e` after a fast-forward-only pull on 2026-09-01 |
-| Current working tree | `docs/execution/PRIVELIER_EVIDENCE_INDEX.md` modified and `docs/execution/PRIVELIER_REBUILD_PLAN.md` untracked for P00-009; unrelated untracked `.claude/settings.local.json` and `.tmp-pharmacy-schedules/` are protected and out of scope |
-| Intended files for active task | Execution docs only; repository and hosted Supabase access remain read-only |
+| Current checkpoint | The P00-013 blocker commit containing this ledger, whose parent is `bdfd266` |
+| Checkpoint payload | `PRIVELIER_REBUILD_PLAN.md`, `PRIVELIER_EVIDENCE_INDEX.md`, `PRIVELIER_REBUILD_DECISIONS.md`, `PRIVELIER_RISK_REGISTER.md`, and `P00_013_SCHEMA_RECONCILIATION_READ_ONLY.sql` |
+| Current working tree | After the checkpoint commit, only unrelated untracked `.claude/settings.local.json` and `.tmp-pharmacy-schedules/` remain; both are protected and out of scope |
+| Intended files for active task | None while externally blocked; on resume, only redacted execution evidence may change until the schema architect passes the read-only reconciliation |
 | Live impact | None; P00 hosted Supabase, provider, EAS, store, and production access is read-only |
-| Last known-good checkpoint | P00-012 exact-HEAD reconstruction PASS; ignored snapshot removed after verified cleanup |
-| Safe recovery | Inventory work is read-only; revert only incomplete execution-doc findings and never mutate hosted state |
-| Resume point | Give every repository/live drift and control inventory item an evidence-linked disposition, then start P00-014 |
-| Exact next task/command | Run read-only repository/control/config/dependency inventory and schema-architect live/local drift reconciliation |
+| Last known-good checkpoint | Commit `bdfd266` contains the architecture-approved ledger and P00-001 through P00-012 evidence |
+| Safe recovery | Revert only the five named P00-013 files to commit `bdfd266`; preserve `.claude/settings.local.json` and `.tmp-pharmacy-schedules/`; never mutate hosted state |
+| Resume point | Restore the connected Supabase metadata tool and run `docs/execution/P00_013_SCHEMA_RECONCILIATION_READ_ONLY.sql`; do not start P00-014 before the schema architect reviews the redacted result |
+| Exact next task/command | Run the saved read-only query against confirmed project `ajcsanrepboqcjgpzsaa`, record redacted metadata as EVID-P00-021, and re-run the P00-013 schema gate |
 
 ## Scoped authority model
 
@@ -69,9 +70,12 @@ No behavior-changing run is active during P00. The following known candidate run
 |---|---|---|---|---|
 | RUN-P02-001 | Make booking creation server-authoritative for future time, active availability, service duration, and interval overlap | SRC-AG-0025, SRC-AG-0026; RISK-001 | `not_started` | P01 passed; schema-architect decomposition; ODEC-001 isolated rather than guessed |
 | RUN-P02-002 | Add an explicit closed/blackout availability representation | SRC-AG-0027 | `not_started` | RUN-P02-001 boundaries known; separate design approval |
+| RUN-P02-003 | Restore `reviews.created_at` to reproducible migration history and the client contract | RISK-003 | `not_started` | P01 passed; live metadata refreshed; existing-row count and backfill policy known; schema-architect owns the forward migration |
+| RUN-P02-004 | Reconstruct the remote-only waitlist schema in local forward history | EVID-P00-011; ODEC-005 | `blocked_decision` | Founders confirm the table's purpose and retention; exact hosted metadata/statements captured read-only |
 | RUN-P03-001 | Add Google and Apple sign-in to the provider-agnostic provisioning path | SRC-AG-0004; DEC-0008 | `not_started` | Applicable P02 findings closed; current primary docs reconciled; founder provider prerequisites available |
 | RUN-P04-001 | Separate Customer and Barber application roots without changing production identity | DEC-0010 | `not_started` | P03 route contract approved; ODEC-002 remains isolated to production rollout |
 | RUN-P05-001 | Add the remaining approved Signet placements and native icon/splash assets | SRC-AG-0008 | `not_started` | Split repository-native UI placement from production identity mutation; founder asset review |
+| RUN-P06-001 | Remove placeholder-only navigation from the Customer Account surface until each underlying capability has its own approved run | SRC-AG-0014, SRC-AG-0015; RISK-014 | `not_started` | P04/P05 foundations passed; product scope for each future account capability remains separate |
 | RUN-P08-001 | Make read-receipt timestamp merging and hook teardown/outage behavior deterministic | SRC-AG-0047, SRC-AG-0048; RISK-017 | `not_started` | P01 deterministic test baseline passed |
 
 ### Reserved stage records
@@ -94,6 +98,20 @@ Each row below is a distinct gate record. A later status change requires its own
 | RUN-P02-002-S05 | RUN-P02-002 | Secure | `not_started` |
 | RUN-P02-002-S06 | RUN-P02-002 | Integrate | `not_started` |
 | RUN-P02-002-S07 | RUN-P02-002 | Release | `not_started` |
+| RUN-P02-003-S01 | RUN-P02-003 | Plan | `not_started` |
+| RUN-P02-003-S02 | RUN-P02-003 | Design | `not_started` |
+| RUN-P02-003-S03 | RUN-P02-003 | Build | `not_started` |
+| RUN-P02-003-S04 | RUN-P02-003 | Validate | `not_started` |
+| RUN-P02-003-S05 | RUN-P02-003 | Secure | `not_started` |
+| RUN-P02-003-S06 | RUN-P02-003 | Integrate | `not_started` |
+| RUN-P02-003-S07 | RUN-P02-003 | Release | `not_started` |
+| RUN-P02-004-S01 | RUN-P02-004 | Plan | `not_started` |
+| RUN-P02-004-S02 | RUN-P02-004 | Design | `not_started` |
+| RUN-P02-004-S03 | RUN-P02-004 | Build | `not_started` |
+| RUN-P02-004-S04 | RUN-P02-004 | Validate | `not_started` |
+| RUN-P02-004-S05 | RUN-P02-004 | Secure | `not_started` |
+| RUN-P02-004-S06 | RUN-P02-004 | Integrate | `not_started` |
+| RUN-P02-004-S07 | RUN-P02-004 | Release | `not_started` |
 | RUN-P03-001-S01 | RUN-P03-001 | Plan | `not_started` |
 | RUN-P03-001-S02 | RUN-P03-001 | Design | `not_started` |
 | RUN-P03-001-S03 | RUN-P03-001 | Build | `not_started` |
@@ -115,6 +133,13 @@ Each row below is a distinct gate record. A later status change requires its own
 | RUN-P05-001-S05 | RUN-P05-001 | Secure | `not_started` |
 | RUN-P05-001-S06 | RUN-P05-001 | Integrate | `not_started` |
 | RUN-P05-001-S07 | RUN-P05-001 | Release | `not_started` |
+| RUN-P06-001-S01 | RUN-P06-001 | Plan | `not_started` |
+| RUN-P06-001-S02 | RUN-P06-001 | Design | `not_started` |
+| RUN-P06-001-S03 | RUN-P06-001 | Build | `not_started` |
+| RUN-P06-001-S04 | RUN-P06-001 | Validate | `not_started` |
+| RUN-P06-001-S05 | RUN-P06-001 | Secure | `not_started` |
+| RUN-P06-001-S06 | RUN-P06-001 | Integrate | `not_started` |
+| RUN-P06-001-S07 | RUN-P06-001 | Release | `not_started` |
 | RUN-P08-001-S01 | RUN-P08-001 | Plan | `not_started` |
 | RUN-P08-001-S02 | RUN-P08-001 | Design | `not_started` |
 | RUN-P08-001-S03 | RUN-P08-001 | Build | `not_started` |
@@ -370,17 +395,33 @@ P00 is program bootstrap, not an app feature run. Its deterministic order is P00
 - Run ID: `PROGRAM`
 - Portfolio / stage: `P00` / Integrate.
 - Atomic outcome: Reconcile repository, controls, dependencies, Graphify, and read-only live/local schema inventories into stable dispositions.
-- Status / release class: `in_progress` / required.
+- Status / release class: `blocked_external` / required.
 - Source references: all SRC-AG IDs; EVID-P00-011; RISK-003, RISK-008, RISK-014.
-- Dependencies / blockers: P00-012 / Supabase CLI may be absent; hosted reads only.
+- Dependencies / blockers: P00-012 / the current harness exposes no Supabase MCP catalog or SQL tool; Supabase CLI, Docker, `supabase/config.toml`, local DB tests, and seed configuration are also absent.
 - Owner / approver: program owner; schema findings to `supabase-schema-architect` / founder for any later live mutation.
 - Intended files and live impact: execution docs and read-only catalog metadata; no hosted write.
-- Exact validation command: tracked file/control/config/dependency inventories, current Graphify availability/update query if installed, Supabase MCP migration/catalog reads, and a clean local reset feasibility check if tooling exists.
+- Exact validation command: tracked file/control/config/dependency inventories; current Graphify availability/update query if installed; then run `docs/execution/P00_013_SCHEMA_RECONCILIATION_READ_ONLY.sql` through the connected Supabase metadata tool and perform a clean local reset when the P02 harness exists.
 - Acceptance: Remote-only waitlist migration, suspected `reviews.created_at` drift, graph absence, controls/screens/config/dependencies, and every crosswalk source have an evidence-linked disposition or compliant future run.
-- Decision / risk / evidence: DEC-0006; RISK-003, RISK-008, RISK-014, RISK-020; EVID-P00-011 plus evidence pending.
-- Recovery / last known good: documentation-only reconciliation; P00-012 checkpoint; no live rollback is needed because no live write is authorized.
-- Dates: started and updated 2026-09-01; completion pending.
-- Exact next task: P00-014.
+- Decision / risk / evidence: DEC-0006; RISK-003, RISK-008, RISK-014, RISK-020; EVID-P00-011, EVID-P00-019, EVID-P00-020, EVID-P00-021; terminal live evidence pending as EVID-P00-022.
+- Recovery / last known good: revert only `PRIVELIER_REBUILD_PLAN.md`, `PRIVELIER_EVIDENCE_INDEX.md`, `PRIVELIER_REBUILD_DECISIONS.md`, `PRIVELIER_RISK_REGISTER.md`, and `P00_013_SCHEMA_RECONCILIATION_READ_ONLY.sql` to commit `bdfd266`; preserve `.claude/settings.local.json` and `.tmp-pharmacy-schedules/`. No live rollback is needed because no live write was performed.
+- Dates: started and updated 2026-09-01; blocked 2026-09-01; completion pending.
+- Exact next task: restore the connected Supabase read tool, run the saved catalog-and-aggregate query, obtain schema-architect PASS, then start P00-014.
+
+#### P00-013 reconciliation record
+
+| Inventory slice | Observed current state | Disposition |
+|---|---|---|
+| Repository topology | 474 tracked files; 155 under `src`; 31 non-test screens; 5 navigator/tab modules; 27 data/realtime modules; 48 unit/integration test files; 16 Maestro files; 23 migrations; 13 agent definitions; 9 command definitions | Current-code evidence for the mapped P05/P06/P07/P08/P09 sources is present; remaining review, device, security, and release gates stay in their mapped portfolios |
+| Controls and product honesty | 36 TSX files contain 65 static control sites; no literal null, undefined, or empty `onPress` handler was found. Five Customer Account rows intentionally navigate to one placeholder-only screen | RISK-014 confirmed and isolated to RUN-P06-001; Favorites, Notifications, Privacy, Preferences, and Help capabilities must not be silently implemented as one feature |
+| Root/navigation/config | `App.tsx` still switches Customer/Barber navigators inside one app root; `app.json` and `eas.json` still expose one Privelier identity and one EAS project | Expected pre-P04 state; RUN-P04-001 owns repository-local separation and ODEC-002 continues to block production identity mutation |
+| Dependencies and tests | Lockfile install is reproducible; Expo Doctor/dependency checks pass; current-workspace Jest timed out at 549/550 while the exact-HEAD snapshot passed 550/550; audit remains 21 findings | P01 owns deterministic tests, warning cleanup, dependency reachability, and compatible remediation; no automatic package mutation |
+| Maestro/tooling prose | Fifteen YAML flows plus README are tracked; the README still says no Android SDK even though current evidence finds ADB by absolute path. Maestro CLI is absent | P01 tooling/docs reconciliation, then P09 device execution; no authored flow is represented as executed |
+| Orchestration definitions | `fullstack-developer.md` describes a Next.js/tRPC/Drizzle stack and `debugger.md` pins `claude-sonnet-4-5`; arbitrary current-harness subagents can apply the architect/realtime definitions by reading them | SRC-AG-0032 and SRC-AG-0033 move to P01 tooling before product Build; SRC-AG-0034 is superseded for this harness but must be revalidated if the harness changes |
+| Graphify | The earlier workspace produced EVID-P00-008, but this checkout has neither `graphify-out/graph.json` nor a `graphify` command | Historical graph evidence remains provenance only; restore/regenerate tooling in P01 before future codebase questions, or explicitly record the same environment blocker |
+| Local database reproducibility | Supabase CLI, Docker, `supabase/config.toml`, `supabase/tests`, and `supabase/seed.sql` are absent | RISK-008 confirmed; P02 must establish the local reset/pgTAP harness before any schema Build or hosted proposal |
+| Reviews schema | All 23 local migrations omit `reviews.created_at`; the typed client requires it, sorts by it, and formats it | RISK-003 confirmed locally; RUN-P02-003 owns the forward-only repair after live metadata and row-count/backfill evidence |
+| Waitlist schema | No local migration or app reference exists; EVID-P00-011 records all 23 local migrations remotely plus `20260728141752_create_waitlist_table`; EVID-P00-004 is consistent with one extra public table | ODEC-005 decides retain versus decommission. Retention routes to RUN-P02-004; destructive removal would require a separate newly decomposed run and explicit approval |
+| Live catalog refresh | The current root and schema-architect tool registries expose no Supabase MCP/SQL tool | P00-013 remains `blocked_external`; run the committed read-only catalog-and-aggregate query when the connector is restored and retain only redacted results |
 
 ### P00-014 - P00 Secure, Integrate, and Release gate
 
@@ -416,19 +457,19 @@ The `Mapped task` values in this crosswalk are stable routing placeholders, not 
 | SRC-AG-0007 | `signet-device-review` | Signet visual review in both themes | P09-BL-001 | P09 | `blocked_external`; founder/device session |
 | SRC-AG-0008 | `signet-ranked-placements` | Signet colophon, icon, splash, optional confirmation placement | P05-BL-001 | P05 | Open; split asset and UI runs before Build |
 | SRC-AG-0009 | `signet-logo-token-lint` | Optional logo-token ESLint hardening | P05-BL-002 | P05 | Optional follow-up |
-| SRC-AG-0010 | `discover-screen-review` | Discover/Home screen | P06-BL-001 | P06/P09 | Code evidence needs P00 reconciliation; founder review remains |
-| SRC-AG-0011 | `barber-profile-screen-review` | Barber profile detail screen | P06-BL-002 | P06/P09 | Code evidence needs P00 reconciliation; founder review remains |
-| SRC-AG-0012 | `bookings-tab-review` | Customer Bookings tab | P06-BL-003 | P06/P09 | Code evidence needs P00 reconciliation; founder review remains |
-| SRC-AG-0013 | `inbox-tab-review` | Customer Inbox tab | P06-BL-004 | P06/P09 | Code evidence needs P00 reconciliation; founder review remains |
-| SRC-AG-0014 | `account-tab-review` | Customer Account tab | P06-BL-005 | P06/P09 | Code evidence needs P00 reconciliation; founder review remains |
+| SRC-AG-0010 | `discover-screen-review` | Discover/Home screen | P06-BL-001 | P06/P09 | Surface present at `6f5654e`; P06 review and P09 founder/device gate remain |
+| SRC-AG-0011 | `barber-profile-screen-review` | Barber profile detail screen | P06-BL-002 | P06/P09 | Surface present at `6f5654e`; P06 review and P09 founder/device gate remain |
+| SRC-AG-0012 | `bookings-tab-review` | Customer Bookings tab | P06-BL-003 | P06/P09 | Surface present at `6f5654e`; P06 review and P09 founder/device gate remain |
+| SRC-AG-0013 | `inbox-tab-review` | Customer Inbox tab | P06-BL-004 | P06/P09 | Surface present at `6f5654e`; P06 review and P09 founder/device gate remain |
+| SRC-AG-0014 | `account-tab-review` | Customer Account tab | P06-BL-005 / RUN-P06-001 | P06/P09 | Surface present; five placeholder-only destinations route to RUN-P06-001; founder/device gate remains |
 | SRC-AG-0015 | `remaining-customer-screens` | Remaining customer screens and account stats | P06-BL-006 | P06 | Open; decompose honest remaining behavior separately |
 | SRC-AG-0016 | `barber-location-device-gate` | Barber location capture founder on-device gate | P09-BL-002 | P09 | `blocked_external`; founder/device/live data |
 | SRC-AG-0017 | `barber-location-independent-security` | Independent security-auditor rerun for location | P11-BL-001 | P11 | Required independent follow-up; no bypass of prior feature gate |
 | SRC-AG-0018 | `current-android-map-build` | Current Android development build installation handoff | P09-BL-003 | P09 | `blocked_external`; expiring external artifact/device |
 | SRC-AG-0019 | `explore-map-device-review` | Explore map and LocationEdit founder review | P09-BL-004 | P09 | `blocked_external`; founder/device session |
 | SRC-AG-0020 | `map-low-followups` | Map attribution overlap and future clustering | P06-BL-007 | P06/P09 | Low follow-up; first item device-dependent |
-| SRC-AG-0021 | `barber-side-screens` | Barber-side screen rebuild/review | P07-BL-001 | P07/P09 | Code evidence needs P00 reconciliation; founder review remains |
-| SRC-AG-0022 | `auth-role-restyle` | Auth and role-select restyle | P05-BL-003 | P05/P09 | Code evidence needs P00 reconciliation; visual review remains |
+| SRC-AG-0021 | `barber-side-screens` | Barber-side screen rebuild/review | P07-BL-001 | P07/P09 | Barber surfaces are present at `6f5654e`; P07 review and P09 founder/device gates remain |
+| SRC-AG-0022 | `auth-role-restyle` | Auth and role-select restyle | P05-BL-003 | P05/P09 | Auth/role surfaces are present at `6f5654e`; P05 accessibility/design and P09 visual gates remain |
 | SRC-AG-0023 | `services-availability-maestro` | Barber services and availability Maestro flows | P09-BL-005 | P09 | `blocked_external`; P01 tooling prerequisite |
 | SRC-AG-0024 | `discovery-maestro` | Customer discovery Maestro flow | P09-BL-006 | P09 | `blocked_external`; P01 tooling prerequisite |
 | SRC-AG-0025 | `booking-duration-overlap` | Duration-overlap booking guard | P02-BL-003 | P02 | Release blocker; combine only with same appointment-integrity run |
@@ -438,9 +479,9 @@ The `Mapped task` values in this crosswalk are stable routing placeholders, not 
 | SRC-AG-0029 | `booking-status-realtime-device` | Two-session booking status and reconnect gate | P09-BL-008 | P09 | `blocked_external`; required before Step 18 |
 | SRC-AG-0030 | `requests-maestro` | Barber request accept/reject Maestro flow | P09-BL-009 | P09 | `blocked_external`; P01 tooling prerequisite |
 | SRC-AG-0031 | `verification-submission-live-gate` | Live verification document submission and approval gate | P09-BL-010 | P09 | `blocked_external`; required live founder/device procedure |
-| SRC-AG-0032 | `fullstack-agent-stack-definition` | Rewrite fullstack-developer agent for Expo/Supabase | P00-BL-001 | P00 | Open orchestration reconciliation; no product behavior |
-| SRC-AG-0033 | `debugger-model-pin` | Remove or update stale debugger model pin | P00-BL-002 | P00 | Open orchestration reconciliation |
-| SRC-AG-0034 | `agent-registry-gap` | Architect/realtime agent registration gap | P00-BL-003 | P00 | Open tooling inventory; current harness can use Codex subagents |
+| SRC-AG-0032 | `fullstack-agent-stack-definition` | Rewrite fullstack-developer agent for Expo/Supabase | P01-BL-004 | P01 | Confirmed stale; rewrite before any product Build agent run |
+| SRC-AG-0033 | `debugger-model-pin` | Remove or update stale debugger model pin | P01-BL-005 | P01 | Confirmed stale; remove/update before debugger use |
+| SRC-AG-0034 | `agent-registry-gap` | Architect/realtime agent registration gap | P00-BL-003 | P00 | `superseded` in the current arbitrary-task subagent harness; definitions were applied successfully and must be rechecked if the harness changes |
 | SRC-AG-0035 | `missing-rn-maestro-skills` | Install missing RN and Maestro skills | P01-BL-002 | P01 | Open tooling task; verify source and permissions first |
 | SRC-AG-0036 | `supabase-advisor-findings` | Security-advisor findings and leaked-password toggle | P02-BL-006 | P02 | Mixed accepted/design/founder action; split before execution |
 | SRC-AG-0037 | `verifyscreen-suite-instability` | VerifyScreen full-suite pollution | P01-BL-003 | P01 | Reconcile against current 550-test warning baseline |
@@ -466,7 +507,7 @@ The `Mapped task` values in this crosswalk are stable routing placeholders, not 
 | SRC-AG-0057 | `barber-bio-device-review` | Barber bio-edit founder review | P09-BL-017 | P09 | `blocked_external`; founder/device session |
 | SRC-AG-0058 | `barber-bio-moderation` | Public bio moderation/disintermediation | DEF-BL-005 | Deferred | `deferred_out_of_scope`; Phase 2 policy |
 | SRC-AG-0059 | `step18-full-flow` | Full real-user Step 18 flow | P09-BL-018 | P09 | Release blocker; depends on all required prior gates |
-| SRC-AG-0060 | `reviews-device-gate` | Reviews founder on-device gate | P09-BL-019 | P09 | `blocked_external`; code evidence reconciled first |
+| SRC-AG-0060 | `reviews-device-gate` | Reviews founder on-device gate | P09-BL-019 | P02/P09 | Review surface/data/tests are present, but RUN-P02-003 schema parity precedes the `blocked_external` founder/device gate |
 | SRC-AG-0061 | `full-app-ultra-device-review` | Full-app Ultra founder visual review | P09-BL-020 | P09 | `blocked_external`; required before release |
 | SRC-AG-0062 | `phase2-payments-disputes` | Stripe, disputes, refunds, cancellation-fee policy | DEF-BL-006 | Deferred | `deferred_out_of_scope`; Phase 2 founder decision |
 | SRC-AG-0063 | `phase2-inhome-safety` | Live location and SOS safety features | DEF-BL-007 | Deferred | `deferred_out_of_scope`; Phase 2/3 liability gate |
@@ -480,8 +521,10 @@ The `Mapped task` values in this crosswalk are stable routing placeholders, not 
 | ODEC-002 production Customer/Barber identities and EAS strategy | P04 production variants and P10 candidates | Founders | Approve the exact identifier/ownership/migration matrix after repository-local variant design |
 | ODEC-003 account deletion retention/anonymization | Destructive P03 deletion completion | Founders | Approve retained, anonymized, and deleted records plus retention periods |
 | ODEC-004 terminal-booking messaging policy | Any behavior change to cancelled/rejected chat | Founders | Confirm always-writable chat or approve a separate read-only-terminal-state run |
+| ODEC-005 hosted-only waitlist purpose and retention | RUN-P02-004 or a future decommission run | Founders | Review exact read-only schema/dependency/row-count metadata, then choose retention/reconstruction or separately authorize decommission planning |
 | EXT-001 Maestro and device matrix | P09 device flows | Founders + test owner | Provide/install approved tooling and attach the required Android/iOS/two-session environment |
 | EXT-002 Google/Apple provider credentials | P03 provider E2E | Founders | Configure provider consoles/Supabase and provide redacted confirmation, never secrets |
+| EXT-003 Supabase metadata connector | P00-013 and therefore P00-014/P01 | Harness owner | Restore read-only Supabase MCP/SQL access for project `ajcsanrepboqcjgpzsaa`; do not paste or expose a service-role key |
 
 ## Ledger validation
 
@@ -518,7 +561,10 @@ $expected = 1..64 | ForEach-Object { '{0:D4}' -f $_ }
 if (Compare-Object -ReferenceObject $expected -DifferenceObject $ids) { throw 'Non-contiguous source IDs' }
 
 $wip = $plan | Select-String -Pattern '^- Status / release class: `in_progress` /'
-if ($wip.Count -ne 1) { throw "Expected one active writing task; found $($wip.Count)" }
+if ($wip.Count -gt 1) { throw "Expected at most one active writing task; found $($wip.Count)" }
+$blockedCheckpoint = ($plan | Select-String -Pattern '^\| Active writing task \| None; `P00-013` is `blocked_external`').Count -eq 1
+if ($blockedCheckpoint -and $wip.Count -ne 0) { throw 'Blocked checkpoint must not claim an in-progress writing task' }
+if (-not $blockedCheckpoint -and $wip.Count -ne 1) { throw "Unblocked checkpoint requires one active writing task; found $($wip.Count)" }
 if (($plan | Select-String -Pattern '^### P00-\d{3} -').Count -ne 14) { throw 'Expected 14 P00 task records' }
 if (($plan | Select-String -Pattern '^\| P01 \|.*\| `not_started` \|').Count -ne 1) { throw 'P01 became ready before P00-014' }
 
@@ -535,7 +581,7 @@ Acceptance for P00-007/P00-008/P00-009:
 
 - The AGENTS checkbox count is 61 and the three named prose sources are present.
 - The crosswalk count and unique count are 64; the contiguous comparison emits no differences.
-- The executable task-record WIP count is exactly one and matches "Current program checkpoint."
+- The executable task-record WIP count is at most one and matches "Current program checkpoint"; the explicit P00-013 external-blocker checkpoint has zero WIP tasks.
 - P00 dependencies are strictly sequential; P01 is not ready before P00-014.
 - All blocked work has an owner and exact unblock action.
 - No P00 task authorizes a live mutation.
@@ -543,4 +589,4 @@ Acceptance for P00-007/P00-008/P00-009:
 
 ## Current handoff
 
-P00-006 through P00-011 passed their program/evidence gates, while RISK-004 and RISK-012 remain open. P00-012 proved exact-HEAD reconstruction: package hashes matched, an offline lockfile install succeeded, typecheck/lint passed, and isolated Jest passed 550/550 while emitting the same `act()` warning classes. The contrast with P00-011's 549/550 Portfolio timeout confirms nondeterminism rather than a stable product failure. Active-workspace status/hashes were unchanged, and the verified ignored snapshot was removed. P00-013 is the sole active task; hosted access remains read-only.
+P00-001 through P00-012 passed. P00-013 completed the repository, controls, config, dependency, Graphify, orchestration, and local-schema inventories. It confirmed the `reviews.created_at` local migration defect, the Customer Account placeholder surface, stale orchestration/tooling prose, and the absence of local Supabase reset infrastructure. The schema-architect gate is a conditional FAIL because this session exposes no Supabase MCP/SQL tool: the exact hosted `reviews` and `waitlist` definitions cannot be freshly reconciled. The read-only catalog-and-aggregate unblock query is committed at `docs/execution/P00_013_SCHEMA_RECONCILIATION_READ_ONLY.sql`. No task is in progress, P00-014 and P01 remain unstarted, and hosted access remains read-only. Exact resume action: restore the connector, run the saved query against confirmed project `ajcsanrepboqcjgpzsaa`, retain only a redacted summary, and obtain schema-architect PASS.
