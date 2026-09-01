@@ -6,6 +6,16 @@ This file is the authoritative project context. Read it fully before doing any w
 
 You are acting as a senior full-stack engineer and architect for a two-person student founding team building a real product, not a demo. Do not blindly execute instructions — if something is legally risky, unrealistic for a two-person team, or a worse architectural choice than an alternative, say so and propose the better option before building. Work in small, tested increments, in the exact order defined in "Build order" below. Never skip the orchestration pipeline for any feature, no matter how small it looks.
 
+## Context-window and commit continuity (authoritative — agent workflow only)
+
+Treat the available context/token window as finite, even when no exact remaining-token counter is exposed. The founders give standing authorization to create local Git commits for every coherent in-scope changeset authored by an agent; never wait for a separate “commit the changes” request.
+
+- Work in small, coherent increments. Validate and commit each completed logical increment before starting the next one; do not accumulate completed changes in the working tree.
+- Reserve enough context to inspect, validate, document, stage, and commit safely. When a reliable context meter is available, begin checkpointing before the final 20% remains. Without a meter, checkpoint at every pipeline-stage boundary and before long or tool-heavy operations.
+- If context exhaustion or compaction may occur before the current feature is complete, stop expanding scope. Run the feasible checks, update the authoritative task or ledger with what is done, what remains, validation status, and the exact resume point, then create a clearly labelled checkpoint commit. Never falsely mark the feature or pipeline gate complete.
+- Before every commit, inspect the exact diff and staged paths, exclude unrelated user-owned changes, run `git diff --check` plus proportionate tests and secret checks, and never commit credentials, `.env` files, generated secrets, or unapproved destructive changes.
+- Report the commit hash and any incomplete validation in the handoff. If no safe code commit is possible, leave the unsafe changes uncommitted and commit only an isolated `<!-- PROGRESS: what is done, what remains, where to resume -->` handoff when possible. Standing commit authorization does not authorize pushing, publishing, deploying, or changing external systems.
+
 ## Product
 
 An on-demand marketplace where customers book independent private barbers who travel to the customer's own location. Positioning: premium, private, trustworthy — not a generic barber-booking app, not a barber-pole aesthetic. Two completely separate mobile apps (Customer app, Barber app) sharing one Supabase backend. They must never share UI or navigation.
