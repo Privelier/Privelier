@@ -2,6 +2,8 @@
 
 Status: accepted by the authoritative 2026-09-01 execution specification; architecture gate approved with conditions.
 
+Execution rule: Sol 5.6 Ultra is reserved for application structure, navigation/UI surfaces, UI/UX, accessibility presentation, visual refinement, and app polishing. Backend, database/schema, migrations, security, tests, performance, tooling, and release operations use their appropriate specialized agent or model. See the [current completion checklist](../execution/PRIVELIER_REBUILD_CHECKLIST.md) and the [authoritative execution specification](../execution/privelier-codex-master-rebuild-prompt.json).
+
 ## Chosen operating model
 
 Three models were considered. A broad rewrite would move quickly at first but destroy the ability to attribute regressions, preserve approved decisions, or pass the mandatory one-feature pipeline. A release-only patch set would be smaller, but it would leave the known navigation split, database-authority gaps, incomplete authentication, accessibility gaps, and fake or placeholder surfaces intact. The chosen model is a gated rebuild program: freeze a reproducible baseline, stabilize evidence, then execute small feature slices in dependency order.
@@ -31,4 +33,3 @@ Live Supabase access is read-only during reconnaissance. Hosted migrations, data
 Evidence begins with a warning-free deterministic unit/component baseline. Each feature adds pure logic tests, screen/mutation integration tests, database allow/deny and concurrency tests where relevant, and a Maestro flow for critical user behavior. Realtime features additionally prove duplicate delivery, reconnect resync, optimistic rollback, teardown, and two-device behavior. Accessibility is validated with VoiceOver and TalkBack, large text, reduced motion, keyboard, theme, and representative window sizes.
 
 Performance is measured in release builds before optimization. Startup, Home load, appointment open, booking submit, chat send, list responsiveness, memory, network calls, and bundle composition receive reproducible scenarios and no-regression budgets. P10 builds clean Android and iOS candidates from the same tested commit in a production-like staging environment. P11 runs independent code and security reviews, reconciles every inventory item, repeats the clean-checkout gates, and produces the founder release decision with exact residual risks and next actions.
-

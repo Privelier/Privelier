@@ -103,6 +103,10 @@ Work through these in order. Do not start a step before the previous one's test 
 
 Every feature passes through this exact sequence: **Plan → Design → Build → Validate → Secure → Integrate → Release.** Never combine more than one feature into the same build cycle — booking, chat, and verification are each their own pipeline run.
 
+### Founder model-selection rule — 2026-09-02
+
+Use **Sol 5.6 Ultra only** for the structure of the app and its navigation/UI surfaces, UI/UX design, accessibility presentation, visual refinement, and app polishing. Use the appropriate specialized agent or model for backend, database/schema, migrations, security, testing, performance measurement, tooling, and release operations. This restriction is about model selection; it does not override the pipeline order, schema ownership, security gate, or founder approval rules.
+
 1. Use the `task-decomposition-expert` agent to break the feature into subtasks. No code is written at this stage.
 2. Use the `architect-review` agent to validate the proposed design against the schema and state machine above.
 3. If a schema change is genuinely required, only the `supabase-schema-architect` agent makes it, then run the `/supabase-schema-sync` slash command to push it live.
