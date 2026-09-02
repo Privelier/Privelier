@@ -30,6 +30,7 @@ function booking(overrides: Partial<BookingRow>): BookingRow {
     time: '10:00:00',
     location: 'Home',
     price: 30,
+    duration_minutes: 45,
     status: 'pending',
     created_at: '2026-07-09T00:00:00Z',
     ...overrides,
@@ -42,6 +43,13 @@ const event = (
 ): BookingChangeEvent => ({ eventType, row });
 
 describe('applyBookingChange', () => {
+  it('does not treat a duration snapshot change as a no-op', () => {
+    const current = [booking({ duration_minutes: 25 })];
+    const next = applyBookingChange(current, event('UPDATE', booking({ duration_minutes: 60 })));
+    expect(next).not.toBe(current);
+    expect(next[0].duration_minutes).toBe(60);
+  });
+
   describe('INSERT / UPDATE upsert path', () => {
     it('appends an unknown row (INSERT)', () => {
       const a = booking({ id: 'a' });

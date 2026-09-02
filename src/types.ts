@@ -91,6 +91,7 @@ export interface BookingRow {
   time: string;
   location: string;
   price: number;
+  duration_minutes: number;
   status: BookingStatus;
   created_at: string;
 }

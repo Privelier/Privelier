@@ -41,6 +41,7 @@ const booking = (id: string, date: string): BookingRow => ({
   time: '10:00:00',
   location: 'Home',
   price: 40,
+  duration_minutes: 45,
   status: 'accepted',
   created_at: '2026-07-01T00:00:00Z',
 });

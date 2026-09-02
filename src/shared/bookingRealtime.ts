@@ -108,6 +108,7 @@ function areBookingsEqual(a: BookingRow, b: BookingRow): boolean {
     a.time === b.time &&
     a.location === b.location &&
     a.price === b.price &&
+    a.duration_minutes === b.duration_minutes &&
     a.status === b.status &&
     a.created_at === b.created_at
   );
