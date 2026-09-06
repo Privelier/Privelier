@@ -52,7 +52,12 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest",
+    "context:bootstrap": "python3 tools/context/context.py bootstrap",
+    "context:update": "python3 tools/context/context.py update",
+    "context:check": "python3 tools/context/context.py check",
+    "context:query": "python3 tools/context/context.py query",
+    "context:pack": "python3 tools/context/context.py pack"
   },
   "private": true,
   "jest": {

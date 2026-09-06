@@ -1,0 +1,18 @@
+{
+  "$schema": "https://repomix.com/schemas/latest/schema.json",
+  "output": {
+    "style": "markdown",
+    "compress": true,
+    "filePath": "artifacts/context/repomix-output.md",
+    "showLineNumbers": true
+  },
+  "ignore": {
+    "useGitignore": true,
+    "customPatterns": [
+      ".env", ".env.*", "*.key", "*.pem", "*.p8", "*.p12", "*.jks",
+      "graphify-out/**", "artifacts/**", "node_modules/**", ".git/**"
+    ]
+  },
+  "security": { "enableSecurityCheck": true },
+  "tokenCount": { "encoding": "o200k_base" }
+}
