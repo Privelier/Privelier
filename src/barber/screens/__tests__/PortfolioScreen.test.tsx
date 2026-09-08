@@ -183,7 +183,7 @@ describe('PortfolioScreen', () => {
       });
 
       await renderLoaded();
-      fireEvent.press(screen.getByTestId('barber-portfolio-add'));
+      await fireEvent.press(screen.getByTestId('barber-portfolio-add'));
 
       await waitFor(() => expect(mockInsert).toHaveBeenCalled());
       expect(mockUpload).toHaveBeenCalledWith('b1', 'file:///tmp/pic.jpg', 'image/jpeg');
@@ -207,7 +207,7 @@ describe('PortfolioScreen', () => {
       });
 
       await renderLoaded();
-      fireEvent.press(screen.getByTestId('barber-portfolio-add'));
+      await fireEvent.press(screen.getByTestId('barber-portfolio-add'));
 
       await waitFor(() => expect(mockUpload).toHaveBeenCalled());
       await waitFor(() =>
@@ -235,20 +235,20 @@ describe('PortfolioScreen', () => {
 
       const add = screen.getByTestId('barber-portfolio-add');
       // Two synchronous presses: the first sets busyRef before its first await;
-      // the second sees busyRef === true and returns immediately. Wrap both in a
-      // single act() so the whole async add flow settles inside one act boundary
-      // — otherwise the two rapid presses spawn overlapping acts whose trailing
-      // state updates leak into (and corrupt the mount of) the next test.
-      await act(async () => {
-        fireEvent.press(add);
-        fireEvent.press(add);
+      // the second sees busyRef === true and returns immediately. Invoke the
+      // rendered Pressable's host callback in one synchronous act so RNTL v14
+      // does not nest two async fireEvent act scopes for this deliberate race.
+      const onPress = add.props.onClick as () => void;
+      await act(() => {
+        onPress();
+        onPress();
       });
 
-      expect(mockRequestPerm).toHaveBeenCalledTimes(1);
-      expect(mockUpload).toHaveBeenCalledTimes(1);
-      expect(mockInsert).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect(mockRequestPerm).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(mockUpload).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(mockInsert).toHaveBeenCalledTimes(1));
       // The single upload's optimistic tile is reflected (flow fully settled).
-      expect(screen.getByTestId('barber-portfolio-image-p1')).toBeTruthy();
+      await waitFor(() => expect(screen.getByTestId('barber-portfolio-image-p1')).toBeTruthy());
     });
   });
 
@@ -281,7 +281,7 @@ describe('PortfolioScreen', () => {
       });
 
       await renderLoaded();
-      fireEvent.press(screen.getByTestId('barber-portfolio-add'));
+      await fireEvent.press(screen.getByTestId('barber-portfolio-add'));
 
       await waitFor(() =>
         expect(alertSpy).toHaveBeenCalledWith(
@@ -302,7 +302,7 @@ describe('PortfolioScreen', () => {
       await renderLoaded();
       expect(screen.getByTestId('barber-portfolio-image-p2')).toBeTruthy();
 
-      fireEvent.press(screen.getByTestId('barber-portfolio-delete-p2'));
+      await fireEvent.press(screen.getByTestId('barber-portfolio-delete-p2'));
 
       await waitFor(() => expect(mockDelete).toHaveBeenCalled());
       await waitFor(() => expect(screen.queryByTestId('barber-portfolio-image-p2')).toBeNull());
@@ -323,7 +323,7 @@ describe('PortfolioScreen', () => {
       alertSpy = installAlertAutoConfirm();
 
       await renderLoaded();
-      fireEvent.press(screen.getByTestId('barber-portfolio-delete-p2'));
+      await fireEvent.press(screen.getByTestId('barber-portfolio-delete-p2'));
 
       // Optimistically gone, then reconciled back after the failure.
       await waitFor(() => expect(mockDelete).toHaveBeenCalled());

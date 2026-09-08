@@ -25,7 +25,7 @@ Authoritative source: [privelier-codex-master-rebuild-prompt.json](./privelier-c
 
 ## Still open or externally blocked
 
-- [ ] P00 baseline closure: clean-checkout reproducibility, complete inventory reconciliation, canonical plan/handoff artifacts, and remote-only waitlist migration drift remain to be reconciled.
+- [ ] P00 baseline closure: clean-checkout reproducibility, canonical plan/handoff artifacts, the complete inventory, and the exit review are evidenced (`EVID-P00-012` through `EVID-P00-026`); P00-002 device evidence and remote-only waitlist migration reconciliation remain external release blockers.
 - [ ] P01 warning-free baseline: fix the known React test `act()`/cross-suite warning behavior and triage the recorded npm advisories without unsafe forced upgrades.
 - [ ] P02 database completion: resolve the rebuild program's UTC/IANA timezone decision, availability-closure/exception semantics, idempotency/concurrency test evidence, and any remaining database advisor findings.
 - [ ] P03 Google/Apple provider implementation and real-device provider tests remain founder/provider-console dependent.
