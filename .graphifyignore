@@ -13,3 +13,11 @@ assets/*.png
 CLAUDE.md
 README.md
 src/mobile_dev_review_notes.md
+
+# Agent frameworks are operating instructions, not application architecture.
+.agents/
+.claude/
+.Codex/
+node_modules/
+graphify-out/
+artifacts/

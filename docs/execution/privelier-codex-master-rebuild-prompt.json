@@ -1,0 +1,1152 @@
+{
+  "schema_version": "1.0.0",
+  "prompt_name": "Privelier Legendary Product Rebuild and Release Program",
+  "prepared_for": "Codex",
+  "prepared_on": "2026-09-01",
+  "target_repository": {
+    "url": "https://github.com/Privelier/Privelier",
+    "verified_reference_commit": "4353237",
+    "verified_reference_build": "https://expo.dev/accounts/aatt/projects/privelier/builds/3f1e4abb-23f9-47b6-9a75-2f8af1d5555c",
+    "technology": [
+      "React Native",
+      "Expo SDK 57",
+      "TypeScript",
+      "React Navigation 7",
+      "Supabase Auth, Database, Storage, and Realtime",
+      "Jest and React Native Testing Library",
+      "Maestro",
+      "EAS Build, Update, Workflows, and Observe"
+    ]
+  },
+  "command_to_codex": {
+    "primary_directive": "Treat this entire JSON object as one authoritative execution specification. Do not merely critique the app or return a plan. Inspect the real repository, create the persistent plan and continuity artifacts described below, then execute the work milestone by milestone until every in-scope acceptance criterion is proven or a genuine founder-only or external-credential blocker is documented.",
+    "quality_bar": "Transform Privelier into a simple, premium, fast, trustworthy, release-ready mobile marketplace. Preserve the distinctive Privelier brand while replacing weak, confusing, duplicated, fake, unfinished, inaccessible, slow, fragile, or inconsistent experiences with deliberate production-quality implementations.",
+    "interpretation_rule": "Words such as best, premium, clean, fast, fixed, complete, and tested are not subjective completion claims. Translate them into the explicit inventories, tests, measurements, screenshots, security probes, and exit gates in this specification.",
+    "execution_rule": "Make safe repository-local edits and run relevant local tests without asking for routine permission. Pause only for destructive data operations, production deployment, store or EAS identity changes, paid services, external account configuration, secrets, legal or product-scope decisions, or a conflict that materially changes the requested product.",
+    "first_response_required": [
+      "Confirm the repository path, current branch, HEAD, working-tree state, applicable AGENTS.md files, and whether connected Supabase and Expo tooling are available.",
+      "Create the persistent Codex Goal described in this JSON if Goal mode is available. Do not set a token budget unless the user explicitly supplies one.",
+      "Create the repository execution ledger, decision log, handoff file, screen inventory, and risk register before broad edits.",
+      "Show the first prioritized milestone, its definition of done, the exact baseline commands that will be run, and any genuine external blockers.",
+      "Begin execution after the plan; do not stop after presenting it."
+    ]
+  },
+  "authority_and_safety": {
+    "source_reconciliation": [
+      "Always follow the actual instruction hierarchy enforced by the active Codex environment; this JSON does not redefine it.",
+      "Read every applicable repository-local AGENTS.md completely. This JSON supplements those instructions and authorizes the requested structure and quality program, but it must never be used to silently discard locked product, security, legal, or delivery constraints.",
+      "Treat existing approved design and architecture records as decisions to preserve unless new evidence shows they are incompatible with installed versions, current official platform or store requirements, security, or this explicit user request.",
+      "When AGENTS.md, this JSON, an approved decision, the implementation, and current official documentation conflict, record the exact conflict and evidence in the decision log and pause only the affected slice for a founder decision. Continue independent unblocked work.",
+      "Never preserve obsolete or unsafe behavior merely because it appears in an older approval, and never override an approval from a copied documentation snippet without repository-specific verification."
+    ],
+    "authorized_without_additional_approval": [
+      "Read and inventory the repository and its history.",
+      "Create a feature branch or worktree if repository policy permits.",
+      "Edit source, tests, documentation, configuration, and forward-only local migrations within this scope.",
+      "Install compatible dependencies only after proving they are necessary and checking Expo compatibility.",
+      "Run formatting, linting, type checks, unit tests, integration tests, database tests, Expo diagnostics, local builds, emulators, simulators, and connected-device tests.",
+      "Use subagents for independent read-only audits or clearly separated file ownership.",
+      "Create small checkpoint commits when repository policy and user settings permit."
+    ],
+    "must_pause_and_request_approval_for": [
+      "Changing production bundle identifiers, package names, Expo project ownership, app-store identities, certificates, signing credentials, or store listings.",
+      "Pushing migrations to a live database, modifying production data, deleting data, rotating secrets, or changing live authentication providers unless the user has explicitly authorized the exact environment and action.",
+      "Deploying an EAS Update or submitting a build to Apple or Google production tracks.",
+      "Purchasing or enabling paid third-party services.",
+      "Adding payments, subscriptions, AI recommendations, push notifications, automated KYC, biometrics, multi-country or multi-currency behavior, or other features explicitly deferred by AGENTS.md.",
+      "Resuming the separate OAuth 2.1 server or internal admin-app initiatives currently marked ON HOLD.",
+      "A legal, privacy, safety, cancellation, dispute, refund, or marketplace-policy decision that cannot be safely inferred."
+    ],
+    "never_do": [
+      "Never expose a Supabase service-role key, provider secret, Apple private key, Mapbox secret download token, or other secret in client code, EXPO_PUBLIC variables, logs, screenshots, tests, commits, or generated documentation.",
+      "Never use a client-side check as the sole authority for booking validity, role, identity, approval, price, appointment state, review eligibility, or access control.",
+      "Never change a live database through an untracked dashboard edit. Schema changes must be forward-only migrations committed with tests.",
+      "Never use destructive git commands, delete user work, overwrite unrelated changes, force-push, or conceal a dirty working tree.",
+      "Never silence failures with skipped tests, broad mocks, TypeScript suppression, arbitrary sleeps, raised timeouts, disabled lint rules, swallowed errors, or fake success states.",
+      "Never ship placeholder buttons, no-op rows, fake statistics, fabricated reviews, arbitrary Unsplash editorial content presented as live data, inaccessible gesture-only actions, or a control that promises functionality that is unavailable.",
+      "Never run two writing agents against the same files. Use explicit ownership and worktrees where parallel changes are truly independent.",
+      "Never claim all bugs are fixed. Report evidence, residual risks, external blockers, and untested conditions honestly."
+    ]
+  },
+  "persistent_goal_and_continuity_protocol": {
+    "goal_request": {
+      "instruction": "Create a persistent Codex Goal now if the product supports it.",
+      "objective": "Re-architect, harden, redesign, test, and prepare Privelier for release according to this JSON, while preserving product constraints and leaving a verifiable, resumable execution record.",
+      "do_not_set_token_budget": true,
+      "completion_condition": "Only complete the Goal after every in-scope ledger item is done with evidence, every release gate passes, the final audit has no unexplained high-severity finding, and all external or deferred work is explicitly separated from completed work."
+    },
+    "required_repository_artifacts": [
+      {
+        "path": "docs/execution/PRIVELIER_REBUILD_PLAN.md",
+        "purpose": "Canonical work breakdown with stable task IDs, priority, status, dependencies, file ownership, acceptance criteria, test evidence, commit or diff reference, and next action."
+      },
+      {
+        "path": "docs/execution/PRIVELIER_REBUILD_HANDOFF.md",
+        "purpose": "Crash and usage-limit recovery checkpoint containing current milestone, last completed atomic task, current in-progress task, exact next command, working-tree state, failing checks, blockers, affected files, and last known-good checkpoint."
+      },
+      {
+        "path": "docs/execution/PRIVELIER_REBUILD_DECISIONS.md",
+        "purpose": "Decision log with date, question, options, chosen decision, rationale, official sources, reversibility, approver when required, and affected modules."
+      },
+      {
+        "path": "docs/execution/PRIVELIER_SCREEN_AND_FLOW_INVENTORY.md",
+        "purpose": "Exhaustive inventory of every route, screen, sheet, dialog, state, deep link, test ID, role, entry point, exit, data source, and status."
+      },
+      {
+        "path": "docs/execution/PRIVELIER_RISK_REGISTER.md",
+        "purpose": "Security, privacy, correctness, performance, accessibility, product, legal, release, and operational risks with severity, likelihood, owner, mitigation, verification, and residual risk."
+      },
+      {
+        "path": "docs/execution/PRIVELIER_EVIDENCE_INDEX.md",
+        "purpose": "Small committed manifest of dated evidence with result summaries, cryptographic hashes, redacted excerpts, and links or paths to retained CI, EAS, or local artifacts. Do not commit binary media, raw logs, secrets, tokens, personal data, or production records."
+      },
+      {
+        "path": "artifacts/privelier-rebuild/",
+        "purpose": "Gitignored local location for screenshots, videos, full logs, bundle reports, and other bulky evidence when CI or EAS storage is unavailable. Add and verify an exact gitignore rule before writing artifacts here."
+      }
+    ],
+    "task_statuses": [
+      "not_started",
+      "in_progress",
+      "blocked_external",
+      "blocked_decision",
+      "failed_needs_recovery",
+      "done_with_evidence",
+      "deferred_out_of_scope"
+    ],
+    "atomic_work_rule": "Only one atomic task may be in progress per writing agent. Before editing, mark it in progress and record intended files and verification. After editing, run the narrowest relevant checks, update evidence, and mark it done only if its acceptance criteria pass.",
+    "usage_limit_checkpoint_rule": [
+      "When a usage limit or session boundary is approaching, stop starting new work.",
+      "Bring the current atomic change to the safest recoverable state possible.",
+      "Update the plan and handoff before the session ends.",
+      "Record git status, changed files, completed checks, failing checks, the exact next command, and any partially applied migration or native-build state.",
+      "Do not mark partial work done and do not create a misleading green checkpoint.",
+      "Use synthetic test accounts and fixtures wherever possible. Redact names, email addresses, phone numbers, exact locations, messages, documents, tokens, and identifiers from any evidence that leaves the controlled test environment."
+    ],
+    "resume_rule": [
+      "Read all applicable AGENTS.md files.",
+      "Read the plan, handoff, decision log, and risk register.",
+      "Inspect git status, diff, recent log, current branch, and any running build or database state.",
+      "Re-run the narrow verification for the interrupted task.",
+      "Continue the highest-priority unfinished, unblocked task from the ledger.",
+      "Do not restart completed milestones or repeat research whose dated source and decision are still current."
+    ],
+    "planning_granularity": "Break every workstream below into atomic tasks that normally fit within one Codex turn. Each task must have a stable ID, explicit files or subsystem, definition of done, validation command, and recovery note.",
+    "status_communication": "During active work, send concise progress updates at least every 60 seconds. Lead with outcomes, current risk, and the next verification rather than narrating every command."
+  },
+  "verified_starting_baseline": {
+    "baseline_date": "2026-08-31",
+    "instruction": "Re-run and verify this baseline on the actual starting HEAD. Treat changed results as new evidence, not as a reason to overwrite these observations.",
+    "observations": [
+      {
+        "id": "BASE-001",
+        "finding": "npm ci completed, but npm audit reported 14 advisories: 12 moderate and 2 high.",
+        "required_response": "Trace every advisory to the exact dependency chain and shipped runtime reachability. Upgrade safely where compatible. Do not run a force upgrade blindly. Document accepted build-time-only risks with owners and expiry dates."
+      },
+      {
+        "id": "BASE-002",
+        "finding": "npm run typecheck passed.",
+        "required_response": "Keep it green after every milestone."
+      },
+      {
+        "id": "BASE-003",
+        "finding": "npm run lint completed without reported findings.",
+        "required_response": "Re-run and keep it green after every milestone."
+      },
+      {
+        "id": "BASE-004",
+        "finding": "npx expo-doctor passed 21 of 21 checks.",
+        "required_response": "Keep it green after dependency, configuration, native-module, or Expo changes."
+      },
+      {
+        "id": "BASE-005",
+        "finding": "Jest reported 549 passing tests and 1 failure across 48 suites. The failing case was PortfolioScreen.test.tsx, 'renders the counter and the add tile after loading an empty portfolio', timing out at 5000 ms.",
+        "required_response": "Fix the root cause. Do not increase the timeout. Prove the test is deterministic in isolation, in its suite, and in repeated full-suite runs."
+      },
+      {
+        "id": "BASE-006",
+        "finding": "The Jest run emitted React act warnings and test-environment warnings in asynchronous screen tests including Portfolio, Verify, and Review submission paths.",
+        "required_response": "Repair async ownership, timers, test setup, cleanup, and overlapping act usage until the full suite is warning-free. Console output expected by negative tests must be asserted or intentionally suppressed at the narrow test boundary."
+      },
+      {
+        "id": "BASE-007",
+        "finding": "The project currently presents one binary with role selection while AGENTS.md describes one codebase producing two separate Customer and Barber apps.",
+        "required_response": "Implement the role-specific navigation architecture now, then produce a documented Expo build-variant proposal. Do not change production identifiers or EAS ownership without founder approval."
+      },
+      {
+        "id": "BASE-008",
+        "finding": "app.json declares portrait orientation while iOS tablet support is enabled.",
+        "required_response": "Test compact, tablet, landscape, font scaling, keyboard, and Android adaptive behavior. Decide and document whether portrait-only is intentional; do not preserve a contradictory configuration accidentally."
+      }
+    ],
+    "baseline_commands": [
+      "git status --short --branch",
+      "git rev-parse HEAD",
+      "node --version",
+      "npm --version",
+      "npm ci",
+      "npm run typecheck",
+      "npm run lint",
+      "npm test -- --runInBand",
+      "npx expo-doctor",
+      "npx expo install --check",
+      "npm audit --json"
+    ]
+  },
+  "completion_outcomes": {
+    "in_progress": "Repository or validation work remains that Codex can perform.",
+    "repository_complete_release_blocked": "All repository-local implementation, documentation, local tests, and available builds pass, but one or more required external credential, provider-console, Apple device, second-device, store, live-environment authorization, or founder-policy actions remain. Report the repository as complete, keep release status explicitly blocked, list each blocker with owner and exact next step, and do not call the app release-ready.",
+    "release_ready": "Every repository-local gate plus required real-provider, real-device, database, release-candidate, security, accessibility, and staging validation gate passes. No unexplained critical or high-severity release risk remains.",
+    "goal_status_rule": "The persistent Goal may be marked complete only for release_ready. If the result is repository_complete_release_blocked, do not falsely complete it; report the blocked release outcome and follow the active Codex product's supported waiting or blocked-state semantics."
+  },
+  "feature_delivery_pipeline": {
+    "rule": "Honor the repository's feature pipeline by treating each behavior-changing slice as a separate, reviewable run. Do not combine the whole rebuild into one unreviewable rewrite.",
+    "stages": [
+      {
+        "name": "Plan",
+        "required_output": "Inventory, user problem, affected roles and routes, data flow, dependencies, risks, acceptance criteria, rollback or recovery strategy, and stable task IDs."
+      },
+      {
+        "name": "Design",
+        "required_output": "Information hierarchy, interaction and state model, accessibility, platform behavior, data truth, security boundaries, and documented decisions before visual implementation."
+      },
+      {
+        "name": "Build",
+        "required_output": "Small cohesive diff with explicit file ownership, no unrelated cleanup, no placeholders, and no test suppression."
+      },
+      {
+        "name": "Validate",
+        "required_output": "Narrow tests, state-matrix checks, device evidence where relevant, and reproduction proof for every repaired defect."
+      },
+      {
+        "name": "Secure",
+        "required_output": "Threat review plus allow and deny tests for role, identity, private data, secrets, validation, storage, and database authority."
+      },
+      {
+        "name": "Integrate",
+        "required_output": "Full-suite verification, navigation and deep-link checks, import and ownership review, database drift check, performance comparison, and conflict-free integration."
+      },
+      {
+        "name": "Release",
+        "required_output": "Updated ledger and handoff, E2E or build evidence appropriate to the slice, monitoring or rollback notes, and an honest residual-risk statement."
+      }
+    ],
+    "parallel_agent_rule": "Use independent read-only reviewers in parallel when useful. For implementation, give each writing agent exclusive files or a separate worktree and integrate only after its own pipeline gates pass."
+  },
+  "product_truth_and_scope": {
+    "positioning": "Privelier is a premium, private, trustworthy marketplace for booking independent barbers who travel to the customer's location. It must not feel like a generic directory, salon template, barber-pole theme, social feed, or overdecorated luxury concept.",
+    "primary_roles": [
+      "Customer",
+      "Barber",
+      "Founder administrator through the currently approved administrative path"
+    ],
+    "phase_one_truth": [
+      "Customers discover approved barbers, inspect honest profiles and services, book valid times, manage appointments, message their barber, and review completed bookings.",
+      "Barbers manage today's work, requests and appointments, messages, services, availability, location, portfolio, bio, and manual verification.",
+      "Barber verification remains manual: ID image plus license image, private storage, founder review, no selfie, no face matching, no OCR, and no biometric processing.",
+      "Only approved barbers appear in customer discovery.",
+      "Payments, subscriptions, AI recommendations, advanced analytics, multi-country or multi-currency logic, automated KYC or biometrics, and push notifications remain out of scope without explicit founder sign-off.",
+      "Dispute, cancellation, refund, and in-home safety policies remain tracked high-liability decisions for the appropriate later phase; do not pretend they are solved."
+    ],
+    "out_of_scope_but_must_remain_visible": [
+      "Real-money payment and payout flows",
+      "Subscription products",
+      "AI recommendation systems",
+      "Automated identity verification or biometric processing",
+      "Push notifications",
+      "Multi-country and multi-currency",
+      "OAuth 2.1 authorization server",
+      "Separate internal admin application",
+      "Live-location safety sharing and SOS implementation until product, legal, and privacy decisions are approved",
+      "Dispute, cancellation-fee, and refund behavior until policy decisions are approved"
+    ]
+  },
+  "best_target_information_architecture": {
+    "principles": [
+      "Use four stable top-level destinations per role. Top-level tabs are destinations, never actions.",
+      "Every tab has one clear job and preserves its own navigation state.",
+      "Use secondary segmented controls only for sibling views inside a destination.",
+      "Keep search, filters, map or list mode, and location selection within Home instead of creating competing discovery tabs.",
+      "Keep settings and low-frequency management under Profile instead of consuming top-level navigation.",
+      "Keep a booking or appointment detail screen as the operational hub for status, address, service, price, time, counterpart, chat entry, cancellation, completion, and review eligibility.",
+      "Customer and Barber navigation trees, copy, priorities, and screens remain role-specific. Share only stable foundations, utilities, and explicitly approved primitives."
+    ],
+    "root_flow": {
+      "sequence": [
+        "Native splash and boot",
+        "Session restoration and deep-link resolution",
+        "Unauthenticated Auth navigator",
+        "Profile provisioning or finish-setup gate",
+        "Authoritative role resolution from the database",
+        "Customer application or Barber application"
+      ],
+      "rules": [
+        "Never flash an unauthorized navigator while session and role are unresolved.",
+        "Never trust route params, local storage, OAuth metadata, or a client-selected role as final authorization.",
+        "Deep links must wait for session and navigator readiness, validate parameters, and fail to a safe recoverable screen."
+      ]
+    },
+    "authentication_navigator": {
+      "screens": [
+        "AuthEntry",
+        "EmailSignIn",
+        "EmailSignUp",
+        "VerifyEmail",
+        "ForgotPassword",
+        "ResetPassword",
+        "FinishSetup"
+      ],
+      "auth_entry_order": [
+        "On iOS, the system Sign in with Apple control is first and is not visually reskinned.",
+        "Continue with Google uses the provider-approved treatment.",
+        "A quiet divider says or.",
+        "Continue with email opens the email flow.",
+        "Terms and privacy links are readable, functional, and not prechecked consent."
+      ]
+    },
+    "customer_application": {
+      "bottom_tabs": [
+        {
+          "name": "Home",
+          "purpose": "Discover and search approved barbers in one place.",
+          "stack": [
+            "CustomerHome",
+            "LocationSearchSheet",
+            "FilterSheet",
+            "BarberProfile",
+            "Booking",
+            "BookingConfirmation",
+            "CustomerAppointmentDetail"
+          ]
+        },
+        {
+          "name": "Appointments",
+          "purpose": "Understand and act on bookings.",
+          "stack": [
+            "CustomerAppointments with Upcoming and Past sibling segments",
+            "CustomerAppointmentDetail",
+            "ReviewSubmit"
+          ]
+        },
+        {
+          "name": "Messages",
+          "purpose": "Conversations connected to real bookings.",
+          "stack": [
+            "CustomerConversationList",
+            "CustomerConversation"
+          ]
+        },
+        {
+          "name": "Profile",
+          "purpose": "Identity, saved items, preferences, privacy, help, and account actions.",
+          "stack": [
+            "CustomerProfile",
+            "CustomerPersonalInformation",
+            "SavedBarbers only if fully implemented",
+            "CustomerSettings",
+            "PrivacyAndSecurity",
+            "HelpAndSupport",
+            "DeleteAccount if required and fully implemented"
+          ]
+        }
+      ],
+      "home_content_order": [
+        "Compact welcome and current service location",
+        "Prominent search field",
+        "Useful filter chips or a filter sheet backed by real data",
+        "List or map control within the same destination",
+        "Recommended or nearby approved barbers backed by real ranking logic, otherwise an honestly labeled directory",
+        "Clear loading, empty, permission-denied, offline, and retry states"
+      ],
+      "booking_model": [
+        "Start from a specific barber profile or a valid appointment rebooking context.",
+        "Prefer one focused Booking screen with progressive sections for service, date and time, address, and review instead of a long wizard.",
+        "Show an always-correct price and duration summary before submission.",
+        "On submit, the database must atomically revalidate future time, barber availability and exceptions, duration overlap, approval, service ownership, price snapshot, role, and idempotency.",
+        "Navigate to a real confirmation and then the appointment-detail hub. A failed or uncertain request must never display success."
+      ]
+    },
+    "barber_application": {
+      "bottom_tabs": [
+        {
+          "name": "Today",
+          "purpose": "A calm operational overview, not a generic dashboard.",
+          "stack": [
+            "BarberToday",
+            "BarberAppointmentDetail",
+            "ProfileCompletionTask routes"
+          ],
+          "content_order": [
+            "Availability status for today",
+            "Next appointment",
+            "New requests requiring action",
+            "Today's schedule",
+            "Profile or verification readiness only when action is required"
+          ]
+        },
+        {
+          "name": "Appointments",
+          "purpose": "Requests, upcoming work, and history in one destination.",
+          "stack": [
+            "BarberAppointments with Requests, Upcoming, and Past sibling segments",
+            "BarberAppointmentDetail"
+          ]
+        },
+        {
+          "name": "Messages",
+          "purpose": "Booking-linked customer conversations.",
+          "stack": [
+            "BarberConversationList",
+            "BarberConversation"
+          ]
+        },
+        {
+          "name": "Profile",
+          "purpose": "Public presentation and business settings.",
+          "stack": [
+            "BarberProfile",
+            "Services",
+            "Availability",
+            "AvailabilityExceptions",
+            "ServiceLocation",
+            "Portfolio",
+            "BioEdit",
+            "Verification",
+            "BarberSettings",
+            "PrivacyAndSecurity",
+            "HelpAndSupport"
+          ]
+        }
+      ]
+    },
+    "build_variant_target": {
+      "recommended_end_state": "One repository and shared backend producing a Privelier Customer app and a Privelier Pro Barber app, each with its own entry point, navigation tree, app name, iconography, onboarding context, EAS profile, and future store identity.",
+      "implementation_order": [
+        "First separate role-specific roots and remove cross-role navigation coupling inside the current project.",
+        "Then introduce a typed APP_VARIANT build configuration with customer and barber entry points and environment validation.",
+        "Create development, preview, staging, and production build profiles for each variant.",
+        "Keep the current bundle and project identity untouched until founders approve exact identifiers, EAS projects, migration strategy, and store implications.",
+        "Do not ship a role switcher in production variants. Development tooling may expose an explicit test-only role launcher."
+      ]
+    }
+  },
+  "premium_design_contract": {
+    "brand_foundation": {
+      "dark_background": "#121214",
+      "dark_surface": "#1B1B1E",
+      "dark_primary_text": "#F5F1E8",
+      "brass_accent": "#BFA06B",
+      "light_background": "#F8F4EC",
+      "style": "Editorial restraint, quiet confidence, precise typography, thin borders, generous whitespace, honest imagery, and sparse brass emphasis.",
+      "typography": "Use the established editorial serif for selective display moments and a highly legible sans serif for interface text.",
+      "forbidden_aesthetic_shortcuts": [
+        "Gradients used to manufacture luxury",
+        "Glassmorphism",
+        "Neon",
+        "Heavy or stacked shadows",
+        "Excessive rounded cards",
+        "Giant headings that displace useful content",
+        "Gold on every interactive element",
+        "Fake urgency, fake scarcity, fake social proof, or decorative ratings",
+        "Barber-pole or generic salon-template styling"
+      ]
+    },
+    "system_requirements": [
+      "Consolidate colors, typography, spacing, radii, borders, elevations, icon sizing, motion durations, and component states into semantic tokens.",
+      "Use a compact spacing scale derived from 4, 8, 12, 16, 24, 32, and 48 unless existing tokens already provide an equivalent coherent scale.",
+      "Use one primary action per screen or task state. Secondary and destructive actions must have clearly different hierarchy.",
+      "Reserve brass for selected state, primary conversion, verified trust moments where it adds meaning, and small editorial highlights.",
+      "Use at least a 48 by 48 dp interactive target across platforms while keeping visual controls refined.",
+      "Support light and dark appearances without duplicating raw color values in screens.",
+      "Use consistent safe-area, keyboard avoidance, scroll-inset, status-bar, edge-to-edge, and predictive-back behavior.",
+      "Use motion only to clarify hierarchy or state, normally in the 150 to 250 ms range, and respect reduced-motion settings.",
+      "Use optimized, cached images with stable aspect ratios, placeholders, accessible descriptions where meaningful, and no layout jumps.",
+      "Use native or platform-conventional controls for authentication, date and time selection, permissions, destructive confirmations, and system settings handoffs."
+    ],
+    "every_screen_state_matrix": [
+      "Initial",
+      "Loading or skeleton",
+      "Success with typical data",
+      "Success with long text and maximum data",
+      "Empty",
+      "Recoverable error",
+      "Offline or disconnected where relevant",
+      "Permission denied or unavailable where relevant",
+      "Disabled",
+      "Submitting",
+      "Success confirmation",
+      "Session expired",
+      "Large font",
+      "Screen reader",
+      "Light theme",
+      "Dark theme",
+      "Small phone",
+      "Large phone",
+      "Tablet or large window when supported"
+    ],
+    "accessibility_acceptance": [
+      "Meet WCAG 2.2 AA where applicable: 4.5 to 1 contrast for normal text, 3 to 1 for large text and essential non-text UI, visible focus, and understandable error identification.",
+      "Every actionable icon has an accessible name, role, state, and hint only when the action is not obvious.",
+      "Decorative images and icons are hidden from accessibility services.",
+      "Reading and focus order follow the visual task order.",
+      "No action requires a gesture without an accessible alternative.",
+      "Dynamic text does not clip, overlap, or hide required actions at large OS font settings.",
+      "Announcements exist for async errors, successful submissions, changed appointment states, and chat send failures without creating duplicate speech.",
+      "Test critical flows manually with VoiceOver and TalkBack, not only with static linting."
+    ],
+    "ui_replacement_rule": "For every weak component, first identify the user task, data truth, hierarchy, and failure states. Replace it with the smallest coherent component that solves the task. Do not repaint a broken information architecture.",
+    "visual_evidence": [
+      "Capture a named screenshot or Appshot matrix for every route and important state.",
+      "Review customer and barber experiences separately.",
+      "Compare small-phone dark and light baselines plus at least one large-window or tablet layout if supported.",
+      "Record all intentional deviations from Apple, Android, React Navigation, or WCAG guidance in the decision log."
+    ]
+  },
+  "authentication_contract": {
+    "providers": [
+      "Email and password",
+      "Google",
+      "Apple"
+    ],
+    "architecture": [
+      "Audit the existing approved OAuth design before changing it. Reconcile it with current Expo and Supabase documentation and record any necessary revision.",
+      "Use PKCE for browser OAuth flows and a dedicated allow-listed callback such as privelier://auth-callback.",
+      "Handle browser completion, cold-start deep links, warm deep links, duplicated callbacks, missing code, expired code, provider cancellation, offline state, and session-exchange failure.",
+      "Use the provider-native or officially recommended SDK when it materially improves security or platform correctness, but do not replace an approved architecture without documenting compatibility, binary cost, and migration impact.",
+      "On iOS, use the official system Sign in with Apple control and capability. Capture Apple's name on first authorization when available because later responses may return null.",
+      "Show Google on the supported customer and barber surfaces. Show Apple on iOS and on other platforms only through a currently supported, deliberately configured flow.",
+      "Use secure session persistence appropriate to the current Expo and Supabase guidance, with detectSessionInUrl disabled on native when applicable and AppState-aware token refresh.",
+      "Provider credentials and secrets belong in provider consoles, Supabase server configuration, or EAS secret environments as appropriate; only publishable client identifiers may be present in the app.",
+      "Do not persist a redundant provider choice when Supabase identities already contain it.",
+      "Audit password policy, email and provider rate limits, resend abuse, breached-password protection, bot protection, and account-enumeration behavior. Enable or document proportionate controls without creating an inaccessible login experience."
+    ],
+    "identity_and_role_invariants": [
+      "All providers converge on the same session-driven provisioning state machine.",
+      "A new social user with incomplete profile data lands on FinishSetup exactly once and can safely resume after app termination.",
+      "Preserve the current single-role-per-user model unless founders separately approve a schema and product change for dual roles.",
+      "During first-ever profile provisioning, allow exactly one explicit, database-validated initial choice of customer or barber. Perform that creation atomically through the approved server path, restrict values to the allowed non-admin roles, make retries idempotent, and freeze the role afterward except through an explicitly authorized migration or founder workflow.",
+      "In the current shared binary, keep the first-run customer or barber choice in FinishSetup. In future split variants, the build variant may supply and clearly confirm the intended initial role for a new account, but APP_VARIANT is onboarding context and never authorization.",
+      "An existing user opening the opposite role app must not be auto-converted and must not receive a duplicate identity. Show a safe wrong-app state with sign-out and a route or store handoff to the correct app. Do not expose the other role's navigator or data.",
+      "Plan migration from the shared binary so existing users sign into the same Supabase identity, retain their database role and history, and move to the matching variant without duplicate accounts or orphaned deep links. Keep a safe compatibility period until both variants and handoffs are available.",
+      "The database role is authoritative after initial provisioning. A user cannot alter role, become approved, or become an administrator by editing local state, APP_VARIANT, OAuth metadata, route params, or an ordinary client update.",
+      "Every OAuth-created barber starts pending, must upload the existing manual documents, cannot self-approve, and remains excluded from customer search until founder approval.",
+      "Handle verified same-email identity linking and manual linking according to current Supabase behavior. Test duplicate email, masked Apple email, provider already linked, account collision, unlinking limits, and takeover-resistant reauthentication.",
+      "Sign-out clears sensitive state, subscriptions, cached private data, pending deep links, and role-specific navigation history.",
+      "Treat in-app account deletion as a release requirement wherever current store rules apply. Implement a secure self-service request, recent reauthentication for sensitive action, truthful completion state, and deletion or documented lawful retention and anonymization of marketplace records. Pause only for the founder's retention-policy decision, not for routine engineering."
+    ],
+    "email_flow_requirements": [
+      "Separate sign-in and sign-up intent clearly while allowing an easy switch.",
+      "Use labeled inputs, correct keyboard and autofill attributes, password visibility controls, precise inline validation, and no destructive trimming or lowercasing beyond valid email normalization.",
+      "Provide forgot password, reset password, verify email, resend with cooldown, expired-link recovery, already-confirmed handling, and changed-email behavior.",
+      "Disable duplicate submissions, show progress without layout shift, preserve non-secret form context across recoverable errors, and never reveal whether an unrelated account exists beyond the chosen security policy.",
+      "Map provider and Supabase errors to calm, actionable, non-technical copy while retaining redacted diagnostics for development and monitoring."
+    ],
+    "authentication_test_matrix": [
+      "New and returning email customer",
+      "New and returning email barber",
+      "New and returning Google customer",
+      "New and returning Google barber",
+      "New and returning Apple customer on iOS",
+      "New and returning Apple barber on iOS",
+      "Apple first authorization with name and later authorization without name",
+      "Canceled provider sheet or browser",
+      "Offline before launch, during provider handoff, and during code exchange",
+      "Cold-start callback, warm callback, duplicate callback, malformed callback, and expired callback",
+      "Unverified email, resend, reset-password callback, and session expiry",
+      "Same email across providers and explicit identity linking",
+      "App killed during provisioning and resumed",
+      "OAuth-created barber cannot self-approve and is absent from customer discovery"
+    ],
+    "external_configuration_checklist": [
+      "Google Cloud OAuth clients and consent configuration",
+      "Apple Developer App ID, Services ID where applicable, Sign in with Apple capability, key, Team ID, and rotation ownership",
+      "Supabase Google and Apple provider configuration",
+      "Exact Supabase callback URL and mobile deep-link allow list",
+      "iOS associated capability and Expo plugin configuration",
+      "Android intent filters and verified redirect behavior",
+      "Development, preview, staging, and production environment separation",
+      "Real-device provider testing with redacted evidence"
+    ]
+  },
+  "database_and_backend_contract": {
+    "audit_inventory": [
+      "Every table, column, enum, constraint, index, foreign key, view, materialized view, function, trigger, publication, grant, RLS policy, storage bucket, storage policy, Realtime channel, generated type, seed, migration, and remote drift state.",
+      "Every client query, RPC, mutation, upload, signed URL, subscription, retry, pagination strategy, and error mapping.",
+      "Every role and actor: anon, authenticated customer, authenticated barber, approved barber, founder administrator, service role, and malicious cross-account caller."
+    ],
+    "booking_integrity_release_blocker": [
+      "Move all authoritative booking validation into one atomic server-owned transaction or RPC.",
+      "Reject appointments in the past.",
+      "Reject a barber who is not approved.",
+      "Reject a service not owned and active for that barber.",
+      "Snapshot the authoritative service name, price, currency, and duration needed to preserve booking history.",
+      "Validate the requested interval against weekly availability and date-specific closed or override exceptions.",
+      "Prevent every time-range overlap for active states, not only identical start times. Use a transaction-safe database constraint or locking design and test concurrent submissions.",
+      "Make booking creation idempotent so a retry, double tap, reconnect, or duplicated callback cannot create duplicate appointments.",
+      "Define and enforce allowed appointment status transitions and actor permissions on the server.",
+      "Use timestamptz in UTC for instants, an explicit IANA timezone for display and recurring availability, and test daylight-saving boundaries."
+    ],
+    "availability_model": [
+      "Preserve recurring weekly availability.",
+      "Add a safe model for date-specific closed days, vacations, and temporary overrides if it is absent.",
+      "Prevent malformed or overlapping availability windows.",
+      "Ensure customer-visible slots are calculated from the same rules enforced by booking creation.",
+      "Do not claim available today when only generic working hours exist and actual capacity is unknown."
+    ],
+    "security_requirements": [
+      "Enable RLS on every exposed table and explicitly test grants plus allow and deny policies for every operation and actor.",
+      "Revoke unnecessary anon privileges including known leftover REFERENCES, TRIGGER, and TRUNCATE grants when a tested migration can do so safely.",
+      "Keep service-role credentials exclusively server-side.",
+      "Set safe search_path values and explicit execution grants for SECURITY DEFINER functions. Remove or justify advisor warnings with compensating controls.",
+      "Verify views do not bypass intended RLS. Use security_invoker or a deliberately narrow SECURITY DEFINER projection as appropriate.",
+      "Protect barber approval, rating, reviewer attribution, booking price snapshots, role, and other server-owned fields against client writes.",
+      "Keep verification documents in a private bucket with owner-scoped paths, file type and size validation, short-lived signed reads, no public listing, and founder-only review access.",
+      "Treat exact customer service addresses, private barber coordinates, messages, verification documents, and identity fields as sensitive. Define and test access by participant and appointment state, minimize retention and logs, and never expose exact location through a directory view.",
+      "Preserve the approved location-privacy behavior: exact barber coordinates remain internal, customer-facing map pins use the stored randomized public offset, and a barber without valid display coordinates receives no fake pin.",
+      "Run live adversarial probes in an authorized non-production or controlled environment for cross-user reads and writes, role escalation, self-approval, forged review attribution, unauthorized document access, booking conflict, and RPC misuse.",
+      "Run Supabase Security and Performance Advisors after every database milestone and resolve or explicitly accept each result."
+    ],
+    "data_quality_and_performance": [
+      "Add missing NOT NULL, CHECK, UNIQUE, foreign-key, and length constraints only after checking existing data and writing a safe migration path.",
+      "Use indexes proven by real query shapes and EXPLAIN ANALYZE. Do not add speculative or duplicate indexes.",
+      "Add or verify useful city and directory lookup indexing, including the tracked users city query path.",
+      "Bound requests, history, reviews, portfolio, messages, and directory queries with server filters, deterministic ordering, pagination, and sane limits.",
+      "Remove N plus 1 reads and duplicate Discover or Explore data fetches without introducing an unjustified heavy state library.",
+      "Generate or update TypeScript database types from the authoritative schema and fail CI on meaningful drift.",
+      "Test Realtime authorization, duplicate delivery, reconnect, missed-event resync, optimistic rollback, and cleanup on sign-out."
+    ],
+    "migration_rules": [
+      "All schema changes are forward-only files under supabase/migrations.",
+      "Test a clean local reset and migration sequence from zero.",
+      "Write pgTAP tests for schema invariants, functions, triggers, grants, and RLS allow and deny behavior.",
+      "Make migrations safe for existing data, document locks and expected duration, and provide a forward recovery plan rather than relying on down migrations.",
+      "Never push live changes until the exact target, backup or recovery posture, migration diff, tests, and founder authorization are confirmed.",
+      "Coordinate so only one operator deploys migrations to an environment at a time."
+    ]
+  },
+  "full_application_audit_checklist": {
+    "completeness_rule": "No route, component, state, query, migration, or build surface may be omitted merely because it looks secondary. Every inventory item receives a status, evidence, and either a fix, an explicit acceptable rationale, an external blocker, or an out-of-scope decision.",
+    "surfaces": [
+      "Boot, splash, fonts, theme restoration, and session restoration",
+      "Role entry, authentication, provisioning, deep links, and sign-out",
+      "Every customer tab, stack screen, sheet, dialog, card, list row, empty state, error state, and destructive action",
+      "Every barber tab, stack screen, sheet, dialog, card, list row, empty state, error state, and destructive action",
+      "Booking, appointment status, chat, review, verification, portfolio, services, availability, location, profile, settings, privacy, and help flows",
+      "Mapbox list and map behavior, permissions, token absence, native-module absence, clustering, selected pin, and accessibility fallback",
+      "Every navigation target, back path, tab reset, state restoration path, deep link, test ID, and route parameter",
+      "Every database and storage operation plus optimistic state and Realtime subscription",
+      "iOS, Android, development build, preview build, staging, production config, EAS Update compatibility, and web only if it remains an intentionally supported target",
+      "Light and dark themes, small and large screens, portrait and supported landscape, keyboard, reduced motion, large text, VoiceOver, and TalkBack"
+    ],
+    "known_items_that_must_be_verified": [
+      "Discover and Explore currently overlap conceptually; merge them into Home without losing the useful map, list, search, location, or filtering capabilities.",
+      "Static Trending content and first-row featured logic must be removed, replaced with real documented logic, or labeled as curated content backed by an explicit content source.",
+      "A Verified filter that selects every approved directory barber is not a useful filter; replace it with a meaningful trust label or remove the no-op control.",
+      "Bookings must open a full appointment detail and action hub.",
+      "Account, Favorites, Notifications, Privacy, Preferences, and Help rows must be functional, honestly unavailable, or removed.",
+      "The Mapbox runtime public token and secret native-download token must remain correctly separated.",
+      "Barber request and history reads must not grow without pagination or server filtering.",
+      "Verification upload and two-device acceptance or Realtime flows require on-device proof, not only mocked tests.",
+      "All authored Maestro flows must actually be run once tooling is available; repair flakiness instead of leaving permanent unexecuted files.",
+      "Public barber bio content may create off-platform contact or moderation risk in the payments phase; keep it tracked without inventing Phase 2 moderation now."
+    ]
+  },
+  "performance_and_reliability_contract": {
+    "measurement_rule": "Measure release builds on representative physical iOS and Android devices. Establish baselines before optimization, record hardware and build mode, and compare identical scenarios. Do not optimize from intuition alone.",
+    "budgets": [
+      "No unexplained JavaScript bundle growth greater than 10 percent from the recorded baseline. Any justified increase must include user value and mitigation.",
+      "No network request or mutation may leave the interface in an indefinite loading or submitting state.",
+      "A tap must receive immediate visual feedback; expensive work must not block the interaction frame.",
+      "Critical lists must remain responsive with realistic upper-bound fixtures and use virtualization, stable keys, bounded item complexity, and optimized thumbnails.",
+      "Repeated navigation, focus refresh, and Realtime events must not cause duplicate subscriptions, unbounded listeners, repeated N plus 1 reads, stale overwrites, or memory growth.",
+      "A cold launch, warm launch, Home load, appointment open, booking submit, and chat send each receive a recorded baseline and an approved release target. If the environment cannot meet a proposed target, document the bottleneck and use a no-regression gate rather than fabricating success.",
+      "Crash-free and error-rate targets must be defined before release once actual telemetry is available."
+    ],
+    "required_actions": [
+      "Analyze production JavaScript bundles with Expo Atlas or the current official Expo bundle tooling.",
+      "Profile real release builds with React Native and native performance tools rather than development mode.",
+      "Audit unnecessary renders, unstable props, repeated focus fetches, oversized images, synchronous work, unbounded arrays, and duplicate queries.",
+      "Adopt expo-image or another current Expo-compatible image solution only if the measured benefit and migration cost justify it.",
+      "Use request deduplication, stale-result protection, pagination, caching, and background refresh deliberately. Do not add a global state or query framework without evidence.",
+      "Remove production console noise and redact diagnostics while preserving useful development and monitoring context.",
+      "Implement recoverable error boundaries at application and risky feature boundaries, plus a safe restart path.",
+      "Choose and configure observability appropriate to Expo SDK 57. Evaluate EAS Observe for supported JavaScript errors and navigation telemetry, and document whether native crash reporting requires Sentry, BugSnag, or another approved service.",
+      "Include app version, build number, update ID, route, and redacted correlation context in diagnostics where allowed.",
+      "Test offline launch, network loss mid-mutation, slow network, server errors, rate limits, session expiry, duplicated Realtime events, and reconnect."
+    ]
+  },
+  "workstreams": [
+    {
+      "id": "P00",
+      "name": "Repository reconnaissance and frozen baseline",
+      "priority": "critical",
+      "tasks": [
+      "Read all applicable AGENTS.md and approved design records completely.",
+        "Install and walk through the referenced Android APK when the artifact, compatible device, and safe test credentials are available, or reproduce that exact reference commit in a representative build. Capture device and OS details, redacted before-state screenshots or short recordings, critical-flow timings, native Mapbox behavior, keyboard and inset behavior, transitions, loading perception, and interaction friction before edits.",
+        "Capture branch, HEAD, dirty state, dependency tree, Expo config, EAS profiles, environment-variable names, source tree, routes, screens, tests, migrations, storage, and CI.",
+        "Build the exhaustive screen and flow inventory and map every control to a real action or data source.",
+        "Run the baseline commands and store redacted results.",
+        "Create the plan, handoff, decisions, risk register, and evidence directories."
+      ],
+      "exit_gate": [
+        "The working baseline is reproducible.",
+        "The actual reference build has a dated walkthrough record, or an explicit artifact, device, or credential blocker plus a best-available source-build comparison.",
+        "Every app surface has an inventory ID.",
+        "Known failures and warnings are recorded without being hidden.",
+        "No broad refactor begins before the current behavior and rollback point are understood."
+      ]
+    },
+    {
+      "id": "P01",
+      "name": "Stabilize tests and dependency health",
+      "priority": "critical",
+      "tasks": [
+        "Fix the PortfolioScreen timeout and all overlapping act or React test-environment warnings at their root.",
+        "Run failing tests in isolation, by suite, in the full suite, and repeatedly to expose order dependence.",
+        "Audit and triage all npm advisories by dependency path, runtime reachability, compatibility, and remediation.",
+        "Upgrade safe compatible dependencies using Expo-compatible installation guidance.",
+        "Make the baseline pipeline deterministic and warning-free before architectural work."
+      ],
+      "exit_gate": [
+        "All unit and component tests pass repeatedly without act, open-handle, unhandled-rejection, or unexpected console warnings.",
+        "Typecheck, lint, and Expo Doctor pass.",
+        "Every unresolved dependency advisory has documented runtime reachability, severity, mitigation, owner, and expiry."
+      ]
+    },
+    {
+      "id": "P02",
+      "name": "Database correctness and release blockers",
+      "priority": "critical",
+      "tasks": [
+        "Inventory local migrations versus authorized remote schema and detect drift.",
+        "Design and implement atomic server-side booking validation and full time-range overlap protection.",
+        "Add or repair availability exceptions and timezone semantics.",
+        "Enforce server-owned price, duration, role, approval, status transitions, and idempotency.",
+        "Audit every RLS policy, grant, view, function, trigger, bucket, storage policy, Realtime publication, and advisor warning.",
+        "Add pgTAP and client integration tests including concurrent and adversarial cases.",
+        "Bound and optimize growing queries with evidence-based indexes and pagination."
+      ],
+      "exit_gate": [
+        "A raw client cannot book the past, outside availability, across a closed override, with another barber's service, as an unapproved barber, or overlapping any active appointment.",
+        "Concurrent valid attempts produce at most one successful conflicting appointment.",
+        "A clean local database reset and all database tests pass.",
+        "RLS and grants have explicit allow and deny coverage for every exposed table and storage path.",
+        "No high-severity database advisor or adversarial-probe finding remains unexplained."
+      ]
+    },
+    {
+      "id": "P03",
+      "name": "Authentication, identity, and provisioning",
+      "priority": "critical",
+      "tasks": [
+        "Reconcile the existing OAuth approval with current official Expo, Supabase, Apple, and Google guidance.",
+        "Complete the email sign-in, sign-up, verification, resend, forgot-password, reset-password, error, and recovery flows.",
+        "Implement and configure Google authentication for both role experiences.",
+        "Implement Sign in with Apple with the official button and first-name capture behavior on iOS; add other-platform Apple support only through an approved supported design.",
+        "Harden PKCE callbacks, deep links, secure persistence, token refresh, sign-out cleanup, identity linking, and session-expiry recovery.",
+        "Prove all providers converge through the same database-authoritative provisioning and manual barber-verification gates.",
+        "Document external provider-console and credential steps as founder blockers without embedding secrets."
+      ],
+      "exit_gate": [
+        "All automatable auth tests pass.",
+        "Real-device email, Google, and Apple flows pass where credentials and platforms are available.",
+        "Cancellation, offline, cold callback, warm callback, duplicate callback, app-kill provisioning, and account-collision cases recover safely.",
+        "An OAuth barber remains pending, cannot self-approve, and is absent from customer discovery.",
+        "No secret or sensitive token appears in the repository, logs, artifacts, or client environment."
+      ]
+    },
+    {
+      "id": "P04",
+      "name": "Navigation and application structure",
+      "priority": "high",
+      "tasks": [
+        "Implement the four-tab Customer structure: Home, Appointments, Messages, Profile.",
+        "Implement the four-tab Barber structure: Today, Appointments, Messages, Profile.",
+        "Merge Discover and Explore into one Home destination with integrated search, filters, location, list, and map.",
+        "Move requests into Barber Appointments and management surfaces into Barber Profile.",
+        "Create or complete role-specific appointment-detail hubs.",
+        "Remove dead routes, duplicate navigators, placeholder tabs, unreachable screens, and cross-role leaks.",
+        "Preserve or atomically migrate deep links, test IDs, tests, and navigation state.",
+        "Design the separate Expo Customer and Barber build variants without changing production identity before approval."
+      ],
+      "exit_gate": [
+        "Every top-level tab has one distinct user purpose and three to five equal-hierarchy destinations are not exceeded.",
+        "Every route has a valid entry, exit, back behavior, auth guard, role guard, and test.",
+        "No tab is an action, no navigation target is dead, and no placeholder route remains.",
+        "Customer and Barber trees are independently testable and cannot navigate into the other role's UI."
+      ]
+    },
+    {
+      "id": "P05",
+      "name": "Design system and shared foundations",
+      "priority": "high",
+      "tasks": [
+        "Audit and consolidate semantic tokens for color, typography, spacing, border, radius, icon, motion, and states.",
+        "Create or refine only the primitives repeatedly needed by real screens, including buttons, inputs, notices, headers, loading states, empty states, error states, list rows, and confirmations.",
+        "Remove raw style drift, cheap visual effects, inconsistent pressed or disabled states, and inaccessible hit areas.",
+        "Implement theme, reduced-motion, text-scaling, keyboard, safe-area, edge-to-edge, and screen-reader foundations.",
+        "Document component usage and anti-patterns."
+      ],
+      "exit_gate": [
+        "No screen invents a second design language.",
+        "All shared primitives pass state, theme, accessibility, and interaction tests.",
+        "Customer and Barber remain visually related but operationally distinct.",
+        "The interface is flat, restrained, legible, and recognizably Privelier."
+      ]
+    },
+    {
+      "id": "P06",
+      "name": "Customer experience rebuild",
+      "priority": "high",
+      "tasks": [
+        "Rebuild Customer Home around location, search, meaningful filters, map or list, and truthful approved-barber data.",
+        "Rebuild Barber Profile with honest service, portfolio, rating, reviews, availability context, trust, and one clear booking action.",
+        "Create the compact booking experience with authoritative slot, price, duration, address, review, idempotent submit, and recovery states.",
+        "Rebuild Customer Appointments and appointment detail for upcoming, past, status, chat, approved cancellation information with no invented fees, completion, and review eligibility.",
+        "Rebuild customer conversation list and conversation states around real booking context.",
+        "Rebuild Customer Profile, personal information, privacy, help, and account actions; remove every nonfunctional row.",
+        "Verify all state-matrix, accessibility, theme, and layout cases."
+      ],
+      "exit_gate": [
+        "A new customer can authenticate, find a legitimate barber, understand the offer, create one valid booking, recover from failure, track it, message, and review a completed appointment without confusion.",
+        "There is no fake content, no dead action, no duplicate discovery destination, and no hidden essential state."
+      ]
+    },
+    {
+      "id": "P07",
+      "name": "Barber experience rebuild",
+      "priority": "high",
+      "tasks": [
+        "Rebuild Today as a concise operational view of availability, next appointment, actionable requests, today's schedule, and readiness.",
+        "Rebuild Barber Appointments with Requests, Upcoming, and Past segments plus clear accept, reject, completion, and conflict behavior.",
+        "Rebuild barber conversations with optimistic-send rollback, reconnect, ordering, pagination, and accessibility.",
+        "Rebuild Barber Profile management for services, recurring availability, exceptions, service location, portfolio, bio, verification, settings, privacy, and help.",
+        "Harden document upload progress, cancellation, retry, file validation, private access, rejection copy, and resubmission.",
+        "Verify all state-matrix, accessibility, theme, and layout cases."
+      ],
+      "exit_gate": [
+        "A new barber can authenticate, complete profile and manual verification submission, configure sellable services and real availability, handle requests, work through appointments, communicate, and maintain a trustworthy public profile without using customer UI.",
+        "Request conflicts, Realtime changes, upload failures, and reconnects are correct and recoverable."
+      ]
+    },
+    {
+      "id": "P08",
+      "name": "Performance, reliability, and observability",
+      "priority": "high",
+      "tasks": [
+        "Measure release-mode startup, navigation, key screen loads, booking, chat, list scroll, memory, network calls, and bundle composition.",
+        "Fix measured render, image, bundle, subscription, query, pagination, and stale-state bottlenecks.",
+        "Add appropriate error boundaries, redacted diagnostics, version context, and observability.",
+        "Test offline, slow, interrupted, duplicate, expired-session, server-error, and reconnect scenarios.",
+        "Set release performance and reliability budgets from the recorded evidence."
+      ],
+      "exit_gate": [
+        "No measured critical-flow regression remains.",
+        "No indefinite spinner, double submit, duplicate subscription, unbounded query, stale overwrite, or silent failure remains in the inventory.",
+        "Release diagnostics are useful, privacy-conscious, and contain no secret or raw sensitive server error."
+      ]
+    },
+    {
+      "id": "P09",
+      "name": "Automated, on-device, accessibility, and visual validation",
+      "priority": "critical",
+      "tasks": [
+        "Add unit tests for pure business, date, price, error, and state-transition logic.",
+        "Add component and integration tests for every screen state and critical mutation.",
+        "Add pgTAP tests for schema, functions, triggers, grants, RLS, and concurrency invariants.",
+        "Install or provision Maestro and run all existing flows before adding missing critical E2E flows.",
+        "Cover customer booking, barber accept or reject, both chat roles, auth providers, app-kill provisioning, verification, review, session expiry, and deep links.",
+        "Run two-device Realtime and reconnect tests.",
+        "Run VoiceOver, TalkBack, large-text, reduced-motion, keyboard, small-phone, and large-window checks.",
+        "Create and review the screenshot or Appshot matrix for every route and major state.",
+        "Run repeated full suites to detect flakes and order dependence."
+      ],
+      "exit_gate": [
+        "All automated suites pass repeatedly without warnings, skips, flakes, or open handles.",
+        "All critical Maestro flows have an actual dated pass result on supported devices.",
+        "Two-device Realtime behavior and reconnect are proven.",
+        "Every inventory screen has visual and accessibility evidence or an explicit platform limitation."
+      ]
+    },
+    {
+      "id": "P10",
+      "name": "Build, environment, CI, and release readiness",
+      "priority": "critical",
+      "tasks": [
+        "Validate environment variables at startup and document which are public versus secret.",
+        "Create coherent development, preview, staging, and production profiles, plus proposed role variants after identifier approval.",
+        "Build iOS and Android release candidates from a clean checkout.",
+        "Add CI or EAS Workflows gates for install, typecheck, lint, tests, database tests, Expo Doctor, bundle analysis, E2E where feasible, and artifact retention.",
+        "Use a staging runtime that matches production and promote the same tested commit or update rather than rebuilding unknown code.",
+        "Verify icons, splash, permissions copy, privacy declarations, versioning, runtimeVersion, update channels, rollback, signing, Mapbox configuration, deep links, and store-required authentication behavior.",
+        "Prepare a release checklist, rollback or forward-fix plan, monitoring plan, and known-risk report."
+      ],
+      "exit_gate": [
+        "Clean iOS and Android release candidates build successfully.",
+        "No development secret, test endpoint, debug control, or role switcher is present in release.",
+        "Staging E2E, smoke, accessibility, database, and performance gates pass on the same candidate.",
+        "Production deployment remains a separate explicitly approved action."
+      ]
+    },
+    {
+      "id": "P11",
+      "name": "Independent final audit and handoff",
+      "priority": "critical",
+      "tasks": [
+        "Run an independent code-quality review of the full diff.",
+        "Run an independent application and Supabase security review with adversarial evidence.",
+        "Reconcile the screen inventory, test matrix, risk register, plan, and git diff to find omitted surfaces.",
+        "Re-run every release command from a clean checkout.",
+        "Produce the final founder walkthrough, remaining external actions, deferred scope, residual risks, and exact release decision."
+      ],
+      "exit_gate": [
+        "Every repository-local in-scope task is done with evidence, and the outcome is explicitly classified as repository_complete_release_blocked or release_ready.",
+        "For release_ready, no critical or high finding remains open. For repository_complete_release_blocked, every external critical or high release blocker remains visibly open with an owner and exact next action and continues to block release.",
+        "No unreviewed migration, secret, placeholder, failing test, unexplained warning, or dirty generated artifact remains.",
+        "The handoff allows a fresh Codex session or human engineer to reproduce the result without hidden context."
+      ]
+    }
+  ],
+  "mandatory_quality_gates": {
+    "run_after_each_atomic_change": [
+      "The narrowest relevant unit, component, database, or E2E test",
+      "Typecheck for TypeScript or route changes",
+      "Lint for source changes",
+      "Expo Doctor for dependency, config, or native-module changes"
+    ],
+    "run_after_each_milestone": [
+      "npm run typecheck",
+      "npm run lint",
+      "npm test -- --runInBand",
+      "npx expo-doctor",
+      "Relevant Supabase local reset and pgTAP tests",
+      "Relevant Maestro flows on a real or representative build",
+      "Git diff review for secrets, accidental generated files, test suppression, and scope drift"
+    ],
+    "final_clean_checkout_gate": [
+      "npm ci",
+      "npm run typecheck",
+      "npm run lint",
+      "npm test -- --runInBand",
+      "npx expo-doctor",
+      "npm audit with documented disposition",
+      "Supabase database reset and complete database test suite",
+      "All critical Maestro E2E flows",
+      "Expo export and bundle analysis for supported targets",
+      "Android release candidate build and smoke test",
+      "iOS release candidate build and smoke test",
+      "Accessibility and visual matrices",
+      "Security advisors, performance advisors, and authorized adversarial probes",
+      "Final secret scan of the working tree, generated artifacts, retained logs, and reachable Git history, plus diff review; any discovered credential is revoked or rotated, not merely deleted from the latest tree"
+    ],
+    "failure_policy": [
+      "A failed gate reopens the owning task.",
+      "Fix the root cause or record a genuine external blocker; do not downgrade the gate to match the implementation.",
+      "A test that passes only in isolation is not green.",
+      "A mocked database security test does not replace a local pgTAP test or authorized live adversarial probe.",
+      "A development build performance result does not qualify as release evidence.",
+      "A screen without empty, error, loading, and accessibility behavior is incomplete."
+    ]
+  },
+  "official_source_policy": {
+    "rule": "Before implementing a version-sensitive or platform-sensitive decision, consult the current official primary source, record the URL and access date in the decision log, reconcile it with the installed versions, and prefer repository-tested behavior over copied snippets. Use blogs or aggregators only when no authoritative source exists.",
+    "codex_workflow": [
+      {
+        "title": "OpenAI Prompting",
+        "url": "https://learn.chatgpt.com/docs/prompting"
+      },
+      {
+        "title": "OpenAI Long-running work",
+        "url": "https://learn.chatgpt.com/docs/long-running-work"
+      }
+    ],
+    "expo_and_react_native": [
+      {
+        "title": "Expo authentication overview",
+        "url": "https://docs.expo.dev/develop/authentication/"
+      },
+      {
+        "title": "Expo authentication SDKs and libraries",
+        "url": "https://docs.expo.dev/guides/using-authentication/"
+      },
+      {
+        "title": "Expo AuthSession",
+        "url": "https://docs.expo.dev/versions/latest/sdk/auth-session/"
+      },
+      {
+        "title": "Expo SecureStore",
+        "url": "https://docs.expo.dev/versions/latest/sdk/securestore/"
+      },
+      {
+        "title": "Expo linking into the app",
+        "url": "https://docs.expo.dev/linking/into-your-app/"
+      },
+      {
+        "title": "Expo environment variables",
+        "url": "https://docs.expo.dev/eas/environment-variables/"
+      },
+      {
+        "title": "Expo build variants",
+        "url": "https://docs.expo.dev/build-reference/variants/"
+      },
+      {
+        "title": "Expo bundle analysis",
+        "url": "https://docs.expo.dev/guides/analyzing-bundles/"
+      },
+      {
+        "title": "Expo Image",
+        "url": "https://docs.expo.dev/versions/latest/sdk/image/"
+      },
+      {
+        "title": "Expo unit testing",
+        "url": "https://docs.expo.dev/develop/unit-testing/"
+      },
+      {
+        "title": "Expo E2E tests with Maestro",
+        "url": "https://docs.expo.dev/eas/workflows/examples/e2e-tests/"
+      },
+      {
+        "title": "EAS Observe",
+        "url": "https://docs.expo.dev/eas/observe/introduction/"
+      },
+      {
+        "title": "EAS Update deployment",
+        "url": "https://docs.expo.dev/eas-update/deployment/"
+      },
+      {
+        "title": "React Native performance",
+        "url": "https://reactnative.dev/docs/performance"
+      },
+      {
+        "title": "React Navigation authentication flow",
+        "url": "https://reactnavigation.org/docs/auth-flow/"
+      },
+      {
+        "title": "React Navigation native bottom tabs",
+        "url": "https://reactnavigation.org/docs/native-bottom-tab-navigator/"
+      }
+    ],
+    "apple_google_and_accessibility": [
+      {
+        "title": "Apple Human Interface Guidelines: Tab bars",
+        "url": "https://developer.apple.com/design/human-interface-guidelines/tab-bars"
+      },
+      {
+        "title": "Apple Human Interface Guidelines: Sign in with Apple",
+        "url": "https://developer.apple.com/design/human-interface-guidelines/sign-in-with-apple"
+      },
+      {
+        "title": "Apple Human Interface Guidelines: Accessibility",
+        "url": "https://developer.apple.com/design/human-interface-guidelines/accessibility"
+      },
+      {
+        "title": "Google Identity branding guidelines",
+        "url": "https://developers.google.com/identity/branding-guidelines"
+      },
+      {
+        "title": "Android layouts and navigation patterns",
+        "url": "https://developer.android.com/design/ui/mobile/guides/layout-and-content/layout-and-nav-patterns"
+      },
+      {
+        "title": "Android accessibility",
+        "url": "https://developer.android.com/design/ui/mobile/guides/foundations/accessibility"
+      },
+      {
+        "title": "Android adaptive layouts",
+        "url": "https://developer.android.com/design/ui/mobile/guides/layout-and-content/adapt-layout"
+      },
+      {
+        "title": "Android system bars and edge-to-edge",
+        "url": "https://developer.android.com/design/ui/mobile/guides/foundations/system-bars"
+      },
+      {
+        "title": "WCAG 2.2",
+        "url": "https://www.w3.org/WAI/WCAG22/"
+      },
+      {
+        "title": "OWASP Mobile Application Security Verification Standard",
+        "url": "https://mas.owasp.org/MASVS/"
+      }
+    ],
+    "supabase": [
+      {
+        "title": "Supabase social authentication with Expo React Native",
+        "url": "https://supabase.com/docs/guides/auth/quickstarts/with-expo-react-native-social-auth"
+      },
+      {
+        "title": "Supabase Apple login",
+        "url": "https://supabase.com/docs/guides/auth/social-login/auth-apple"
+      },
+      {
+        "title": "Supabase Google login",
+        "url": "https://supabase.com/docs/guides/auth/social-login/auth-google?platform=react-native&queryGroups=platform"
+      },
+      {
+        "title": "Supabase identity linking",
+        "url": "https://supabase.com/docs/guides/auth/auth-identity-linking"
+      },
+      {
+        "title": "Supabase Row Level Security",
+        "url": "https://supabase.com/docs/guides/database/postgres/row-level-security"
+      },
+      {
+        "title": "Supabase database testing",
+        "url": "https://supabase.com/docs/guides/local-development/testing/overview"
+      },
+      {
+        "title": "Supabase database migrations",
+        "url": "https://supabase.com/docs/guides/deployment/database-migrations"
+      },
+      {
+        "title": "Supabase database advisors",
+        "url": "https://supabase.com/docs/guides/database/database-advisors"
+      },
+      {
+        "title": "Supabase query optimization",
+        "url": "https://supabase.com/docs/guides/database/query-optimization"
+      },
+      {
+        "title": "Supabase production checklist",
+        "url": "https://supabase.com/docs/guides/deployment/going-into-prod"
+      }
+    ]
+  },
+  "definition_of_done": [
+    "The canonical plan contains every workstream and every discovered inventory item with a terminal status and evidence.",
+    "The Customer app uses Home, Appointments, Messages, and Profile with no duplicate discovery destination.",
+    "The Barber app uses Today, Appointments, Messages, and Profile with management nested under Profile.",
+    "Email, Google, and Apple authentication are implemented to the approved platform scope with complete recovery UI, database-authoritative provisioning, secure session handling, and provider-console handoff documentation.",
+    "Manual barber verification cannot be bypassed by any authentication provider.",
+    "All booking rules are enforced atomically by the database, including future time, approval, service ownership, availability exceptions, complete duration overlap, concurrency, idempotency, snapshots, and status transitions.",
+    "Every table, storage path, function, view, and Realtime surface has tested least-privilege grants and RLS behavior.",
+    "Every route and major state is functional, truthful, visually reviewed, accessible, and covered at the appropriate unit, integration, database, E2E, and on-device levels.",
+    "All test suites pass repeatedly without warnings, flakes, skipped critical coverage, open handles, or hidden console failures.",
+    "Critical E2E flows have real dated Maestro results, including two-device Realtime behavior.",
+    "Release-mode performance and bundle measurements meet documented budgets or have no unexplained regression.",
+    "Clean Android and iOS release candidates build and pass smoke checks in an environment matching production.",
+    "No secret, fake content, dead action, placeholder route, critical or high security finding, unreviewed migration, or undocumented production risk remains.",
+    "All actions requiring founder credentials, store access, provider configuration, policy decisions, live migration, or production deployment are separated into an exact final checklist rather than falsely marked complete.",
+    "The repository plan and handoff are current enough that a fresh Codex session can resume from the exact next task after a usage reset.",
+    "The final outcome is explicitly repository_complete_release_blocked or release_ready, and no external blocker is misrepresented as completed."
+  ],
+  "final_report_required": {
+    "sections": [
+      "Outcome summary",
+      "Before and after information architecture",
+      "Completed task IDs with evidence and commits",
+      "UI and accessibility improvements by role and route",
+      "Authentication implementation and external provider actions",
+      "Database migrations, invariants, RLS, storage, and adversarial results",
+      "Performance measurements and bundle changes",
+      "Automated, E2E, device, visual, and accessibility test results",
+      "Dependency and security-advisory disposition",
+      "Release candidate identifiers and build evidence",
+      "External founder-only steps",
+      "Deferred out-of-scope work",
+      "Residual risks and recommended monitoring",
+      "Exact next command if anything remains blocked"
+    ],
+    "evidence_rule": "Every completion claim must point to a task ID and concrete evidence such as a test result, screenshot, migration test, advisor result, device record, bundle report, commit, or build identifier.",
+    "goal_completion_rule": "Do not mark the persistent Goal complete until the final report is written, the handoff is current, all definition-of-done items pass, and the outcome is release_ready. A repository_complete_release_blocked report is a valid engineering handoff but not Goal completion or permission to release."
+  }
+}

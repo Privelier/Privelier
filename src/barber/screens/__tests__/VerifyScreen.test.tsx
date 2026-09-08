@@ -128,7 +128,7 @@ afterEach(() => {
  * result).
  */
 async function renderLoaded() {
-  render(<VerifyScreen />);
+  await render(<VerifyScreen />);
   await waitFor(() => expect(screen.getByTestId('barber-verify-status')).toBeTruthy());
 }
 

@@ -44,3 +44,10 @@ graphify-out/
 # generated native folders
 /ios
 /android
+
+# Context tooling -- generated locally, never commit packed source
+/artifacts/context/
+
+# Python tooling
+__pycache__/
+*.py[cod]
