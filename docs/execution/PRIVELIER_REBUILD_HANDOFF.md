@@ -1,15 +1,17 @@
 # Privelier rebuild handoff
 
 Last updated: 2026-09-09
-Current milestone: P01 — warning-free baseline and dependency health
-Current atomic task: `P01-D` — triage one production dependency-advisory family at a time
+Current milestone: Week completion plan — product-first MVP release candidate
+Current atomic task: `W01` — portfolio upload, Plan phase
+
+The active deadline plan is [`docs/plans/2026-09-09-week-completion-plan.md`](../plans/2026-09-09-week-completion-plan.md). When the founder says “continue building the app,” resume at the first incomplete W01–W06 row. P01 maintenance remains recorded below but is paused unless it directly blocks a product or release gate.
 
 ## Resume safely
 
 1. Read `AGENTS.md`, `docs/execution/PRIVELIER_REBUILD_PLAN.md`, this handoff, `PRIVELIER_REBUILD_DECISIONS.md`, and `PRIVELIER_RISK_REGISTER.md`.
 2. Run `npm run context:check`. The graph semantic provider currently prevents a complete graph build; use tightly scoped reads only after recording that limitation.
 3. Run `git status --short` and `git diff --check` before changing anything.
-4. P01-C2 and P01-C1 automated/config gates are complete. P01-D1 accepted the React Navigation `query-string` path as constrained risk: no linking is configured, no compatible upstream fix exists, and no package change is authorized. P01-D2 accepted the audited Expo XML parser as bounded build-tool risk: its config is committed and EAS-secret-gated, and no compatible Expo 57 parent fix exists. Keep P01-C1's fresh Android/iOS release-device visual check open; select one different advisory family for the next P01-D cycle.
+4. P01-C2 and P01-C1 automated/config gates are complete. P01-D1 accepted the React Navigation `query-string` path as constrained risk: no linking is configured, no compatible upstream fix exists, and no package change is authorized. P01-D2 accepted the audited Expo XML parser as bounded build-tool risk: its config is committed and EAS-secret-gated, and no compatible Expo 57 parent fix exists. Keep P01-C1's fresh Android/iOS release-device visual check open. Do not select another advisory family while W01–W06 product work is active unless it directly blocks a release gate.
 5. Keep P00-002 device evidence and P00-005 waitlist reconciliation visible as release blockers. Do not reset, clean, stage, commit, or overwrite the main workspace.
 
 ## Last completed atomic task
@@ -46,10 +48,10 @@ Current atomic task: `P01-D` — triage one production dependency-advisory famil
 - Live read-only database check: expected core tables have RLS; only `bookings` and `messages` are Realtime-published.
 - Fresh Supabase advisor check found the known callable `SECURITY DEFINER` warnings and the new `waitlist` RLS-without-policy ERROR; final security PASS is therefore not available.
 
-## Exact next command
+## Exact next action
 
 ```powershell
-git diff --check; git status --short
+Begin W01 portfolio upload Plan phase. Inspect the existing Portfolio screen/data contract, write the focused design decision, then build the upload/delete/cap states before touching unrelated maintenance work.
 ```
 
 Then choose one remaining advisory family, establish its exact dependency path and production/build reachability, and obtain architecture review before any compatible remediation. Do not alter splash configuration, product code, global Jest configuration, either accepted-risk disposition, or use a forced audit fix.
