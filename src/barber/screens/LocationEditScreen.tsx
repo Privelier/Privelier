@@ -22,6 +22,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -75,6 +76,7 @@ export default function LocationEditScreen({ navigation }: Props) {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [focused, setFocused] = useState(false);
+  const savedRef = useRef(false);
 
   // Mount fetch (plain useEffect — leaf editor, bio-edit C6 precedent).
   useEffect(() => {
@@ -188,6 +190,23 @@ export default function LocationEditScreen({ navigation }: Props) {
     : selectionCurrent && (selected.label !== savedAddress || !savedHasCoords);
   const canSave = !loading && !submitting && barberId !== null && dirty;
   const needsPick = !clearing && !selectionCurrent;
+  const hasUnsavedDraft = dirty || trimmed !== (savedAddress ?? '').trim();
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (event) => {
+      if (!hasUnsavedDraft || submitting || savedRef.current) return;
+      event.preventDefault();
+      Alert.alert('Discard changes?', "Your location changes won't be saved.", [
+        { text: 'Keep editing', style: 'cancel' },
+        {
+          text: 'Discard',
+          style: 'destructive',
+          onPress: () => navigation.dispatch(event.data.action),
+        },
+      ]);
+    });
+    return unsubscribe;
+  }, [navigation, hasUnsavedDraft, submitting]);
 
   const onSave = useCallback(async () => {
     if (!barberId) return;
@@ -202,6 +221,7 @@ export default function LocationEditScreen({ navigation }: Props) {
         });
     setSubmitting(false);
     if (result.status === 'ok') {
+      savedRef.current = true;
       navigation.goBack();
     } else {
       setFormError(result.message);

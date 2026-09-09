@@ -9,6 +9,7 @@
  * field saves an explicit NULL location (the pin-removal path).
  */
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 import LocationEditScreen from '../LocationEditScreen';
 import { fetchOwnLocation, updateOwnLocation } from '../../locationData';
 import { forwardGeocode } from '../../../shared/geocoding';
@@ -70,7 +71,27 @@ jest.mock('react-native-safe-area-context', () => {
 const mockFetchLocation = fetchOwnLocation as jest.Mock;
 const mockUpdateLocation = updateOwnLocation as jest.Mock;
 const mockGeocode = forwardGeocode as jest.Mock;
-const navigation = { goBack: jest.fn() };
+
+type RemoveListener = (event: {
+  preventDefault: jest.Mock;
+  data: { action: { type: string } };
+}) => void;
+
+let beforeRemoveListener: RemoveListener | null;
+let navigation: {
+  goBack: jest.Mock;
+  dispatch: jest.Mock;
+  addListener: jest.Mock;
+};
+
+function fireBeforeRemove() {
+  const event = {
+    preventDefault: jest.fn(),
+    data: { action: { type: 'POP' } },
+  };
+  beforeRemoveListener?.(event);
+  return event;
+}
 
 const CANDIDATE = { label: 'Prinsengracht 263, Amsterdam', latitude: 52.3752, longitude: 4.8837 };
 
@@ -87,11 +108,22 @@ async function flushMount() {
 beforeEach(() => {
   jest.clearAllMocks();
   jest.useFakeTimers();
+  beforeRemoveListener = null;
+  navigation = {
+    goBack: jest.fn(),
+    dispatch: jest.fn(),
+    addListener: jest.fn((event: string, listener: RemoveListener) => {
+      if (event === 'beforeRemove') beforeRemoveListener = listener;
+      return jest.fn();
+    }),
+  };
+  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
 
 afterEach(async () => {
   cleanup();
   jest.useRealTimers();
+  jest.restoreAllMocks();
 });
 
 describe('LocationEditScreen', () => {
@@ -204,5 +236,52 @@ describe('LocationEditScreen', () => {
     expect(
       screen.getByTestId('barber-location-save').props.accessibilityState?.disabled
     ).toBe(true);
+  });
+
+  it('guards an unsaved address draft and lets a successful save leave', async () => {
+    mockFetchLocation.mockResolvedValue({ status: 'ok', location: null });
+    mockGeocode.mockResolvedValue({ status: 'ok', candidates: [CANDIDATE] });
+    mockUpdateLocation.mockResolvedValue({
+      status: 'ok',
+      location: { user_id: 'barber-1', address: CANDIDATE.label },
+    });
+
+    await renderScreen();
+    await flushMount();
+
+    const cleanExit = fireBeforeRemove();
+    expect(cleanExit.preventDefault).not.toHaveBeenCalled();
+
+    await fireEvent.changeText(screen.getByTestId('barber-location-input'), 'Prinsengracht 263');
+    expect(screen.getByTestId('barber-location-save').props.accessibilityState?.disabled).toBe(
+      true
+    );
+
+    const draftExit = fireBeforeRemove();
+    expect(draftExit.preventDefault).toHaveBeenCalled();
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Discard changes?',
+      "Your location changes won't be saved.",
+      expect.any(Array)
+    );
+
+    const buttons = (Alert.alert as jest.Mock).mock.calls[0][2] as {
+      text: string;
+      onPress?: () => void;
+    }[];
+    buttons.find((button) => button.text === 'Discard')?.onPress?.();
+    expect(navigation.dispatch).toHaveBeenCalledWith(draftExit.data.action);
+
+    await act(() => jest.advanceTimersByTime(450));
+    await act(async () => {});
+    await fireEvent.press(screen.getByTestId('barber-location-candidate-0'));
+    await fireEvent.press(screen.getByTestId('barber-location-save'));
+    await act(async () => {});
+
+    expect(navigation.goBack).toHaveBeenCalled();
+    (Alert.alert as jest.Mock).mockClear();
+    const savedExit = fireBeforeRemove();
+    expect(savedExit.preventDefault).not.toHaveBeenCalled();
+    expect(Alert.alert).not.toHaveBeenCalled();
   });
 });

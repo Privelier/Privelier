@@ -110,7 +110,17 @@ env:
     id: "barber-location-pick-hint"
 
 # Leave without saving (deterministic-path-only — see header).
-- tapOn:
-    id: "barber-location-back"
+# First back is the Android hardware-back evidence for the discard guard.
+- hideKeyboard
+- back
+- assertVisible: "Discard changes?"
+- tapOn: "Keep editing"
+- assertVisible:
+    id: "barber-location-screen"
+- assertNotVisible:
+    id: "barber-location-pick-hint"
+- back
+- assertVisible: "Discard changes?"
+- tapOn: "Discard"
 - assertVisible:
     id: "barber-dashboard-screen"
