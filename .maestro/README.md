@@ -181,15 +181,17 @@ probes, and remain part of the two-device soft gate.
 For build-order step 17's last sub-feature (barber Studio dashboard —
 bookings overview + profile readiness), `barber-dashboard-overview-readiness.yaml`
 covers the deterministic path: a barber lands on Studio, both new read-only
-sections render (the overview card and the four-row readiness meter — all
-four row testIDs exist in every completion state, so presence is asserted
+sections render (the overview card and the five-row readiness meter — all
+five row testIDs exist in every completion state, so presence is asserted
 regardless of backend state), the overview card deep-links to the Requests
 tab, and returning to Studio re-renders cleanly (the focus refresh is silent
 over an already-loaded dashboard — no spinner, no error). Deliberately
 state-dependent and therefore NOT asserted: per-row readiness deep-links
 (complete rows are intentionally inert), the pending pill / next-appointment
-line, and "N of 5 complete" vs the is-live line. Needs no seeding beyond any
-signed-in barber account.
+line, and "N of 5 complete" vs the is-live line. Those variants remain
+device-only checks because they require a deliberately seeded profile and can
+change account state; the no-seed flow remains rerunnable for any signed-in
+barber.
 
 For the Explore/location feature's Run A (barber address entry),
 `barber-location-edit.yaml` covers the deterministic path: Studio's Location
@@ -202,7 +204,9 @@ the input. Deliberately NOT asserted: the save itself (save-enablement is
 dirty-state-dependent and would flake on re-runs when the saved address
 already equals the picked candidate) — the save/clear write paths are pinned
 by LocationEditScreen.test.tsx and the locationData unit tests. Needs no
-seeding beyond any signed-in barber account.
+seeding beyond any signed-in barber account. The same flow now exercises
+Android hardware back: "Keep editing" preserves the selected draft, then
+"Discard" leaves without a write.
 
 For the bio-edit run, `barber-bio-edit.yaml` covers the deterministic path:
 Studio's Bio card opens the BioEdit screen, the authoritative bio loads,
@@ -277,7 +281,7 @@ placements use), `barber-dashboard-logout`,
 state ids, plus the step-17 dashboard sections `barber-dashboard-overview`
 (the read-only bookings glance, taps through to the Requests tab) and
 `barber-dashboard-readiness` with its per-item rows
-`barber-dashboard-readiness-{services|availability|portfolio|verification}`
+`barber-dashboard-readiness-{services|availability|bio|portfolio|verification}`
 (present in every completion state; incomplete rows deep-link to their fixer
 screen, complete rows are inert); tab-bar buttons are
 `barber-tab-{studio|requests|portfolio|chats|verify}` and

@@ -1,7 +1,7 @@
 # Barber Studio dashboard flow (build-order step 17, last sub-feature): log in
 # as the barber -> land on the Studio tab -> assert the dashboard's two new
 # read-only sections render (bookings-overview card + "Readiness to go live"
-# meter with all four item rows) -> tap the overview card and confirm it
+# meter with all five item rows) -> tap the overview card and confirm it
 # deep-links to the Requests tab -> return to Studio via the tab bar and
 # confirm the dashboard re-renders cleanly (the focus refresh is silent — no
 # spinner blanks an already-loaded dashboard, so the assertion is simply that
@@ -9,16 +9,19 @@
 #
 # Deliberately NOT asserted, because they depend on backend state unknown at
 # authoring time (the flow must pass for ANY signed-in barber):
-# - Which readiness rows are complete vs incomplete (all four row testIDs exist
+# - Which readiness rows are complete vs incomplete (all five row testIDs exist
 #   in every state, so presence is asserted; per-row deep-links are not, since
 #   complete rows are intentionally inert).
 # - The pending pill / next-appointment line (only rendered when such bookings
 #   exist; the overview card testID itself is state-independent).
-# - "N of 4 complete" vs the is-live line (state-dependent; the section title
+# - "N of 5 complete" vs the is-live line (state-dependent; the section title
 #   "Readiness to go live" is static and asserted instead).
 #
-# NOT YET RUN — same tooling gap as every other flow here: no Maestro CLI on
-# the authoring machine (see .maestro/README.md). Once available:
+# These state-dependent variants remain device-only checks: exercising them
+# requires a deliberately seeded barber profile and can change account state.
+# This no-seed flow stays rerunnable for any signed-in barber.
+#
+# Device-only run (requires an attached, authorized device):
 #   maestro test .maestro/barber-dashboard-overview-readiness.yaml \
 #     -e TEST_BARBER_EMAIL=... -e TEST_BARBER_PASSWORD=...
 #
@@ -80,11 +83,13 @@ env:
 - assertVisible:
     id: "barber-dashboard-readiness"
 - assertVisible: "Readiness to go live"
-# All four readiness rows exist in every completion state.
+# All five readiness rows exist in every completion state.
 - assertVisible:
     id: "barber-dashboard-readiness-services"
 - assertVisible:
     id: "barber-dashboard-readiness-availability"
+- assertVisible:
+    id: "barber-dashboard-readiness-bio"
 - assertVisible:
     id: "barber-dashboard-readiness-portfolio"
 - assertVisible:

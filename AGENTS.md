@@ -13,6 +13,8 @@ An on-demand marketplace where customers book independent private barbers who tr
 ## Tech stack
 
 - Frontend: React Native + Expo. One codebase, two separately branded and separately navigated apps (Customer, Barber).
+- UI components: use **HeroUI Native** as the first choice for new, suitable mobile primitives (for example buttons, inputs, cards, chips, dialogs, and avatars). Do not use the web-only HeroUI React package. Preserve the authoritative Privelier tokens, typography, accessibility, and flat visual language; use a small custom React Native component when HeroUI Native cannot meet them cleanly. Do not migrate stable existing screens or add HeroUI Native and its peer dependencies outside a dedicated, validated UI-infrastructure pipeline.
+- Delivery efficiency: keep responses, context reads, plans, and diffs scoped to the active feature. Reuse existing components and data paths; avoid speculative abstractions, broad audits, and duplicate validation.
 - Backend: Supabase — Postgres, Auth, Storage, Realtime, Row Level Security. No self-managed servers.
 - Payments: Stripe Connect — Phase 2 only, not in the initial build.
 - Do not introduce any other backend service, database, or third-party API without explicit founder approval.
