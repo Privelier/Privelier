@@ -21,6 +21,7 @@ import { logAuthError } from './errors';
 /** Path segment used for every auth redirect link. Must match the Supabase
  * dashboard's Auth → URL Configuration redirect allow-list exactly. */
 const AUTH_CALLBACK_PATH = 'auth-callback';
+const AUTH_CALLBACK_SCHEME = 'privelier';
 
 /** Build the `emailRedirectTo` value for signUp/resend calls. */
 export function getEmailRedirectTo(): string {
@@ -35,9 +36,34 @@ interface ParsedCallback {
   errorCode?: string;
 }
 
+/**
+ * Accept only the callback authority registered by the native app. The
+ * callback route is the URL authority (`privelier://auth-callback`) because
+ * that is the shape produced by Linking.createURL in a native build.
+ *
+ * Query parameters are allowed, but user-info, ports, and extra path
+ * segments are not. In particular, do not trust a token-bearing fragment
+ * until this boundary has been checked.
+ */
+export function isExpectedAuthCallbackUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return (
+      parsed.protocol === `${AUTH_CALLBACK_SCHEME}:` &&
+      parsed.host === AUTH_CALLBACK_PATH &&
+      (parsed.pathname === '' || parsed.pathname === '/') &&
+      parsed.username === '' &&
+      parsed.password === ''
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** Pure parser — the URL fragment is not a standard query string, so this is
  * hand-rolled rather than relying on URL/Linking's query-string parsing. */
 export function parseAuthCallbackUrl(url: string): ParsedCallback | null {
+  if (!isExpectedAuthCallbackUrl(url)) return null;
   const hashIndex = url.indexOf('#');
   if (hashIndex === -1) return null;
   const fragment = url.slice(hashIndex + 1);

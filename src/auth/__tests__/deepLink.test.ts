@@ -5,7 +5,12 @@
  * which is unavailable in the Jest environment.
  */
 import { supabase } from '../../../lib/supabase';
-import { applyAuthCallbackUrl, getEmailRedirectTo, parseAuthCallbackUrl } from '../deepLink';
+import {
+  applyAuthCallbackUrl,
+  getEmailRedirectTo,
+  isExpectedAuthCallbackUrl,
+  parseAuthCallbackUrl,
+} from '../deepLink';
 
 jest.mock('../../../lib/supabase', () => ({
   supabase: {
@@ -28,6 +33,28 @@ beforeEach(() => {
 describe('getEmailRedirectTo', () => {
   it('builds the auth-callback deep link', () => {
     expect(getEmailRedirectTo()).toBe('privelier://auth-callback');
+  });
+});
+
+describe('isExpectedAuthCallbackUrl', () => {
+  it.each([
+    'privelier://auth-callback',
+    'privelier://auth-callback/?source=email',
+  ])('accepts the registered callback URL: %s', (url) => {
+    expect(isExpectedAuthCallbackUrl(url)).toBe(true);
+  });
+
+  it.each([
+    'https://auth-callback#access_token=at-1&refresh_token=rt-1',
+    'exp://127.0.0.1:8081/--/auth-callback#access_token=at-1&refresh_token=rt-1',
+    'privelier://some-other-path#access_token=at-1&refresh_token=rt-1',
+    'privelier://auth-callback/extra#access_token=at-1&refresh_token=rt-1',
+    'privelier://auth-callback.evil.example#access_token=at-1&refresh_token=rt-1',
+    'privelier://auth-callback:443#access_token=at-1&refresh_token=rt-1',
+    'privelier://user:password@auth-callback#access_token=at-1&refresh_token=rt-1',
+    'not a URL#access_token=at-1&refresh_token=rt-1',
+  ])('rejects an unexpected callback origin or path: %s', (url) => {
+    expect(isExpectedAuthCallbackUrl(url)).toBe(false);
   });
 });
 
@@ -72,6 +99,18 @@ describe('parseAuthCallbackUrl', () => {
 describe('applyAuthCallbackUrl', () => {
   it('returns "ignored" for a non-auth-callback URL', async () => {
     const outcome = await applyAuthCallbackUrl('privelier://some-other-path');
+    expect(outcome).toBe('ignored');
+    expect(mockAuth.setSession).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'https://auth-callback#access_token=at-1&refresh_token=rt-1',
+    'privelier://some-other-path#access_token=at-1&refresh_token=rt-1',
+    'privelier://auth-callback/extra#access_token=at-1&refresh_token=rt-1',
+    'privelier://auth-callback.evil.example#access_token=at-1&refresh_token=rt-1',
+  ])('ignores valid-looking tokens from an unexpected URL: %s', async (url) => {
+    const outcome = await applyAuthCallbackUrl(url);
+
     expect(outcome).toBe('ignored');
     expect(mockAuth.setSession).not.toHaveBeenCalled();
   });

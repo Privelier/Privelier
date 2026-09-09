@@ -1,6 +1,6 @@
 # Privelier rebuild handoff
 
-Last updated: 2026-09-08
+Last updated: 2026-09-09
 Current milestone: P01 — warning-free baseline and dependency health
 Current atomic task: `P01-D` — triage one production dependency-advisory family at a time
 
@@ -9,12 +9,12 @@ Current atomic task: `P01-D` — triage one production dependency-advisory famil
 1. Read `AGENTS.md`, `docs/execution/PRIVELIER_REBUILD_PLAN.md`, this handoff, `PRIVELIER_REBUILD_DECISIONS.md`, and `PRIVELIER_RISK_REGISTER.md`.
 2. Run `npm run context:check`. The graph semantic provider currently prevents a complete graph build; use tightly scoped reads only after recording that limitation.
 3. Run `git status --short` and `git diff --check` before changing anything.
-4. P01-C2 and P01-C1 automated/config gates are complete. Keep P01-C1's fresh Android/iOS release-device visual check open, and start P01-D with read-only dependency-path/reachability evidence before any remediation.
+4. P01-C2 and P01-C1 automated/config gates are complete. P01-D1 accepted the React Navigation `query-string` path as constrained risk: no linking is configured, no compatible upstream fix exists, and no package change is authorized. P01-D2 accepted the audited Expo XML parser as bounded build-tool risk: its config is committed and EAS-secret-gated, and no compatible Expo 57 parent fix exists. Keep P01-C1's fresh Android/iOS release-device visual check open; select one different advisory family for the next P01-D cycle.
 5. Keep P00-002 device evidence and P00-005 waitlist reconciliation visible as release blockers. Do not reset, clean, stage, commit, or overwrite the main workspace.
 
 ## Last completed atomic task
 
-`P01-B2` Portfolio rapid-double-tap lifecycle correction, completed 2026-09-08. `EVID-P01-005` records the same-turn two-host-callback/one-upload invariant, warning-free focused 8/8, three 48/551 seven-worker runs, lint/typecheck, test validation, security PASS, and integration PASS. It does not close Expo, advisory, device, or waitlist work.
+`P01-D2` Expo XML parser advisory disposition, completed 2026-09-09. `EVID-P01-009` records the high audited config/prebuild-only dependency path, the committed static-base plus EAS-secret-gated dynamic Mapbox config boundary, and the absence of a compatible Expo 57 parent remedy. It is an accepted bounded build-tool risk, not a dependency remediation; other advisory families, device evidence, and waitlist reconciliation remain open.
 
 ## Current workspace state
 
@@ -33,7 +33,9 @@ Current atomic task: `P01-D` — triage one production dependency-advisory famil
 | Graph context | AST extraction works but the configured semantic backend lacks its SDK/configuration. | Fix the local Graphify provider or document the fallback; do not claim a complete graph query. |
 | Test reliability | Portfolio is repeatably deterministic and its focused suite is now free of the prior harness `act()` warnings. Other test warning signatures remain separately visible in the full suite. | Continue evidence-driven P01 test-warning slices; do not suppress warnings. |
 | Expo compatibility | Expo dependencies and supported splash config now pass Doctor 21/21; fresh native release-device splash appearance is unverified. | Keep the visual gate `blocked_external`; do not substitute Expo Go/web evidence. |
-| Dependencies | `npm audit --omit=dev` reports 22 transitive advisories, including two high build-tool-chain findings and a moderate React Navigation query-string path. | P01 dependency-triage pipeline; never run a forced audit fix. |
+| Dependencies | `npm audit --omit=dev` reports 22 advisories (19 moderate, three high). P01-D1 disposed only the React Navigation `query-string` path: no external URI parser reachability exists while navigation linking is absent, and latest compatible React Navigation still requires it. | Triage one remaining family at a time; never run a forced audit fix. Re-review this path before adding navigation linking or when upstream provides a compatible fix. |
+| Expo XML parser | Audited `@xmldom/xmldom@0.9.10` is restricted to Expo's Node-side prebuild chain. The base app config is static; its only dynamic plugin is Mapbox, conditional on a controlled EAS secret. | P01-D2 accepted bounded build-tool risk. Re-review if Expo offers a compatible parent remediation, config/native input becomes external or contributor-untrusted, native folders are committed, or runtime XML parsing is added. |
+| Auth URL intake | The current callback parser accepts token fragments without first verifying the expected callback scheme/path. | `RISK-028`: run a separate auth validation pipeline with adversarial wrong-origin/path token tests; do not fold it into dependency triage. |
 
 ## Last known-good verification
 
@@ -50,4 +52,4 @@ Current atomic task: `P01-D` — triage one production dependency-advisory famil
 git diff --check; git status --short
 ```
 
-Then rebaseline Expo Doctor and run Expo's supported package check. Change only the seven SDK 57 patch targets and lockfile; do not alter splash configuration, product code, global Jest configuration, or audit advisories.
+Then choose one remaining advisory family, establish its exact dependency path and production/build reachability, and obtain architecture review before any compatible remediation. Do not alter splash configuration, product code, global Jest configuration, either accepted-risk disposition, or use a forced audit fix.

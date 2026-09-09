@@ -48,6 +48,6 @@ The device walkthrough is parallel to P00 but remains an external prerequisite f
 
 ## Current recovery point
 
-Current atomic task: `P01-D` Plan. `EVID-P01-007` records P01-C1's one-file supported splash migration and 21/21 Expo Doctor result; its code/config gates pass, while native Android/iOS release-device visuals remain `blocked_external`. P01-D may assess only one advisory family at a time. P00-002 (device) and P00-005 (waitlist schema) remain external release blockers.
+Current atomic task: `P01-D` advisory triage. `EVID-P01-008` records P01-D1's React Navigation `query-string` accepted constrained risk; `EVID-P01-009` records P01-D2's Expo prebuild `@xmldom/xmldom` accepted bounded build-tool risk. Neither has a compatible remediation or application/dependency change. P01-D may assess only one remaining advisory family at a time. `EVID-P01-007` records P01-C1's one-file supported splash migration and 21/21 Expo Doctor result; its code/config gates pass, while native Android/iOS release-device visuals remain `blocked_external`. P00-002 (device) and P00-005 (waitlist schema) remain external release blockers.
 
 Known blockers: no Android device is attached; Maestro is not installed; the hosted `waitlist` table has no committed local migration and no RLS policies; the graph semantic provider is not configured locally; Jest emits known `act()` warnings; and npm audit needs a compatible-remediation review rather than an automatic fix.
