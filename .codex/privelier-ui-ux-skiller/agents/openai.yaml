@@ -1,0 +1,4 @@
+interface:
+  display_name: "UI and UX skiller"
+  short_description: "Audit and redesign Privelier mobile UX"
+  default_prompt: "Use $privelier-ui-ux-skiller to audit and improve the requested Privelier customer or barber experience."

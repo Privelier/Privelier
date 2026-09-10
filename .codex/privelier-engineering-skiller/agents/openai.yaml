@@ -1,0 +1,4 @@
+interface:
+  display_name: "Engineering and security skiller"
+  short_description: "Audit and harden Privelier across its full stack"
+  default_prompt: "Use $privelier-engineering-skiller to audit Privelier end to end for bugs, security, Supabase integrity, tests, performance, and missing essentials; fix confirmed issues in separate validated cycles."

@@ -1,5 +1,4 @@
 # Tooling config, not project code/docs -- excluded from the knowledge graph.
-.claude/
 .expo/
 
 # Static binary brand assets -- graphing these requires image understanding,
@@ -16,8 +15,7 @@ src/mobile_dev_review_notes.md
 
 # Agent frameworks are operating instructions, not application architecture.
 .agents/
-.claude/
-.Codex/
+.codex/
 node_modules/
 graphify-out/
 artifacts/

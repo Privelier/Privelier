@@ -6,15 +6,15 @@ This log records decisions for the Privelier Legendary Product Rebuild and Relea
 
 ## Decision record
 
-### DEC-0001 — Two synchronized sources of truth during the rebuild
+### DEC-0001 — Active backlog plus current plan are the working sources
 
 - Date: 2026-09-01
-- Question: AGENTS.md says its Tasks section is the single source of truth, while the rebuild specification calls PRIVELIER_REBUILD_PLAN.md the canonical execution ledger.
-- Options: silently replace AGENTS.md; duplicate all detail indefinitely; keep AGENTS.md as the product-backlog authority and the rebuild plan as the execution/evidence authority with mandatory synchronization.
-- Decision: use the third option. Every open AGENTS.md item receives a stable rebuild task ID. New product work is added to AGENTS.md and the ledger. A completed AGENTS.md line is deleted only after its gate passes; the ledger retains permanent evidence.
-- Rationale: preserves the existing authoritative backlog while providing resumable atomic status and evidence.
-- Sources: AGENTS.md Tasks maintenance protocol; user rebuild specification, persistent_goal_and_continuity_protocol.
-- Reversibility: reversible after founder approval to make AGENTS.md point directly to the new ledger.
+- Updated: 2026-09-10
+- Question: which docs should drive ongoing work after the rebuild-program cleanup?
+- Decision: `AGENTS.md`, `docs/project/ACTIVE_BACKLOG.md`, and `docs/plans/2026-09-09-week-completion-plan.md` are the working sources. The older rebuild-program ledger/handoff/master prompt artifacts were removed as duplicate planning scaffolding; this decision log and the evidence index retain compact provenance.
+- Rationale: preserves the current authoritative backlog and product-first weekly plan without keeping multiple competing execution ledgers.
+- Sources: AGENTS.md Tasks maintenance protocol; current active backlog; week-completion plan.
+- Reversibility: reversible if founders ask for a separate execution ledger again.
 - Approver: founder instruction supplied in this session; final source-of-truth consolidation remains a founder decision.
 - Affected modules: AGENTS.md; docs/execution.
 
@@ -120,13 +120,14 @@ This log records decisions for the Privelier Legendary Product Rebuild and Relea
 - Approver: founder required for identity rollout.
 - Affected modules: App.tsx, entry points, navigators, app/eas config.
 
-### DEC-0011 — Available orchestration definitions live under .claude
+### DEC-0011 — Available orchestration definitions are Codex-first
 
 - Date: 2026-09-01
-- Question: how should stale .Codex references be handled?
-- Decision: use the actual .claude/agents and .claude/commands definitions, plus currently installed .agents/skills and available Codex subagents. Log any unavailable named role and apply its documented gate manually only when no callable equivalent exists.
-- Rationale: repository inventory shows no .Codex directory; silently invoking phantom tools would skip gates.
-- Sources: repository file inventory; AGENTS.md Important distinction.
+- Updated: 2026-09-10
+- Question: how should stale Claude/Codex orchestration references be handled?
+- Decision: use the retained Codex-first skill setup: `.codex/privelier-engineering-skiller`, `.codex/privelier-ui-ux-skiller`, and the minimal `.agents/skills` support set. The tracked `.claude` agent, command, script, and duplicate skill files were removed because they were stale or duplicated. The generic `.agents` engineering/UI/review skills were also removed where the Privelier Codex skills covered the same responsibility better. Log any unavailable named role and apply its documented gate manually only when no callable equivalent exists.
+- Rationale: the active runtime exposes the project `.agents/skills` and Privelier Codex skills; keeping duplicate `.claude` definitions and generic project-overlapping skills created conflicting sources of truth.
+- Sources: repository file inventory; AGENTS.md Current Codex skill plan.
 - Reversibility: yes if the harness layout changes.
 - Approver: engineering evidence.
 - Affected modules: orchestration only.
