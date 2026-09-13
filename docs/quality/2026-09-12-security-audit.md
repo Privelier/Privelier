@@ -6,6 +6,20 @@ Security gate: **FAIL**. The application has strong baseline controls in several
 
 Audit environment: repository `main` at commit `82f81f8`, remote `origin/main` aligned, live Supabase project reached through the connected MCP server, and local Windows workspace. Secrets and private payloads were not copied into this report.
 
+## Post-remediation follow-up — 2026-09-13
+
+Forward migration `security_hardening` was applied to the live project and recorded locally as [`0031_security_hardening.sql`](../../supabase/migrations/0031_security_hardening.sql).
+
+- **Resolved:** SEC-001. Anonymous `SELECT` was revoked from `services` and `availability`; legacy permissive policies were replaced with authenticated owner/approved policies. Live grant query shows no anonymous `SELECT`.
+- **Resolved:** SEC-002. `public.barber_directory` now has `security_invoker=true`; the security-definer-view advisor finding is gone.
+- **Resolved:** SEC-004. All three trigger functions now have `search_path=public, pg_temp`; the mutable-search-path findings are gone.
+- **Resolved:** SEC-005. Both storage buckets now enforce a 10 MiB limit and JPEG/PNG/WebP MIME allowlist. `verification-docs` remains private.
+- **Improved:** SEC-007. High-severity `@xmldom/xmldom` and `js-yaml` findings were removed with tested lockfile overrides. `npm audit` still reports 19 moderate transitive findings in Expo/React Navigation/xcode paths; no force upgrade was used.
+- **Accepted design exception:** SEC-003 remains as five advisor warnings. The three projection RPCs are shipped client calls and `has_role`/`is_admin` are required by RLS policies. They retain pinned search paths, least-projection bodies, participant/role scoping, and `anon` execution revoked. Removing authenticated execution would break authorization or shipped flows.
+- **Still blocked:** SEC-006. The available Supabase Management API token can read the Auth config, but the PATCH was rejected because HaveIBeenPwned leaked-password protection is available only on Pro plans and above. Authenticated positive/negative RLS matrix with independent fixtures, fresh replay/PITR verification, native/device/Maestro gates, and the independent security-auditor role rerun also remain open.
+
+Local validation after the migration/configuration changes: `npm run typecheck`, `npm run lint`, `npm test -- --runInBand --silent` (48 suites / 566 tests), and `npx expo-doctor` all passed. The overall release/security verdict remains **FAIL/BLOCKED** until SEC-006 and the live/device evidence are completed.
+
 ## Coverage ledger
 
 | Area | Evidence | Status | Result / next action |
