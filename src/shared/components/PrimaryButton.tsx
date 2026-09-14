@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: space.sm, // inert when there's no icon
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
     paddingVertical: space.base,
     minHeight: 52, // > 44 floor; literal by design (no 52 on the scale)
   },

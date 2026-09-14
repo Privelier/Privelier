@@ -14,6 +14,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Role } from '../../types';
 import type { EnsureProfileResult, ProfilePrefill, SetupFormFields } from '../types';
 import { useTheme } from '../../theme/useTheme';
+import { radius } from '../../theme/spacing';
 import { optionalText, requiredText } from './validation';
 import {
   AuthScreenShell,
@@ -237,7 +238,7 @@ const styles = StyleSheet.create({
   roleOption: {
     flex: 1,
     borderWidth: 0.5,
-    borderRadius: 10,
+    borderRadius: radius.lg,
     paddingVertical: 14,
     alignItems: 'center',
   },

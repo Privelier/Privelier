@@ -59,7 +59,7 @@ export function Notice({
 const styles = StyleSheet.create({
   box: {
     borderWidth: HAIRLINE,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     paddingVertical: space.md, // 12
     paddingHorizontal: 14, // matches the reviews/booking reference bar
   },

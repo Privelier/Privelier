@@ -29,6 +29,7 @@ import type {
   ResendConfirmationResult,
   SetupFormFields,
   SignInResult,
+  OAuthSignInResult,
   SignUpProfileFields,
   SignUpResult,
 } from './types';
@@ -129,6 +130,25 @@ export async function signIn(email: string, password: string): Promise<SignInRes
   // Session is persisted by the client (encrypted SecureStore). The caller's
   // next step is ensureProfile().
   return { status: 'signed_in' };
+}
+
+export async function signInWithProvider(
+  provider: 'google' | 'apple'
+): Promise<OAuthSignInResult> {
+  try {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: getEmailRedirectTo(), skipBrowserRedirect: true },
+    });
+    if (error) return mapAuthApiError(`signInWithProvider.${provider}`, error);
+    if (!data.url) return failure('unknown');
+    const Linking = await import('expo-linking');
+    if (!(await Linking.canOpenURL(data.url))) return failure('unknown');
+    await Linking.openURL(data.url);
+    return { status: 'started' };
+  } catch (raw) {
+    return mapAuthApiError(`signInWithProvider.${provider}`, raw);
+  }
 }
 
 export async function resendConfirmation(email: string): Promise<ResendConfirmationResult> {

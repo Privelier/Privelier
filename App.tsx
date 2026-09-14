@@ -32,6 +32,9 @@ import CustomerNavigator from './src/customer/CustomerNavigator';
 import BarberNavigator from './src/barber/BarberNavigator';
 import { appFonts } from './src/theme/typography';
 
+import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
+import '@/global.css';
+
 SplashScreen.preventAutoHideAsync();
 
 function renderRoot(shell: AuthShell): ReactElement {
@@ -45,11 +48,13 @@ function renderRoot(shell: AuthShell): ReactElement {
     case 'provisioning':
       if (state.view.kind === 'setup_form') {
         return (
-          <FinishSetupScreen
+          <GluestackUIProvider mode="dark">
+            <FinishSetupScreen
             prefill={state.view.prefill}
             onSubmit={submitSetupForm}
             onSignOut={signOutNow}
-          />
+            />
+          </GluestackUIProvider>
         );
       }
       return (

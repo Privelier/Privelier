@@ -12,7 +12,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { StyleSheet, View, type TextInput } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { signIn } from '../authService';
+import { signIn, signInWithProvider } from '../authService';
 import type { AuthStackParamList } from './AuthNavigator';
 import { emailError, loginPasswordError } from './validation';
 import {
@@ -20,6 +20,7 @@ import {
   BackLink,
   FormTextField,
   Notice,
+  OAuthButton,
   PrimaryButton,
   ScreenHeading,
   TextLink,
@@ -39,6 +40,7 @@ export default function LoginScreen({ navigation, route }: Props) {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [providerSubmitting, setProviderSubmitting] = useState<'google' | 'apple' | null>(null);
   const passwordRef = useRef<TextInput>(null);
 
   const onSubmit = useCallback(async () => {
@@ -66,6 +68,14 @@ export default function LoginScreen({ navigation, route }: Props) {
         break;
     }
   }, [email, password, navigation, role]);
+
+  const onProviderPress = useCallback(async (provider: 'google' | 'apple') => {
+    setFormError(null);
+    setProviderSubmitting(provider);
+    const result = await signInWithProvider(provider);
+    setProviderSubmitting(null);
+    if (result.status === 'error') setFormError(result.message);
+  }, []);
 
   return (
     <AuthScreenShell testID="auth-login-screen">
@@ -121,10 +131,15 @@ export default function LoginScreen({ navigation, route }: Props) {
           testID="auth-login-go-signup"
         />
       </View>
+      <View style={styles.providerActions}>
+        <OAuthButton provider="google" onPress={() => onProviderPress('google')} loading={providerSubmitting === 'google'} disabled={submitting || providerSubmitting !== null} testID="auth-login-google" />
+        <OAuthButton provider="apple" onPress={() => onProviderPress('apple')} loading={providerSubmitting === 'apple'} disabled={submitting || providerSubmitting !== null} testID="auth-login-apple" />
+      </View>
     </AuthScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
   actions: { marginTop: 8, gap: 8 },
+  providerActions: { marginTop: 24, gap: 10 },
 });

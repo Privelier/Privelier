@@ -15,7 +15,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { StyleSheet, Text, View, type TextInput } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { signUpBarber, signUpCustomer } from '../authService';
+import { signInWithProvider, signUpBarber, signUpCustomer } from '../authService';
 import { useTheme } from '../../theme/useTheme';
 import type { AuthStackParamList } from './AuthNavigator';
 import { emailError, optionalText, requiredText, signupPasswordError, PASSWORD_MIN_LENGTH } from './validation';
@@ -24,6 +24,7 @@ import {
   BackLink,
   FormTextField,
   Notice,
+  OAuthButton,
   PrimaryButton,
   ScreenHeading,
   TextLink,
@@ -54,6 +55,7 @@ export default function SignupScreen({ navigation, route }: Props) {
   const [formError, setFormError] = useState<string | null>(null);
   const [emailInUse, setEmailInUse] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [providerSubmitting, setProviderSubmitting] = useState<'google' | 'apple' | null>(null);
   // Focus chain for the required fields: name → email → password → city → submit
   // (optional country/phone/bio are left out of the keyboard chain).
   const emailRef = useRef<TextInput>(null);
@@ -104,6 +106,14 @@ export default function SignupScreen({ navigation, route }: Props) {
         break;
     }
   }, [name, email, password, city, country, phone, bio, isBarber, navigation, role]);
+
+  const onProviderPress = useCallback(async (provider: 'google' | 'apple') => {
+    setFormError(null);
+    setProviderSubmitting(provider);
+    const result = await signInWithProvider(provider);
+    setProviderSubmitting(null);
+    if (result.status === 'error') setFormError(result.message);
+  }, []);
 
   return (
     <AuthScreenShell testID="auth-signup-screen">
@@ -234,6 +244,10 @@ export default function SignupScreen({ navigation, route }: Props) {
           testID="auth-signup-go-login"
         />
       </View>
+      <View style={styles.providerActions}>
+        <OAuthButton provider="google" onPress={() => onProviderPress('google')} loading={providerSubmitting === 'google'} disabled={submitting || providerSubmitting !== null} testID="auth-signup-google" />
+        <OAuthButton provider="apple" onPress={() => onProviderPress('apple')} loading={providerSubmitting === 'apple'} disabled={submitting || providerSubmitting !== null} testID="auth-signup-apple" />
+      </View>
     </AuthScreenShell>
   );
 }
@@ -242,4 +256,5 @@ const styles = StyleSheet.create({
   loginInstead: { alignItems: 'flex-start', marginTop: -12, marginBottom: 12 },
   verifyNote: { fontSize: 13, lineHeight: 19, marginBottom: 20 },
   actions: { marginTop: 8, gap: 8 },
+  providerActions: { marginTop: 24, gap: 10 },
 });

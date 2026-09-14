@@ -25,9 +25,12 @@ import {
   View,
   type TextInputProps,
 } from 'react-native';
+import { Input, InputField, InputSlot } from '../../../components/ui/input';
+import { Button, ButtonText } from '../../../components/ui/button';
+import { AuthProviderLogo } from '../../shared/components/AuthProviderLogo';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/useTheme';
-import { HAIRLINE, space } from '../../theme/spacing';
+import { radius, space } from '../../theme/spacing';
 import { Notice as SharedNotice } from '../../shared/components/Notice';
 import { BackButton } from '../../shared/components/ScreenBackHeader';
 
@@ -164,21 +167,20 @@ export function FormTextField({
           </Text>
         ) : null}
       </View>
-      <View
+      <Input
+        className="rounded-xl"
         style={[
           fieldStyles.inputRow,
           {
-            borderBottomColor: error ? colors.error : focused ? colors.accent : colors.border,
+            backgroundColor: colors.surface,
+            borderColor: error ? colors.error : focused ? colors.accent : colors.border,
           },
         ]}
+        isDisabled={false}
       >
-        <TextInput
-          ref={inputRef}
-          style={[
-            fieldStyles.input,
-            multiline && fieldStyles.inputMultiline,
-            { color: colors.textPrimary, fontFamily: fonts.body },
-          ]}
+        <InputField
+          ref={inputRef as unknown as Ref<TextInputProps>}
+          style={[fieldStyles.input, multiline && fieldStyles.inputMultiline, { color: colors.textPrimary, fontFamily: fonts.body }]}
           value={value}
           onChangeText={onChangeText}
           secureTextEntry={secure && hidden}
@@ -200,19 +202,17 @@ export function FormTextField({
           onBlur={() => setFocused(false)}
         />
         {secure ? (
-          <Pressable
+          <InputSlot
             onPress={() => setHidden((current) => !current)}
-            accessibilityRole="button"
             accessibilityLabel={hidden ? 'Show password' : 'Hide password'}
-            hitSlop={16}
-            testID={`${testID}-toggle`}
+            className="min-h-11 min-w-11"
           >
             <Text style={[fieldStyles.toggle, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
               {hidden ? 'Show' : 'Hide'}
             </Text>
-          </Pressable>
+          </InputSlot>
         ) : null}
-      </View>
+      </Input>
       {error ? (
         <Text
           testID={`${testID}-error`}
@@ -236,10 +236,8 @@ const fieldStyles = StyleSheet.create({
   label: { fontSize: 12, letterSpacing: 0.2 },
   optional: { fontSize: 12 },
   inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: HAIRLINE,
-    minHeight: 44,
+    minHeight: 52,
+    paddingHorizontal: space.base,
   },
   input: { flex: 1, fontSize: 16, paddingVertical: 10 },
   inputMultiline: { minHeight: 96, textAlignVertical: 'top' },
@@ -312,9 +310,48 @@ export function TextLink({ label, onPress, testID, disabled = false }: ButtonPro
   );
 }
 
+export function OAuthButton({
+  provider,
+  onPress,
+  testID,
+  loading = false,
+  disabled = false,
+}: {
+  provider: 'google' | 'apple';
+  onPress: () => void;
+  testID: string;
+  loading?: boolean;
+  disabled?: boolean;
+}) {
+  const { colors, fonts } = useTheme();
+  const inactive = disabled || loading;
+  const label = provider === 'google' ? 'Continue with Google' : 'Continue with Apple';
+  return (
+    <Button
+      onPress={onPress}
+      isDisabled={inactive}
+      variant="outline"
+      size="lg"
+      className="rounded-full"
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: inactive, busy: loading }}
+      testID={testID}
+      style={[buttonStyles.oauth, { backgroundColor: colors.surface, borderColor: colors.border }]}
+    >
+      {loading ? <ActivityIndicator size="small" color={colors.textPrimary} /> : (
+        <>
+          <AuthProviderLogo provider={provider} size={18} color={colors.textPrimary} />
+          <ButtonText style={[buttonStyles.oauthLabel, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{label}</ButtonText>
+        </>
+      )}
+    </Button>
+  );
+}
+
 const buttonStyles = StyleSheet.create({
   secondary: {
-    borderRadius: 10,
+    borderRadius: radius.pill,
     borderWidth: 0.5,
     paddingVertical: 16,
     alignItems: 'center',
@@ -322,6 +359,17 @@ const buttonStyles = StyleSheet.create({
     minHeight: 52,
   },
   secondaryLabel: { fontSize: 16 },
+  oauth: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.sm,
+    borderRadius: radius.pill,
+    borderWidth: 0.5,
+    paddingVertical: 16,
+    minHeight: 52,
+  },
+  oauthLabel: { fontSize: 15 },
   link: { alignSelf: 'center', paddingVertical: 8 },
   linkLabel: { fontSize: 14 },
 });

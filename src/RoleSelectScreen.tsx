@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from './theme/useTheme';
+import { radius } from './theme/spacing';
 import Brandmark from './shared/components/Brandmark';
 import type { Role } from './types';
 
@@ -111,7 +112,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 0.5,
-    borderRadius: 10,
+    borderRadius: radius.xl,
     paddingVertical: 20,
     paddingHorizontal: 20,
   },
