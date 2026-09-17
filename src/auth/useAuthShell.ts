@@ -21,7 +21,7 @@ import * as Linking from 'expo-linking';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabase';
 import { ensureProfile, ensureProfileFromForm, signOut } from './authService';
-import { applyAuthCallbackUrl } from './deepLink';
+import { applyAuthCallbackUrl, isPasswordRecoveryUrl } from './deepLink';
 import type { AuthFailure } from './errors';
 import type { EnsureProfileResult, ProfilePrefill, SetupFormFields } from './types';
 import type { UsersRow } from '../types';
@@ -36,6 +36,8 @@ export type AuthShellState =
   | { phase: 'restoring' }
   | { phase: 'unauthenticated' }
   | { phase: 'provisioning'; view: ProvisioningView }
+  | { phase: 'password_recovery'; view: 'opening' | 'ready' | 'expired' | 'error' }
+  | { phase: 'auth_link_error'; view: 'expired' | 'error' }
   | { phase: 'authenticated'; profile: UsersRow };
 
 export interface AuthShell {
@@ -46,6 +48,9 @@ export interface AuthShell {
   submitSetupForm: (fields: SetupFormFields) => Promise<EnsureProfileResult>;
   /** Real sign-out — replaces the step-4 pre-auth "exit role" behavior. */
   signOutNow: () => void;
+  finishPasswordRecovery: () => void;
+  dismissPasswordRecovery: () => void;
+  dismissAuthLinkError: () => void;
 }
 
 export function useAuthShell(): AuthShell {
@@ -54,6 +59,8 @@ export function useAuthShell(): AuthShell {
   const [profile, setProfile] = useState<UsersRow | null>(null);
   const [view, setView] = useState<ProvisioningView>({ kind: 'loading' });
   const [attempt, setAttempt] = useState(0);
+  const [passwordRecovery, setPasswordRecovery] = useState<'opening' | 'ready' | 'expired' | 'error' | null>(null);
+  const [authLinkError, setAuthLinkError] = useState<'expired' | 'error' | null>(null);
 
   // Single top-level subscription + initial session restore (encrypted
   // SecureStore-backed storage inside the supabase client).
@@ -86,6 +93,10 @@ export function useAuthShell(): AuthShell {
           // stable while `profile` is cached, so navigators do not remount.
           setSession(nextSession ?? null);
           break;
+        case 'PASSWORD_RECOVERY':
+          setSession(nextSession ?? null);
+          setPasswordRecovery('ready');
+          break;
         default:
           break;
       }
@@ -103,11 +114,24 @@ export function useAuthShell(): AuthShell {
   // a cold start via the link (getInitialURL) and the app already running
   // (the 'url' event).
   useEffect(() => {
+    const handleUrl = async (url: string) => {
+      const isRecovery = isPasswordRecoveryUrl(url);
+      if (isRecovery) setPasswordRecovery('opening');
+      const outcome = await applyAuthCallbackUrl(url);
+      if (outcome === 'recovery_applied') setPasswordRecovery('ready');
+      else if (outcome === 'expired_or_used') {
+        if (isRecovery) setPasswordRecovery('expired');
+        else setAuthLinkError('expired');
+      } else if (outcome === 'error') {
+        if (isRecovery) setPasswordRecovery('error');
+        else setAuthLinkError('error');
+      }
+    };
     Linking.getInitialURL().then((url) => {
-      if (url) void applyAuthCallbackUrl(url);
+      if (url) void handleUrl(url);
     });
     const subscription = Linking.addEventListener('url', ({ url }) => {
-      void applyAuthCallbackUrl(url);
+      void handleUrl(url);
     });
     return () => subscription.remove();
   }, []);
@@ -175,12 +199,24 @@ export function useAuthShell(): AuthShell {
     void signOut();
   }, []);
 
+  const finishPasswordRecovery = useCallback(() => setPasswordRecovery(null), []);
+  const dismissPasswordRecovery = useCallback(() => {
+    setPasswordRecovery(null);
+    void signOut();
+  }, []);
+  const dismissAuthLinkError = useCallback(() => {
+    setAuthLinkError(null);
+    void signOut();
+  }, []);
+
   const state: AuthShellState = useMemo(() => {
     if (restoring) return { phase: 'restoring' };
+    if (passwordRecovery) return { phase: 'password_recovery', view: passwordRecovery };
+    if (authLinkError) return { phase: 'auth_link_error', view: authLinkError };
     if (session === null) return { phase: 'unauthenticated' };
     if (profile !== null) return { phase: 'authenticated', profile };
     return { phase: 'provisioning', view };
-  }, [restoring, session, profile, view]);
+  }, [restoring, session, profile, view, passwordRecovery, authLinkError]);
 
-  return { state, retryProvisioning, submitSetupForm, signOutNow };
+  return { state, retryProvisioning, submitSetupForm, signOutNow, finishPasswordRecovery, dismissPasswordRecovery, dismissAuthLinkError };
 }

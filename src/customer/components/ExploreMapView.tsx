@@ -21,7 +21,7 @@
  * renders its map-empty state instead of a pointless globe).
  */
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Animated, Easing, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import Mapbox from '@rnmapbox/maps';
 import { useTheme } from '../../theme/useTheme';
 import { duration } from '../../theme/motion';
@@ -179,20 +179,20 @@ function DockedCard({
   const [translateY] = useState(() => new Animated.Value(8));
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: duration.base,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: duration.base,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }),
-    ]).start();
+    let active = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then((reduceMotion) => {
+      if (!active) return;
+      if (reduceMotion) {
+        opacity.setValue(1);
+        translateY.setValue(0);
+        return;
+      }
+      Animated.parallel([
+        Animated.timing(opacity, { toValue: 1, duration: duration.base, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        Animated.timing(translateY, { toValue: 0, duration: duration.base, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      ]).start();
+    });
+    return () => { active = false; };
   }, [opacity, translateY]);
 
   return (

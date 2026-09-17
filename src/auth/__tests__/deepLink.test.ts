@@ -65,6 +65,7 @@ describe('parseAuthCallbackUrl', () => {
       accessToken: 'at-1',
       refreshToken: 'rt-1',
       errorCode: undefined,
+      type: 'signup',
     });
   });
 
@@ -75,6 +76,7 @@ describe('parseAuthCallbackUrl', () => {
       accessToken: undefined,
       refreshToken: undefined,
       errorCode: 'otp_expired',
+      type: undefined,
     });
   });
 
@@ -126,6 +128,14 @@ describe('applyAuthCallbackUrl', () => {
       access_token: 'at-1',
       refresh_token: 'rt-1',
     });
+  });
+
+  it('returns "recovery_applied" for a valid password recovery callback', async () => {
+    mockAuth.setSession.mockResolvedValue({ data: {}, error: null } as never);
+    const outcome = await applyAuthCallbackUrl(
+      'privelier://auth-callback#access_token=at-1&refresh_token=rt-1&type=recovery'
+    );
+    expect(outcome).toBe('recovery_applied');
   });
 
   it('returns "error" when setSession itself fails', async () => {

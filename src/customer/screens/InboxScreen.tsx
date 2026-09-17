@@ -27,7 +27,7 @@ import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../../theme/useTheme';
 import { pressOpacity } from '../../theme/motion';
-import { Notice } from '../../shared/components/Notice';
+import { RetryNotice } from '../../shared/components/RetryNotice';
 import type { InboxThread } from '../types';
 import type { CustomerTabParamList } from '../CustomerTabs';
 import type { CustomerStackParamList } from '../CustomerNavigator';
@@ -102,7 +102,7 @@ export default function InboxScreen({ navigation }: Props) {
           testID="customer-inbox-loading"
         />
       ) : error ? (
-        <Notice testID="customer-inbox-error" message={error} style={styles.noticeMargins} />
+        <RetryNotice testID="customer-inbox-error" message={error} onRetry={() => void load()} style={styles.noticeMargins} />
       ) : (
         <FlatList
           data={threads}

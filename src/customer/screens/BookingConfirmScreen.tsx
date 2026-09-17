@@ -19,7 +19,7 @@
  *   retried blindly.
  * - a generic CustomerDataFailure: its own `.message` is shown inline.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -40,46 +40,33 @@ type Props = NativeStackScreenProps<CustomerStackParamList, 'BookingConfirm'>;
 
 // Long enough to register as an intentional confirmation, short enough not
 // to feel like a stall — matches the "brief success state" spec.
-const SUCCESS_PAUSE_MS = 700;
-
 export default function BookingConfirmScreen({ route, navigation }: Props) {
   const { barberId, barberName, service, date, time, location } = route.params;
   const { colors, fonts } = useTheme();
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(
-    () => () => {
-      if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
-    },
-    []
-  );
+  const [confirmedPrice, setConfirmedPrice] = useState<number | null>(null);
+  const [conflict, setConflict] = useState(false);
 
   const onConfirm = useCallback(async () => {
     setSubmitting(true);
     setError(null);
+    setConflict(false);
     const result = await insertBooking({ barberId, serviceId: service.id, date, time, location });
     setSubmitting(false);
 
     if (result.status === 'ok') {
-      setSuccess(true);
-      successTimeoutRef.current = setTimeout(() => {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'CustomerTabs', params: { screen: 'Bookings' } }],
-        });
-      }, SUCCESS_PAUSE_MS);
+      setConfirmedPrice(result.booking.price);
       return;
     }
     if (result.status === 'conflict') {
+      setConflict(true);
       setError(customerDataErrorCopy.conflict);
       return;
     }
     setError(result.message);
-  }, [barberId, service.id, date, time, location, navigation]);
+  }, [barberId, service.id, date, time, location]);
 
   const onPickAnotherTime = useCallback(() => {
     // Pops exactly Confirm + Location, landing back on the existing
@@ -88,7 +75,14 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
     navigation.pop(2);
   }, [navigation]);
 
-  if (success) {
+  const onViewBookings = useCallback(() => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'CustomerTabs', params: { screen: 'Bookings' } }],
+    });
+  }, [navigation]);
+
+  if (confirmedPrice !== null) {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
@@ -103,8 +97,13 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
             Booking requested
           </Text>
           <Text style={[styles.successHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-            {`${barberName} will confirm shortly. You'll find it under Bookings.`}
+            {`Your request was sent to ${barberName}. The confirmed booking price is ${formatMoney(confirmedPrice)}.`}
           </Text>
+          <PrimaryButton
+            label="View bookings"
+            onPress={onViewBookings}
+            testID="customer-booking-confirm-view-bookings"
+          />
         </View>
       </SafeAreaView>
     );
@@ -125,7 +124,7 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-          Confirm your booking
+          Review your request
         </Text>
 
         {error ? (
@@ -135,17 +134,19 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
             variant="error"
             style={styles.noticeSpacing}
           >
-            <Pressable
-              onPress={onPickAnotherTime}
-              accessibilityRole="button"
-              accessibilityLabel="Choose another time"
-              testID="customer-booking-confirm-pick-another-time"
-              style={({ pressed }) => [styles.noticeLink, pressed ? { opacity: pressOpacity.soft } : null]}
-            >
-              <Text style={[styles.noticeLinkText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
-                Choose another time
-              </Text>
-            </Pressable>
+            {conflict ? (
+              <Pressable
+                onPress={onPickAnotherTime}
+                accessibilityRole="button"
+                accessibilityLabel="Choose another time"
+                testID="customer-booking-confirm-pick-another-time"
+                style={({ pressed }) => [styles.noticeLink, pressed ? { opacity: pressOpacity.soft } : null]}
+              >
+                <Text style={[styles.noticeLinkText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
+                  Choose another time
+                </Text>
+              </Pressable>
+            ) : null}
           </Notice>
         ) : null}
 
@@ -171,7 +172,7 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
 
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
         <PrimaryButton
-          label="Confirm booking"
+          label="Request booking"
           onPress={onConfirm}
           loading={submitting}
           testID="customer-booking-confirm-submit"

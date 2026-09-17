@@ -28,12 +28,13 @@ export function getEmailRedirectTo(): string {
   return Linking.createURL(AUTH_CALLBACK_PATH);
 }
 
-export type AuthCallbackOutcome = 'applied' | 'expired_or_used' | 'error' | 'ignored';
+export type AuthCallbackOutcome = 'applied' | 'recovery_applied' | 'expired_or_used' | 'error' | 'ignored';
 
 interface ParsedCallback {
   accessToken?: string;
   refreshToken?: string;
   errorCode?: string;
+  type?: string;
 }
 
 /**
@@ -72,8 +73,9 @@ export function parseAuthCallbackUrl(url: string): ParsedCallback | null {
   const accessToken = params.get('access_token') ?? undefined;
   const refreshToken = params.get('refresh_token') ?? undefined;
   const errorCode = params.get('error_code') ?? params.get('error') ?? undefined;
+  const type = params.get('type') ?? undefined;
   if (!accessToken && !refreshToken && !errorCode) return null;
-  return { accessToken, refreshToken, errorCode };
+  return { accessToken, refreshToken, errorCode, type };
 }
 
 /**
@@ -99,5 +101,9 @@ export async function applyAuthCallbackUrl(url: string): Promise<AuthCallbackOut
     logAuthError('deepLink.setSession', error);
     return 'error';
   }
-  return 'applied';
+  return parsed.type === 'recovery' ? 'recovery_applied' : 'applied';
+}
+
+export function isPasswordRecoveryUrl(url: string): boolean {
+  return parseAuthCallbackUrl(url)?.type === 'recovery';
 }

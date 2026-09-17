@@ -18,13 +18,14 @@
  * customer-account-logout keeps its testID (referenced by the login E2E
  * flow).
  */
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { fetchOwnProfile } from '../../auth/authService';
 import { useExitRole } from '../../RoleContext';
 import { useTheme } from '../../theme/useTheme';
@@ -33,6 +34,7 @@ import type { UsersRow } from '../../types';
 import { ACCOUNT_SECTIONS, type AccountSectionKey } from './AccountSectionScreen';
 import type { CustomerTabParamList } from '../CustomerTabs';
 import type { CustomerStackParamList } from '../CustomerNavigator';
+import { Notice } from '../../shared/components/Notice';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<CustomerTabParamList, 'Account'>,
@@ -40,10 +42,7 @@ type Props = CompositeScreenProps<
 >;
 
 const SETTINGS_ROWS: { key: AccountSectionKey; icon: keyof typeof Feather.glyphMap }[] = [
-  { key: 'favorites', icon: 'heart' },
-  { key: 'notifications', icon: 'bell' },
   { key: 'privacy', icon: 'shield' },
-  { key: 'preferences', icon: 'settings' },
   { key: 'help', icon: 'help-circle' },
 ];
 
@@ -51,16 +50,16 @@ export default function AccountScreen({ navigation }: Props) {
   const { colors, fonts } = useTheme();
   const onSignOut = useExitRole();
   const [profile, setProfile] = useState<UsersRow | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
-    fetchOwnProfile().then((result) => {
-      if (active && result.status === 'ok') setProfile(result.profile);
-    });
-    return () => {
-      active = false;
-    };
+  const load = useCallback(async () => {
+    setError(null);
+    const result = await fetchOwnProfile();
+    if (result.status === 'ok') setProfile(result.profile);
+    else setError(result.message);
   }, []);
+
+  useFocusEffect(useCallback(() => { void load(); }, [load]));
 
   return (
     <SafeAreaView
@@ -73,7 +72,21 @@ export default function AccountScreen({ navigation }: Props) {
           Account
         </Text>
 
-        <View style={styles.profileRow}>
+        {error ? (
+          <Notice message={error} testID="customer-account-error" style={styles.errorNotice}>
+            <Pressable onPress={() => void load()} accessibilityRole="button" style={styles.retryAction}>
+              <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}>Try again</Text>
+            </Pressable>
+          </Notice>
+        ) : null}
+
+        <Pressable
+          onPress={() => navigation.navigate('EditProfile')}
+          accessibilityRole="button"
+          accessibilityLabel="Edit profile and city"
+          testID="customer-account-edit-profile"
+          style={({ pressed }) => [styles.profileRow, pressed ? { opacity: pressOpacity.soft } : null]}
+        >
           {profile?.profile_image ? (
             <Image source={{ uri: profile.profile_image }} style={styles.avatar} />
           ) : (
@@ -102,7 +115,8 @@ export default function AccountScreen({ navigation }: Props) {
               Member
             </Text>
           </View>
-        </View>
+          <Feather name="edit-2" size={16} color={colors.textSecondary} />
+        </Pressable>
 
         <View style={styles.settingsList}>
           {SETTINGS_ROWS.map(({ key, icon }, index) => (
@@ -155,6 +169,8 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 24, paddingBottom: 32 },
   heading: { fontSize: 30, marginTop: 24 },
   profileRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 32 },
+  errorNotice: { marginTop: 20 },
+  retryAction: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
   avatar: { width: 64, height: 64, borderRadius: 32 },
   avatarFallback: { alignItems: 'center', justifyContent: 'center' },
   avatarInitial: { fontSize: 24 },

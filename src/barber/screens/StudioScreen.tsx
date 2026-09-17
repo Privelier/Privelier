@@ -37,7 +37,7 @@ import { useExitRole } from '../../RoleContext';
 import { useTheme } from '../../theme/useTheme';
 import { HAIRLINE, radius, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
-import { Notice } from '../../shared/components/Notice';
+import { RetryNotice } from '../../shared/components/RetryNotice';
 import type { AvailabilityRow, ServiceRow, VerificationStatus } from '../../types';
 import { fetchDashboardView } from '../dashboardData';
 import { firstName, formatBookingWhen, formatMoney, timeOfDayGreeting } from '../../shared/format';
@@ -217,7 +217,7 @@ export default function StudioScreen({ navigation }: Props) {
             testID="barber-dashboard-loading"
           />
         ) : error && !view ? (
-          <Notice testID="barber-dashboard-error" message={error} style={styles.noticeMargins} />
+          <RetryNotice testID="barber-dashboard-error" message={error} onRetry={() => void load()} style={styles.noticeMargins} />
         ) : view ? (
           <>
             {verification ? (

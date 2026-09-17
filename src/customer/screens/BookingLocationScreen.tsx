@@ -10,7 +10,7 @@
  * sufficient on its own.
  */
 import { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../../theme/useTheme';
@@ -27,8 +27,11 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
   const { barberId, barberName, service, date, time } = route.params;
   const { colors, fonts } = useTheme();
 
-  const [location, setLocation] = useState('');
-  const [focused, setFocused] = useState(false);
+  const [street, setStreet] = useState('');
+  const [city, setCity] = useState('');
+  const [unit, setUnit] = useState('');
+  const [instructions, setInstructions] = useState('');
+  const [focused, setFocused] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -38,15 +41,17 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
     fetchOwnProfile().then((result) => {
       if (!active || result.status !== 'ok' || !result.profile?.city) return;
       const city = result.profile.city;
-      setLocation((current) => (current.trim().length === 0 ? city : current));
+      setCity((current) => (current.trim().length === 0 ? city : current));
     });
     return () => {
       active = false;
     };
   }, []);
 
-  const trimmed = location.trim();
-  const canContinue = trimmed.length > 0;
+  const trimmedStreet = street.trim();
+  const trimmedCity = city.trim();
+  const canContinue = trimmedStreet.length >= 5 && trimmedCity.length >= 2;
+  const location = [trimmedStreet, unit.trim(), trimmedCity, instructions.trim()].filter(Boolean).join(', ');
 
   const onContinue = useCallback(() => {
     if (!canContinue) return;
@@ -56,14 +61,14 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
       service,
       date,
       time,
-      location: trimmed,
+      location,
     });
-  }, [navigation, barberId, barberName, service, date, time, trimmed, canContinue]);
+  }, [navigation, barberId, barberName, service, date, time, location, canContinue]);
 
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['top', 'left', 'right']}
+      edges={['top', 'left', 'right', 'bottom']}
       testID="customer-booking-location-screen"
     >
       <ScreenBackHeader
@@ -72,7 +77,8 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
         right={<BookingStepIndicator current={2} />}
       />
 
-      <View style={styles.content}>
+      <KeyboardAvoidingView style={styles.content} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
           Where should the barber come to?
         </Text>
@@ -81,17 +87,17 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
         </Text>
 
         <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-          Location
+          Street and building
         </Text>
         <TextInput
-          value={location}
-          onChangeText={setLocation}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          placeholder="Street, number, city"
+          value={street}
+          onChangeText={setStreet}
+          onFocus={() => setFocused('street')}
+          onBlur={() => setFocused(null)}
+          placeholder="12 Example Street, building 4"
           placeholderTextColor={colors.textSecondary}
           multiline
-          accessibilityLabel="Location"
+          accessibilityLabel="Street and building"
           selectionColor={colors.accent}
           cursorColor={colors.accent}
           keyboardAppearance={colors.background === '#121214' ? 'dark' : 'light'}
@@ -99,13 +105,22 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
             styles.input,
             {
               color: colors.textPrimary,
-              borderBottomColor: focused ? colors.accent : colors.border,
+              borderBottomColor: focused === 'street' ? colors.accent : colors.border,
               fontFamily: fonts.body,
             },
           ]}
           testID="customer-booking-location-input"
         />
-      </View>
+          <AddressField label="City" value={city} onChangeText={setCity} focused={focused === 'city'} onFocus={() => setFocused('city')} onBlur={() => setFocused(null)} testID="customer-booking-location-city" />
+          <AddressField label="Apartment or unit (optional)" value={unit} onChangeText={setUnit} focused={focused === 'unit'} onFocus={() => setFocused('unit')} onBlur={() => setFocused(null)} testID="customer-booking-location-unit" />
+          <AddressField label="Access instructions (optional)" value={instructions} onChangeText={setInstructions} focused={focused === 'instructions'} onFocus={() => setFocused('instructions')} onBlur={() => setFocused(null)} testID="customer-booking-location-instructions" />
+          {!canContinue && (street.length > 0 || city.length > 0) ? (
+            <Text style={[styles.validation, { color: colors.errorText, fontFamily: fonts.body }]} accessibilityRole="alert">
+              Enter a street and building plus your city.
+            </Text>
+          ) : null}
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
         <PrimaryButton
@@ -119,10 +134,39 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
   );
 }
 
+function AddressField({ label, value, onChangeText, focused, onFocus, onBlur, testID }: {
+  label: string;
+  value: string;
+  onChangeText: (value: string) => void;
+  focused: boolean;
+  onFocus: () => void;
+  onBlur: () => void;
+  testID: string;
+}) {
+  const { colors, fonts } = useTheme();
+  return (
+    <View>
+      <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>{label}</Text>
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        accessibilityLabel={label}
+        placeholderTextColor={colors.textSecondary}
+        selectionColor={colors.accent}
+        style={[styles.singleInput, { color: colors.textPrimary, borderBottomColor: focused ? colors.accent : colors.border, fontFamily: fonts.body }]}
+        testID={testID}
+      />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
 
-  content: { flex: 1, paddingHorizontal: space.xl, paddingTop: space.base },
+  content: { flex: 1 },
+  scrollContent: { paddingHorizontal: space.xl, paddingTop: space.base, paddingBottom: space.xl },
   heading: { fontSize: 24 },
   subheading: { fontSize: 13, marginTop: 6, lineHeight: 19 },
 
@@ -135,6 +179,8 @@ const styles = StyleSheet.create({
     minHeight: 88,
     textAlignVertical: 'top',
   },
+  singleInput: { borderBottomWidth: HAIRLINE, paddingVertical: space.md, fontSize: 16, minHeight: 48 },
+  validation: { fontSize: 13, lineHeight: 19, marginTop: space.base },
 
   footer: { paddingHorizontal: space.xl, paddingTop: 14, paddingBottom: space.lg, borderTopWidth: HAIRLINE },
 });

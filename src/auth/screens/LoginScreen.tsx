@@ -125,6 +125,12 @@ export default function LoginScreen({ navigation, route }: Props) {
           testID="auth-login-submit"
         />
         <TextLink
+          label="Forgot password?"
+          onPress={() => navigation.navigate('ForgotPassword', { role, email })}
+          disabled={submitting || providerSubmitting !== null}
+          testID="auth-login-forgot-password"
+        />
+        <TextLink
           label="New here? Create an account"
           onPress={() => navigation.navigate('Signup', { role })}
           disabled={submitting}

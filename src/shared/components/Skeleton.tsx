@@ -12,7 +12,7 @@
  * for its one use case.
  */
 import { useEffect, useState } from 'react';
-import { Animated, Easing, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
 import { radius } from '../../theme/spacing';
 
@@ -26,8 +26,19 @@ export function Skeleton({ style }: { style?: StyleProp<ViewStyle> }) {
   // itself (outside React's render cycle), so holding it as state is safe and
   // never triggers a re-render via setState (the setter is never called).
   const [pulse] = useState(() => new Animated.Value(0.5));
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
+    void AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      pulse.setValue(1);
+      return;
+    }
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, {
@@ -46,7 +57,7 @@ export function Skeleton({ style }: { style?: StyleProp<ViewStyle> }) {
     );
     loop.start();
     return () => loop.stop();
-  }, [pulse]);
+  }, [pulse, reduceMotion]);
 
   return (
     <Animated.View

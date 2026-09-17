@@ -19,11 +19,12 @@
  * / verified / barber_profile. The fetch(uri).arrayBuffer() read inside the data
  * layer only truly runs on-device after a dev-client rebuild with the picker.
  */
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useFocusEffect } from '@react-navigation/native';
 import { fetchOwnProfile } from '../../auth/authService';
 import { useTheme } from '../../theme/useTheme';
 import { HAIRLINE, radius, space } from '../../theme/spacing';
@@ -87,21 +88,15 @@ export default function VerifyScreen() {
       setError(barberProfileResult.message);
       return;
     }
+    if (requestResult.status !== 'ok') {
+      setError(requestResult.message);
+      return;
+    }
     setStatus(barberProfileResult.profile?.verification_status ?? null);
-    setRequest(requestResult.status === 'ok' ? requestResult.request : null);
+    setRequest(requestResult.request);
   }, []);
 
-  useEffect(() => {
-    let active = true;
-    // Deferred via .then() (not called directly) for the same
-    // react-hooks/set-state-in-effect reason as the other data screens.
-    Promise.resolve().then(() => {
-      if (active) void load();
-    });
-    return () => {
-      active = false;
-    };
-  }, [load]);
+  useFocusEffect(useCallback(() => { void load(); }, [load]));
 
   const handleUpload = useCallback(
     async (docType: VerificationDocType) => {
@@ -114,7 +109,10 @@ export default function VerifyScreen() {
 
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
-        Alert.alert('Photo access needed', 'Allow photo access to upload your documents.');
+        Alert.alert('Photo access needed', 'Allow photo access in Settings to upload your documents.', [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => void Linking.openSettings() },
+        ]);
         return;
       }
 
@@ -154,6 +152,10 @@ export default function VerifyScreen() {
       : status === 'rejected'
         ? colors.errorText
         : colors.accentText;
+  const hasAnyDocument = Boolean(request?.id_image_url || request?.license_image_url);
+  const statusCopy = status === 'pending' && !hasAnyDocument
+    ? { word: 'Documents needed', line: 'Upload both documents to enter manual review.', icon: 'upload' as const }
+    : status ? STATUS_COPY[status] : null;
 
   return (
     <SafeAreaView
@@ -177,20 +179,24 @@ export default function VerifyScreen() {
             testID="barber-verify-loading"
           />
         ) : error ? (
-          <Notice testID="barber-verify-error" message={error} style={styles.noticeMargins} />
-        ) : status ? (
+          <Notice testID="barber-verify-error" message={error} style={styles.noticeMargins}>
+            <Pressable onPress={() => void load()} accessibilityRole="button" testID="barber-verify-retry" style={styles.noticeAction}>
+              <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}>Try again</Text>
+            </Pressable>
+          </Notice>
+        ) : status && statusCopy ? (
           <>
             <View
               style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
               testID="barber-verify-status"
             >
-              <Feather name={STATUS_COPY[status].icon} size={28} color={statusColor} />
+              <Feather name={statusCopy.icon} size={28} color={statusColor} />
               <View style={styles.statusText}>
                 <Text style={[styles.statusWord, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-                  {STATUS_COPY[status].word}
+                  {statusCopy.word}
                 </Text>
                 <Text style={[styles.statusLine, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                  {STATUS_COPY[status].line}
+                  {statusCopy.line}
                 </Text>
               </View>
             </View>
@@ -200,7 +206,7 @@ export default function VerifyScreen() {
                 label="Government-issued ID"
                 uploaded={Boolean(request?.id_image_url)}
                 uploading={uploadingDoc === 'id'}
-                disabled={uploadingDoc !== null}
+                disabled={uploadingDoc !== null || status === 'approved'}
                 onPress={() => void handleUpload('id')}
                 testID="barber-verify-doc-id"
               />
@@ -208,7 +214,7 @@ export default function VerifyScreen() {
                 label="Barber licence"
                 uploaded={Boolean(request?.license_image_url)}
                 uploading={uploadingDoc === 'license'}
-                disabled={uploadingDoc !== null}
+                disabled={uploadingDoc !== null || status === 'approved'}
                 onPress={() => void handleUpload('license')}
                 testID="barber-verify-doc-license"
               />
@@ -218,6 +224,11 @@ export default function VerifyScreen() {
               Documents are stored privately. No automated scanning, no biometrics — a human on
               our team reviews them.
             </Text>
+            {status === 'rejected' ? (
+              <Pressable onPress={() => void Linking.openURL('mailto:privelier@outlook.com?subject=Verification%20help')} accessibilityRole="link" testID="barber-verify-contact" style={styles.contactAction}>
+                <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}>Contact verification support</Text>
+              </Pressable>
+            ) : null}
           </>
         ) : null}
       </ScrollView>
@@ -306,6 +317,8 @@ const styles = StyleSheet.create({
 
   spinner: { marginTop: 48, alignSelf: 'center' },
   noticeMargins: { marginTop: space.xl },
+  noticeAction: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
+  contactAction: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start', marginTop: space.sm },
 
   statusCard: {
     flexDirection: 'row',

@@ -44,6 +44,9 @@ export type OAuthSignInResult = { status: 'started' } | AuthFailure;
 /** Result of resendConfirmation. */
 export type ResendConfirmationResult = { status: 'sent' } | AuthFailure;
 
+export type PasswordResetRequestResult = { status: 'sent' } | AuthFailure;
+export type PasswordUpdateResult = { status: 'updated' } | AuthFailure;
+
 /**
  * Result of fetchOwnProfile. 'ok' with profile null means "no users row yet"
  * (deferred provisioning has not run); a fetch failure is a separate arm so

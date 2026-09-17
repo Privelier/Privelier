@@ -49,7 +49,7 @@ import { PortfolioTile } from '../../shared/components/PortfolioTile';
 import { useTheme } from '../../theme/useTheme';
 import { HAIRLINE, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
-import { Notice } from '../../shared/components/Notice';
+import { RetryNotice } from '../../shared/components/RetryNotice';
 import type { PortfolioRow } from '../../types';
 import {
   deletePortfolioImage,
@@ -231,7 +231,7 @@ export default function PortfolioScreen() {
             testID="barber-portfolio-loading"
           />
         ) : error ? (
-          <Notice testID="barber-portfolio-error" message={error} style={styles.noticeMargins} />
+          <RetryNotice testID="barber-portfolio-error" message={error} onRetry={() => void load()} style={styles.noticeMargins} />
         ) : (
           <>
             <PortfolioGrid style={styles.gridSpacing}>

@@ -47,7 +47,7 @@ import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../theme/useTheme';
 import { HAIRLINE, radius, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
-import { Notice } from '../../shared/components/Notice';
+import { RetryNotice } from '../../shared/components/RetryNotice';
 import type { Palette } from '../../theme/colors';
 import type { BookingCounterpart, TransitionBookingResult } from '../types';
 import type { BookingRow, ServiceRow } from '../../types';
@@ -238,9 +238,11 @@ export default function RequestsScreen() {
           testID="barber-requests-loading"
         />
       ) : showError ? (
-        <Notice testID="barber-requests-error" message={error ?? ''} style={styles.noticeMargins} />
+        <RetryNotice testID="barber-requests-error" message={error ?? ''} onRetry={() => void load()} style={styles.noticeMargins} />
       ) : (
-        <FlatList
+        <>
+          {error ? <RetryNotice testID="barber-requests-error" message={error} onRetry={() => void load()} style={styles.noticeMargins} /> : null}
+          <FlatList
           data={bookings}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
@@ -379,7 +381,8 @@ export default function RequestsScreen() {
               </View>
             );
           }}
-        />
+          />
+        </>
       )}
     </SafeAreaView>
   );

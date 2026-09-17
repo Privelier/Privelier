@@ -19,6 +19,7 @@ import AuthEntryScreen from './AuthEntryScreen';
 import LoginScreen from './LoginScreen';
 import SignupScreen from './SignupScreen';
 import AwaitEmailConfirmationScreen from './AwaitEmailConfirmationScreen';
+import ForgotPasswordScreen from './ForgotPasswordScreen';
 import type { Role } from '../../types';
 
 export type AuthStackParamList = {
@@ -27,6 +28,7 @@ export type AuthStackParamList = {
   Login: { role: Role };
   Signup: { role: Role };
   AwaitEmailConfirmation: { email: string; role: Role };
+  ForgotPassword: { role: Role; email?: string };
 };
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
@@ -54,6 +56,7 @@ export default function AuthNavigator() {
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Signup" component={SignupScreen} />
       <Stack.Screen name="AwaitEmailConfirmation" component={AwaitEmailConfirmationScreen} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
     </Stack.Navigator>
   );
 }

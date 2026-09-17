@@ -41,7 +41,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { fetchOwnProfile } from '../../auth/authService';
 import { useTheme } from '../../theme/useTheme';
 import { pressOpacity } from '../../theme/motion';
-import { Notice } from '../../shared/components/Notice';
+import { RetryNotice } from '../../shared/components/RetryNotice';
 import type { AvailabilityRow, BarberDirectoryRow, ServiceRow } from '../../types';
 import { listBarbersByCity, listServicesForBarberIds } from '../discoveryData';
 import { listAvailabilityForBarberIds } from '../availabilityData';
@@ -61,7 +61,7 @@ type ViewMode = 'list' | 'map';
 
 const CHIP_LABELS: Record<ExploreFilterKey, string> = {
   all: 'All',
-  today: 'Available today',
+  today: 'Works today',
   under100: 'Under €100',
   verified: 'Verified',
 };
@@ -292,7 +292,7 @@ export default function ExploreScreen({ navigation }: Props) {
           testID="customer-explore-loading"
         />
       ) : error ? (
-        <Notice testID="customer-explore-error" message={error} style={styles.noticeMargins} />
+        <RetryNotice testID="customer-explore-error" message={error} onRetry={() => void load()} style={styles.noticeMargins} />
       ) : viewMode === 'map' ? (
         <View style={styles.mapArea} testID="customer-explore-map-area">
           {ExploreMapView === null ? (

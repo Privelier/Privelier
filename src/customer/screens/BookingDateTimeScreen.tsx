@@ -106,6 +106,7 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
 
   const [dates] = useState<string[]>(() => buildLookaheadDates());
   const [slotsByDate, setSlotsByDate] = useState<Map<string, string[]>>(new Map());
+  const [unverifiedDates, setUnverifiedDates] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selection, setSelection] = useState<Selection>({ date: null, time: null });
@@ -125,7 +126,8 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
     const entries = await Promise.all(
       dates.map(async (date) => {
         const busyResult = await listBarberBusySlots(barberId, date);
-        const busy = busyResult.status === 'ok' ? busyResult.busy : [];
+        if (busyResult.status !== 'ok') return [date, null] as const;
+        const busy = busyResult.busy;
         const slots = deriveAvailableSlots({
           windows,
           busy,
@@ -136,7 +138,9 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
       })
     );
 
-    const map = new Map(entries);
+    const failedDates = new Set(entries.filter(([, slots]) => slots === null).map(([date]) => date));
+    const map = new Map(entries.map(([date, slots]) => [date, slots ?? []]));
+    setUnverifiedDates(failedDates);
     setSlotsByDate(map);
     setSelection((current) => {
       if (!current.date) return current;
@@ -155,8 +159,8 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
   );
 
   const disabledDates = useMemo(
-    () => new Set(dates.filter((date) => (slotsByDate.get(date) ?? []).length === 0)),
-    [dates, slotsByDate]
+    () => new Set(dates.filter((date) => unverifiedDates.has(date) || (slotsByDate.get(date) ?? []).length === 0)),
+    [dates, slotsByDate, unverifiedDates]
   );
 
   const allEmpty = useMemo(
@@ -177,7 +181,7 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
     })).filter((group) => group.slots.length > 0);
   }, [selectedSlots]);
 
-  const canContinue = !!selection.date && !!selection.time;
+  const canContinue = !!selection.date && !!selection.time && !loading && !error && !unverifiedDates.has(selection.date);
 
   const onContinue = useCallback(() => {
     if (!selection.date || !selection.time) return;
@@ -223,16 +227,35 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
             testID="customer-booking-datetime-error"
             variant="error"
             style={styles.noticeSpacing}
-          />
-        ) : allEmpty ? (
-          <Text
-            style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}
-            testID="customer-booking-datetime-empty"
           >
-            No upcoming availability. Check back soon.
-          </Text>
+            <RetryAvailability onPress={() => void load()} />
+          </Notice>
+        ) : allEmpty ? (
+          <View style={styles.emptyWrap}>
+            <Text
+              style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}
+              testID="customer-booking-datetime-empty"
+            >
+              {unverifiedDates.size > 0
+                ? 'We could not verify availability. Try again before choosing a time.'
+                : 'No upcoming availability. Check back soon.'}
+            </Text>
+            {unverifiedDates.size > 0 ? (
+              <PrimaryButton label="Try again" onPress={() => void load()} testID="customer-booking-datetime-retry" />
+            ) : null}
+          </View>
         ) : (
           <>
+            {unverifiedDates.size > 0 ? (
+              <Notice
+                message="Some dates could not be verified and are temporarily unavailable."
+                testID="customer-booking-datetime-partial-error"
+                variant="info"
+                style={styles.noticeSpacing}
+              >
+                <RetryAvailability onPress={() => void load()} />
+              </Notice>
+            ) : null}
             <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
               Date
             </Text>
@@ -327,6 +350,21 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
   );
 }
 
+function RetryAvailability({ onPress }: { onPress: () => void }) {
+  const { colors, fonts } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel="Retry availability"
+      testID="customer-booking-datetime-retry-inline"
+      style={({ pressed }) => [styles.retryLink, pressed ? { opacity: pressOpacity.soft } : null]}
+    >
+      <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}>Try again</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
 
@@ -336,7 +374,9 @@ const styles = StyleSheet.create({
 
   spinner: { marginTop: space['4xl'] },
   noticeSpacing: { marginTop: space.xl },
-  emptyText: { fontSize: 13, textAlign: 'center', paddingVertical: space['3xl'] },
+  retryLink: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
+  emptyWrap: { gap: space.base, paddingVertical: space['3xl'] },
+  emptyText: { fontSize: 13, lineHeight: 19, textAlign: 'center' },
   hintText: { fontSize: 13, marginTop: space.base },
 
   sectionLabel: { fontSize: 12, letterSpacing: 0.2, marginTop: 28, marginBottom: 14 },

@@ -195,7 +195,7 @@ export default function DiscoverScreen({ navigation }: Props) {
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder="Search a barber, a service, a style"
+              placeholder="Search a barber or service"
               placeholderTextColor={colors.textSecondary}
               style={[styles.searchInput, { color: colors.textPrimary, fontFamily: fonts.body }]}
               autoCapitalize="none"
@@ -247,7 +247,28 @@ export default function DiscoverScreen({ navigation }: Props) {
         {loading ? (
           <DiscoverSkeleton />
         ) : error ? (
-          <Notice testID="customer-home-error" message={error} style={styles.noticeMargins} />
+          <Notice testID="customer-home-error" message={error} style={styles.noticeMargins}>
+            <Pressable
+              onPress={() => void load()}
+              accessibilityRole="button"
+              accessibilityLabel="Retry discovery"
+              testID="customer-home-retry"
+              style={styles.noticeAction}
+            >
+              <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}>Try again</Text>
+            </Pressable>
+            {error.startsWith('Add your city') ? (
+              <Pressable
+                onPress={() => navigation.navigate('Account')}
+                accessibilityRole="button"
+                accessibilityLabel="Open account to add city"
+                testID="customer-home-open-account"
+                style={styles.noticeAction}
+              >
+                <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}>Open account</Text>
+              </Pressable>
+            ) : null}
+          </Notice>
         ) : !featured ? (
           <Text
             style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}
@@ -264,7 +285,6 @@ export default function DiscoverScreen({ navigation }: Props) {
                 barber={featured}
                 services={servicesByBarber.get(featured.id) ?? []}
                 variant="wide"
-                featured
                 onPress={() => openProfile(featured.id)}
               />
             </View>
@@ -302,7 +322,7 @@ export default function DiscoverScreen({ navigation }: Props) {
 
         <View style={[styles.pad, styles.section]}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-            Trending this week
+            Style inspiration
           </Text>
           <View style={styles.trendingGrid}>
             {TRENDING_STYLES.map((style) => (
@@ -388,6 +408,7 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 12 },
 
   noticeMargins: { marginTop: 32, marginHorizontal: 24 },
+  noticeAction: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
   emptyText: { fontSize: 14, textAlign: 'center', marginTop: 48, paddingHorizontal: 24 },
 
   featured: { marginTop: 30 },

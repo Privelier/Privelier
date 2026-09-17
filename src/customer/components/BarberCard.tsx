@@ -13,6 +13,7 @@
  * verification_status = 'approved'), so every visible row is verified by
  * construction.
  */
+import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/useTheme';
@@ -40,12 +41,14 @@ function startingPrice(services: ServiceRow[]): number | null {
 
 function CardImage({ barber, aspectRatio }: { barber: BarberDirectoryRow; aspectRatio: number }) {
   const { colors, fonts } = useTheme();
-  if (barber.profile_image) {
+  const [failed, setFailed] = useState(false);
+  if (barber.profile_image && !failed) {
     return (
       <Image
         source={{ uri: barber.profile_image }}
         style={[styles.image, { aspectRatio, backgroundColor: colors.surface }]}
         resizeMode="cover"
+        onError={() => setFailed(true)}
       />
     );
   }
@@ -87,13 +90,21 @@ export default function BarberCard({ barber, services, variant = 'wide', feature
     .slice(0, 2)
     .map((s) => s.name)
     .join(' · ');
+  const cardLabel = [
+    barber.name,
+    barber.city,
+    barber.rating > 0 ? `rated ${barber.rating.toFixed(1)} out of 5` : 'no ratings yet',
+    from !== null ? `services from ${formatMoney(from)}` : null,
+    'verified barber',
+  ].filter(Boolean).join(', ');
 
   if (variant === 'compact') {
     return (
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
-        accessibilityLabel={`View ${barber.name}'s profile`}
+        accessibilityLabel={cardLabel}
+        accessibilityHint="Opens the barber profile"
         testID={`customer-home-barber-${barber.id}`}
         style={({ pressed }) => [styles.compact, { opacity: pressed ? pressOpacity.soft : 1 }]}
       >
@@ -139,7 +150,8 @@ export default function BarberCard({ barber, services, variant = 'wide', feature
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`View ${barber.name}'s profile`}
+      accessibilityLabel={cardLabel}
+      accessibilityHint="Opens the barber profile"
       testID={`customer-home-barber-${barber.id}`}
       style={({ pressed }) => ({ opacity: pressed ? pressOpacity.soft : 1 })}
     >
@@ -148,7 +160,7 @@ export default function BarberCard({ barber, services, variant = 'wide', feature
         <View style={styles.wideMetaLeft}>
           {featured ? (
             <Text style={[styles.editorsPick, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
-              {'Editor’s pick'}
+              Featured barber
             </Text>
           ) : null}
           <View style={styles.nameRow}>

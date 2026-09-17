@@ -29,6 +29,11 @@ jest.mock('expo-image-picker', () => ({
   launchImageLibraryAsync: jest.fn(),
 }));
 
+jest.mock('@react-navigation/native', () => {
+  const React = jest.requireActual('react');
+  return { useFocusEffect: (callback: () => void | (() => void)) => React.useEffect(callback, [callback]) };
+});
+
 // @expo/vector-icons pulls expo-font -> expo-asset at import, which isn't
 // resolvable in the jest env; the icon glyph is irrelevant to behaviour.
 jest.mock('@expo/vector-icons', () => ({

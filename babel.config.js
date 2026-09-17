@@ -1,8 +1,11 @@
 module.exports = function (api) {
-  api.cache(true);
+  const isTest = api.env('test');
 
   return {
-    presets: [['babel-preset-expo'], 'nativewind/babel'],
+    // NativeWind's preview transform recursively wraps React Native's Jest
+    // mocks. App builds keep it; tests render the same component trees with
+    // their explicit inline/theme styles and do not need class compilation.
+    presets: isTest ? ['babel-preset-expo'] : [['babel-preset-expo'], 'nativewind/babel'],
 
     plugins: [
       [

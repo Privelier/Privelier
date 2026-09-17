@@ -41,7 +41,7 @@ import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../theme/useTheme';
 import { radius, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
-import { Notice } from '../../shared/components/Notice';
+import { RetryNotice } from '../../shared/components/RetryNotice';
 import type { BarberDirectoryRow, BookingRow, ServiceRow } from '../../types';
 import { cancelBookingAsCustomer, fetchOwnBookingsView, isUpcomingBooking } from '../bookingsData';
 import { fetchOwnReviewedBookingIds } from '../reviewsData';
@@ -285,9 +285,11 @@ export default function BookingsScreen() {
           testID="customer-bookings-loading"
         />
       ) : showError ? (
-        <Notice testID="customer-bookings-error" message={error ?? ''} style={styles.noticeMargins} />
+        <RetryNotice testID="customer-bookings-error" message={error ?? ''} onRetry={() => void load()} style={styles.noticeMargins} />
       ) : (
-        <FlatList
+        <>
+          {error ? <RetryNotice testID="customer-bookings-error" message={error} onRetry={() => void load()} style={styles.noticeMargins} /> : null}
+          <FlatList
           data={list}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
@@ -435,7 +437,8 @@ export default function BookingsScreen() {
               </View>
             );
           }}
-        />
+          />
+        </>
       )}
     </SafeAreaView>
   );

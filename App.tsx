@@ -27,6 +27,8 @@ import AuthNavigator from './src/auth/screens/AuthNavigator';
 import AdminNotSupportedScreen from './src/auth/screens/AdminNotSupportedScreen';
 import FinishSetupScreen from './src/auth/screens/FinishSetupScreen';
 import ProvisioningScreen from './src/auth/screens/ProvisioningScreen';
+import ResetPasswordScreen from './src/auth/screens/ResetPasswordScreen';
+import AuthLinkErrorScreen from './src/auth/screens/AuthLinkErrorScreen';
 import { useAuthShell, type AuthShell } from './src/auth/useAuthShell';
 import CustomerNavigator from './src/customer/CustomerNavigator';
 import BarberNavigator from './src/barber/BarberNavigator';
@@ -38,7 +40,7 @@ import '@/global.css';
 SplashScreen.preventAutoHideAsync();
 
 function renderRoot(shell: AuthShell): ReactElement {
-  const { state, retryProvisioning, submitSetupForm, signOutNow } = shell;
+  const { state, retryProvisioning, submitSetupForm, signOutNow, finishPasswordRecovery, dismissPasswordRecovery, dismissAuthLinkError } = shell;
   switch (state.phase) {
     case 'restoring':
     case 'unauthenticated':
@@ -48,13 +50,11 @@ function renderRoot(shell: AuthShell): ReactElement {
     case 'provisioning':
       if (state.view.kind === 'setup_form') {
         return (
-          <GluestackUIProvider mode="dark">
-            <FinishSetupScreen
+          <FinishSetupScreen
             prefill={state.view.prefill}
             onSubmit={submitSetupForm}
             onSignOut={signOutNow}
-            />
-          </GluestackUIProvider>
+          />
         );
       }
       return (
@@ -64,6 +64,10 @@ function renderRoot(shell: AuthShell): ReactElement {
           onSignOut={signOutNow}
         />
       );
+    case 'password_recovery':
+      return <ResetPasswordScreen view={state.view} onComplete={finishPasswordRecovery} onDismiss={dismissPasswordRecovery} />;
+    case 'auth_link_error':
+      return <AuthLinkErrorScreen view={state.view} onDismiss={dismissAuthLinkError} />;
     case 'authenticated':
       // Routing authority is public.users.role — never user_metadata, never
       // which auth screen was used. "Exit" in authenticated states is a real
@@ -80,25 +84,27 @@ function renderRoot(shell: AuthShell): ReactElement {
 }
 
 export default function App() {
-  const [fontsLoaded] = useFonts(appFonts);
+  const [fontsLoaded, fontError] = useFonts(appFonts);
   const shell = useAuthShell();
   const restoring = shell.state.phase === 'restoring';
 
   const onLayoutRootView = useCallback(async () => {
-    if (fontsLoaded && !restoring) {
+    if ((fontsLoaded || fontError) && !restoring) {
       await SplashScreen.hideAsync();
     }
-  }, [fontsLoaded, restoring]);
+  }, [fontsLoaded, fontError, restoring]);
 
-  if (!fontsLoaded || restoring) {
+  if ((!fontsLoaded && !fontError) || restoring) {
     // RESTORING: the native splash stays up; no navigator is mounted.
     return null;
   }
 
   return (
-    <SafeAreaProvider onLayout={onLayoutRootView}>
-      <NavigationContainer>{renderRoot(shell)}</NavigationContainer>
-      <StatusBar style="auto" />
-    </SafeAreaProvider>
+    <GluestackUIProvider mode="system">
+      <SafeAreaProvider onLayout={onLayoutRootView}>
+        <NavigationContainer>{renderRoot(shell)}</NavigationContainer>
+        <StatusBar style="auto" />
+      </SafeAreaProvider>
+    </GluestackUIProvider>
   );
 }

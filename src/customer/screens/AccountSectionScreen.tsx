@@ -7,7 +7,7 @@
  * Account tab's structure final. Wallet/payments and gift cards are
  * deliberately absent (founder-excluded, out of MVP scope).
  */
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../../theme/useTheme';
@@ -15,28 +15,13 @@ import { BackButton } from '../../shared/components/ScreenBackHeader';
 import type { CustomerStackParamList } from '../CustomerNavigator';
 
 export type AccountSectionKey =
-  | 'favorites'
-  | 'notifications'
   | 'privacy'
-  | 'preferences'
   | 'help';
 
 export const ACCOUNT_SECTIONS: Record<AccountSectionKey, { title: string; blurb: string }> = {
-  favorites: {
-    title: 'Favorites',
-    blurb: 'Barbers you save will appear here.',
-  },
-  notifications: {
-    title: 'Notifications',
-    blurb: 'Notification preferences arrive in a later update.',
-  },
   privacy: {
     title: 'Privacy & security',
-    blurb: 'Privacy and security settings are on their way.',
-  },
-  preferences: {
-    title: 'Preferences',
-    blurb: 'The app follows your device appearance for now; more preferences arrive later.',
+    blurb: 'Your exact booking address is shared only with the barber attached to that booking. Identity documents are private and reviewed manually. Privelier never uses biometric verification.',
   },
   help: {
     title: 'Help center',
@@ -67,6 +52,17 @@ export default function AccountSectionScreen({ route, navigation }: Props) {
         <Text style={[styles.blurb, { color: colors.textSecondary, fontFamily: fonts.body }]}>
           {blurb}
         </Text>
+        {route.params.section === 'help' ? (
+          <Pressable
+            onPress={() => void Linking.openURL('mailto:privelier@outlook.com')}
+            accessibilityRole="link"
+            accessibilityLabel="Email Privelier support"
+            testID="customer-account-help-email"
+            style={styles.contact}
+          >
+            <Text style={[styles.contactText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>Email support</Text>
+          </Pressable>
+        ) : null}
       </View>
     </SafeAreaView>
   );
@@ -78,4 +74,6 @@ const styles = StyleSheet.create({
   heading: { fontSize: 24, marginTop: 24 },
   body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 96 },
   blurb: { fontSize: 14, textAlign: 'center', lineHeight: 21 },
+  contact: { minHeight: 44, justifyContent: 'center', marginTop: 12 },
+  contactText: { fontSize: 14 },
 });

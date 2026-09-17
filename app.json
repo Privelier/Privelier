@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "scheme": "privelier",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/privelier-app-icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
@@ -18,24 +18,27 @@
       "package": "com.privelier.app",
       "adaptiveIcon": {
         "backgroundColor": "#121214",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/privelier-app-foreground.png",
+        "monochromeImage": "./assets/privelier-app-foreground.png"
       },
       "predictiveBackGestureEnabled": true
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/privelier-favicon.png"
     },
     "plugins": [
       "expo-font",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#121214",
-          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#F8F4EC",
+          "image": "./assets/privelier-wordmark-black.png",
           "imageWidth": 200,
-          "resizeMode": "contain"
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#121214",
+            "image": "./assets/privelier-wordmark-white.png"
+          }
         }
       ],
       "expo-secure-store"

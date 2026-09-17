@@ -27,7 +27,7 @@ import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../theme/useTheme';
 import { HAIRLINE, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
-import { Notice } from '../../shared/components/Notice';
+import { RetryNotice } from '../../shared/components/RetryNotice';
 import type { InboxThread } from '../../shared/threads';
 import type { BarberTabParamList } from '../BarberTabs';
 import type { BarberStackParamList } from '../BarberNavigator';
@@ -99,7 +99,7 @@ export default function ChatsScreen({ navigation }: Props) {
           testID="barber-chats-loading"
         />
       ) : error ? (
-        <Notice testID="barber-chats-error" message={error} style={styles.noticeMargins} />
+        <RetryNotice testID="barber-chats-error" message={error} onRetry={() => void load()} style={styles.noticeMargins} />
       ) : (
         <FlatList
           data={threads}

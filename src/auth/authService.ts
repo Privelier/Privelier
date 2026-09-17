@@ -26,6 +26,8 @@ import type {
   EnsureProfileResult,
   FetchOwnProfileResult,
   ProfilePrefill,
+  PasswordResetRequestResult,
+  PasswordUpdateResult,
   ResendConfirmationResult,
   SetupFormFields,
   SignInResult,
@@ -159,6 +161,20 @@ export async function resendConfirmation(email: string): Promise<ResendConfirmat
   });
   if (error) return mapAuthApiError('resendConfirmation', error);
   return { status: 'sent' };
+}
+
+export async function requestPasswordReset(email: string): Promise<PasswordResetRequestResult> {
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+    redirectTo: getEmailRedirectTo(),
+  });
+  if (error) return mapAuthApiError('requestPasswordReset', error);
+  return { status: 'sent' };
+}
+
+export async function updatePassword(password: string): Promise<PasswordUpdateResult> {
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) return mapAuthApiError('updatePassword', error);
+  return { status: 'updated' };
 }
 
 /**

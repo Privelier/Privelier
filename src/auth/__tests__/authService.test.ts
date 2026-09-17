@@ -9,10 +9,12 @@ import {
   ensureProfile,
   ensureProfileFromForm,
   resendConfirmation,
+  requestPasswordReset,
   signIn,
   signOut,
   signUpBarber,
   signUpCustomer,
+  updatePassword,
 } from '../authService';
 import type { SetupFormFields } from '../types';
 
@@ -25,6 +27,8 @@ jest.mock('../../../lib/supabase', () => ({
       signUp: jest.fn(),
       signInWithPassword: jest.fn(),
       resend: jest.fn(),
+      resetPasswordForEmail: jest.fn(),
+      updateUser: jest.fn(),
       signOut: jest.fn(),
       getSession: jest.fn(),
     },
@@ -255,6 +259,22 @@ describe('signIn', () => {
 
     const result = await signIn('test@example.com', 'wrong');
     expect(result).toMatchObject({ status: 'error', code: 'invalid_credentials' });
+  });
+});
+
+describe('password recovery', () => {
+  it('requests a reset link using the registered app callback', async () => {
+    mockAuth.resetPasswordForEmail.mockResolvedValue({ data: {}, error: null } as never);
+    await expect(requestPasswordReset('  test@example.com ')).resolves.toEqual({ status: 'sent' });
+    expect(mockAuth.resetPasswordForEmail).toHaveBeenCalledWith('test@example.com', {
+      redirectTo: 'privelier://auth-callback',
+    });
+  });
+
+  it('updates the authenticated recovery session password', async () => {
+    mockAuth.updateUser.mockResolvedValue({ data: {}, error: null } as never);
+    await expect(updatePassword('new-password-123')).resolves.toEqual({ status: 'updated' });
+    expect(mockAuth.updateUser).toHaveBeenCalledWith({ password: 'new-password-123' });
   });
 });
 
