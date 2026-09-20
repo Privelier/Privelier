@@ -1,20 +1,15 @@
 /** Studio presentation and navigation over the dashboard's section results. */
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import StudioScreen from '../StudioScreen';
 import { fetchOwnProfile } from '../../../auth/authService';
 import { fetchDashboardView } from '../../dashboardData';
 import type { DashboardView } from '../../types';
 
-// useFocusEffect needs a navigation container at runtime; mock it to a plain
-// mount effect (deps [] — runs once) so the screen loads its data without a
-// real navigator. Using the canonical react instance avoids a second copy that
-// would make React see overlapping act() scopes.
+// useFocusEffect needs a navigation container at runtime. Match the established
+// test shim used by the other barber screens, including its callback cleanup.
 jest.mock('@react-navigation/native', () => {
   const React = jest.requireActual('react');
-  return {
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    useFocusEffect: (cb: () => void | (() => void)) => React.useEffect(() => cb(), []),
-  };
+  return { useFocusEffect: (callback: () => void | (() => void)) => React.useEffect(callback, [callback]) };
 });
 
 jest.mock('@expo/vector-icons', () => ({ Feather: () => null }));
@@ -109,7 +104,9 @@ const MIXED_VIEW: DashboardView = {
 };
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  mockFetchProfile.mockReset();
+  mockFetchView.mockReset();
+  navigation.navigate.mockReset();
 });
 
 afterEach(async () => {
@@ -118,6 +115,39 @@ afterEach(async () => {
 });
 
 describe('StudioScreen dashboard', () => {
+  it('does not turn a failed section into an empty state and retries it', async () => {
+    mockFetchProfile.mockResolvedValue({ status: 'ok', profile: { id: 'u1', name: 'Ada Lovelace' } });
+    const failedView: DashboardView = {
+      ...MIXED_VIEW,
+      services: { status: 'error', code: 'network', message: 'We could not reach the server.', retryable: true },
+      readiness: {
+        ...MIXED_VIEW.readiness,
+        items: MIXED_VIEW.readiness.items.map((item) =>
+          item.key === 'services' ? { ...item, state: 'unavailable' } : item
+        ),
+        completeCount: 0,
+        unavailableCount: 1,
+        isLive: null,
+      },
+    };
+    mockFetchView.mockResolvedValue(failedView);
+
+    await render(<StudioScreen navigation={navigation as never} route={{} as never} />);
+    await waitFor(() => expect(screen.getByTestId('barber-dashboard-services-unavailable')).toBeTruthy());
+    expect(screen.getByText('Service summary unavailable')).toBeTruthy();
+    expect(screen.getByText('0 confirmed complete; 1 unavailable')).toBeTruthy();
+    expect(screen.queryByText('No services yet.')).toBeNull();
+
+    mockFetchView.mockResolvedValue(MIXED_VIEW);
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('barber-dashboard-services-unavailable-retry'));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(screen.getByText(/1 service/)).toBeTruthy());
+    expect(mockFetchView).toHaveBeenCalledTimes(2);
+  });
+
   it('prioritizes bookings, preserves dashboard routes, and shows confirmed readiness', async () => {
     mockFetchProfile.mockResolvedValue({ status: 'ok', profile: { id: 'u1', name: 'Ada Lovelace' } });
     mockFetchView.mockResolvedValue(MIXED_VIEW);
@@ -172,31 +202,4 @@ describe('StudioScreen dashboard', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('Requests');
   });
 
-  it('does not turn a failed section into an empty state and retries it', async () => {
-    mockFetchProfile.mockResolvedValue({ status: 'ok', profile: { id: 'u1', name: 'Ada Lovelace' } });
-    const failedView: DashboardView = {
-      ...MIXED_VIEW,
-      services: { status: 'error', code: 'network', message: 'We could not reach the server.', retryable: true },
-      readiness: {
-        ...MIXED_VIEW.readiness,
-        items: MIXED_VIEW.readiness.items.map((item) =>
-          item.key === 'services' ? { ...item, state: 'unavailable' } : item
-        ),
-        completeCount: 0,
-        unavailableCount: 1,
-        isLive: null,
-      },
-    };
-    mockFetchView.mockResolvedValueOnce(failedView).mockResolvedValueOnce(MIXED_VIEW);
-
-    render(<StudioScreen navigation={navigation as never} route={{} as never} />);
-    await waitFor(() => expect(screen.getByTestId('barber-dashboard-services-unavailable')).toBeTruthy());
-    expect(screen.getByText('Service summary unavailable')).toBeTruthy();
-    expect(screen.getByText('0 confirmed complete; 1 unavailable')).toBeTruthy();
-    expect(screen.queryByText('No services yet.')).toBeNull();
-
-    fireEvent.press(screen.getByTestId('barber-dashboard-services-unavailable-retry'));
-    await waitFor(() => expect(screen.getByText(/1 service/)).toBeTruthy());
-    expect(mockFetchView).toHaveBeenCalledTimes(2);
-  });
 });

@@ -90,7 +90,7 @@ export default function DiscoverScreen({ navigation }: Props) {
     const ownCity = profileResult.profile?.city?.trim();
     if (!ownCity) {
       setLoading(false);
-      setError('Add your city to your profile to see barbers near you.');
+      setError('We could not confirm your service area. Try again.');
       return;
     }
     setCity(ownCity);
@@ -257,17 +257,6 @@ export default function DiscoverScreen({ navigation }: Props) {
             >
               <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}>Try again</Text>
             </Pressable>
-            {error.startsWith('Add your city') ? (
-              <Pressable
-                onPress={() => navigation.navigate('Account')}
-                accessibilityRole="button"
-                accessibilityLabel="Open account to add city"
-                testID="customer-home-open-account"
-                style={styles.noticeAction}
-              >
-                <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}>Open account</Text>
-              </Pressable>
-            ) : null}
           </Notice>
         ) : !featured ? (
           <Text

@@ -6,8 +6,8 @@
  * only, never authorization.
  *
  * Fields: name (required), role limited to customer/barber (required),
- * city (required), country/phone optional, bio optional and shown only when
- * role = barber.
+ * phone optional, bio optional and shown only when role = barber. The current
+ * Nuremberg service area is checked by the root before this form is mounted.
  */
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -34,14 +34,11 @@ interface Props {
 interface FieldErrors {
   role?: string;
   name?: string;
-  city?: string;
 }
 
 export default function FinishSetupScreen({ prefill, onSubmit, onSignOut }: Props) {
   const [role, setRole] = useState<Role | null>(prefill.role ?? null);
   const [name, setName] = useState(prefill.name ?? '');
-  const [city, setCity] = useState(prefill.city ?? '');
-  const [country, setCountry] = useState(prefill.country ?? '');
   const [phone, setPhone] = useState(prefill.phone ?? '');
   const [bio, setBio] = useState(prefill.bio ?? '');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -52,18 +49,15 @@ export default function FinishSetupScreen({ prefill, onSubmit, onSignOut }: Prop
     const errors: FieldErrors = {
       role: role === null ? 'Choose whether you are a customer or a barber.' : undefined,
       name: requiredText(name, 'Enter your name.'),
-      city: requiredText(city, 'Enter your city.'),
     };
     setFieldErrors(errors);
     setFormError(null);
-    if (errors.role || errors.name || errors.city || role === null) return;
+    if (errors.role || errors.name || role === null) return;
 
     setSubmitting(true);
     const result = await onSubmit({
       role,
       name: name.trim(),
-      city: city.trim(),
-      country: optionalText(country),
       phone: optionalText(phone),
       bio: role === 'barber' ? optionalText(bio) : undefined,
     });
@@ -76,13 +70,13 @@ export default function FinishSetupScreen({ prefill, onSubmit, onSignOut }: Prop
       // Should not occur on the form path; keep the user's input and ask again.
       setFormError('We could not save that. Check the fields and try again.');
     }
-  }, [role, name, city, country, phone, bio, onSubmit]);
+  }, [role, name, phone, bio, onSubmit]);
 
   return (
     <AuthScreenShell testID="setup-screen">
       <ScreenHeading
         title="Finish setting up"
-        subtitle="A couple of details before you continue."
+        subtitle="Your location is confirmed in Nuremberg. Add the remaining details to continue."
       />
       {formError ? <Notice kind="error" message={formError} testID="setup-error" /> : null}
       <RoleChoice value={role} onChange={setRole} error={fieldErrors.role} />
@@ -95,24 +89,6 @@ export default function FinishSetupScreen({ prefill, onSubmit, onSignOut }: Prop
         autoComplete="name"
         textContentType="name"
         testID="setup-name"
-      />
-      <FormTextField
-        label="City"
-        value={city}
-        onChangeText={setCity}
-        error={fieldErrors.city}
-        autoCapitalize="words"
-        testID="setup-city"
-      />
-      <FormTextField
-        label="Country"
-        value={country}
-        onChangeText={setCountry}
-        optional
-        autoCapitalize="words"
-        autoComplete="country"
-        textContentType="countryName"
-        testID="setup-country"
       />
       <FormTextField
         label="Phone"

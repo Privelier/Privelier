@@ -6,8 +6,8 @@
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../../../lib/supabase';
 import {
-  ensureProfile,
-  ensureProfileFromForm,
+  ensureProfile as ensureProfileForEligibleLocation,
+  ensureProfileFromForm as ensureProfileFromFormForEligibleLocation,
   resendConfirmation,
   requestPasswordReset,
   signIn,
@@ -17,7 +17,7 @@ import {
   signUpCustomer,
   updatePassword,
 } from '../authService';
-import type { SetupFormFields } from '../types';
+import type { EligibleNurembergLocation, SetupFormFields } from '../types';
 
 // babel-plugin-jest-hoist hoists this above the imports above at transform
 // time, so the mock is in place before authService.ts (and this file) ever
@@ -98,6 +98,7 @@ function chainable(result: unknown, record?: () => void) {
     maybeSingle: jest.Mock;
     single: jest.Mock;
     insert: jest.Mock;
+    update: jest.Mock;
     then: (resolve: (value: unknown) => void) => void;
   } = {
     select: jest.fn(() => obj),
@@ -115,6 +116,7 @@ function chainable(result: unknown, record?: () => void) {
       record?.();
       return obj;
     }),
+    update: jest.fn(() => obj),
     then: (resolve: (value: unknown) => void) => resolve(result),
   };
   return obj;
@@ -146,6 +148,16 @@ function okSession(session: Session | null) {
   } as Awaited<ReturnType<typeof supabase.auth.getSession>>);
 }
 
+const ELIGIBLE_NUREMBERG: EligibleNurembergLocation = {
+  status: 'eligible',
+  city: 'Nuremberg',
+  country: 'Germany',
+};
+
+const ensureProfile = () => ensureProfileForEligibleLocation(ELIGIBLE_NUREMBERG);
+const ensureProfileFromForm = (fields: SetupFormFields) =>
+  ensureProfileFromFormForEligibleLocation(fields, ELIGIBLE_NUREMBERG);
+
 // ---------------------------------------------------------------------------
 // signUpCustomer / signUpBarber
 // ---------------------------------------------------------------------------
@@ -159,8 +171,7 @@ describe('signUpCustomer / signUpBarber', () => {
 
     const result = await signUpCustomer('  test@example.com  ', 'password123', {
       name: 'Alex',
-      city: 'Lisbon',
-    });
+    }, ELIGIBLE_NUREMBERG);
 
     expect(result).toEqual({ status: 'confirmation_email_sent', email: 'test@example.com' });
     expect(mockAuth.signUp).toHaveBeenCalledWith({
@@ -171,8 +182,8 @@ describe('signUpCustomer / signUpBarber', () => {
         data: {
           name: 'Alex',
           role: 'customer',
-          city: 'Lisbon',
-          country: undefined,
+          city: 'Nuremberg',
+          country: 'Germany',
           phone: undefined,
           bio: undefined,
         },
@@ -188,9 +199,8 @@ describe('signUpCustomer / signUpBarber', () => {
 
     await signUpBarber('barber@example.com', 'password123', {
       name: 'Barb',
-      city: 'Porto',
       bio: 'Fades and fresh cuts.',
-    });
+    }, ELIGIBLE_NUREMBERG);
 
     expect(mockAuth.signUp).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -209,7 +219,7 @@ describe('signUpCustomer / signUpBarber', () => {
       error: new AuthApiError('Password too weak', 400, 'weak_password'),
     } as never);
 
-    const result = await signUpCustomer('test@example.com', 'weak', { name: 'Alex', city: 'Lisbon' });
+    const result = await signUpCustomer('test@example.com', 'weak', { name: 'Alex' }, ELIGIBLE_NUREMBERG);
     expect(result).toEqual({
       status: 'error',
       code: 'weak_password',
@@ -227,8 +237,7 @@ describe('signUpCustomer / signUpBarber', () => {
 
     const result = await signUpCustomer('test@example.com', 'password123', {
       name: 'Alex',
-      city: 'Lisbon',
-    });
+    }, ELIGIBLE_NUREMBERG);
     expect(result).toEqual({ status: 'email_in_use' });
   });
 
@@ -240,9 +249,21 @@ describe('signUpCustomer / signUpBarber', () => {
 
     const result = await signUpCustomer('taken@example.com', 'password123', {
       name: 'Alex',
-      city: 'Lisbon',
-    });
+    }, ELIGIBLE_NUREMBERG);
     expect(result).toEqual({ status: 'email_in_use' });
+  });
+
+  it('rejects a forged service area before calling Supabase', async () => {
+    const forged = {
+      status: 'eligible',
+      city: 'Hamburg',
+      country: 'Germany',
+    } as unknown as EligibleNurembergLocation;
+
+    await expect(
+      signUpCustomer('test@example.com', 'password123', { name: 'Alex' }, forged)
+    ).resolves.toMatchObject({ status: 'error', code: 'unknown' });
+    expect(mockAuth.signUp).not.toHaveBeenCalled();
   });
 });
 
@@ -453,6 +474,8 @@ describe('ensureProfile / provisionForSession', () => {
       role: 'customer',
       name: 'Alex',
       email: 'session@example.com',
+      city: 'Nuremberg',
+      country: 'Germany',
     };
     queueFrom(chainable({ data: existingProfile, error: null })); // users select
 
@@ -461,10 +484,36 @@ describe('ensureProfile / provisionForSession', () => {
     expect(mockFrom).toHaveBeenCalledTimes(1); // no barber_profile call for a customer
   });
 
+  it('reconciles a pre-gate own profile to the current canonical service area', async () => {
+    const session = makeSession({ id: 'user-location' });
+    okSession(session);
+    const oldProfile = {
+      id: 'user-location',
+      role: 'customer',
+      name: 'Alex',
+      city: 'Hamburg',
+      country: 'Germany',
+    };
+    const reconciledProfile = { ...oldProfile, city: 'Nuremberg' };
+    const usersSelect = chainable({ data: oldProfile, error: null });
+    const usersUpdate = chainable({ data: reconciledProfile, error: null });
+    queueFrom(usersSelect, usersUpdate);
+
+    await expect(ensureProfile()).resolves.toEqual({ status: 'ready', profile: reconciledProfile });
+    expect(usersUpdate.update).toHaveBeenCalledWith({ city: 'Nuremberg', country: 'Germany' });
+    expect(usersUpdate.eq).toHaveBeenCalledWith('id', 'user-location');
+  });
+
   it('existing barber profile with an existing barber_profile row: returns ready, no inserts', async () => {
     const session = makeSession({ id: 'user-2' });
     okSession(session);
-    const existingProfile = { id: 'user-2', role: 'barber', name: 'Barb' };
+    const existingProfile = {
+      id: 'user-2',
+      role: 'barber',
+      name: 'Barb',
+      city: 'Nuremberg',
+      country: 'Germany',
+    };
     const usersSelect = chainable({ data: existingProfile, error: null });
     const barberProfileSelect = chainable({ data: { id: 'bp-1' }, error: null });
     queueFrom(usersSelect, barberProfileSelect);
@@ -482,7 +531,13 @@ describe('ensureProfile / provisionForSession', () => {
       user_metadata: { role: 'customer', name: 'New Customer', city: 'Lisbon' },
     });
     okSession(session);
-    const insertedRow = { id: 'user-3', role: 'customer', name: 'New Customer' };
+    const insertedRow = {
+      id: 'user-3',
+      role: 'customer',
+      name: 'New Customer',
+      city: 'Nuremberg',
+      country: 'Germany',
+    };
     const usersSelect = chainable({ data: null, error: null });
     const usersInsert = chainable({ data: insertedRow, error: null });
     queueFrom(usersSelect, usersInsert);
@@ -497,6 +552,8 @@ describe('ensureProfile / provisionForSession', () => {
       email: 'newcustomer@example.com',
       name: 'New Customer',
       role: 'customer',
+      city: 'Nuremberg',
+      country: 'Germany',
     });
     expect(payload).not.toHaveProperty('created_at');
     expect(mockFrom).toHaveBeenCalledTimes(2); // no barber_profile call for a customer
@@ -509,7 +566,13 @@ describe('ensureProfile / provisionForSession', () => {
       user_metadata: { role: 'barber', name: 'New Barber', city: 'Porto', bio: 'Fresh fades' },
     });
     okSession(session);
-    const insertedRow = { id: 'user-4', role: 'barber', name: 'New Barber' };
+    const insertedRow = {
+      id: 'user-4',
+      role: 'barber',
+      name: 'New Barber',
+      city: 'Nuremberg',
+      country: 'Germany',
+    };
     const callOrder: string[] = [];
     const usersSelect = chainable({ data: null, error: null });
     const usersInsert = chainable({ data: insertedRow, error: null }, () => callOrder.push('users.insert'));
@@ -547,7 +610,7 @@ describe('ensureProfile / provisionForSession', () => {
     const result = await ensureProfile();
     expect(result).toEqual({
       status: 'needs_setup_form',
-      prefill: { role: 'customer', name: undefined, city: undefined, country: undefined, phone: undefined, bio: undefined },
+      prefill: { role: 'customer', name: undefined, phone: undefined, bio: undefined },
     });
     expect(usersSelect.insert).not.toHaveBeenCalled();
     expect(mockFrom).toHaveBeenCalledTimes(1);
@@ -573,7 +636,13 @@ describe('ensureProfile / provisionForSession', () => {
       user_metadata: { role: 'customer', name: 'Race Loser' },
     });
     okSession(session);
-    const refetchedProfile = { id: 'user-7', role: 'customer', name: 'Race Winner' };
+    const refetchedProfile = {
+      id: 'user-7',
+      role: 'customer',
+      name: 'Race Winner',
+      city: 'Nuremberg',
+      country: 'Germany',
+    };
     const usersSelect = chainable({ data: null, error: null });
     const usersInsert = chainable({
       data: null,
@@ -594,7 +663,13 @@ describe('ensureProfile / provisionForSession', () => {
       user_metadata: { role: 'barber', name: 'Barber Eight' },
     });
     okSession(session);
-    const insertedRow = { id: 'user-8', role: 'barber', name: 'Barber Eight' };
+    const insertedRow = {
+      id: 'user-8',
+      role: 'barber',
+      name: 'Barber Eight',
+      city: 'Nuremberg',
+      country: 'Germany',
+    };
     const usersSelect = chainable({ data: null, error: null });
     const usersInsert = chainable({ data: insertedRow, error: null });
     const barberProfileSelect = chainable({ data: null, error: null });
@@ -637,7 +712,13 @@ describe('ensureProfile / provisionForSession', () => {
       user_metadata: { role: 'customer', name: 'Someone' },
     });
     okSession(session);
-    const insertedRow = { id: 'user-10', role: 'customer', name: 'Someone' };
+    const insertedRow = {
+      id: 'user-10',
+      role: 'customer',
+      name: 'Someone',
+      city: 'Nuremberg',
+      country: 'Germany',
+    };
     const usersSelect = chainable({ data: null, error: null });
     const usersInsert = chainable({ data: insertedRow, error: null });
     queueFrom(usersSelect, usersInsert);
@@ -653,7 +734,6 @@ describe('ensureProfileFromForm', () => {
   const validFields: SetupFormFields = {
     role: 'customer',
     name: 'Form User',
-    city: 'Lisbon',
   };
 
   it('runtime-guards an invalid role (bypassing the TS type via `as any`) and never calls getSession', async () => {
@@ -684,7 +764,13 @@ describe('ensureProfileFromForm', () => {
   it('on valid fields, inserts using the form fields and the session email (never a form email)', async () => {
     const session = makeSession({ id: 'user-11', email: 'from-session@example.com' });
     okSession(session);
-    const insertedRow = { id: 'user-11', role: 'customer', name: 'Form User' };
+    const insertedRow = {
+      id: 'user-11',
+      role: 'customer',
+      name: 'Form User',
+      city: 'Nuremberg',
+      country: 'Germany',
+    };
     const usersSelect = chainable({ data: null, error: null });
     const usersInsert = chainable({ data: insertedRow, error: null });
     queueFrom(usersSelect, usersInsert);

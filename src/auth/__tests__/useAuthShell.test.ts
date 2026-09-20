@@ -4,11 +4,13 @@
  * exercises the state machine in isolation from any real network call.
  */
 import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { AppState, type AppStateStatus } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 import type { UsersRow } from '../../types';
 import { supabase } from '../../../lib/supabase';
 import { ensureProfile, ensureProfileFromForm, signOut } from '../authService';
 import { useAuthShell } from '../useAuthShell';
+import { checkLocationEligibility } from '../../location/locationEligibility';
 
 type AuthChangeCallback = (event: string, session: Session | null) => void;
 
@@ -24,15 +26,22 @@ jest.mock('../../../lib/supabase', () => ({
   },
 }));
 jest.mock('../authService');
+jest.mock('../../location/locationEligibility', () => ({
+  checkLocationEligibility: jest.fn(),
+}));
 
 const mockGetSession = supabase.auth.getSession as jest.Mock;
 const mockOnAuthStateChange = supabase.auth.onAuthStateChange as jest.Mock;
 const mockEnsureProfile = ensureProfile as jest.Mock;
 const mockEnsureProfileFromForm = ensureProfileFromForm as jest.Mock;
 const mockSignOut = signOut as jest.Mock;
+const mockCheckLocation = checkLocationEligibility as jest.Mock;
+const eligibleLocation = { status: 'eligible' as const, city: 'Nuremberg' as const, country: 'Germany' as const };
 
 let authChangeCallback: AuthChangeCallback = () => {};
+let onStateChange: (state: AppStateStatus) => void = () => {};
 const unsubscribe = jest.fn();
+const mockAddAppStateListener = jest.spyOn(AppState, 'addEventListener');
 
 function makeSession(userId: string, accessToken = 'token-1'): Session {
   return {
@@ -48,8 +57,8 @@ function makeProfile(overrides: Partial<UsersRow> = {}): UsersRow {
     email: 'user-1@example.com',
     phone: null,
     role: 'customer',
-    city: 'Lisbon',
-    country: null,
+    city: 'Nuremberg',
+    country: 'Germany',
     profile_image: null,
     created_at: '2026-01-01T00:00:00.000Z',
     ...overrides,
@@ -72,6 +81,12 @@ async function renderShell() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  onStateChange = () => {};
+  mockAddAppStateListener.mockImplementation((_event, listener) => {
+    onStateChange = listener;
+    return { remove: jest.fn() } as ReturnType<typeof AppState.addEventListener>;
+  });
+  mockCheckLocation.mockResolvedValue(eligibleLocation);
   authChangeCallback = () => {};
   mockOnAuthStateChange.mockImplementation((callback: AuthChangeCallback) => {
     authChangeCallback = callback;
@@ -104,6 +119,7 @@ describe('initial restoring -> unauthenticated / provisioning', () => {
 
     await waitFor(() => expect(result.current.state.phase).toBe('unauthenticated'));
     expect(mockEnsureProfile).not.toHaveBeenCalled();
+    expect(mockCheckLocation).toHaveBeenCalledTimes(1);
   });
 
   it('moves to provisioning (loading) when getSession resolves with a session', async () => {
@@ -111,11 +127,122 @@ describe('initial restoring -> unauthenticated / provisioning', () => {
     primeInitialSession(session);
     const { result } = await renderShell();
 
-    await waitFor(() => expect(result.current.state.phase).toBe('provisioning'));
-    if (result.current.state.phase === 'provisioning') {
-      expect(result.current.state.view).toEqual({ kind: 'loading' });
+    await waitFor(() => expect(result.current.state.phase).toBe('location_gate'));
+    if (result.current.state.phase === 'location_gate') {
+      expect(result.current.state.view).toEqual({ kind: 'checking' });
     }
-    await waitFor(() => expect(mockEnsureProfile).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockEnsureProfile).toHaveBeenCalledWith(eligibleLocation));
+  });
+});
+
+describe('foreground location gate', () => {
+  it.each(['permission_denied', 'unavailable', 'outside_service_area'] as const)(
+    'blocks a restored session on %s before provisioning',
+    async (status) => {
+      primeInitialSession(makeSession('user-1'));
+      mockCheckLocation.mockResolvedValue({ status });
+
+      const { result } = await renderShell();
+      await waitFor(() => {
+        expect(result.current.state).toEqual({
+          phase: 'location_gate',
+          view: { kind: 'blocked', reason: { status } },
+        });
+      });
+      expect(mockEnsureProfile).not.toHaveBeenCalled();
+    }
+  );
+
+  it('waits for a current check before loading an existing profile', async () => {
+    primeInitialSession(makeSession('user-1'));
+    let completeCheck: (value: typeof eligibleLocation) => void = () => {};
+    mockCheckLocation.mockImplementation(() => new Promise((resolve) => { completeCheck = resolve; }));
+    mockEnsureProfile.mockResolvedValue({ status: 'ready', profile: makeProfile() });
+
+    const { result } = await renderShell();
+    await waitFor(() => expect(mockCheckLocation).toHaveBeenCalledTimes(1));
+    expect(result.current.state.phase).toBe('location_gate');
+    expect(mockEnsureProfile).not.toHaveBeenCalled();
+
+    await act(async () => completeCheck(eligibleLocation));
+    await waitFor(() => expect(result.current.state.phase).toBe('authenticated'));
+    expect(mockEnsureProfile).toHaveBeenCalledWith(eligibleLocation);
+  });
+
+  it('retries outside Nuremberg and enters only after a new eligible reading', async () => {
+    primeInitialSession(makeSession('user-1'));
+    mockCheckLocation.mockResolvedValueOnce({ status: 'outside_service_area' });
+    mockEnsureProfile.mockResolvedValue({ status: 'ready', profile: makeProfile() });
+
+    const { result } = await renderShell();
+    await waitFor(() => {
+      if (result.current.state.phase !== 'location_gate') throw new Error('expected location gate');
+      expect(result.current.state.view.kind).toBe('blocked');
+    });
+    expect(mockEnsureProfile).not.toHaveBeenCalled();
+
+    await act(() => result.current.retryLocation());
+    await waitFor(() => expect(result.current.state.phase).toBe('authenticated'));
+    expect(mockCheckLocation).toHaveBeenCalledTimes(2);
+    expect(mockEnsureProfile).toHaveBeenCalledWith(eligibleLocation);
+  });
+
+  it('keeps password recovery ahead of an unavailable location', async () => {
+    primeInitialSession(null);
+    mockCheckLocation.mockResolvedValue({ status: 'permission_denied' });
+    const { result } = await renderShell();
+    await waitFor(() => expect(result.current.state.phase).toBe('location_gate'));
+
+    await act(() => authChangeCallback('PASSWORD_RECOVERY', makeSession('user-1')));
+    expect(result.current.state).toEqual({ phase: 'password_recovery', view: 'ready' });
+
+    await act(() => result.current.finishPasswordRecovery());
+    await waitFor(() => {
+      expect(result.current.state).toEqual({
+        phase: 'location_gate',
+        view: { kind: 'blocked', reason: { status: 'permission_denied' } },
+      });
+    });
+    expect(mockEnsureProfile).not.toHaveBeenCalled();
+  });
+
+  it('hides an authenticated shell on background and rechecks on return', async () => {
+    primeInitialSession(makeSession('user-1'));
+    mockEnsureProfile.mockResolvedValue({ status: 'ready', profile: makeProfile() });
+    const { result } = await renderShell();
+    await waitFor(() => expect(result.current.state.phase).toBe('authenticated'));
+
+    mockCheckLocation.mockResolvedValueOnce({ status: 'outside_service_area' });
+    await act(() => onStateChange('background'));
+    expect(result.current.state.phase).toBe('location_gate');
+    await act(() => onStateChange('active'));
+    await waitFor(() => {
+      expect(result.current.state).toEqual({
+        phase: 'location_gate',
+        view: { kind: 'blocked', reason: { status: 'outside_service_area' } },
+      });
+    });
+    expect(mockEnsureProfile).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores a location result from before sign-out', async () => {
+    primeInitialSession(makeSession('user-1'));
+    mockEnsureProfile.mockResolvedValue({ status: 'ready', profile: makeProfile() });
+    const { result } = await renderShell();
+    await waitFor(() => expect(result.current.state.phase).toBe('authenticated'));
+
+    let finishOldCheck: (value: { status: 'outside_service_area' }) => void = () => {};
+    mockCheckLocation.mockImplementationOnce(() => new Promise((resolve) => { finishOldCheck = resolve; }));
+    await act(() => onStateChange('background'));
+    await act(() => onStateChange('active'));
+    await waitFor(() => expect(mockCheckLocation).toHaveBeenCalledTimes(2));
+
+    await act(() => authChangeCallback('SIGNED_OUT', null));
+    await waitFor(() => expect(result.current.state.phase).toBe('unauthenticated'));
+
+    await act(async () => finishOldCheck({ status: 'outside_service_area' }));
+    expect(result.current.state.phase).toBe('unauthenticated');
+    expect(mockEnsureProfile).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -217,6 +344,16 @@ describe('SIGNED_OUT', () => {
 
     expect(result.current.state.phase).toBe('unauthenticated');
   });
+
+  it('restarts the gate even if a link error is dismissed without a cached session', async () => {
+    primeInitialSession(null);
+    const { result } = await renderShell();
+    await waitFor(() => expect(result.current.state.phase).toBe('unauthenticated'));
+
+    await act(() => authChangeCallback('SIGNED_OUT', null));
+    await waitFor(() => expect(mockCheckLocation).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(result.current.state.phase).toBe('unauthenticated'));
+  });
 });
 
 describe('retryProvisioning', () => {
@@ -246,9 +383,9 @@ describe('retryProvisioning', () => {
       result.current.retryProvisioning();
     });
 
-    expect(result.current.state.phase).toBe('provisioning');
-    if (result.current.state.phase === 'provisioning') {
-      expect(result.current.state.view).toEqual({ kind: 'loading' });
+    expect(result.current.state.phase).toBe('location_gate');
+    if (result.current.state.phase === 'location_gate') {
+      expect(result.current.state.view).toEqual({ kind: 'checking' });
     }
     await waitFor(() => expect(mockEnsureProfile).toHaveBeenCalledTimes(2));
   });
@@ -285,9 +422,10 @@ describe('submitSetupForm', () => {
     mockEnsureProfileFromForm.mockResolvedValue({ status: 'ready', profile });
 
     await act(async () => {
-      await result.current.submitSetupForm({ role: 'customer', name: 'Alex', city: 'Lisbon' });
+      await result.current.submitSetupForm({ role: 'customer', name: 'Alex' });
     });
 
     expect(result.current.state).toEqual({ phase: 'authenticated', profile });
+    expect(mockEnsureProfileFromForm).toHaveBeenCalledWith({ role: 'customer', name: 'Alex' }, eligibleLocation);
   });
 });

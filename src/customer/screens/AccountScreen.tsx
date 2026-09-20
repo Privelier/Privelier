@@ -83,7 +83,7 @@ export default function AccountScreen({ navigation }: Props) {
         <Pressable
           onPress={() => navigation.navigate('EditProfile')}
           accessibilityRole="button"
-          accessibilityLabel="Edit profile and city"
+          accessibilityLabel="Edit profile"
           testID="customer-account-edit-profile"
           style={({ pressed }) => [styles.profileRow, pressed ? { opacity: pressOpacity.soft } : null]}
         >

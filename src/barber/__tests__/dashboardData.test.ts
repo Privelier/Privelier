@@ -240,20 +240,20 @@ describe('fetchDashboardView', () => {
 
   it('composes overview + readiness + summary arrays when every read succeeds', async () => {
     const view = await fetchDashboardView('brb1');
-    expect(view.overview.pendingCount).toBe(1);
-    expect(view.overview.nextAppointment?.booking.id).toBe('a1');
-    expect(view.services).toHaveLength(1);
-    expect(view.windows).toHaveLength(1);
-    expect(view.verification).toBe('approved');
-    expect(view.bio).toBe('A short bio');
-    expect(view.locationAddress).toBe('Teststraat 1, Amsterdam');
+    expect(view.overview).toMatchObject({ status: 'ok', data: { pendingCount: 1 } });
+    if (view.overview.status === 'ok') expect(view.overview.data.nextAppointment?.booking.id).toBe('a1');
+    expect(view.services).toMatchObject({ status: 'ok', data: [expect.objectContaining({ id: 's1' })] });
+    expect(view.availability).toMatchObject({ status: 'ok', data: [expect.objectContaining({ id: 'w1' })] });
+    expect(view.portfolio).toMatchObject({ status: 'ok', data: [expect.objectContaining({ id: 'img1' })] });
+    expect(view.profile).toMatchObject({ status: 'ok', data: { verification: 'approved', bio: 'A short bio' } });
+    expect(view.location).toEqual({ status: 'ok', data: 'Teststraat 1, Amsterdam' });
     expect(view.readiness.isLive).toBe(true);
   });
 
   it('degrades locationAddress to null on a failed location read — and location is NOT a readiness item', async () => {
     mockLocation.mockResolvedValue({ status: 'error', code: 'network', message: 'x' });
     const view = await fetchDashboardView('brb1');
-    expect(view.locationAddress).toBeNull();
+    expect(view.location).toMatchObject({ status: 'error', code: 'network' });
     // The meter stays the founder-scoped five items; location joins Explore, not readiness.
     expect(view.readiness.total).toBe(5);
     expect(view.readiness.items.map((i) => i.key)).not.toContain('location');
@@ -263,7 +263,7 @@ describe('fetchDashboardView', () => {
   it('degrades to an empty overview when the bookings read fails, without failing the dashboard', async () => {
     mockRequests.mockResolvedValue({ status: 'error', code: 'network', message: 'x' });
     const view = await fetchDashboardView('brb1');
-    expect(view.overview).toEqual({ pendingCount: 0, upcomingCount: 0, nextAppointment: null });
+    expect(view.overview).toMatchObject({ status: 'error', code: 'network' });
     // readiness still derives from the other (successful) reads
     expect(view.readiness.items.find((i) => i.key === 'services')?.state).toBe('complete');
   });
@@ -271,14 +271,16 @@ describe('fetchDashboardView', () => {
   it('degrades per-field: a failed services read empties services and marks that item incomplete', async () => {
     mockServices.mockResolvedValue({ status: 'error', code: 'network', message: 'x' });
     const view = await fetchDashboardView('brb1');
-    expect(view.services).toEqual([]);
-    expect(view.readiness.items.find((i) => i.key === 'services')?.state).toBe('incomplete');
+    expect(view.services).toMatchObject({ status: 'error', code: 'network' });
+    expect(view.readiness.items.find((i) => i.key === 'services')?.state).toBe('unavailable');
+    expect(view.readiness.isLive).toBeNull();
   });
 
   it('treats a failed profile read as unknown verification (in_progress, never a fault)', async () => {
     mockProfile.mockResolvedValue({ status: 'error', code: 'network', message: 'x' });
     const view = await fetchDashboardView('brb1');
-    expect(view.verification).toBeNull();
-    expect(view.readiness.items.find((i) => i.key === 'verification')?.state).toBe('in_progress');
+    expect(view.profile).toMatchObject({ status: 'error', code: 'network' });
+    expect(view.readiness.items.find((i) => i.key === 'verification')?.state).toBe('unavailable');
+    expect(view.readiness.items.find((i) => i.key === 'bio')?.state).toBe('unavailable');
   });
 });

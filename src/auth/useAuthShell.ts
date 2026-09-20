@@ -1,8 +1,8 @@
 /**
  * Session-driven root state machine (Contract A, build-order step 5).
  *
- * Drives the single root switch in App.tsx over (session, profileRow):
- *   RESTORING → UNAUTHENTICATED | PROVISIONING → AUTHENTICATED
+ * Drives the single root switch in App.tsx over session, foreground location,
+ * and profile row. Neither role navigator mounts without a current eligible fix.
  *
  * Binding rules implemented here:
  * - onAuthStateChange is subscribed ONCE and unsubscribed on unmount.
@@ -10,13 +10,13 @@
  *   supabase calls (known supabase-js deadlock). ensureProfile() runs in an
  *   effect reacting to state instead.
  * - SIGNED_OUT clears ALL cached profile state.
- * - TOKEN_REFRESHED / USER_UPDATED update the session object but cannot
- *   change the derived phase while a profile row is cached, so the root
- *   switch keeps rendering the same element types — navigators never remount.
+ * - TOKEN_REFRESHED / USER_UPDATED update the session object without
+ *   triggering a location check or remounting an authenticated navigator.
  * - Routing authority is public.users.role from ensureProfile's returned
  *   profile — never user_metadata, never which auth screen was used.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import * as Linking from 'expo-linking';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabase';
@@ -25,6 +25,8 @@ import { applyAuthCallbackUrl, isPasswordRecoveryUrl } from './deepLink';
 import type { AuthFailure } from './errors';
 import type { EnsureProfileResult, ProfilePrefill, SetupFormFields } from './types';
 import type { UsersRow } from '../types';
+import { checkLocationEligibility, type LocationEligibility } from '../location/locationEligibility';
+import { nativeLocationGateway } from '../location/nativeLocationGateway';
 
 /** What the PROVISIONING phase is currently showing. */
 export type ProvisioningView =
@@ -34,6 +36,7 @@ export type ProvisioningView =
 
 export type AuthShellState =
   | { phase: 'restoring' }
+  | { phase: 'location_gate'; view: { kind: 'checking' } | { kind: 'blocked'; reason: Exclude<LocationEligibility, { status: 'eligible' }> } }
   | { phase: 'unauthenticated' }
   | { phase: 'provisioning'; view: ProvisioningView }
   | { phase: 'password_recovery'; view: 'opening' | 'ready' | 'expired' | 'error' }
@@ -42,6 +45,7 @@ export type AuthShellState =
 
 export interface AuthShell {
   state: AuthShellState;
+  retryLocation: () => void;
   /** Re-run ensureProfile() after a retryable provisioning failure. */
   retryProvisioning: () => void;
   /** Submit the finish-setup form ('needs_setup_form' path). */
@@ -58,7 +62,9 @@ export function useAuthShell(): AuthShell {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UsersRow | null>(null);
   const [view, setView] = useState<ProvisioningView>({ kind: 'loading' });
-  const [attempt, setAttempt] = useState(0);
+  const [location, setLocation] = useState<LocationEligibility | null>(null);
+  const [locationAttempt, setLocationAttempt] = useState(0);
+  const locationCheck = useRef(0);
   const [passwordRecovery, setPasswordRecovery] = useState<'opening' | 'ready' | 'expired' | 'error' | null>(null);
   const [authLinkError, setAuthLinkError] = useState<'expired' | 'error' | null>(null);
 
@@ -77,16 +83,27 @@ export function useAuthShell(): AuthShell {
       // Synchronous state updates ONLY in this callback.
       switch (event) {
         case 'SIGNED_OUT':
+          locationCheck.current += 1;
+          setLocation(null);
+          setLocationAttempt((current) => current + 1);
           setSession(null);
           setProfile(null);
           setView({ kind: 'loading' });
           setRestoring(false);
           break;
         case 'INITIAL_SESSION':
+          locationCheck.current += 1;
+          setLocation(null);
+          setLocationAttempt((current) => current + 1);
           setSession(nextSession ?? null);
           setRestoring(false);
           break;
         case 'SIGNED_IN':
+          locationCheck.current += 1;
+          setLocation(null);
+          setSession(nextSession ?? null);
+          setLocationAttempt((current) => current + 1);
+          break;
         case 'TOKEN_REFRESHED':
         case 'USER_UPDATED':
           // No navigation change on refresh/update: the derived phase stays
@@ -94,6 +111,8 @@ export function useAuthShell(): AuthShell {
           setSession(nextSession ?? null);
           break;
         case 'PASSWORD_RECOVERY':
+          locationCheck.current += 1;
+          setLocation(null);
           setSession(nextSession ?? null);
           setPasswordRecovery('ready');
           break;
@@ -142,6 +161,7 @@ export function useAuthShell(): AuthShell {
         setProfile(result.profile);
         break;
       case 'needs_setup_form':
+        setProfile(null);
         setView({ kind: 'setup_form', prefill: result.prefill });
         break;
       case 'signed_out':
@@ -149,40 +169,73 @@ export function useAuthShell(): AuthShell {
         // but clear defensively either way.
         setSession(null);
         setProfile(null);
+        setLocation(null);
         setView({ kind: 'loading' });
         break;
       case 'error':
+        setProfile(null);
         setView({ kind: 'failure', failure: result });
         break;
     }
   }, []);
 
-  // PROVISIONING: run ensureProfile() via an effect reacting to state —
-  // never from inside the onAuthStateChange callback. Keyed on the user id
-  // (not the session object) so token refreshes do not re-trigger it.
-  // The view is already 'loading' whenever a provisioning cycle begins: it is
-  // the initial value, SIGNED_OUT resets it, and retryProvisioning resets it
-  // in the event handler — so the effect body never calls setState directly.
+  // One current foreground check gates both auth entry and profile reads.
+  // A new user id, retry, or foreground return starts a fresh check; token
+  // refreshes preserve the mounted app shell.
   const userId = session?.user.id ?? null;
   useEffect(() => {
-    if (restoring || userId === null || profile !== null) return;
-    let cancelled = false;
-    ensureProfile().then((result) => {
-      if (!cancelled) applyEnsureResult(result);
-    });
+    if (restoring) return;
+    const checkId = ++locationCheck.current;
+    let active = true;
+    void (async () => {
+      const result = await checkLocationEligibility(nativeLocationGateway);
+      if (!active || checkId !== locationCheck.current) return;
+      if (result.status === 'eligible' && userId !== null) {
+        setView({ kind: 'loading' });
+        const profileResult = await ensureProfile(result);
+        if (!active || checkId !== locationCheck.current) return;
+        applyEnsureResult(profileResult);
+      }
+      setLocation(result);
+    })();
     return () => {
-      cancelled = true;
+      active = false;
+      locationCheck.current += 1;
     };
-  }, [restoring, userId, profile, attempt, applyEnsureResult]);
+  }, [restoring, userId, locationAttempt, applyEnsureResult]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        setLocation(null);
+        setLocationAttempt((current) => current + 1);
+      } else {
+        locationCheck.current += 1;
+        setLocation(null);
+      }
+    });
+    return () => subscription.remove();
+  }, []);
+
+  const retryLocation = useCallback(() => {
+    locationCheck.current += 1;
+    setLocation(null);
+    setLocationAttempt((current) => current + 1);
+  }, []);
 
   const retryProvisioning = useCallback(() => {
     setView({ kind: 'loading' });
-    setAttempt((current) => current + 1);
-  }, []);
+    retryLocation();
+  }, [retryLocation]);
 
   const submitSetupForm = useCallback(
     async (fields: SetupFormFields): Promise<EnsureProfileResult> => {
-      const result = await ensureProfileFromForm(fields);
+      const currentLocation = await checkLocationEligibility(nativeLocationGateway);
+      if (currentLocation.status !== 'eligible') {
+        setLocation(currentLocation);
+        return { status: 'error', code: 'unknown', message: 'Your location could not be confirmed.', retryable: true };
+      }
+      const result = await ensureProfileFromForm(fields, currentLocation);
       // Success and signed-out flip the phase; failures stay inline in the
       // form (the form renders result.message itself), so the user never
       // loses what they typed.
@@ -199,7 +252,10 @@ export function useAuthShell(): AuthShell {
     void signOut();
   }, []);
 
-  const finishPasswordRecovery = useCallback(() => setPasswordRecovery(null), []);
+  const finishPasswordRecovery = useCallback(() => {
+    setPasswordRecovery(null);
+    retryLocation();
+  }, [retryLocation]);
   const dismissPasswordRecovery = useCallback(() => {
     setPasswordRecovery(null);
     void signOut();
@@ -213,10 +269,12 @@ export function useAuthShell(): AuthShell {
     if (restoring) return { phase: 'restoring' };
     if (passwordRecovery) return { phase: 'password_recovery', view: passwordRecovery };
     if (authLinkError) return { phase: 'auth_link_error', view: authLinkError };
+    if (location === null) return { phase: 'location_gate', view: { kind: 'checking' } };
+    if (location.status !== 'eligible') return { phase: 'location_gate', view: { kind: 'blocked', reason: location } };
     if (session === null) return { phase: 'unauthenticated' };
     if (profile !== null) return { phase: 'authenticated', profile };
     return { phase: 'provisioning', view };
-  }, [restoring, session, profile, view, passwordRecovery, authLinkError]);
+  }, [restoring, session, profile, view, passwordRecovery, authLinkError, location]);
 
-  return { state, retryProvisioning, submitSetupForm, signOutNow, finishPasswordRecovery, dismissPasswordRecovery, dismissAuthLinkError };
+  return { state, retryLocation, retryProvisioning, submitSetupForm, signOutNow, finishPasswordRecovery, dismissPasswordRecovery, dismissAuthLinkError };
 }

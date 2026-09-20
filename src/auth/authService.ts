@@ -26,6 +26,7 @@ import type {
   BarberSignUpProfileFields,
   EnsureProfileResult,
   FetchOwnProfileResult,
+  EligibleNurembergLocation,
   ProfilePrefill,
   PasswordResetRequestResult,
   PasswordUpdateResult,
@@ -49,10 +50,18 @@ function isClientRole(value: unknown): value is Role {
 interface ProvisionFields {
   role: Role;
   name: string;
-  city?: string;
-  country?: string;
   phone?: string;
   bio?: string;
+}
+
+function isEligibleNurembergLocation(value: unknown): value is EligibleNurembergLocation {
+  if (!value || typeof value !== 'object') return false;
+  const location = value as Record<string, unknown>;
+  return (
+    location.status === 'eligible' &&
+    location.city === 'Nuremberg' &&
+    location.country === 'Germany'
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -62,8 +71,13 @@ interface ProvisionFields {
 async function signUp(
   email: string,
   password: string,
-  metadata: ProvisionFields
+  metadata: ProvisionFields,
+  location: EligibleNurembergLocation
 ): Promise<SignUpResult> {
+  if (!isEligibleNurembergLocation(location)) {
+    logAuthError('signUp', 'called without an eligible Nuremberg location result');
+    return failure('unknown');
+  }
   if (!hasStableAuthRedirect()) return failure('development_build_required');
   const normalizedEmail = email.trim();
   // Single write. options.data is stored as user_metadata — a prefill hint
@@ -77,8 +91,8 @@ async function signUp(
       data: {
         name: metadata.name,
         role: metadata.role,
-        city: metadata.city,
-        country: metadata.country,
+        city: location.city,
+        country: location.country,
         phone: metadata.phone,
         bio: metadata.bio,
       },
@@ -100,17 +114,19 @@ async function signUp(
 export function signUpCustomer(
   email: string,
   password: string,
-  fields: SignUpProfileFields
+  fields: SignUpProfileFields,
+  location: EligibleNurembergLocation
 ): Promise<SignUpResult> {
-  return signUp(email, password, { role: 'customer', ...fields });
+  return signUp(email, password, { role: 'customer', ...fields }, location);
 }
 
 export function signUpBarber(
   email: string,
   password: string,
-  fields: BarberSignUpProfileFields
+  fields: BarberSignUpProfileFields,
+  location: EligibleNurembergLocation
 ): Promise<SignUpResult> {
-  return signUp(email, password, { role: 'barber', ...fields });
+  return signUp(email, password, { role: 'barber', ...fields }, location);
 }
 
 // ---------------------------------------------------------------------------
@@ -270,8 +286,6 @@ function parseMetadata(rawMetadata: Record<string, unknown> | undefined): Metada
   const prefill: ProfilePrefill = {
     role,
     name,
-    city: asOptionalString(meta.city),
-    country: asOptionalString(meta.country),
     phone: asOptionalString(meta.phone),
     bio: asOptionalString(meta.bio),
   };
@@ -281,8 +295,6 @@ function parseMetadata(rawMetadata: Record<string, unknown> | undefined): Metada
     fields: {
       role,
       name,
-      city: prefill.city,
-      country: prefill.country,
       phone: prefill.phone,
       bio: prefill.bio,
     },
@@ -325,8 +337,13 @@ async function ensureBarberProfileRow(
 
 async function provisionForSession(
   session: Session,
-  formFields: SetupFormFields | null
+  formFields: SetupFormFields | null,
+  location: EligibleNurembergLocation
 ): Promise<EnsureProfileResult> {
+  if (!isEligibleNurembergLocation(location)) {
+    logAuthError('ensureProfile', 'called without an eligible Nuremberg location result');
+    return failure('unknown');
+  }
   const fetched = await fetchProfileById(session.user.id);
   if (fetched.status === 'error') return fetched;
 
@@ -368,8 +385,8 @@ async function provisionForSession(
         email,
         name: fields.name,
         role: fields.role,
-        city: fields.city ?? null,
-        country: fields.country ?? null,
+        city: location.city,
+        country: location.country,
         phone: fields.phone ?? null,
       })
       .select()
@@ -402,6 +419,22 @@ async function provisionForSession(
     }
   }
 
+  // Existing accounts may predate the foreground gate or have been created
+  // while the app supported manual city entry. Keep the stored discovery
+  // scope in sync with the freshly derived, canonical service area.
+  if (profile.city !== location.city || profile.country !== location.country) {
+    const reconciled = await supabase
+      .from('users')
+      .update({ city: location.city, country: location.country })
+      .eq('id', profile.id)
+      .select('*')
+      .single();
+    if (reconciled.error) {
+      return mapPostgrestError('ensureProfile.users.reconcileLocation', reconciled.error);
+    }
+    profile = reconciled.data as UsersRow;
+  }
+
   // Second, sequential call ONLY after the users row is confirmed committed.
   if (profile.role === 'barber') {
     const barberFailure = await ensureBarberProfileRow(profile.id, bioHint);
@@ -416,11 +449,13 @@ async function provisionForSession(
  * exists and after every successful sign-in. Safe to call repeatedly and
  * concurrently: duplicate-key races resolve as success-of-the-other-writer.
  */
-export async function ensureProfile(): Promise<EnsureProfileResult> {
+export async function ensureProfile(
+  location: EligibleNurembergLocation
+): Promise<EnsureProfileResult> {
   const sessionResult = await getSession();
   if (sessionResult.status === 'error') return sessionResult;
   if (!sessionResult.session) return { status: 'signed_out' };
-  return provisionForSession(sessionResult.session, null);
+  return provisionForSession(sessionResult.session, null, location);
 }
 
 /**
@@ -430,7 +465,8 @@ export async function ensureProfile(): Promise<EnsureProfileResult> {
  * runtime; email still comes from the session, never from the form.
  */
 export async function ensureProfileFromForm(
-  fields: SetupFormFields
+  fields: SetupFormFields,
+  location: EligibleNurembergLocation
 ): Promise<EnsureProfileResult> {
   if (!isClientRole(fields.role)) {
     logAuthError('ensureProfileFromForm', `invalid role value: ${String(fields.role)}`);
@@ -444,5 +480,5 @@ export async function ensureProfileFromForm(
   const sessionResult = await getSession();
   if (sessionResult.status === 'error') return sessionResult;
   if (!sessionResult.session) return { status: 'signed_out' };
-  return provisionForSession(sessionResult.session, { ...fields, name });
+  return provisionForSession(sessionResult.session, { ...fields, name }, location);
 }

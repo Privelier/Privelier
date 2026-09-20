@@ -91,7 +91,7 @@ export default function ExploreScreen({ navigation }: Props) {
     const ownCity = profileResult.profile?.city?.trim();
     if (!ownCity) {
       setLoading(false);
-      setError('Add your city to your profile to explore barbers near you.');
+      setError('We could not confirm your service area. Try again.');
       return;
     }
     setCity(ownCity);
