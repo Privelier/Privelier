@@ -23,6 +23,8 @@ export type AuthErrorCode =
   | 'rate_limited'
   | 'invalid_credentials'
   | 'email_not_confirmed'
+  | 'provider_unavailable'
+  | 'development_build_required'
   | 'network'
   | 'provisioning_denied'
   | 'unknown';
@@ -46,6 +48,10 @@ export const authErrorCopy: Record<AuthErrorCode, string> = {
   invalid_credentials: 'Incorrect email or password.',
   email_not_confirmed:
     'Your email is not confirmed yet. Check your inbox for the confirmation link.',
+  provider_unavailable:
+    'This sign-in provider is unavailable right now. Use email and password, or try again later.',
+  development_build_required:
+    'Email links need the Privelier development build. Open the app there and try again.',
   network: 'We could not reach the server. Check your connection and try again.',
   provisioning_denied:
     'We could not finish setting up your account. Try again, or contact support if this keeps happening.',
@@ -55,6 +61,7 @@ export const authErrorCopy: Record<AuthErrorCode, string> = {
 const retryableCodes: ReadonlySet<AuthErrorCode> = new Set([
   'network',
   'rate_limited',
+  'provider_unavailable',
   // Contract B §5: on an RLS denial the caller keeps the user in the
   // provisioning state so the action can be retried (e.g. via the setup form).
   'provisioning_denied',
@@ -107,7 +114,6 @@ export function mapAuthApiError(context: string, raw: unknown): AuthFailure {
       case 'weak_password':
         return failure('weak_password');
       case 'email_address_invalid':
-      case 'validation_failed':
         return failure('invalid_email');
       case 'over_request_rate_limit':
       case 'over_email_send_rate_limit':
@@ -121,6 +127,13 @@ export function mapAuthApiError(context: string, raw: unknown): AuthFailure {
     }
     if (raw.status === 429) return failure('rate_limited');
     const msg = raw.message.toLowerCase();
+    if (
+      msg.includes('provider is not enabled') ||
+      msg.includes('unsupported provider') ||
+      msg.includes('provider not enabled')
+    ) {
+      return failure('provider_unavailable');
+    }
     if (msg.includes('invalid login credentials')) return failure('invalid_credentials');
     if (msg.includes('email not confirmed')) return failure('email_not_confirmed');
     if (msg.includes('already registered')) return failure('email_in_use');

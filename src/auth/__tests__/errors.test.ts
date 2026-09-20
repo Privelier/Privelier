@@ -42,6 +42,8 @@ describe('failure()', () => {
   it.each<[AuthErrorCode, boolean]>([
     ['network', true],
     ['rate_limited', true],
+    ['provider_unavailable', true],
+    ['development_build_required', false],
     ['provisioning_denied', true],
     ['email_in_use', false],
     ['weak_password', false],
@@ -60,7 +62,6 @@ describe('mapAuthApiError', () => {
     ['email_exists', 'Email already registered', 'email_in_use'],
     ['weak_password', 'Password too weak', 'weak_password'],
     ['email_address_invalid', 'bad email', 'invalid_email'],
-    ['validation_failed', 'bad input', 'invalid_email'],
     ['over_request_rate_limit', 'slow down', 'rate_limited'],
     ['over_email_send_rate_limit', 'slow down', 'rate_limited'],
     ['invalid_credentials', 'nope', 'invalid_credentials'],
@@ -82,6 +83,7 @@ describe('mapAuthApiError', () => {
     ['User already registered', 'email_in_use'],
     ['Password should be at least 6 characters', 'weak_password'],
     ['Unable to validate email address: must be a valid email', 'invalid_email'],
+    ['Unsupported provider: Provider is not enabled', 'provider_unavailable'],
   ])('falls back to message-sniffing for %s', (message, expected) => {
     // No `code` field at all — forces the message-sniffing branch.
     const raw = new AuthApiError(message, 400, undefined as unknown as string);

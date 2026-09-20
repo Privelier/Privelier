@@ -1,18 +1,4 @@
-/**
- * Integration tests for the barber Studio tab (dashboard). The data layer
- * (../../dashboardData) and the auth profile read (../../../auth/authService)
- * are mocked; the screen is rendered with @testing-library/react-native and
- * driven through its testIDs.
- *
- * Deliberately a SINGLE rich mount. This screen loads via useFocusEffect + an
- * async load(); like every other focus-effect screen in this codebase it is not
- * exhaustively component-tested (RNTL's async-act environment degrades after
- * several such mounts in one file). The derivation logic is covered thoroughly
- * by dashboardData.test.ts and the screen wiring by the Maestro E2E flow, so
- * one fixture here asserts everything structural in a single mount: the seven
- * preserved testIDs, the bookings overview (pending pill / next appointment /
- * upcoming line), the readiness meter and its states, and both deep-link paths.
- */
+/** Studio presentation and navigation over the dashboard's section results. */
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import StudioScreen from '../StudioScreen';
 import { fetchOwnProfile } from '../../../auth/authService';
@@ -81,12 +67,12 @@ const navigation = { navigate: jest.fn() };
 // half-complete readiness meter (one complete, two incomplete, verification
 // mid-review) — enough to assert every branch in one mount.
 const MIXED_VIEW: DashboardView = {
-  services: [{ id: 's1', barber_id: 'b1', name: 'Fade', price: 40, duration_minutes: 45 }],
-  windows: [{ id: 'w1' }] as DashboardView['windows'],
-  verification: 'pending',
-  bio: 'Ten years of fades.',
-  locationAddress: 'Prinsengracht 263, Amsterdam',
-  overview: {
+  services: { status: 'ok', data: [{ id: 's1', barber_id: 'b1', name: 'Fade', price: 40, duration_minutes: 45 }] },
+  availability: { status: 'ok', data: [{ id: 'w1' }] as Extract<DashboardView['availability'], { status: 'ok' }>['data'] },
+  portfolio: { status: 'ok', data: [] },
+  profile: { status: 'ok', data: { verification: 'pending', bio: 'Ten years of fades.' } },
+  location: { status: 'ok', data: 'Prinsengracht 263, Amsterdam' },
+  overview: { status: 'ok', data: {
     pendingCount: 2,
     upcomingCount: 1,
     nextAppointment: {
@@ -106,7 +92,7 @@ const MIXED_VIEW: DashboardView = {
       serviceName: 'Fade',
       counterpartName: 'Sam',
     },
-  },
+  } },
   readiness: {
     items: [
       { key: 'services', state: 'complete' },
@@ -118,6 +104,7 @@ const MIXED_VIEW: DashboardView = {
     completeCount: 1,
     total: 5,
     isLive: false,
+    unavailableCount: 0,
   },
 };
 
@@ -131,7 +118,7 @@ afterEach(async () => {
 });
 
 describe('StudioScreen dashboard', () => {
-  it('renders the preserved testIDs, the overview glance, the readiness meter, and both deep-links', async () => {
+  it('prioritizes bookings, preserves dashboard routes, and shows confirmed readiness', async () => {
     mockFetchProfile.mockResolvedValue({ status: 'ok', profile: { id: 'u1', name: 'Ada Lovelace' } });
     mockFetchView.mockResolvedValue(MIXED_VIEW);
 
@@ -146,17 +133,19 @@ describe('StudioScreen dashboard', () => {
     expect(screen.getByTestId('barber-dashboard-availability')).toBeTruthy();
     expect(screen.getByTestId('barber-dashboard-bio')).toBeTruthy();
 
-    // Overview glance: pending pill, next appointment (name + time), upcoming line.
-    expect(screen.getByText('2 pending')).toBeTruthy();
+    // Bookings show a pending count and the next accepted appointment.
+    expect(screen.getByText('2')).toBeTruthy();
+    expect(screen.getByText('Pending requests')).toBeTruthy();
     expect(screen.getByText(/Sam/)).toBeTruthy();
     expect(screen.getByText(/14:30/)).toBeTruthy();
     expect(screen.getByText('1 upcoming in the next 7 days')).toBeTruthy();
 
-    // Readiness meter: the "N of 5" status and the five item rows.
+    // Readiness stays a five-item setup state, separate from verification.
     expect(screen.getByTestId('barber-dashboard-readiness')).toBeTruthy();
     expect(screen.getByText('1 of 5 complete')).toBeTruthy();
     expect(screen.getByTestId('barber-dashboard-readiness-verification')).toBeTruthy();
     expect(screen.getByTestId('barber-dashboard-readiness-bio')).toBeTruthy();
+    expect(screen.getByText('Verification is under manual review.')).toBeTruthy();
 
     // A complete item is inert; an incomplete one deep-links to its fixer.
     expect(
@@ -170,6 +159,8 @@ describe('StudioScreen dashboard', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('BioEdit');
     fireEvent.press(screen.getByTestId('barber-dashboard-bio'));
     expect(navigation.navigate).toHaveBeenCalledWith('BioEdit');
+    fireEvent.press(screen.getByTestId('barber-dashboard-portfolio'));
+    expect(navigation.navigate).toHaveBeenCalledWith('Portfolio');
 
     // Location card (Explore Run A): shows the saved address, links to LocationEdit.
     expect(screen.getByText('Prinsengracht 263, Amsterdam')).toBeTruthy();
@@ -179,5 +170,33 @@ describe('StudioScreen dashboard', () => {
     // The overview deep-links to Requests (glance only — Requests owns mutations).
     fireEvent.press(screen.getByTestId('barber-dashboard-overview'));
     expect(navigation.navigate).toHaveBeenCalledWith('Requests');
+  });
+
+  it('does not turn a failed section into an empty state and retries it', async () => {
+    mockFetchProfile.mockResolvedValue({ status: 'ok', profile: { id: 'u1', name: 'Ada Lovelace' } });
+    const failedView: DashboardView = {
+      ...MIXED_VIEW,
+      services: { status: 'error', code: 'network', message: 'We could not reach the server.', retryable: true },
+      readiness: {
+        ...MIXED_VIEW.readiness,
+        items: MIXED_VIEW.readiness.items.map((item) =>
+          item.key === 'services' ? { ...item, state: 'unavailable' } : item
+        ),
+        completeCount: 0,
+        unavailableCount: 1,
+        isLive: null,
+      },
+    };
+    mockFetchView.mockResolvedValueOnce(failedView).mockResolvedValueOnce(MIXED_VIEW);
+
+    render(<StudioScreen navigation={navigation as never} route={{} as never} />);
+    await waitFor(() => expect(screen.getByTestId('barber-dashboard-services-unavailable')).toBeTruthy());
+    expect(screen.getByText('Service summary unavailable')).toBeTruthy();
+    expect(screen.getByText('0 confirmed complete; 1 unavailable')).toBeTruthy();
+    expect(screen.queryByText('No services yet.')).toBeNull();
+
+    fireEvent.press(screen.getByTestId('barber-dashboard-services-unavailable-retry'));
+    await waitFor(() => expect(screen.getByText(/1 service/)).toBeTruthy());
+    expect(mockFetchView).toHaveBeenCalledTimes(2);
   });
 });

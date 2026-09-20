@@ -301,7 +301,7 @@ export interface BookingsOverview {
  * barber's fault (founder decision 2026-07-14). `attention` is for a
  * rejected verification (the one item that genuinely needs the barber to act).
  */
-export type ReadinessState = 'complete' | 'incomplete' | 'in_progress' | 'attention';
+export type ReadinessState = 'complete' | 'incomplete' | 'in_progress' | 'attention' | 'unavailable';
 
 export type ReadinessItemKey = 'services' | 'availability' | 'portfolio' | 'bio' | 'verification';
 
@@ -321,8 +321,11 @@ export interface ReadinessItem {
 export interface ProfileReadiness {
   items: ReadinessItem[];
   completeCount: number;
+  /** Number of checks whose source data could not be read. */
+  unavailableCount: number;
   total: number;
-  isLive: boolean;
+  /** `null` means one or more source reads prevented a readiness verdict. */
+  isLive: boolean | null;
 }
 
 /**
@@ -333,18 +336,33 @@ export interface ProfileReadiness {
  * a single failed sub-read blanks only its own section, never the dashboard
  * (architect-review C5, matching Studio's existing loader).
  */
-export interface DashboardView {
-  services: ServiceRow[];
-  windows: AvailabilityRow[];
+/**
+ * A single dashboard section's authoritative read state. An empty value is
+ * only meaningful when `status` is `ok`; error sections carry the same safe,
+ * typed failure used by the rest of the barber data layer.
+ */
+export type DashboardSection<T> =
+  | { status: 'ok'; data: T }
+  | BarberDataFailure;
+
+/** The portion of barber_profile the Studio dashboard may display. */
+export interface DashboardProfile {
   verification: VerificationStatus | null;
+  bio: string | null;
+}
+
+export interface DashboardView {
+  overview: DashboardSection<BookingsOverview>;
+  services: DashboardSection<ServiceRow[]>;
+  availability: DashboardSection<AvailabilityRow[]>;
+  portfolio: DashboardSection<PortfolioRow[]>;
+  profile: DashboardSection<DashboardProfile>;
   /** The barber's own bio (null = none set). Backs the Studio "Bio" launch
    * card's summary and the bio readiness item. */
-  bio: string | null;
   /** The barber's own saved address (null = no location set / read failed).
    * Backs the Studio "Location" launch card's summary only — location is
    * deliberately NOT a readiness item (the meter stays the founder-scoped
    * five; revisit as an option once Explore ships). */
-  locationAddress: string | null;
-  overview: BookingsOverview;
+  location: DashboardSection<string | null>;
   readiness: ProfileReadiness;
 }

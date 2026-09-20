@@ -1,30 +1,4 @@
-/**
- * Barber Studio tab (dashboard). Time-of-day greeting + serif first name +
- * sign out, then two READ-ONLY glances on top of real data:
- *
- *  1. Bookings overview — pending-request count, the next confirmed
- *     appointment, and a next-7-days count, all sourced from the same
- *     fetchOwnRequestsView() the Requests tab uses. It NEVER mutates a booking
- *     (accept/reject/complete live only on the Requests tab); tapping it
- *     deep-links there.
- *  2. Profile readiness — a five-item "readiness to go live" meter
- *     (service / availability / portfolio / bio / verification). A verification
- *     still under manual review renders as a calm in-progress state, never the
- *     barber's fault (founder decision 2026-07-13). Each incomplete item
- *     deep-links to the screen that fixes it (bio → BioEdit).
- *
- * Founder decision (2026-07-08): Services and Availability are managed on
- * their own stack screens, not inline — the two summary cards here link to
- * them. All data is composed by fetchDashboardView (src/barber/dashboardData.ts),
- * which degrades per-field so one failed read never blanks the dashboard.
- *
- * The dashboard refreshes on focus (matching the rest of the app); the spinner
- * shows only on the first load, later focus refreshes update silently.
- *
- * Preserved testIDs (Maestro / login E2E depend on them): barber-dashboard-
- * screen, -logout, -loading, -error, -verification, -services, -availability.
- */
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -51,14 +25,21 @@ type Props = CompositeScreenProps<
 >;
 
 const VERIFICATION_LINES: Record<VerificationStatus, string> = {
-  approved: 'Verified — you appear in customer search.',
-  pending: 'Verification pending — our team reviews manually.',
-  rejected: 'Verification declined — see the Verify tab.',
+  approved: 'Verification approved. Your profile can appear in customer search.',
+  pending: 'Verification is under manual review.',
+  rejected: 'Verification needs your attention.',
 };
 
-/** Per-item copy. Verification copy varies by state; the others toggle on
- * done/not-done. Sentence case, never all-caps (brand). */
 function readinessLabel(item: ReadinessItem): string {
+  if (item.state === 'unavailable') {
+    switch (item.key) {
+      case 'services': return 'Could not check services';
+      case 'availability': return 'Could not check availability';
+      case 'portfolio': return 'Could not check portfolio';
+      case 'bio': return 'Could not check bio';
+      case 'verification': return 'Could not check verification';
+    }
+  }
   switch (item.key) {
     case 'services':
       return item.state === 'complete' ? 'Services added' : 'Add a service';
@@ -82,12 +63,13 @@ const READINESS_ICONS: Record<ReadinessState, keyof typeof Feather.glyphMap> = {
   incomplete: 'circle',
   in_progress: 'clock',
   attention: 'alert-circle',
+  unavailable: 'help-circle',
 };
 
 function servicesSummary(services: ServiceRow[]): string {
   if (services.length === 0) return 'No services yet.';
   const count = services.length === 1 ? '1 service' : `${services.length} services`;
-  return `${count} · from ${formatMoney(Math.min(...services.map((s) => s.price)))}`;
+  return `${count} · from ${formatMoney(Math.min(...services.map((service) => service.price)))}`;
 }
 
 function availabilitySummary(windows: AvailabilityRow[]): string {
@@ -95,88 +77,159 @@ function availabilitySummary(windows: AvailabilityRow[]): string {
   return windows.length === 1 ? '1 window' : `${windows.length} windows`;
 }
 
+function portfolioSummary(count: number): string {
+  if (count === 0) return 'No photos yet.';
+  return count === 1 ? '1 of 6 photos' : `${count} of 6 photos`;
+}
+
 function bioSummary(bio: string | null): string {
-  const trimmed = bio?.trim() ?? '';
-  return trimmed.length === 0 ? 'Add a short introduction' : trimmed;
+  return bio?.trim() || 'Add a short introduction';
 }
 
 function locationSummary(address: string | null): string {
-  const trimmed = address?.trim() ?? '';
-  return trimmed.length === 0 ? 'Add your address for the Explore map' : trimmed;
+  return address?.trim() || 'Add your address for the Explore map';
+}
+
+function SectionUnavailable({
+  label,
+  testID,
+  onRetry,
+  retrying,
+}: {
+  label: string;
+  testID: string;
+  onRetry: () => void;
+  retrying: boolean;
+}) {
+  const { colors, fonts } = useTheme();
+  return (
+    <View style={styles.unavailable} testID={testID}>
+      <Text accessibilityRole="alert" style={[styles.unavailableText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+        {label} could not load.
+      </Text>
+      {retrying ? (
+        <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Refreshing studio" />
+      ) : (
+        <Pressable
+          onPress={onRetry}
+          accessibilityRole="button"
+          accessibilityLabel={`Retry ${label.toLowerCase()}`}
+          testID={`${testID}-retry`}
+          style={({ pressed }) => [styles.retryAction, { opacity: pressed ? pressOpacity.soft : 1 }]}
+        >
+          <Text style={[styles.retryText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
+            Try again
+          </Text>
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
+function ManagementRow({
+  title,
+  summary,
+  icon,
+  testID,
+  onPress,
+  unavailable,
+  onRetry,
+  retrying,
+  last = false,
+}: {
+  title: string;
+  summary: string;
+  icon: keyof typeof Feather.glyphMap;
+  testID: string;
+  onPress: () => void;
+  unavailable: boolean;
+  onRetry: () => void;
+  retrying: boolean;
+  last?: boolean;
+}) {
+  const { colors, fonts } = useTheme();
+  return (
+    <View style={[styles.managementItem, { borderBottomColor: colors.border, borderBottomWidth: last ? 0 : HAIRLINE }]}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`${title}. ${summary}`}
+        testID={testID}
+        style={({ pressed }) => [styles.managementLink, { opacity: pressed ? pressOpacity.soft : 1 }]}
+      >
+        <Feather name={icon} size={18} color={colors.textSecondary} />
+        <View style={styles.managementText}>
+          <Text style={[styles.managementTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>
+            {title}
+          </Text>
+          <Text numberOfLines={2} style={[styles.managementSummary, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+            {summary}
+          </Text>
+        </View>
+        <Feather name="chevron-right" size={18} color={colors.textSecondary} />
+      </Pressable>
+      {unavailable ? (
+        <SectionUnavailable label={title} testID={`${testID}-unavailable`} onRetry={onRetry} retrying={retrying} />
+      ) : null}
+    </View>
+  );
 }
 
 export default function StudioScreen({ navigation }: Props) {
   const { colors, fonts } = useTheme();
   const onSignOut = useExitRole();
-
   const [name, setName] = useState<string | null>(null);
   const [view, setView] = useState<DashboardView | null>(null);
   const [loading, setLoading] = useState(true);
+  const [retrying, setRetrying] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const loadedRef = useRef(false);
 
   const load = useCallback(async () => {
-    const profileResult = await fetchOwnProfile();
-    if (profileResult.status === 'error' || !profileResult.profile) {
-      // Only surface an error screen if nothing has ever loaded — a failed
-      // focus refresh keeps the last good dashboard on screen.
-      if (!loadedRef.current) {
-        setError(
-          profileResult.status === 'error' ? profileResult.message : 'Could not load your profile.'
-        );
+    try {
+      const profileResult = await fetchOwnProfile();
+      if (profileResult.status === 'error' || !profileResult.profile) {
+        setError(profileResult.status === 'error' ? profileResult.message : 'Could not load your profile.');
+        setView(null);
+        return;
       }
+      const nextView = await fetchDashboardView(profileResult.profile.id);
+      setName(profileResult.profile.name);
+      setView(nextView);
+      setError(null);
+    } catch {
+      setError('Could not load your studio. Try again.');
+      setView(null);
+    } finally {
       setLoading(false);
-      return;
+      setRetrying(false);
     }
-    setName(profileResult.profile.name);
-    const nextView = await fetchDashboardView(profileResult.profile.id);
-    setView(nextView);
-    setError(null);
-    loadedRef.current = true;
-    setLoading(false);
   }, []);
 
-  // Refresh on every focus. useFocusEffect (unlike a bare useEffect) is not
-  // flagged by react-hooks/set-state-in-effect, so load() is called directly —
-  // no microtask deferral, which also keeps test act() scopes from overlapping.
-  useFocusEffect(
-    useCallback(() => {
-      void load();
-    }, [load])
-  );
+  useFocusEffect(useCallback(() => { void load(); }, [load]));
 
-  /** Deep-link an incomplete readiness item to the screen that resolves it. */
+  const retryDashboard = useCallback(() => {
+    if (retrying) return;
+    setRetrying(true);
+    void load();
+  }, [load, retrying]);
+
   const openReadinessTarget = useCallback(
     (key: ReadinessItemKey) => {
       switch (key) {
-        case 'services':
-          navigation.navigate('Services');
-          return;
-        case 'availability':
-          navigation.navigate('Availability');
-          return;
-        case 'portfolio':
-          navigation.navigate('Portfolio');
-          return;
-        case 'bio':
-          navigation.navigate('BioEdit');
-          return;
-        case 'verification':
-          navigation.navigate('Verify');
-          return;
+        case 'services': navigation.navigate('Services'); return;
+        case 'availability': navigation.navigate('Availability'); return;
+        case 'portfolio': navigation.navigate('Portfolio'); return;
+        case 'bio': navigation.navigate('BioEdit'); return;
+        case 'verification': navigation.navigate('Verify'); return;
       }
     },
     [navigation]
   );
 
-  const verification = view?.verification ?? null;
-  // Approved is deliberately NOT green here. isLive requires approved, so a
-  // green line here would always double the green "you're live" moment — and
-  // with bio as a 5th gate, "approved but 4 of 5" is the common state, where a
-  // green line would be marking an unfinished profile. Green stays the one
-  // earned moment; error stays reserved for the one attention state.
-  const verificationColor =
-    verification === 'rejected' ? colors.errorText : colors.textSecondary;
+  const verification = view?.profile.status === 'ok' ? view.profile.data.verification : null;
+  const verificationText = verification
+    ? VERIFICATION_LINES[verification]
+    : 'Verify your profile to appear in customer search.';
 
   return (
     <SafeAreaView
@@ -198,150 +251,151 @@ export default function StudioScreen({ navigation }: Props) {
             onPress={onSignOut}
             accessibilityRole="button"
             accessibilityLabel="Sign out"
-            hitSlop={12}
             testID="barber-dashboard-logout"
-            style={styles.signOut}
+            style={({ pressed }) => [styles.signOut, { opacity: pressed ? pressOpacity.soft : 1 }]}
           >
-            <Feather name="log-out" size={12} color={colors.textSecondary} />
-            <Text style={[styles.signOutText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+            <Feather name="log-out" size={16} color={colors.textSecondary} />
+            <Text style={[styles.signOutText, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
               Sign out
             </Text>
           </Pressable>
         </View>
 
         {loading && !view ? (
-          <ActivityIndicator
-            size="small"
-            color={colors.accent}
-            style={styles.spinner}
-            testID="barber-dashboard-loading"
-          />
+          <View style={styles.loading} testID="barber-dashboard-loading">
+            <ActivityIndicator size="small" color={colors.accent} />
+            <Text style={[styles.loadingText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+              Loading your studio
+            </Text>
+          </View>
         ) : error && !view ? (
-          <RetryNotice testID="barber-dashboard-error" message={error} onRetry={() => void load()} style={styles.noticeMargins} />
+          <RetryNotice testID="barber-dashboard-error" message={error} onRetry={retryDashboard} style={styles.noticeMargins} />
         ) : view ? (
           <>
-            {verification ? (
-              <Text
-                style={[styles.verification, { color: verificationColor, fontFamily: fonts.body }]}
-                testID="barber-dashboard-verification"
-              >
-                {VERIFICATION_LINES[verification]}
-              </Text>
-            ) : null}
+            <View testID="barber-dashboard-verification" style={styles.verification}>
+              {view.profile.status === 'ok' ? (
+                <Pressable
+                  onPress={() => navigation.navigate('Verify')}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${verificationText} View verification.`}
+                  style={({ pressed }) => [styles.verificationLink, { opacity: pressed ? pressOpacity.soft : 1 }]}
+                >
+                  <Feather
+                    name={verification === 'approved' ? 'check-circle' : verification === 'rejected' ? 'alert-circle' : 'clock'}
+                    size={16}
+                    color={verification === 'rejected' ? colors.errorText : verification === 'approved' ? colors.accentText : colors.textSecondary}
+                  />
+                  <Text style={[styles.verificationText, {
+                    color: verification === 'rejected' ? colors.errorText : colors.textSecondary,
+                    fontFamily: fonts.body,
+                  }]}>
+                    {verificationText}
+                  </Text>
+                  <Feather name="chevron-right" size={16} color={colors.textSecondary} />
+                </Pressable>
+              ) : (
+                <SectionUnavailable label="Verification status" testID="barber-dashboard-verification-unavailable" onRetry={retryDashboard} retrying={retrying} />
+              )}
+            </View>
 
-            {/* Bookings overview — read-only glance; taps go to Requests. */}
-            <Pressable
-              onPress={() => navigation.navigate('Requests')}
-              accessibilityRole="button"
-              accessibilityLabel={
-                view.overview.pendingCount > 0
-                  ? `${view.overview.pendingCount} pending requests. View booking requests.`
-                  : 'View booking requests'
-              }
-              testID="barber-dashboard-overview"
-              style={({ pressed }) => [
-                styles.card,
-                styles.overview,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                  opacity: pressed ? pressOpacity.soft : 1,
-                },
-              ]}
-            >
-              <View style={styles.overviewHeader}>
-                <Text style={[styles.cardTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+            <View style={[styles.overview, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Pressable
+                onPress={() => navigation.navigate('Requests')}
+                accessibilityRole="button"
+                accessibilityLabel={view.overview.status === 'ok'
+                  ? `Bookings. ${view.overview.data.pendingCount} pending requests. View requests.`
+                  : 'Bookings unavailable. View requests.'}
+                testID="barber-dashboard-overview"
+                style={({ pressed }) => [styles.overviewHeader, { opacity: pressed ? pressOpacity.soft : 1 }]}
+              >
+                <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
                   Bookings
                 </Text>
-                {/* Pill and chevron coexist — the nav affordance must not vanish
-                    exactly when the card is most worth tapping. */}
-                <View style={styles.overviewHeaderRight}>
-                  {view.overview.pendingCount > 0 ? (
-                    <View style={[styles.pendingPill, { backgroundColor: colors.accent }]}>
-                      <Text style={[styles.pendingPillText, { color: colors.onAccent, fontFamily: fonts.bodySemiBold }]}>
-                        {view.overview.pendingCount} pending
+                <Feather name="chevron-right" size={18} color={colors.textSecondary} />
+              </Pressable>
+              {view.overview.status === 'ok' ? (
+                <>
+                  <View style={styles.pendingRow}>
+                    <Text style={[styles.pendingNumber, { color: colors.accentText, fontFamily: fonts.headingMedium }]}>
+                      {view.overview.data.pendingCount}
+                    </Text>
+                    <View style={styles.pendingCopy}>
+                      <Text style={[styles.pendingTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>
+                        {view.overview.data.pendingCount === 1 ? 'Pending request' : 'Pending requests'}
+                      </Text>
+                      <Text style={[styles.pendingHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                        {view.overview.data.pendingCount > 0 ? 'Awaiting your response' : 'No requests waiting'}
                       </Text>
                     </View>
-                  ) : null}
-                  <Feather name="chevron-right" size={16} color={colors.textSecondary} />
-                </View>
-              </View>
-              {view.overview.nextAppointment ? (
-                <>
-                  <Text style={[styles.overviewCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                    Next appointment
-                  </Text>
-                  <View style={styles.overviewNextRow}>
-                    <Text
-                      numberOfLines={1}
-                      style={[styles.overviewWho, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}
-                    >
-                      {view.overview.nextAppointment.counterpartName ??
-                        view.overview.nextAppointment.serviceName ??
-                        'Appointment'}
+                  </View>
+                  <View style={[styles.nextAppointment, { borderTopColor: colors.border }]}>
+                    <Text style={[styles.eyebrow, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
+                      Next appointment
                     </Text>
-                    <Text style={[styles.overviewWhen, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                      {' · '}
-                      {formatBookingWhen(
-                        view.overview.nextAppointment.booking.date,
-                        view.overview.nextAppointment.booking.time
-                      )}
-                    </Text>
+                    {view.overview.data.nextAppointment ? (
+                      <>
+                        <Text style={[styles.appointmentName, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>
+                          {view.overview.data.nextAppointment.counterpartName ??
+                            view.overview.data.nextAppointment.serviceName ??
+                            'Appointment'}
+                        </Text>
+                        <Text style={[styles.appointmentWhen, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                          {formatBookingWhen(
+                            view.overview.data.nextAppointment.booking.date,
+                            view.overview.data.nextAppointment.booking.time
+                          )}
+                          {view.overview.data.nextAppointment.counterpartName &&
+                          view.overview.data.nextAppointment.serviceName
+                            ? ` · ${view.overview.data.nextAppointment.serviceName}`
+                            : ''}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                        Nothing scheduled yet.
+                      </Text>
+                    )}
+                    {view.overview.data.upcomingCount > 0 ? (
+                      <Text style={[styles.upcomingText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                        {view.overview.data.upcomingCount} upcoming in the next 7 days
+                      </Text>
+                    ) : null}
                   </View>
                 </>
               ) : (
-                <Text style={[styles.overviewEmpty, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                  Nothing scheduled yet.
-                </Text>
+                <SectionUnavailable label="Bookings" testID="barber-dashboard-overview-unavailable" onRetry={retryDashboard} retrying={retrying} />
               )}
-              {view.overview.upcomingCount > 0 ? (
-                <Text style={[styles.overviewMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                  {view.overview.upcomingCount} upcoming in the next 7 days
-                </Text>
-              ) : null}
-            </Pressable>
+            </View>
 
-            {/* Profile readiness meter. */}
-            <View
-              testID="barber-dashboard-readiness"
-              style={[styles.card, styles.readiness, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            >
-              <Text style={[styles.cardTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-                Readiness to go live
+            <View testID="barber-dashboard-readiness" style={[styles.readiness, { borderTopColor: colors.border }]}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+                Studio setup
               </Text>
-              {view.readiness.isLive ? (
-                // The screen's single green moment — the quiet, earned ending.
-                <View style={styles.liveRow}>
-                  <Feather name="check-circle" size={14} color={colors.successText} />
-                  <Text style={[styles.liveText, { color: colors.successText, fontFamily: fonts.bodyMedium }]}>
-                    {"You're live — customers can find you."}
-                  </Text>
-                </View>
+              {view.readiness.isLive === true ? (
+                <Text style={[styles.readinessStatus, { color: colors.successText, fontFamily: fonts.bodyMedium }]}>
+                  Studio setup complete.
+                </Text>
               ) : (
                 <Text style={[styles.readinessStatus, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                  {view.readiness.completeCount} of {view.readiness.total} complete
+                  {view.readiness.isLive === null
+                    ? `${view.readiness.completeCount} confirmed complete; ${view.readiness.unavailableCount} unavailable`
+                    : `${view.readiness.completeCount} of ${view.readiness.total} complete`}
                 </Text>
               )}
-              {/* Discrete segments mirror the readiness rows one-to-one — a
-                  countable fact, not a percentage (readiness, never a score).
-                  Hidden from the a11y tree: the status line above already
-                  carries the count, so color is never the sole signal. */}
+              {view.readiness.unavailableCount > 0 ? (
+                <SectionUnavailable label="Some setup details" testID="barber-dashboard-readiness-unavailable" onRetry={retryDashboard} retrying={retrying} />
+              ) : null}
               <View style={styles.meter} accessible={false} importantForAccessibility="no-hide-descendants">
                 {view.readiness.items.map((item) => (
                   <View
                     key={item.key}
-                    style={[
-                      styles.meterSegment,
-                      { backgroundColor: item.state === 'complete' ? colors.accent : colors.border },
-                    ]}
+                    style={[styles.meterSegment, { backgroundColor: item.state === 'complete' ? colors.accent : colors.border }]}
                   />
                 ))}
               </View>
-
               <View style={styles.readinessItems}>
                 {view.readiness.items.map((item, index) => {
                   const done = item.state === 'complete';
-                  const last = index === view.readiness.items.length - 1;
                   return (
                     <Pressable
                       key={item.key}
@@ -354,145 +408,87 @@ export default function StudioScreen({ navigation }: Props) {
                       style={({ pressed }) => [
                         styles.readinessRow,
                         {
-                          borderBottomWidth: last ? 0 : 0.5,
+                          borderBottomWidth: index === view.readiness.items.length - 1 ? 0 : HAIRLINE,
                           borderColor: colors.border,
                           opacity: pressed && !done ? pressOpacity.soft : 1,
                         },
                       ]}
                     >
-                      {/* Done rows recede entirely (muted icon + label) — the
-                          checklist's job is to surface what REMAINS. Error
-                          color is reserved for the one attention state. */}
                       <Feather
                         name={READINESS_ICONS[item.state]}
-                        size={15}
+                        size={17}
                         color={item.state === 'attention' ? colors.errorText : colors.textSecondary}
                       />
-                      <Text
-                        style={[
-                          styles.readinessLabel,
-                          done
-                            ? { color: colors.textSecondary, fontFamily: fonts.body }
-                            : { color: colors.textPrimary, fontFamily: fonts.bodyMedium },
-                        ]}
-                      >
+                      <Text style={[styles.readinessLabel, {
+                        color: done ? colors.textSecondary : colors.textPrimary,
+                        fontFamily: done ? fonts.body : fonts.bodyMedium,
+                      }]}>
                         {readinessLabel(item)}
                       </Text>
-                      {done ? null : <Feather name="chevron-right" size={15} color={colors.textSecondary} />}
+                      {done ? null : <Feather name="chevron-right" size={16} color={colors.textSecondary} />}
                     </Pressable>
                   );
                 })}
               </View>
             </View>
 
-            {/* Management cards (separate stack screens — founder 2026-07-08). */}
-            <View style={styles.cards}>
-              <Pressable
-                onPress={() => navigation.navigate('Services')}
-                accessibilityRole="button"
-                // The label overrides the children, so it has to carry the
-                // state itself (same shape as the bio card's fix).
-                accessibilityLabel={`Manage services. ${servicesSummary(view.services)}.`}
-                testID="barber-dashboard-services"
-                style={({ pressed }) => [
-                  styles.card,
-                  styles.linkCard,
-                  { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? pressOpacity.soft : 1 },
-                ]}
-              >
-                <View style={styles.cardText}>
-                  <Text style={[styles.cardTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-                    Services
-                  </Text>
-                  <Text style={[styles.cardMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                    {servicesSummary(view.services)}
-                  </Text>
-                </View>
-                <Feather name="chevron-right" size={16} color={colors.textSecondary} />
-              </Pressable>
-
-              <Pressable
-                onPress={() => navigation.navigate('Availability')}
-                accessibilityRole="button"
-                accessibilityLabel={`Manage availability. ${availabilitySummary(view.windows)}.`}
-                testID="barber-dashboard-availability"
-                style={({ pressed }) => [
-                  styles.card,
-                  styles.linkCard,
-                  { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? pressOpacity.soft : 1 },
-                ]}
-              >
-                <View style={styles.cardText}>
-                  <Text style={[styles.cardTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-                    Availability
-                  </Text>
-                  <Text style={[styles.cardMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                    {availabilitySummary(view.windows)}
-                  </Text>
-                </View>
-                <Feather name="chevron-right" size={16} color={colors.textSecondary} />
-              </Pressable>
-
-              <Pressable
-                onPress={() => navigation.navigate('BioEdit')}
-                accessibilityRole="button"
-                // The label overrides the children, so it has to carry the
-                // state itself — reading 500 characters aloud would be worse.
-                accessibilityLabel={`Edit your bio. ${
-                  (view.bio?.trim().length ?? 0) > 0 ? 'Bio added' : 'No bio yet'
-                }.`}
-                testID="barber-dashboard-bio"
-                style={({ pressed }) => [
-                  styles.card,
-                  styles.linkCard,
-                  { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? pressOpacity.soft : 1 },
-                ]}
-              >
-                <View style={styles.cardText}>
-                  <Text style={[styles.cardTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-                    Bio
-                  </Text>
-                  <Text
-                    // Two lines, unlike the fact-summarising cards beside it:
-                    // this one previews prose, and one line truncates mid-word
-                    // almost always.
-                    numberOfLines={2}
-                    style={[
-                      styles.cardMeta,
-                      styles.bioMeta,
-                      { color: colors.textSecondary, fontFamily: fonts.body },
-                    ]}
-                  >
-                    {bioSummary(view.bio)}
-                  </Text>
-                </View>
-                <Feather name="chevron-right" size={16} color={colors.textSecondary} />
-              </Pressable>
-
-              <Pressable
-                onPress={() => navigation.navigate('LocationEdit')}
-                accessibilityRole="button"
-                accessibilityLabel={`Edit your location. ${locationSummary(view.locationAddress)}.`}
-                testID="barber-dashboard-location"
-                style={({ pressed }) => [
-                  styles.card,
-                  styles.linkCard,
-                  { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? pressOpacity.soft : 1 },
-                ]}
-              >
-                <View style={styles.cardText}>
-                  <Text style={[styles.cardTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-                    Location
-                  </Text>
-                  <Text
-                    numberOfLines={1}
-                    style={[styles.cardMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}
-                  >
-                    {locationSummary(view.locationAddress)}
-                  </Text>
-                </View>
-                <Feather name="chevron-right" size={16} color={colors.textSecondary} />
-              </Pressable>
+            <View style={[styles.management, { borderTopColor: colors.border }]}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+                Manage your studio
+              </Text>
+              <View style={styles.managementRows}>
+                <ManagementRow
+                  title="Services"
+                  summary={view.services.status === 'ok' ? servicesSummary(view.services.data) : 'Service summary unavailable'}
+                  icon="scissors"
+                  testID="barber-dashboard-services"
+                  onPress={() => navigation.navigate('Services')}
+                  unavailable={view.services.status !== 'ok'}
+                  onRetry={retryDashboard}
+                  retrying={retrying}
+                />
+                <ManagementRow
+                  title="Availability"
+                  summary={view.availability.status === 'ok' ? availabilitySummary(view.availability.data) : 'Availability summary unavailable'}
+                  icon="calendar"
+                  testID="barber-dashboard-availability"
+                  onPress={() => navigation.navigate('Availability')}
+                  unavailable={view.availability.status !== 'ok'}
+                  onRetry={retryDashboard}
+                  retrying={retrying}
+                />
+                <ManagementRow
+                  title="Portfolio"
+                  summary={view.portfolio.status === 'ok' ? portfolioSummary(view.portfolio.data.length) : 'Portfolio summary unavailable'}
+                  icon="image"
+                  testID="barber-dashboard-portfolio"
+                  onPress={() => navigation.navigate('Portfolio')}
+                  unavailable={view.portfolio.status !== 'ok'}
+                  onRetry={retryDashboard}
+                  retrying={retrying}
+                />
+                <ManagementRow
+                  title="Bio"
+                  summary={view.profile.status === 'ok' ? bioSummary(view.profile.data.bio) : 'Bio summary unavailable'}
+                  icon="edit-3"
+                  testID="barber-dashboard-bio"
+                  onPress={() => navigation.navigate('BioEdit')}
+                  unavailable={view.profile.status !== 'ok'}
+                  onRetry={retryDashboard}
+                  retrying={retrying}
+                />
+                <ManagementRow
+                  title="Location"
+                  summary={view.location.status === 'ok' ? locationSummary(view.location.data) : 'Location summary unavailable'}
+                  icon="map-pin"
+                  testID="barber-dashboard-location"
+                  onPress={() => navigation.navigate('LocationEdit')}
+                  unavailable={view.location.status !== 'ok'}
+                  onRetry={retryDashboard}
+                  retrying={retrying}
+                  last
+                />
+              </View>
             </View>
           </>
         ) : null}
@@ -504,47 +500,48 @@ export default function StudioScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: space.xl, paddingTop: space.xl, paddingBottom: space['2xl'] },
-  headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
-  headerText: { flexShrink: 1 },
-  greeting: { fontSize: 13 },
-  name: { fontSize: 30, marginTop: 4 },
-  signOut: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingTop: 4 },
-  signOutText: { fontSize: 12 },
-
-  spinner: { marginTop: 48 },
+  headerRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: space.sm },
+  headerText: { flexGrow: 1, flexShrink: 1, minWidth: 160 },
+  greeting: { fontSize: 13, lineHeight: 20 },
+  name: { fontSize: 30, lineHeight: 38, marginTop: space.xs },
+  signOut: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.xs },
+  signOutText: { fontSize: 13 },
+  loading: { minHeight: 120, alignItems: 'center', justifyContent: 'center', gap: space.md },
+  loadingText: { fontSize: 13 },
   noticeMargins: { marginTop: space.xl },
-
-  verification: { fontSize: 12, marginTop: 12 },
-
-  card: { borderWidth: HAIRLINE, borderRadius: radius.sm, padding: space.base },
-  cardTitle: { fontSize: 18 },
-  cardMeta: { fontSize: 12, marginTop: 4 },
-  // cardMeta has no lineHeight; two lines without one sets too tight.
-  bioMeta: { lineHeight: 17 },
-
-  overview: { marginTop: 24 },
-  overviewHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  overviewHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  overviewCaption: { fontSize: 12, marginTop: 14 },
-  overviewNextRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: 3 },
-  overviewWho: { fontSize: 14, flexShrink: 1 },
-  overviewWhen: { fontSize: 14, flexShrink: 0 },
-  overviewEmpty: { fontSize: 13, marginTop: 12 },
-  overviewMeta: { fontSize: 12, marginTop: 10 },
-  pendingPill: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
-  pendingPillText: { fontSize: 11 },
-
-  readiness: { marginTop: 12 },
-  readinessStatus: { fontSize: 12, marginTop: 6 },
-  liveRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
-  liveText: { fontSize: 13 },
-  meter: { flexDirection: 'row', gap: 4, marginTop: 12 },
+  verification: { marginTop: space.sm },
+  verificationLink: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  verificationText: { flex: 1, fontSize: 13, lineHeight: 19 },
+  overview: { marginTop: space.lg, borderWidth: HAIRLINE, borderRadius: radius.sm, paddingHorizontal: space.base, paddingVertical: space.md },
+  overviewHeader: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sectionTitle: { fontSize: 19, lineHeight: 26 },
+  pendingRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md },
+  pendingNumber: { minWidth: 34, fontSize: 34, lineHeight: 42 },
+  pendingCopy: { flex: 1 },
+  pendingTitle: { fontSize: 15, lineHeight: 22 },
+  pendingHint: { fontSize: 13, lineHeight: 19 },
+  nextAppointment: { borderTopWidth: HAIRLINE, paddingTop: space.md, paddingBottom: space.xs },
+  eyebrow: { fontSize: 12, lineHeight: 18 },
+  appointmentName: { fontSize: 16, lineHeight: 24, marginTop: space.xs },
+  appointmentWhen: { fontSize: 13, lineHeight: 20, marginTop: space.xs },
+  emptyText: { fontSize: 13, lineHeight: 20, marginTop: space.xs },
+  upcomingText: { fontSize: 12, lineHeight: 18, marginTop: space.sm },
+  readiness: { marginTop: space.xl, paddingTop: space.lg, borderTopWidth: HAIRLINE },
+  readinessStatus: { fontSize: 13, lineHeight: 20, marginTop: space.xs },
+  meter: { flexDirection: 'row', gap: space.xs, marginTop: space.base },
   meterSegment: { flex: 1, height: 3, borderRadius: 1.5 },
-  readinessItems: { marginTop: 8 },
-  readinessRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44 },
-  readinessLabel: { flex: 1, fontSize: 14 },
-
-  cards: { marginTop: 12, gap: 12 },
-  linkCard: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  cardText: { flex: 1, minWidth: 0 },
+  readinessItems: { marginTop: space.sm },
+  readinessRow: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
+  readinessLabel: { flex: 1, fontSize: 14, lineHeight: 21 },
+  management: { marginTop: space.xl, paddingTop: space.lg, borderTopWidth: HAIRLINE },
+  managementRows: { marginTop: space.sm },
+  managementItem: { borderBottomWidth: HAIRLINE },
+  managementLink: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
+  managementText: { flex: 1, minWidth: 0 },
+  managementTitle: { fontSize: 15, lineHeight: 22 },
+  managementSummary: { fontSize: 13, lineHeight: 19, marginTop: space.xs },
+  unavailable: { paddingVertical: space.sm },
+  unavailableText: { fontSize: 13, lineHeight: 20 },
+  retryAction: { minHeight: 44, alignSelf: 'flex-start', justifyContent: 'center' },
+  retryText: { fontSize: 13 },
 });

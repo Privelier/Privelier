@@ -1,0 +1,21 @@
+env: load .env
+env: export EXPO_PUBLIC_SUPABASE_ANON_KEY EXPO_PUBLIC_SUPABASE_URL
+Starting project at C:\Users\original\Documents\Privelier
+Starting Metro Bundler
+
+Error: listen EADDRINUSE: address already in use :::8081
+Error: listen EADDRINUSE: address already in use :::8081
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at Server.listen (node:net:2170:7)
+    at C:\Users\original\Documents\Privelier\node_modules\@expo\cli\build\src\start\server\metro\runServer-fork.js:144:20
+    at new Promise (<anonymous>)
+    at runServer (C:\Users\original\Documents\Privelier\node_modules\@expo\cli\build\src\start\server\metro\runServer-fork.js:140:12)
+    at runNextTicks (node:internal/process/task_queues:65:5)
+    at process.processTimers (node:internal/timers:538:9)
+    at async replaceMetroFileMap (C:\Users\original\Documents\Privelier\node_modules\@expo\cli\build\src\start\server\metro\createFileMap-fork.js:191:20)
+    at async instantiateMetroAsync (C:\Users\original\Documents\Privelier\node_modules\@expo\cli\build\src\start\server\metro\instantiateMetro.js:401:51)
+    at async MetroBundlerDevServer.startImplementationAsync (C:\Users\original\Documents\Privelier\node_modules\@expo\cli\build\src\start\server\metro\MetroBundlerDevServer.js:930:82)
+    at async MetroBundlerDevServer.startAsync (C:\Users\original\Documents\Privelier\node_modules\@expo\cli\build\src\start\server\BundlerDevServer.js:124:24)
+    at async DevServerManager.startAsync (C:\Users\original\Documents\Privelier\node_modules\@expo\cli\build\src\start\server\DevServerManager.js:213:13)
+    at async startAsync (C:\Users\original\Documents\Privelier\node_modules\@expo\cli\build\src\start\startAsync.js:163:5)

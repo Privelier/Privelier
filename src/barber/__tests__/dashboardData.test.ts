@@ -140,8 +140,7 @@ describe('deriveProfileReadiness', () => {
       serviceCount: 2,
       availabilityCount: 1,
       portfolioCount: 3,
-      bio: 'Sharp fades since 2015.',
-      verification: 'approved',
+      profile: { bio: 'Sharp fades since 2015.', verification: 'approved' },
     });
     expect(r.completeCount).toBe(5);
     expect(r.total).toBe(5);
@@ -153,8 +152,7 @@ describe('deriveProfileReadiness', () => {
       serviceCount: 0,
       availabilityCount: 0,
       portfolioCount: 0,
-      bio: null,
-      verification: 'approved',
+      profile: { bio: null, verification: 'approved' },
     });
     const byKey = Object.fromEntries(r.items.map((i) => [i.key, i.state]));
     expect(byKey).toMatchObject({
@@ -178,8 +176,7 @@ describe('deriveProfileReadiness', () => {
       serviceCount: 1,
       availabilityCount: 1,
       portfolioCount: 1,
-      bio,
-      verification: 'approved',
+      profile: { bio, verification: 'approved' },
     });
     expect(r.items.find((i) => i.key === 'bio')?.state).toBe(expected);
   });
@@ -194,8 +191,7 @@ describe('deriveProfileReadiness', () => {
       serviceCount: 1,
       availabilityCount: 1,
       portfolioCount: 1,
-      bio: 'x',
-      verification,
+      profile: { bio: 'x', verification },
     });
     const v = r.items.find((i) => i.key === 'verification');
     expect(v?.state).toBe(expected);
@@ -206,8 +202,7 @@ describe('deriveProfileReadiness', () => {
       serviceCount: 1,
       availabilityCount: 1,
       portfolioCount: 1,
-      bio: null,
-      verification: 'pending',
+      profile: { bio: null, verification: 'pending' },
     });
     expect(r.completeCount).toBe(3);
     expect(r.isLive).toBe(false);

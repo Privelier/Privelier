@@ -28,6 +28,7 @@ module.exports = ({ config }) => {
     ...config,
     plugins: [
       ...(config.plugins ?? []),
+      'expo-web-browser',
       ...(downloadToken
         ? [["@rnmapbox/maps", { RNMapboxMapsDownloadToken: downloadToken }]]
         : []),

@@ -8,6 +8,7 @@ import { supabase } from '../../../lib/supabase';
 import {
   applyAuthCallbackUrl,
   getEmailRedirectTo,
+  hasStableAuthRedirect,
   isExpectedAuthCallbackUrl,
   parseAuthCallbackUrl,
 } from '../deepLink';
@@ -16,6 +17,7 @@ jest.mock('../../../lib/supabase', () => ({
   supabase: {
     auth: {
       setSession: jest.fn(),
+      exchangeCodeForSession: jest.fn(),
     },
   },
 }));
@@ -33,6 +35,12 @@ beforeEach(() => {
 describe('getEmailRedirectTo', () => {
   it('builds the auth-callback deep link', () => {
     expect(getEmailRedirectTo()).toBe('privelier://auth-callback');
+  });
+
+  it('requires the registered custom scheme rather than Expo Go', () => {
+    const createURL = jest.requireMock('expo-linking').createURL as jest.Mock;
+    createURL.mockReturnValueOnce('exp://127.0.0.1:8081/--/auth-callback');
+    expect(hasStableAuthRedirect()).toBe(false);
   });
 });
 
@@ -59,6 +67,20 @@ describe('isExpectedAuthCallbackUrl', () => {
 });
 
 describe('parseAuthCallbackUrl', () => {
+  it('extracts a PKCE code from the callback query', () => {
+    expect(parseAuthCallbackUrl('privelier://auth-callback?code=pkce-code-1')).toEqual({
+      code: 'pkce-code-1',
+    });
+  });
+
+  it('rejects a callback that combines the PKCE and implicit token shapes', () => {
+    expect(
+      parseAuthCallbackUrl(
+        'privelier://auth-callback?code=pkce-code-1#access_token=at-1&refresh_token=rt-1'
+      )
+    ).toBeNull();
+  });
+
   it('extracts access_token and refresh_token from the fragment', () => {
     const url = 'privelier://auth-callback#access_token=at-1&refresh_token=rt-1&type=signup';
     expect(parseAuthCallbackUrl(url)).toEqual({
@@ -128,6 +150,24 @@ describe('applyAuthCallbackUrl', () => {
       access_token: 'at-1',
       refresh_token: 'rt-1',
     });
+  });
+
+  it('exchanges a PKCE code and returns "applied" on success', async () => {
+    mockAuth.exchangeCodeForSession.mockResolvedValue({ data: {}, error: null } as never);
+
+    const outcome = await applyAuthCallbackUrl('privelier://auth-callback?code=pkce-code-1');
+
+    expect(outcome).toBe('applied');
+    expect(mockAuth.exchangeCodeForSession).toHaveBeenCalledWith('pkce-code-1');
+    expect(mockAuth.setSession).not.toHaveBeenCalled();
+  });
+
+  it('returns "error" when PKCE code exchange fails', async () => {
+    mockAuth.exchangeCodeForSession.mockResolvedValue({ data: {}, error: { message: 'boom' } } as never);
+
+    await expect(applyAuthCallbackUrl('privelier://auth-callback?code=pkce-code-1')).resolves.toBe(
+      'error'
+    );
   });
 
   it('returns "recovery_applied" for a valid password recovery callback', async () => {

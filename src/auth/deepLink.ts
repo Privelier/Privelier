@@ -21,11 +21,22 @@ import { logAuthError } from './errors';
 /** Path segment used for every auth redirect link. Must match the Supabase
  * dashboard's Auth → URL Configuration redirect allow-list exactly. */
 const AUTH_CALLBACK_PATH = 'auth-callback';
-const AUTH_CALLBACK_SCHEME = 'privelier';
+const APP_SCHEME = 'privelier:';
 
 /** Build the `emailRedirectTo` value for signUp/resend calls. */
 export function getEmailRedirectTo(): string {
   return Linking.createURL(AUTH_CALLBACK_PATH);
+}
+
+/** Expo Go produces an `exp://` callback that is not a stable Supabase
+ * redirect target. Email links and OAuth require the development/production
+ * build registered for Privelier's custom scheme. */
+export function hasStableAuthRedirect(): boolean {
+  try {
+    return new URL(getEmailRedirectTo()).protocol === APP_SCHEME;
+  } catch {
+    return false;
+  }
 }
 
 export type AuthCallbackOutcome = 'applied' | 'recovery_applied' | 'expired_or_used' | 'error' | 'ignored';
@@ -33,14 +44,16 @@ export type AuthCallbackOutcome = 'applied' | 'recovery_applied' | 'expired_or_u
 interface ParsedCallback {
   accessToken?: string;
   refreshToken?: string;
+  code?: string;
   errorCode?: string;
   type?: string;
 }
 
 /**
- * Accept only the callback authority registered by the native app. The
- * callback route is the URL authority (`privelier://auth-callback`) because
- * that is the shape produced by Linking.createURL in a native build.
+ * Accept only the callback URL created for this running app. A development
+ * build resolves this to `privelier://auth-callback`; Expo Go resolves it to
+ * an `exp://.../--/auth-callback` URL, which is deliberately not a stable
+ * production auth target.
  *
  * Query parameters are allowed, but user-info, ports, and extra path
  * segments are not. In particular, do not trust a token-bearing fragment
@@ -49,10 +62,16 @@ interface ParsedCallback {
 export function isExpectedAuthCallbackUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
+    const expected = new URL(getEmailRedirectTo());
+    const expectedPath = expected.pathname;
+    const hasExpectedPath =
+      parsed.pathname === expectedPath ||
+      (expectedPath === '' && parsed.pathname === '/');
     return (
-      parsed.protocol === `${AUTH_CALLBACK_SCHEME}:` &&
-      parsed.host === AUTH_CALLBACK_PATH &&
-      (parsed.pathname === '' || parsed.pathname === '/') &&
+      parsed.protocol === expected.protocol &&
+      parsed.host === expected.host &&
+      parsed.port === expected.port &&
+      hasExpectedPath &&
       parsed.username === '' &&
       parsed.password === ''
     );
@@ -65,10 +84,12 @@ export function isExpectedAuthCallbackUrl(url: string): boolean {
  * hand-rolled rather than relying on URL/Linking's query-string parsing. */
 export function parseAuthCallbackUrl(url: string): ParsedCallback | null {
   if (!isExpectedAuthCallbackUrl(url)) return null;
+  const callbackUrl = new URL(url);
+  const code = callbackUrl.searchParams.get('code') ?? undefined;
   const hashIndex = url.indexOf('#');
-  if (hashIndex === -1) return null;
+  if (hashIndex === -1) return code ? { code } : null;
   const fragment = url.slice(hashIndex + 1);
-  if (fragment.length === 0) return null;
+  if (fragment.length === 0 || code) return null;
   const params = new URLSearchParams(fragment);
   const accessToken = params.get('access_token') ?? undefined;
   const refreshToken = params.get('refresh_token') ?? undefined;
@@ -88,6 +109,14 @@ export async function applyAuthCallbackUrl(url: string): Promise<AuthCallbackOut
   if (parsed.errorCode) {
     logAuthError('deepLink', `auth callback returned error_code=${parsed.errorCode}`);
     return parsed.errorCode === 'otp_expired' ? 'expired_or_used' : 'error';
+  }
+  if (parsed.code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(parsed.code);
+    if (error) {
+      logAuthError('deepLink.exchangeCodeForSession', error);
+      return 'error';
+    }
+    return 'applied';
   }
   if (!parsed.accessToken || !parsed.refreshToken) {
     logAuthError('deepLink', 'auth callback missing access_token/refresh_token');

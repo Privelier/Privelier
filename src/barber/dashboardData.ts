@@ -33,13 +33,6 @@ import type {
   ReadinessState,
 } from './types';
 
-/** The overview shown before any booking data loads / when it fails to load. */
-const EMPTY_OVERVIEW: BookingsOverview = {
-  pendingCount: 0,
-  upcomingCount: 0,
-  nextAppointment: null,
-};
-
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
@@ -103,31 +96,45 @@ export function deriveBookingsOverview(
  * `isLive` is true only when all five are complete.
  */
 export function deriveProfileReadiness(input: {
-  serviceCount: number;
-  availabilityCount: number;
-  portfolioCount: number;
-  bio: string | null;
-  verification: VerificationStatus | null;
+  serviceCount: number | null;
+  availabilityCount: number | null;
+  portfolioCount: number | null;
+  profile: { bio: string | null; verification: VerificationStatus | null } | null;
 }): ProfileReadiness {
+  const contentState = (count: number | null): ReadinessState =>
+    count === null ? 'unavailable' : count > 0 ? 'complete' : 'incomplete';
   const verificationState: ReadinessState =
-    input.verification === 'approved'
-      ? 'complete'
-      : input.verification === 'rejected'
-        ? 'attention'
-        : 'in_progress';
-
-  const bioComplete = (input.bio?.trim().length ?? 0) > 0;
+    input.profile === null
+      ? 'unavailable'
+      : input.profile.verification === 'approved'
+        ? 'complete'
+        : input.profile.verification === 'rejected'
+          ? 'attention'
+          : 'in_progress';
+  const bioState: ReadinessState =
+    input.profile === null
+      ? 'unavailable'
+      : (input.profile.bio?.trim().length ?? 0) > 0
+        ? 'complete'
+        : 'incomplete';
 
   const items: ReadinessItem[] = [
-    { key: 'services', state: input.serviceCount > 0 ? 'complete' : 'incomplete' },
-    { key: 'availability', state: input.availabilityCount > 0 ? 'complete' : 'incomplete' },
-    { key: 'portfolio', state: input.portfolioCount > 0 ? 'complete' : 'incomplete' },
-    { key: 'bio', state: bioComplete ? 'complete' : 'incomplete' },
+    { key: 'services', state: contentState(input.serviceCount) },
+    { key: 'availability', state: contentState(input.availabilityCount) },
+    { key: 'portfolio', state: contentState(input.portfolioCount) },
+    { key: 'bio', state: bioState },
     { key: 'verification', state: verificationState },
   ];
 
   const completeCount = items.filter((item) => item.state === 'complete').length;
-  return { items, completeCount, total: items.length, isLive: completeCount === items.length };
+  const unavailableCount = items.filter((item) => item.state === 'unavailable').length;
+  return {
+    items,
+    completeCount,
+    unavailableCount,
+    total: items.length,
+    isLive: unavailableCount > 0 ? null : completeCount === items.length,
+  };
 }
 
 /**
@@ -152,32 +159,47 @@ export async function fetchDashboardView(barberId: string): Promise<DashboardVie
       fetchOwnLocation(barberId),
     ]);
 
-  const services = servicesResult.status === 'ok' ? servicesResult.services : [];
-  const windows = availabilityResult.status === 'ok' ? availabilityResult.windows : [];
-  const portfolioCount = portfolioResult.status === 'ok' ? portfolioResult.images.length : 0;
-  const verification =
-    profileResult.status === 'ok' ? (profileResult.profile?.verification_status ?? null) : null;
-  const bio = profileResult.status === 'ok' ? (profileResult.profile?.bio ?? null) : null;
-  const locationAddress =
-    locationResult.status === 'ok' ? (locationResult.location?.address ?? null) : null;
-
+  const services =
+    servicesResult.status === 'ok' ? { status: 'ok' as const, data: servicesResult.services } : servicesResult;
+  const availability =
+    availabilityResult.status === 'ok'
+      ? { status: 'ok' as const, data: availabilityResult.windows }
+      : availabilityResult;
+  const portfolio =
+    portfolioResult.status === 'ok' ? { status: 'ok' as const, data: portfolioResult.images } : portfolioResult;
+  const profile =
+    profileResult.status === 'ok'
+      ? {
+          status: 'ok' as const,
+          data: {
+            verification: profileResult.profile?.verification_status ?? null,
+            bio: profileResult.profile?.bio ?? null,
+          },
+        }
+      : profileResult;
+  const location =
+    locationResult.status === 'ok'
+      ? { status: 'ok' as const, data: locationResult.location?.address ?? null }
+      : locationResult;
   const overview =
     requests.status === 'ok'
-      ? deriveBookingsOverview(
-          requests.bookings,
-          now,
-          requests.servicesById,
-          requests.counterpartsByBookingId
-        )
-      : EMPTY_OVERVIEW;
+      ? {
+          status: 'ok' as const,
+          data: deriveBookingsOverview(
+            requests.bookings,
+            now,
+            requests.servicesById,
+            requests.counterpartsByBookingId
+          ),
+        }
+      : requests;
 
   const readiness = deriveProfileReadiness({
-    serviceCount: services.length,
-    availabilityCount: windows.length,
-    portfolioCount,
-    bio,
-    verification,
+    serviceCount: services.status === 'ok' ? services.data.length : null,
+    availabilityCount: availability.status === 'ok' ? availability.data.length : null,
+    portfolioCount: portfolio.status === 'ok' ? portfolio.data.length : null,
+    profile: profile.status === 'ok' ? profile.data : null,
   });
 
-  return { services, windows, verification, bio, locationAddress, overview, readiness };
+  return { overview, services, availability, portfolio, profile, location, readiness };
 }

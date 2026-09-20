@@ -16,9 +16,10 @@
  * No UI in this module. Screens are built in the next pipeline stage.
  */
 import type { Session } from '@supabase/supabase-js';
+import * as WebBrowser from 'expo-web-browser';
 import { supabase } from '../../lib/supabase';
 import type { Role, UsersRow } from '../types';
-import { getEmailRedirectTo } from './deepLink';
+import { applyAuthCallbackUrl, getEmailRedirectTo, hasStableAuthRedirect } from './deepLink';
 import { failure, logAuthError, mapAuthApiError, mapPostgrestError } from './errors';
 import type { AuthFailure } from './errors';
 import type {
@@ -63,6 +64,7 @@ async function signUp(
   password: string,
   metadata: ProvisionFields
 ): Promise<SignUpResult> {
+  if (!hasStableAuthRedirect()) return failure('development_build_required');
   const normalizedEmail = email.trim();
   // Single write. options.data is stored as user_metadata — a prefill hint
   // for deferred provisioning ONLY, never authorization (RLS + the 0005
@@ -137,6 +139,7 @@ export async function signIn(email: string, password: string): Promise<SignInRes
 export async function signInWithProvider(
   provider: 'google' | 'apple'
 ): Promise<OAuthSignInResult> {
+  if (!hasStableAuthRedirect()) return failure('development_build_required');
   try {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
@@ -144,9 +147,13 @@ export async function signInWithProvider(
     });
     if (error) return mapAuthApiError(`signInWithProvider.${provider}`, error);
     if (!data.url) return failure('unknown');
-    const Linking = await import('expo-linking');
-    if (!(await Linking.canOpenURL(data.url))) return failure('unknown');
-    await Linking.openURL(data.url);
+    const result = await WebBrowser.openAuthSessionAsync(data.url, getEmailRedirectTo());
+    if (result.type === 'cancel' || result.type === 'dismiss') return { status: 'started' };
+    if (result.type !== 'success') return failure('unknown');
+    const outcome = await applyAuthCallbackUrl(result.url);
+    if (outcome === 'error' || outcome === 'expired_or_used' || outcome === 'ignored') {
+      return failure('unknown');
+    }
     return { status: 'started' };
   } catch (raw) {
     return mapAuthApiError(`signInWithProvider.${provider}`, raw);
@@ -154,6 +161,7 @@ export async function signInWithProvider(
 }
 
 export async function resendConfirmation(email: string): Promise<ResendConfirmationResult> {
+  if (!hasStableAuthRedirect()) return failure('development_build_required');
   const { error } = await supabase.auth.resend({
     type: 'signup',
     email: email.trim(),
@@ -164,6 +172,7 @@ export async function resendConfirmation(email: string): Promise<ResendConfirmat
 }
 
 export async function requestPasswordReset(email: string): Promise<PasswordResetRequestResult> {
+  if (!hasStableAuthRedirect()) return failure('development_build_required');
   const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
     redirectTo: getEmailRedirectTo(),
   });

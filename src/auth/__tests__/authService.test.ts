@@ -11,6 +11,7 @@ import {
   resendConfirmation,
   requestPasswordReset,
   signIn,
+  signInWithProvider,
   signOut,
   signUpBarber,
   signUpCustomer,
@@ -26,6 +27,7 @@ jest.mock('../../../lib/supabase', () => ({
     auth: {
       signUp: jest.fn(),
       signInWithPassword: jest.fn(),
+      signInWithOAuth: jest.fn(),
       resend: jest.fn(),
       resetPasswordForEmail: jest.fn(),
       updateUser: jest.fn(),
@@ -42,7 +44,23 @@ jest.mock('../../../lib/supabase', () => ({
 // pass through as emailRedirectTo, not expo-linking's own behavior.
 jest.mock('../deepLink', () => ({
   getEmailRedirectTo: jest.fn(() => 'privelier://auth-callback'),
+  hasStableAuthRedirect: jest.fn(() => true),
+  applyAuthCallbackUrl: jest.fn(),
 }));
+
+jest.mock('expo-web-browser', () => ({
+  openAuthSessionAsync: jest.fn(),
+}));
+
+const { applyAuthCallbackUrl } = jest.requireMock('../deepLink') as {
+  applyAuthCallbackUrl: jest.Mock;
+};
+const { hasStableAuthRedirect } = jest.requireMock('../deepLink') as {
+  hasStableAuthRedirect: jest.Mock;
+};
+const { openAuthSessionAsync } = jest.requireMock('expo-web-browser') as {
+  openAuthSessionAsync: jest.Mock;
+};
 
 const mockAuth = supabase.auth as jest.Mocked<typeof supabase.auth>;
 const mockFrom = supabase.from as jest.Mock;
@@ -262,6 +280,57 @@ describe('signIn', () => {
   });
 });
 
+describe('signInWithProvider', () => {
+  it('opens the hosted provider flow and applies its PKCE callback', async () => {
+    mockAuth.signInWithOAuth.mockResolvedValue({
+      data: { url: 'https://project.supabase.co/auth/v1/authorize' },
+      error: null,
+    } as never);
+    openAuthSessionAsync.mockResolvedValue({
+      type: 'success',
+      url: 'privelier://auth-callback?code=pkce-code-1',
+    });
+    applyAuthCallbackUrl.mockResolvedValue('applied');
+
+    await expect(signInWithProvider('google')).resolves.toEqual({ status: 'started' });
+
+    expect(mockAuth.signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: { redirectTo: 'privelier://auth-callback', skipBrowserRedirect: true },
+    });
+    expect(openAuthSessionAsync).toHaveBeenCalledWith(
+      'https://project.supabase.co/auth/v1/authorize',
+      'privelier://auth-callback'
+    );
+    expect(applyAuthCallbackUrl).toHaveBeenCalledWith('privelier://auth-callback?code=pkce-code-1');
+  });
+
+  it('does not start OAuth in Expo Go because it cannot receive a stable callback', async () => {
+    hasStableAuthRedirect.mockReturnValueOnce(false);
+
+    await expect(signInWithProvider('google')).resolves.toMatchObject({
+      status: 'error',
+      code: 'development_build_required',
+      retryable: false,
+    });
+    expect(mockAuth.signInWithOAuth).not.toHaveBeenCalled();
+  });
+
+  it('returns a clear retryable error when Supabase has not enabled the provider', async () => {
+    const { AuthApiError } = jest.requireActual('@supabase/supabase-js');
+    mockAuth.signInWithOAuth.mockResolvedValue({
+      data: { url: null },
+      error: new AuthApiError('Unsupported provider: Provider is not enabled', 400, 'validation_failed'),
+    } as never);
+
+    await expect(signInWithProvider('apple')).resolves.toMatchObject({
+      status: 'error',
+      code: 'provider_unavailable',
+      retryable: true,
+    });
+  });
+});
+
 describe('password recovery', () => {
   it('requests a reset link using the registered app callback', async () => {
     mockAuth.resetPasswordForEmail.mockResolvedValue({ data: {}, error: null } as never);
@@ -269,6 +338,16 @@ describe('password recovery', () => {
     expect(mockAuth.resetPasswordForEmail).toHaveBeenCalledWith('test@example.com', {
       redirectTo: 'privelier://auth-callback',
     });
+  });
+
+  it('does not send an unusable reset link from Expo Go', async () => {
+    hasStableAuthRedirect.mockReturnValueOnce(false);
+
+    await expect(requestPasswordReset('test@example.com')).resolves.toMatchObject({
+      status: 'error',
+      code: 'development_build_required',
+    });
+    expect(mockAuth.resetPasswordForEmail).not.toHaveBeenCalled();
   });
 
   it('updates the authenticated recovery session password', async () => {
