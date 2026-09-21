@@ -6,10 +6,10 @@ Improve the customer Discover tab with only real, already-authorized data. This 
 
 ## Information architecture
 
-1. Keep the greeting and add quiet `Nuremberg, Germany` service-area context.
+1. Keep the greeting and show the signed-in user's city and optional country as quiet service-area context.
 2. Keep search and service filters, sourced only from the approved directory and its services.
 3. Show one neutral `Barber spotlight` card when no search/filter is active.
-4. Show the remaining results under `Verified barbers in Nuremberg`.
+4. Show the remaining results under `Verified barbers in {city}`.
 5. Remove unsupported distance, proximity, availability, recommendation, and editorial claims. Remove stock style imagery; profile images remain real barber content.
 
 ## Spotlight rule
@@ -35,3 +35,12 @@ The directory remains primary. If service enrichment fails, barbers still render
 - Preserve current navigation and Maestro test IDs; adapt E2E selection so it is independent of the rotating spotlight.
 - Test dark/light, large text, keyboard, and screen-reader labels on development builds.
 - Security review confirms only authenticated `barber_directory`/`services` reads, no exact coordinates or verification data, no external stock images, and no `service_role` in client code.
+
+## Location-policy update — 2026-09-21
+
+Founder Taha opened the app to all locations, superseding the 2026-09-20
+Nuremberg-only gate. Discovery uses the customer's manually entered city. It
+trims and compares city values case-insensitively, including stored values with
+surrounding whitespace, while keeping aliases such as `Nuremberg` and
+`Nürnberg` distinct. Distance-based discovery from the existing public barber
+coordinates is deferred to its own pipeline.

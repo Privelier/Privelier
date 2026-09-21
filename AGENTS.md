@@ -74,6 +74,8 @@ Do not build any OCR or face-match service. No `face_recognition`, no selfie cap
 
 **Build now:** auth for customer and barber roles, city-based barber discovery, barber profile pages, service creation, availability management, the booking flow end to end, realtime status updates, simple text chat attached to a booking, barber dashboard, portfolio upload (max 6), manual verification.
 
+**Service area (authoritative, founder decision by Taha 2026-09-21):** the app is open to all locations. This supersedes the 2026-09-20 Nuremberg-only gate. Location permission is never required for signup, login, OAuth, app entry, or normal foreground use. Capture city manually during signup/OAuth completion and allow profile edits; discovery matches trimmed city strings case-insensitively without alias mapping.
+
 **Do not build yet, under any circumstance, without explicit founder sign-off:** payments/Stripe, subscriptions, AI-based recommendations, advanced analytics, multi-country/multi-currency logic, automated KYC or biometrics, push notifications.
 
 **Deferred but tracked — do not let these silently disappear from scope:** a dispute resolution and refund/cancellation-fee policy (currently undefined — needed before real money moves in Phase 2), and in-home safety features for the barber-travels-to-you model (live location sharing during the appointment window, an SOS button) — flagged early as the single highest-liability part of this product if skipped indefinitely. Revisit both explicitly when planning Phase 2/3, do not assume they're solved.

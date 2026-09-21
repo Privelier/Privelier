@@ -1,5 +1,21 @@
 # Nuremberg location gate
 
+> **Superseded on 2026-09-21 by founder decision from Taha.** The app is open
+> to all locations. Location permission is not required for signup, login,
+> OAuth, app entry, or foreground use. Manual city capture is restored. The
+> scope, decisions, architecture, and acceptance checks below are historical
+> and must not be reintroduced.
+
+## Replacement implementation
+
+The root, signup, login, OAuth, setup, and foreground recheck gates were
+removed. `expo-location` and its native configuration were removed. Signup and
+OAuth completion now collect a required city and optional country, and users
+can edit both fields later. Discovery compares city values after trimming and
+case-folding; it deliberately does not treat aliases such as `Nuremberg` and
+`Nürnberg` as equivalent. No database migration or existing-user rewrite was
+performed.
+
 ## Scope
 
 Replace manually entered city and country during onboarding with a current-device location gate for both customer and barber accounts. Privelier is available only when the device is currently in Nuremberg, Germany. The gate also runs after sign-in so an existing user who arrives in Nuremberg can use the app without changing profile data manually.

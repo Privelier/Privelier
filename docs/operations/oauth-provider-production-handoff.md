@@ -51,10 +51,11 @@ custom scheme.
 ## Validation gate
 
 From an installed development build, test Google and Apple signup/login for a
-customer and a barber. Confirm callback completion, Nuremberg foreground gate,
-profile provisioning, manual barber verification remaining pending, a second
-login, cancellation, and provider-denied/error states. Test password recovery
-with a fresh email link only once; recovery tokens are intentionally one-time.
+customer and a barber. Confirm callback completion, manual city/country setup,
+profile provisioning without a location-permission prompt, manual barber
+verification remaining pending, a second login, cancellation, and
+provider-denied/error states. Test password recovery with a fresh email link
+only once; recovery tokens are intentionally one-time.
 
 Never commit Google client secrets, Apple private keys, Team IDs, SMTP
 passwords, or any Supabase secret/service-role key. Keep them only in the
