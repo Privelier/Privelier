@@ -2,7 +2,7 @@
 
 ## Verdict
 
-**Fail for 500 concurrent Realtime users.** The live project was inspected on 2026-09-20: it is on Supabase Free with Realtime configured for 200 maximum concurrent clients and 100 events/second. It has no 500-user controlled load result. It must not be described as 500-user ready.
+**Fail for 500 concurrent Realtime users.** Live rechecks on 2026-09-20 and 2026-09-21 found the project on Supabase Free with Realtime configured for 200 maximum concurrent clients and 100 events/second. It has no 500-user controlled load result and only six users, three bookings, and five messages, which is not representative. It must not be described as 500-user ready.
 
 ## Source evidence
 
@@ -43,7 +43,7 @@ Advisor remediation links: [security-definer functions](https://supabase.com/doc
 
 ## 500-user readiness gate
 
-1. Upgrade from Free and configure Realtime for the expected peak. The live 200-client ceiling cannot meet 500 concurrent users. Pro permits 500 concurrent connections, but use headroom rather than treating its ceiling as the launch target.
+1. Upgrade from Free and configure Realtime for the expected peak. The live 200-client ceiling cannot meet 500 concurrent users. A 500-connection tier is not enough headroom for a 500-concurrent-active-session launch commitment; select/configure a tier and spend limit that provides at least 600 connections, then verify the actual dashboard limits before testing.
 2. Run the pagination feature pipeline above before load testing: task decomposition, schema-architect index decision, bounded client data-layer implementation, unit/integration plus Maestro coverage, security review, then integration review. The current unbounded history queries make any test result dependent on accidental account age.
 3. Use a non-production Supabase project with synthetic accounts. Ramp from 25 to 100 to 250 to 500 active sessions; do not point a load test at founders' live user data.
 4. Resolve or explicitly risk-accept the live Advisor security findings, and run the schema-owned RLS performance remediation before the high-concurrency test.
