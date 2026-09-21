@@ -39,6 +39,8 @@ env:
 
 - assertVisible:
     id: "auth-login-screen"
+- assertVisible:
+    id: "auth-login-legal-links"
 - tapOn:
     id: "auth-login-email"
 - inputText: "${TEST_CUSTOMER_EMAIL}"

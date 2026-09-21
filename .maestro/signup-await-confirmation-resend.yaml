@@ -51,6 +51,10 @@ env:
 - tapOn:
     id: "auth-signup-country"
 - inputText: "Portugal"
+- tapOn:
+    id: "auth-signup-legal-terms"
+- tapOn:
+    id: "auth-signup-legal-adult"
 - hideKeyboard
 - tapOn:
     id: "auth-signup-submit"

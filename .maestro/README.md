@@ -268,7 +268,8 @@ label once a review exists); on the barber profile Reviews tab,
 `auth-entry-login`, `auth-entry-signup`, `auth-login-screen`,
 `auth-login-email`, `auth-login-password`, `auth-login-submit`,
 `auth-signup-screen`, `auth-signup-name`, `auth-signup-email`,
-`auth-signup-password`, `auth-signup-city`, `auth-signup-country`, `auth-signup-submit`,
+`auth-signup-password`, `auth-signup-city`, `auth-signup-country`,
+`auth-signup-legal-terms`, `auth-signup-legal-adult`, `auth-signup-submit`,
 `auth-confirm-screen`, `auth-confirm-resend`, `auth-confirm-success`,
 `auth-confirm-error`, `brandmark` (the shared Privelier Signet — default
 testID of `src/shared/components/Brandmark.tsx`; present on RoleSelect, the
