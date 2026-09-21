@@ -19,3 +19,12 @@ foreground use. Signup and OAuth completion collect a required city and an
 optional country manually; users can edit both later. Discovery currently uses
 an exact city match after trimming and case-insensitive comparison. Do not map
 city aliases in this version.
+
+## Legal consent versioning
+
+The legal consent migration intentionally seeds `placeholder-1` for the
+privacy notice and both role-specific terms. Keep this stable placeholder until
+the real legal texts are published and approved. When they are published,
+bump the current version values; the version change will require every user to
+accept the updated legal text again. Do not replace the placeholder merely
+because it looks unfinished.
