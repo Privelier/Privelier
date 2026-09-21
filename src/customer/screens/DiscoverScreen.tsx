@@ -44,21 +44,25 @@ type Props = CompositeScreenProps<
   NativeStackScreenProps<CustomerStackParamList>
 >;
 
-const SERVICE_AREA_LABEL = 'Nuremberg, Germany';
-
 export default function DiscoverScreen({ navigation }: Props) {
   const { colors, fonts } = useTheme();
   const [ownName, setOwnName] = useState<string | null>(null);
+  const [cityName, setCityName] = useState<string | null>(null);
+  const [serviceArea, setServiceArea] = useState<string | null>(null);
   const [barbers, setBarbers] = useState<BarberDirectoryRow[]>([]);
   const [services, setServices] = useState<ServiceRow[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [missingCity, setMissingCity] = useState(false);
   const [query, setQuery] = useState('');
   const [activeService, setActiveService] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setMissingCity(false);
+    setCityName(null);
+    setServiceArea(null);
 
     const profileResult = await fetchOwnProfile();
     if (profileResult.status === 'error') {
@@ -71,9 +75,13 @@ export default function DiscoverScreen({ navigation }: Props) {
     const city = profileResult.profile?.city?.trim();
     if (!city) {
       setLoading(false);
-      setError('We could not confirm your service area. Try again.');
+      setMissingCity(true);
+      setError('Add your city to discover verified barbers near you.');
       return;
     }
+    const country = profileResult.profile?.country?.trim();
+    setCityName(city);
+    setServiceArea(country ? `${city}, ${country}` : city);
 
     const barbersResult = await listBarbersByCity(city);
     if (barbersResult.status !== 'ok') {
@@ -165,7 +173,7 @@ export default function DiscoverScreen({ navigation }: Props) {
                 { color: colors.textSecondary, fontFamily: fonts.body },
               ]}
             >
-              {SERVICE_AREA_LABEL}
+              {serviceArea ?? 'Your city'}
             </Text>
           </View>
         </View>
@@ -239,14 +247,17 @@ export default function DiscoverScreen({ navigation }: Props) {
         ) : error ? (
           <Notice testID="customer-home-error" message={error} style={styles.noticeMargins}>
             <Pressable
-              onPress={() => void load()}
+              onPress={() => {
+                if (missingCity) navigation.navigate('EditProfile');
+                else void load();
+              }}
               accessibilityRole="button"
-              accessibilityLabel="Retry discovery"
-              testID="customer-home-retry"
+              accessibilityLabel={missingCity ? 'Add city to profile' : 'Retry discovery'}
+              testID={missingCity ? 'customer-home-add-city' : 'customer-home-retry'}
               style={styles.noticeAction}
             >
               <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}>
-                Try again
+                {missingCity ? 'Add city' : 'Try again'}
               </Text>
             </Pressable>
           </Notice>
@@ -256,7 +267,7 @@ export default function DiscoverScreen({ navigation }: Props) {
             testID="customer-home-empty"
           >
             {barbers.length === 0
-              ? 'No verified barbers are available in Nuremberg yet.'
+              ? `No verified barbers are available in ${cityName ?? 'your city'} yet.`
               : 'No verified barbers match your search.'}
           </Text>
         ) : (
@@ -293,7 +304,7 @@ export default function DiscoverScreen({ navigation }: Props) {
                       { color: colors.textPrimary, fontFamily: fonts.headingMedium },
                     ]}
                   >
-                    Verified barbers in Nuremberg
+                    {`Verified barbers in ${cityName ?? 'your city'}`}
                   </Text>
                   <Text
                     style={[
@@ -313,7 +324,7 @@ export default function DiscoverScreen({ navigation }: Props) {
                   keyExtractor={(item) => item.id}
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.directoryContent}
-                  accessibilityLabel="Verified barbers in Nuremberg"
+                  accessibilityLabel={`Verified barbers in ${cityName ?? 'your city'}`}
                   renderItem={({ item }) => (
                     <BarberCard
                       barber={item}

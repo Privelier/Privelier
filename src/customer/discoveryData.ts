@@ -33,67 +33,41 @@ const LIST_BARBERS_LIMIT = 100;
 
 /**
  * Escape Postgres ILIKE's wildcard metacharacters (`%`, `_`, and the escape
- * character `\` itself) in a literal string so it is matched as an exact
- * string rather than a pattern. Without this, a city input containing e.g.
- * "%" would silently behave as a wildcard search instead of the exact match
- * the architect review requires.
+ * character `\` itself) so user text cannot widen the candidate query. The
+ * exact comparison happens after the rows return.
  */
 function escapeIlikeLiteral(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
 }
 
 /**
- * Normalize a user-supplied city string for comparison: trim leading/
- * trailing whitespace. Internal whitespace is intentionally left alone (we
- * do not know whether "New  York" with a doubled space is a typo or, in
- * principle, part of a legitimate place name) — only leading/trailing
- * whitespace is unambiguous to strip.
+ * Internal whitespace and accented characters are preserved. Aliases such as
+ * Nuremberg and Nürnberg intentionally remain distinct.
  */
-function normalizeCityInput(value: string): string {
-  return value.trim();
+function normalizeCity(value: string): string {
+  return value.trim().toLocaleLowerCase();
 }
 
 /**
- * List approved barbers whose `city` matches the given city, using a
- * case/whitespace-normalized exact match.
- *
- * Reasoning on the normalization approach (architect-review requirement:
- * `lower(trim(city)) = lower(trim($input))`, not substring/ilike matching):
- *
- * The Supabase/PostgREST JS query builder can only express filters PostgREST
- * exposes as operators (eq, ilike, etc.) against a column as stored — it
- * cannot call an arbitrary SQL function like `trim()` or `lower()` on the
- * *stored* column value from the client. Doing that server-side would
- * require a computed column, a view, or an RPC function, all of which are
- * schema changes and out of scope for this pipeline run (schema is sacred;
- * one feature per pipeline run).
- *
- * Given that constraint, this function normalizes what it *can* control —
- * the input side — by trimming it, and uses Postgres `ILIKE` with no
- * wildcards (after escaping any literal `%`/`_`/`\` in the input) for
- * case-insensitive comparison. `ILIKE` alone does not trim whitespace
- * *stored* in the `city` column, so a stored value with stray leading/
- * trailing whitespace (e.g. a "London " typo that made it into `users.city`
- * at signup/profile-edit time) would still fail to match even though it is
- * "the same" city. That is a genuine limitation of filtering from the JS
- * client against unnormalized stored data, not an oversight — the correct
- * long-term fix is normalizing `city` at write time (signup/profile-edit
- * validation) or, later, a dedicated normalized column/index, both out of
- * scope here. This function delivers exact-match semantics that are
- * case-insensitive and input-whitespace-insensitive, which is the closest
- * correct behavior achievable without a schema change.
+ * PostgREST cannot trim the stored column. The broad ILIKE query admits rows
+ * with surrounding whitespace; the client-side comparison then enforces an
+ * exact trimmed, case-insensitive match.
  */
 export async function listBarbersByCity(city: string): Promise<ListBarbersResult> {
-  const normalized = normalizeCityInput(city);
+  const trimmed = city.trim();
+  const normalized = normalizeCity(city);
   const { data, error } = await supabase
     .from('barber_directory')
     .select('*')
-    .ilike('city', escapeIlikeLiteral(normalized))
+    .ilike('city', `%${escapeIlikeLiteral(trimmed)}%`)
     .order('name', { ascending: true })
     .limit(LIST_BARBERS_LIMIT);
 
   if (error) return mapPostgrestError('listBarbersByCity', error);
-  return { status: 'ok', barbers: (data as BarberDirectoryRow[]) ?? [] };
+  const barbers = ((data as BarberDirectoryRow[]) ?? []).filter(
+    (barber) => normalizeCity(barber.city ?? '') === normalized
+  );
+  return { status: 'ok', barbers };
 }
 
 /** Fetch a single approved barber's public profile by id. */

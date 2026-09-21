@@ -63,7 +63,7 @@ const profile: UsersRow = {
   email: 'nora@example.com',
   phone: null,
   role: 'customer',
-  city: 'Nuremberg',
+  city: 'Nürnberg ',
   country: 'Germany',
   profile_image: null,
   created_at: '2026-09-21T00:00:00.000Z',
@@ -133,8 +133,9 @@ describe('DiscoverScreen', () => {
     });
     await waitFor(() => expect(screen.getByText('Barber spotlight')).toBeTruthy());
 
-    expect(screen.getByText('Nuremberg, Germany')).toBeTruthy();
-    expect(screen.getByText('Verified barbers in Nuremberg')).toBeTruthy();
+    expect(mockListBarbers).toHaveBeenCalledWith('Nürnberg');
+    expect(screen.getByText('Nürnberg, Germany')).toBeTruthy();
+    expect(screen.getByText('Verified barbers in Nürnberg')).toBeTruthy();
     expect(screen.queryByText('Nearby masters')).toBeNull();
     expect(screen.queryByText('Style inspiration')).toBeNull();
     expect(screen.queryByText(/within reach/i)).toBeNull();

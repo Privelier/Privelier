@@ -60,17 +60,21 @@ function chainable(result: unknown) {
 // ---------------------------------------------------------------------------
 
 describe('listBarbersByCity', () => {
-  it('returns ok with the barbers array on success, querying barber_directory ordered by name and capped at 100', async () => {
+  it('returns exact city matches after trimming and case-folding both sides', async () => {
     const rows = [
-      { id: 'b-1', name: 'Ada', city: 'Paris', country: 'France', profile_image: null, bio: null, rating: 0 },
+      { id: 'b-1', name: 'Ada', city: 'nürnberg', country: 'Germany', profile_image: null, bio: null, rating: 0 },
+      { id: 'b-2', name: 'Bea', city: 'Nürnberg ', country: 'Germany', profile_image: null, bio: null, rating: 0 },
+      { id: 'b-3', name: 'Cam', city: 'Nuremberg', country: 'Germany', profile_image: null, bio: null, rating: 0 },
+      { id: 'b-4', name: 'Dan', city: 'Nürnbergville', country: 'Germany', profile_image: null, bio: null, rating: 0 },
     ];
     const builder = chainable({ data: rows, error: null });
     mockFrom.mockReturnValueOnce(builder);
 
-    const result = await listBarbersByCity('Paris');
+    const result = await listBarbersByCity('  Nürnberg  ');
 
-    expect(result).toEqual({ status: 'ok', barbers: rows });
+    expect(result).toEqual({ status: 'ok', barbers: rows.slice(0, 2) });
     expect(mockFrom).toHaveBeenCalledWith('barber_directory');
+    expect(builder.ilike).toHaveBeenCalledWith('city', '%Nürnberg%');
     expect(builder.order).toHaveBeenCalledWith('name', { ascending: true });
     expect(builder.limit).toHaveBeenCalledWith(100);
   });
@@ -101,7 +105,7 @@ describe('listBarbersByCity', () => {
 
       await listBarbersByCity('  Paris  ');
 
-      expect(builder.ilike).toHaveBeenCalledWith('city', 'Paris');
+      expect(builder.ilike).toHaveBeenCalledWith('city', '%Paris%');
     });
 
     it('does not trim internal whitespace', async () => {
@@ -110,7 +114,7 @@ describe('listBarbersByCity', () => {
 
       await listBarbersByCity('  New  York  ');
 
-      expect(builder.ilike).toHaveBeenCalledWith('city', 'New  York');
+      expect(builder.ilike).toHaveBeenCalledWith('city', '%New  York%');
     });
 
     it('escapes a literal "%" so it is not treated as an ILIKE wildcard', async () => {
@@ -119,7 +123,7 @@ describe('listBarbersByCity', () => {
 
       await listBarbersByCity('50% off');
 
-      expect(builder.ilike).toHaveBeenCalledWith('city', '50\\% off');
+      expect(builder.ilike).toHaveBeenCalledWith('city', '%50\\% off%');
     });
 
     it('escapes a literal "_" so it is not treated as an ILIKE single-char wildcard', async () => {
@@ -128,7 +132,7 @@ describe('listBarbersByCity', () => {
 
       await listBarbersByCity('san_francisco');
 
-      expect(builder.ilike).toHaveBeenCalledWith('city', 'san\\_francisco');
+      expect(builder.ilike).toHaveBeenCalledWith('city', '%san\\_francisco%');
     });
 
     it('escapes a literal backslash before escaping "%"/"_" so the escaping itself cannot be subverted', async () => {
@@ -137,7 +141,7 @@ describe('listBarbersByCity', () => {
 
       await listBarbersByCity(String.raw`50%_off\special`);
 
-      expect(builder.ilike).toHaveBeenCalledWith('city', '50\\%\\_off\\\\special');
+      expect(builder.ilike).toHaveBeenCalledWith('city', '%50\\%\\_off\\\\special%');
     });
 
     it('combines trimming and escaping for a city input with both whitespace and metacharacters', async () => {
@@ -146,7 +150,7 @@ describe('listBarbersByCity', () => {
 
       await listBarbersByCity('  100%_off  ');
 
-      expect(builder.ilike).toHaveBeenCalledWith('city', '100\\%\\_off');
+      expect(builder.ilike).toHaveBeenCalledWith('city', '%100\\%\\_off%');
     });
   });
 });
