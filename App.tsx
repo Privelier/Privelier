@@ -1,16 +1,15 @@
 /**
  * Root of the app — the single session-driven root switch (Contract A).
  *
- * Exactly ONE of these renders at a time, derived from session, location, and profile:
+ * Exactly ONE of these renders at a time, derived from session and profile:
  * by useAuthShell:
  * 1. RESTORING        → native splash stays visible; no navigator mounted.
- * 2. LOCATION GATE    → current foreground eligibility before auth or app access.
- * 3. UNAUTHENTICATED  → pre-auth shell (AuthNavigator: RoleSelect → per-role
+ * 2. UNAUTHENTICATED  → pre-auth shell (AuthNavigator: RoleSelect → per-role
  *                       login/signup; AwaitEmailConfirmation lives inside it
  *                       as client navigation state).
- * 4. PROVISIONING     → ensureProfile() in flight / finish-setup form /
+ * 3. PROVISIONING     → ensureProfile() in flight / finish-setup form /
  *                       retryable failure.
- * 5. AUTHENTICATED    → role from the public.users row ONLY:
+ * 4. AUTHENTICATED    → role from the public.users row ONLY:
  *                       customer → CustomerNavigator, barber → BarberNavigator,
  *                       admin → AdminNotSupportedScreen.
  *
@@ -33,7 +32,6 @@ import AuthLinkErrorScreen from './src/auth/screens/AuthLinkErrorScreen';
 import { useAuthShell, type AuthShell } from './src/auth/useAuthShell';
 import CustomerNavigator from './src/customer/CustomerNavigator';
 import BarberNavigator from './src/barber/BarberNavigator';
-import LocationGateScreen from './src/location/LocationGateScreen';
 import { appFonts } from './src/theme/typography';
 
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
@@ -42,15 +40,13 @@ import '@/global.css';
 SplashScreen.preventAutoHideAsync();
 
 function renderRoot(shell: AuthShell): ReactElement {
-  const { state, retryLocation, retryProvisioning, submitSetupForm, signOutNow, finishPasswordRecovery, dismissPasswordRecovery, dismissAuthLinkError } = shell;
+  const { state, retryProvisioning, submitSetupForm, signOutNow, finishPasswordRecovery, dismissPasswordRecovery, dismissAuthLinkError } = shell;
   switch (state.phase) {
     case 'restoring':
     case 'unauthenticated':
       // 'restoring' never reaches here (App returns null first); listing it
       // keeps the switch exhaustive for TypeScript.
       return <AuthNavigator />;
-    case 'location_gate':
-      return <LocationGateScreen view={state.view} onRetry={retryLocation} />;
     case 'provisioning':
       if (state.view.kind === 'setup_form') {
         return (

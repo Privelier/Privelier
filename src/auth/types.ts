@@ -5,15 +5,6 @@
  */
 import type { Role, UsersRow } from '../types';
 import type { AuthFailure } from './errors';
-import type { LocationEligibility } from '../location/locationEligibility';
-
-/**
- * A successful, foreground-only location check for Privelier's sole service
- * area. Callers must pass the result itself rather than recreating city and
- * country strings from UI state.
- */
-export type EligibleNurembergLocation = Extract<LocationEligibility, { status: 'eligible' }>;
-
 /** Profile fields collected at customer signup. */
 export interface SignUpProfileFields {
   name: string;

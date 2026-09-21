@@ -26,7 +26,6 @@ import type {
   BarberSignUpProfileFields,
   EnsureProfileResult,
   FetchOwnProfileResult,
-  EligibleNurembergLocation,
   ProfilePrefill,
   PasswordResetRequestResult,
   PasswordUpdateResult,
@@ -54,16 +53,6 @@ interface ProvisionFields {
   bio?: string;
 }
 
-function isEligibleNurembergLocation(value: unknown): value is EligibleNurembergLocation {
-  if (!value || typeof value !== 'object') return false;
-  const location = value as Record<string, unknown>;
-  return (
-    location.status === 'eligible' &&
-    location.city === 'Nuremberg' &&
-    location.country === 'Germany'
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Sign up (Contract B §signUp)
 // ---------------------------------------------------------------------------
@@ -71,13 +60,8 @@ function isEligibleNurembergLocation(value: unknown): value is EligibleNuremberg
 async function signUp(
   email: string,
   password: string,
-  metadata: ProvisionFields,
-  location: EligibleNurembergLocation
+  metadata: ProvisionFields
 ): Promise<SignUpResult> {
-  if (!isEligibleNurembergLocation(location)) {
-    logAuthError('signUp', 'called without an eligible Nuremberg location result');
-    return failure('unknown');
-  }
   if (!hasStableAuthRedirect()) return failure('development_build_required');
   const normalizedEmail = email.trim();
   // Single write. options.data is stored as user_metadata — a prefill hint
@@ -91,8 +75,6 @@ async function signUp(
       data: {
         name: metadata.name,
         role: metadata.role,
-        city: location.city,
-        country: location.country,
         phone: metadata.phone,
         bio: metadata.bio,
       },
@@ -114,19 +96,17 @@ async function signUp(
 export function signUpCustomer(
   email: string,
   password: string,
-  fields: SignUpProfileFields,
-  location: EligibleNurembergLocation
+  fields: SignUpProfileFields
 ): Promise<SignUpResult> {
-  return signUp(email, password, { role: 'customer', ...fields }, location);
+  return signUp(email, password, { role: 'customer', ...fields });
 }
 
 export function signUpBarber(
   email: string,
   password: string,
-  fields: BarberSignUpProfileFields,
-  location: EligibleNurembergLocation
+  fields: BarberSignUpProfileFields
 ): Promise<SignUpResult> {
-  return signUp(email, password, { role: 'barber', ...fields }, location);
+  return signUp(email, password, { role: 'barber', ...fields });
 }
 
 // ---------------------------------------------------------------------------
@@ -337,13 +317,8 @@ async function ensureBarberProfileRow(
 
 async function provisionForSession(
   session: Session,
-  formFields: SetupFormFields | null,
-  location: EligibleNurembergLocation
+  formFields: SetupFormFields | null
 ): Promise<EnsureProfileResult> {
-  if (!isEligibleNurembergLocation(location)) {
-    logAuthError('ensureProfile', 'called without an eligible Nuremberg location result');
-    return failure('unknown');
-  }
   const fetched = await fetchProfileById(session.user.id);
   if (fetched.status === 'error') return fetched;
 
@@ -385,8 +360,6 @@ async function provisionForSession(
         email,
         name: fields.name,
         role: fields.role,
-        city: location.city,
-        country: location.country,
         phone: fields.phone ?? null,
       })
       .select()
@@ -419,22 +392,6 @@ async function provisionForSession(
     }
   }
 
-  // Existing accounts may predate the foreground gate or have been created
-  // while the app supported manual city entry. Keep the stored discovery
-  // scope in sync with the freshly derived, canonical service area.
-  if (profile.city !== location.city || profile.country !== location.country) {
-    const reconciled = await supabase
-      .from('users')
-      .update({ city: location.city, country: location.country })
-      .eq('id', profile.id)
-      .select('*')
-      .single();
-    if (reconciled.error) {
-      return mapPostgrestError('ensureProfile.users.reconcileLocation', reconciled.error);
-    }
-    profile = reconciled.data as UsersRow;
-  }
-
   // Second, sequential call ONLY after the users row is confirmed committed.
   if (profile.role === 'barber') {
     const barberFailure = await ensureBarberProfileRow(profile.id, bioHint);
@@ -449,13 +406,11 @@ async function provisionForSession(
  * exists and after every successful sign-in. Safe to call repeatedly and
  * concurrently: duplicate-key races resolve as success-of-the-other-writer.
  */
-export async function ensureProfile(
-  location: EligibleNurembergLocation
-): Promise<EnsureProfileResult> {
+export async function ensureProfile(): Promise<EnsureProfileResult> {
   const sessionResult = await getSession();
   if (sessionResult.status === 'error') return sessionResult;
   if (!sessionResult.session) return { status: 'signed_out' };
-  return provisionForSession(sessionResult.session, null, location);
+  return provisionForSession(sessionResult.session, null);
 }
 
 /**
@@ -465,8 +420,7 @@ export async function ensureProfile(
  * runtime; email still comes from the session, never from the form.
  */
 export async function ensureProfileFromForm(
-  fields: SetupFormFields,
-  location: EligibleNurembergLocation
+  fields: SetupFormFields
 ): Promise<EnsureProfileResult> {
   if (!isClientRole(fields.role)) {
     logAuthError('ensureProfileFromForm', `invalid role value: ${String(fields.role)}`);
@@ -480,5 +434,5 @@ export async function ensureProfileFromForm(
   const sessionResult = await getSession();
   if (sessionResult.status === 'error') return sessionResult;
   if (!sessionResult.session) return { status: 'signed_out' };
-  return provisionForSession(sessionResult.session, { ...fields, name }, location);
+  return provisionForSession(sessionResult.session, { ...fields, name });
 }

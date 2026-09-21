@@ -41,13 +41,7 @@
           }
         }
       ],
-      "expo-secure-store",
-      [
-        "expo-location",
-        {
-          "locationWhenInUsePermission": "Allow Privelier to use your location while you use the app to confirm service availability in Nuremberg."
-        }
-      ]
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {

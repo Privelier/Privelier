@@ -16,9 +16,6 @@ import { useCallback, useRef, useState } from 'react';
 import { StyleSheet, Text, View, type TextInput } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { signInWithProvider, signUpBarber, signUpCustomer } from '../authService';
-import { checkLocationEligibility, type LocationEligibility } from '../../location/locationEligibility';
-import { nativeLocationGateway } from '../../location/nativeLocationGateway';
-import { LocationAccessNotice } from '../../location/LocationAccessNotice';
 import { useTheme } from '../../theme/useTheme';
 import type { AuthStackParamList } from './AuthNavigator';
 import { emailError, optionalText, requiredText, signupPasswordError, PASSWORD_MIN_LENGTH } from './validation';
@@ -41,8 +38,6 @@ interface FieldErrors {
   password?: string;
 }
 
-type BlockedLocation = Exclude<LocationEligibility, { status: 'eligible' }>;
-
 export default function SignupScreen({ navigation, route }: Props) {
   const { role } = route.params;
   const isBarber = role === 'barber';
@@ -55,7 +50,6 @@ export default function SignupScreen({ navigation, route }: Props) {
   const [bio, setBio] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
-  const [locationIssue, setLocationIssue] = useState<BlockedLocation | null>(null);
   const [emailInUse, setEmailInUse] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [providerSubmitting, setProviderSubmitting] = useState<'google' | 'apple' | null>(null);
@@ -71,7 +65,6 @@ export default function SignupScreen({ navigation, route }: Props) {
     };
     setFieldErrors(errors);
     setFormError(null);
-    setLocationIssue(null);
     setEmailInUse(false);
     if (errors.name || errors.email || errors.password) return;
 
@@ -81,15 +74,9 @@ export default function SignupScreen({ navigation, route }: Props) {
     };
 
     setSubmitting(true);
-    const location = await checkLocationEligibility(nativeLocationGateway);
-    if (location.status !== 'eligible') {
-      setLocationIssue(location);
-      setSubmitting(false);
-      return;
-    }
     const result = isBarber
-      ? await signUpBarber(email, password, { ...profileFields, bio: optionalText(bio) }, location)
-      : await signUpCustomer(email, password, profileFields, location);
+      ? await signUpBarber(email, password, { ...profileFields, bio: optionalText(bio) })
+      : await signUpCustomer(email, password, profileFields);
     setSubmitting(false);
 
     switch (result.status) {
@@ -114,14 +101,7 @@ export default function SignupScreen({ navigation, route }: Props) {
 
   const onProviderPress = useCallback(async (provider: 'google' | 'apple') => {
     setFormError(null);
-    setLocationIssue(null);
     setProviderSubmitting(provider);
-    const location = await checkLocationEligibility(nativeLocationGateway);
-    if (location.status !== 'eligible') {
-      setLocationIssue(location);
-      setProviderSubmitting(null);
-      return;
-    }
     const result = await signInWithProvider(provider);
     setProviderSubmitting(null);
     if (result.status === 'error') setFormError(result.message);
@@ -139,7 +119,6 @@ export default function SignupScreen({ navigation, route }: Props) {
         }
       />
       {formError ? <Notice kind="error" message={formError} testID="auth-signup-error" /> : null}
-      {locationIssue ? <LocationAccessNotice reason={locationIssue} testID="auth-signup-location-error" /> : null}
       <FormTextField
         label="Name"
         value={name}
