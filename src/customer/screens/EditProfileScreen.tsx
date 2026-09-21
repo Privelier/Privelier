@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { fetchOwnProfile } from '../../auth/authService';
@@ -15,8 +15,10 @@ import type { CustomerStackParamList } from '../CustomerNavigator';
 type Props = NativeStackScreenProps<CustomerStackParamList, 'EditProfile'>;
 
 export default function EditProfileScreen({ navigation }: Props) {
-  const { colors, fonts } = useTheme();
+  const { colors } = useTheme();
   const [name, setName] = useState('');
+  const [city, setCity] = useState('');
+  const [country, setCountry] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,22 +33,24 @@ export default function EditProfileScreen({ navigation }: Props) {
       return;
     }
     setName(result.profile.name);
+    setCity(result.profile.city ?? '');
+    setCountry(result.profile.country ?? '');
   }, []);
 
   useEffect(() => { Promise.resolve().then(() => void load()); }, [load]);
 
   const save = useCallback(async () => {
-    if (name.trim().length < 2) {
-      setError('Enter your name.');
+    if (name.trim().length < 2 || city.trim().length < 2) {
+      setError('Enter your name and city.');
       return;
     }
     setSaving(true);
     setError(null);
-    const result = await updateOwnProfile({ name });
+    const result = await updateOwnProfile({ name, city, country });
     setSaving(false);
     if (result.status === 'ok') navigation.goBack();
     else setError(result.message);
-  }, [name, navigation]);
+  }, [name, city, country, navigation]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right', 'bottom']} testID="customer-edit-profile-screen">
@@ -55,14 +59,13 @@ export default function EditProfileScreen({ navigation }: Props) {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {error ? <Notice message={error} testID="customer-edit-profile-error" style={styles.notice}><PrimaryButton label="Try again" onPress={() => void load()} testID="customer-edit-profile-retry" /></Notice> : null}
           <FormTextField label="Name" value={name} onChangeText={setName} testID="customer-edit-profile-name" autoComplete="name" textContentType="name" />
-          <Text style={[styles.serviceArea, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-            Service area: Nuremberg, Germany
-          </Text>
-          <PrimaryButton label="Save profile" onPress={save} loading={saving || loading} disabled={name.trim().length < 2} testID="customer-edit-profile-save" />
+          <FormTextField label="City" value={city} onChangeText={setCity} testID="customer-edit-profile-city" textContentType="addressCity" />
+          <FormTextField label="Country" value={country} onChangeText={setCountry} optional testID="customer-edit-profile-country" autoComplete="country" textContentType="countryName" />
+          <PrimaryButton label="Save profile" onPress={save} loading={saving || loading} disabled={name.trim().length < 2 || city.trim().length < 2} testID="customer-edit-profile-save" />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({ container: { flex: 1 }, content: { padding: space.xl }, notice: { marginBottom: space.lg }, serviceArea: { fontSize: 14, lineHeight: 20, marginBottom: space.lg } });
+const styles = StyleSheet.create({ container: { flex: 1 }, content: { padding: space.xl }, notice: { marginBottom: space.lg } });

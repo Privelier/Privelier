@@ -36,6 +36,7 @@ interface FieldErrors {
   name?: string;
   email?: string;
   password?: string;
+  city?: string;
 }
 
 export default function SignupScreen({ navigation, route }: Props) {
@@ -46,6 +47,8 @@ export default function SignupScreen({ navigation, route }: Props) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [city, setCity] = useState('');
+  const [country, setCountry] = useState('');
   const [phone, setPhone] = useState('');
   const [bio, setBio] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -53,23 +56,28 @@ export default function SignupScreen({ navigation, route }: Props) {
   const [emailInUse, setEmailInUse] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [providerSubmitting, setProviderSubmitting] = useState<'google' | 'apple' | null>(null);
-  // Focus chain for the required fields: name → email → password → submit.
+  // Focus chain for the required fields: name → email → password → city → submit
+  // (optional country/phone/bio are left out of the keyboard chain).
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
+  const cityRef = useRef<TextInput>(null);
 
   const onSubmit = useCallback(async () => {
     const errors: FieldErrors = {
       name: requiredText(name, 'Enter your name.'),
       email: emailError(email),
       password: signupPasswordError(password),
+      city: requiredText(city, 'Enter your city.'),
     };
     setFieldErrors(errors);
     setFormError(null);
     setEmailInUse(false);
-    if (errors.name || errors.email || errors.password) return;
+    if (errors.name || errors.email || errors.password || errors.city) return;
 
     const profileFields = {
       name: name.trim(),
+      city: city.trim(),
+      country: optionalText(country),
       phone: optionalText(phone),
     };
 
@@ -97,7 +105,7 @@ export default function SignupScreen({ navigation, route }: Props) {
         }
         break;
     }
-  }, [name, email, password, phone, bio, isBarber, navigation, role]);
+  }, [name, email, password, city, country, phone, bio, isBarber, navigation, role]);
 
   const onProviderPress = useCallback(async (provider: 'google' | 'apple') => {
     setFormError(null);
@@ -167,9 +175,31 @@ export default function SignupScreen({ navigation, route }: Props) {
         autoComplete="new-password"
         textContentType="newPassword"
         inputRef={passwordRef}
+        returnKeyType="next"
+        onSubmitEditing={() => cityRef.current?.focus()}
+        blurOnSubmit={false}
+        testID="auth-signup-password"
+      />
+      <FormTextField
+        label="City"
+        value={city}
+        onChangeText={setCity}
+        error={fieldErrors.city}
+        autoCapitalize="words"
+        inputRef={cityRef}
         returnKeyType="done"
         onSubmitEditing={onSubmit}
-        testID="auth-signup-password"
+        testID="auth-signup-city"
+      />
+      <FormTextField
+        label="Country"
+        value={country}
+        onChangeText={setCountry}
+        optional
+        autoCapitalize="words"
+        autoComplete="country"
+        textContentType="countryName"
+        testID="auth-signup-country"
       />
       <FormTextField
         label="Phone"

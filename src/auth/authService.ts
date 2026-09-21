@@ -49,6 +49,8 @@ function isClientRole(value: unknown): value is Role {
 interface ProvisionFields {
   role: Role;
   name: string;
+  city?: string;
+  country?: string;
   phone?: string;
   bio?: string;
 }
@@ -64,6 +66,12 @@ async function signUp(
 ): Promise<SignUpResult> {
   if (!hasStableAuthRedirect()) return failure('development_build_required');
   const normalizedEmail = email.trim();
+  const normalizedMetadata = {
+    ...metadata,
+    name: metadata.name.trim(),
+    city: metadata.city?.trim(),
+    country: metadata.country?.trim() || undefined,
+  };
   // Single write. options.data is stored as user_metadata — a prefill hint
   // for deferred provisioning ONLY, never authorization (RLS + the 0005
   // triggers are the authority).
@@ -73,10 +81,12 @@ async function signUp(
     options: {
       emailRedirectTo: getEmailRedirectTo(),
       data: {
-        name: metadata.name,
-        role: metadata.role,
-        phone: metadata.phone,
-        bio: metadata.bio,
+        name: normalizedMetadata.name,
+        role: normalizedMetadata.role,
+        city: normalizedMetadata.city,
+        country: normalizedMetadata.country,
+        phone: normalizedMetadata.phone,
+        bio: normalizedMetadata.bio,
       },
     },
   });
@@ -266,6 +276,8 @@ function parseMetadata(rawMetadata: Record<string, unknown> | undefined): Metada
   const prefill: ProfilePrefill = {
     role,
     name,
+    city: asOptionalString(meta.city),
+    country: asOptionalString(meta.country),
     phone: asOptionalString(meta.phone),
     bio: asOptionalString(meta.bio),
   };
@@ -275,6 +287,8 @@ function parseMetadata(rawMetadata: Record<string, unknown> | undefined): Metada
     fields: {
       role,
       name,
+      city: prefill.city,
+      country: prefill.country,
       phone: prefill.phone,
       bio: prefill.bio,
     },
@@ -360,6 +374,8 @@ async function provisionForSession(
         email,
         name: fields.name,
         role: fields.role,
+        city: fields.city ?? null,
+        country: fields.country ?? null,
         phone: fields.phone ?? null,
       })
       .select()
@@ -427,12 +443,18 @@ export async function ensureProfileFromForm(
     return failure('unknown');
   }
   const name = fields.name.trim();
-  if (name.length === 0) {
-    logAuthError('ensureProfileFromForm', 'empty name');
+  const city = fields.city.trim();
+  if (name.length === 0 || city.length === 0) {
+    logAuthError('ensureProfileFromForm', 'empty name or city');
     return failure('unknown');
   }
   const sessionResult = await getSession();
   if (sessionResult.status === 'error') return sessionResult;
   if (!sessionResult.session) return { status: 'signed_out' };
-  return provisionForSession(sessionResult.session, { ...fields, name });
+  return provisionForSession(sessionResult.session, {
+    ...fields,
+    name,
+    city,
+    country: fields.country?.trim() || undefined,
+  });
 }

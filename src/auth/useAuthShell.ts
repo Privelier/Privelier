@@ -1,7 +1,8 @@
 /**
  * Session-driven root state machine (Contract A, build-order step 5).
  *
- * Drives the single root switch in App.tsx over the session and profile row.
+ * Drives the single root switch in App.tsx over (session, profileRow):
+ *   RESTORING → UNAUTHENTICATED | PROVISIONING → AUTHENTICATED
  *
  * Binding rules implemented here:
  * - onAuthStateChange is subscribed ONCE and unsubscribed on unmount.
@@ -9,8 +10,9 @@
  *   supabase calls (known supabase-js deadlock). ensureProfile() runs in an
  *   effect reacting to state instead.
  * - SIGNED_OUT clears ALL cached profile state.
- * - TOKEN_REFRESHED / USER_UPDATED update the session object without
- *   remounting an authenticated navigator.
+ * - TOKEN_REFRESHED / USER_UPDATED update the session object but cannot
+ *   change the derived phase while a profile row is cached, so the root
+ *   switch keeps rendering the same element types — navigators never remount.
  * - Routing authority is public.users.role from ensureProfile's returned
  *   profile — never user_metadata, never which auth screen was used.
  */
@@ -56,6 +58,7 @@ export function useAuthShell(): AuthShell {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UsersRow | null>(null);
   const [view, setView] = useState<ProvisioningView>({ kind: 'loading' });
+  const [attempt, setAttempt] = useState(0);
   const [passwordRecovery, setPasswordRecovery] = useState<'opening' | 'ready' | 'expired' | 'error' | null>(null);
   const [authLinkError, setAuthLinkError] = useState<'expired' | 'error' | null>(null);
 
@@ -84,8 +87,6 @@ export function useAuthShell(): AuthShell {
           setRestoring(false);
           break;
         case 'SIGNED_IN':
-          setSession(nextSession ?? null);
-          break;
         case 'TOKEN_REFRESHED':
         case 'USER_UPDATED':
           // No navigation change on refresh/update: the derived phase stays
@@ -141,7 +142,6 @@ export function useAuthShell(): AuthShell {
         setProfile(result.profile);
         break;
       case 'needs_setup_form':
-        setProfile(null);
         setView({ kind: 'setup_form', prefill: result.prefill });
         break;
       case 'signed_out':
@@ -152,33 +152,33 @@ export function useAuthShell(): AuthShell {
         setView({ kind: 'loading' });
         break;
       case 'error':
-        setProfile(null);
         setView({ kind: 'failure', failure: result });
         break;
     }
   }, []);
 
-  // Provision once per signed-in user. Token refreshes preserve the mounted
-  // app shell because this effect keys on user id rather than session object.
+  // PROVISIONING: run ensureProfile() via an effect reacting to state —
+  // never from inside the onAuthStateChange callback. Keyed on the user id
+  // (not the session object) so token refreshes do not re-trigger it.
+  // The view is already 'loading' whenever a provisioning cycle begins: it is
+  // the initial value, SIGNED_OUT resets it, and retryProvisioning resets it
+  // in the event handler — so the effect body never calls setState directly.
   const userId = session?.user.id ?? null;
   useEffect(() => {
-    if (restoring || userId === null) return;
-    let active = true;
-    void (async () => {
-      setView({ kind: 'loading' });
-      const profileResult = await ensureProfile();
-      if (!active) return;
-      applyEnsureResult(profileResult);
-    })();
+    if (restoring || userId === null || profile !== null) return;
+    let cancelled = false;
+    ensureProfile().then((result) => {
+      if (!cancelled) applyEnsureResult(result);
+    });
     return () => {
-      active = false;
+      cancelled = true;
     };
-  }, [restoring, userId, applyEnsureResult]);
+  }, [restoring, userId, profile, attempt, applyEnsureResult]);
 
   const retryProvisioning = useCallback(() => {
     setView({ kind: 'loading' });
-    void ensureProfile().then(applyEnsureResult);
-  }, [applyEnsureResult]);
+    setAttempt((current) => current + 1);
+  }, []);
 
   const submitSetupForm = useCallback(
     async (fields: SetupFormFields): Promise<EnsureProfileResult> => {
@@ -199,9 +199,7 @@ export function useAuthShell(): AuthShell {
     void signOut();
   }, []);
 
-  const finishPasswordRecovery = useCallback(() => {
-    setPasswordRecovery(null);
-  }, []);
+  const finishPasswordRecovery = useCallback(() => setPasswordRecovery(null), []);
   const dismissPasswordRecovery = useCallback(() => {
     setPasswordRecovery(null);
     void signOut();

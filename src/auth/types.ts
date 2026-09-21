@@ -5,9 +5,12 @@
  */
 import type { Role, UsersRow } from '../types';
 import type { AuthFailure } from './errors';
+
 /** Profile fields collected at customer signup. */
 export interface SignUpProfileFields {
   name: string;
+  city: string;
+  country?: string;
   phone?: string;
 }
 
@@ -61,6 +64,8 @@ export type FetchOwnProfileResult =
 export interface ProfilePrefill {
   role?: Role;
   name?: string;
+  city?: string;
+  country?: string;
   phone?: string;
   bio?: string;
 }
@@ -69,6 +74,8 @@ export interface ProfilePrefill {
 export interface SetupFormFields {
   role: Role;
   name: string;
+  city: string;
+  country?: string;
   phone?: string;
   bio?: string;
 }
