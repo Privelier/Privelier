@@ -48,6 +48,9 @@ env:
 - tapOn:
     id: "auth-signup-city"
 - inputText: "Lisbon"
+- tapOn:
+    id: "auth-signup-country"
+- inputText: "Portugal"
 - hideKeyboard
 - tapOn:
     id: "auth-signup-submit"

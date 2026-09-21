@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { BarberDirectoryRow, ServiceRow, UsersRow } from '../../../types';
 import { fetchOwnProfile } from '../../../auth/authService';
 import { listBarbersByCity, listServicesForBarberIds } from '../../discoveryData';
@@ -114,24 +114,23 @@ const services: ServiceRow[] = [
 ];
 
 describe('DiscoverScreen', () => {
-  it('renders truthful discovery, hides spotlight while filtering, and preserves profile navigation', async () => {
-    let resolveProfile!: (value: { status: 'ok'; profile: UsersRow }) => void;
-    mockFetchOwnProfile.mockReturnValue(
-      new Promise((resolve) => {
-        resolveProfile = resolve;
-      })
-    );
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  async function renderDiscovery() {
+    mockFetchOwnProfile.mockResolvedValue({ status: 'ok', profile });
     mockListBarbers.mockResolvedValue({ status: 'ok', barbers });
     mockListServices.mockResolvedValue({ status: 'ok', services });
     const navigate = jest.fn();
 
     await render(<DiscoverScreen navigation={{ navigate } as never} route={{} as never} />);
-    expect(screen.getByTestId('customer-home-loading')).toBeTruthy();
-
-    await act(async () => {
-      resolveProfile({ status: 'ok', profile });
-    });
     await waitFor(() => expect(screen.getByText('Barber spotlight')).toBeTruthy());
+    return navigate;
+  }
+
+  it('renders truthful discovery for the profile city', async () => {
+    await renderDiscovery();
 
     expect(mockListBarbers).toHaveBeenCalledWith('Nürnberg');
     expect(screen.getByText('Nürnberg, Germany')).toBeTruthy();
@@ -142,25 +141,44 @@ describe('DiscoverScreen', () => {
     expect(screen.getAllByTestId('customer-home-barber-a')).toHaveLength(1);
     expect(screen.getAllByTestId('customer-home-barber-b')).toHaveLength(1);
     expect(screen.getAllByTestId('customer-home-barber-c')).toHaveLength(1);
+  });
 
-    await act(async () => {
-      fireEvent.changeText(screen.getByTestId('customer-home-search'), 'Clara');
-    });
+  it('filters by barber name and preserves profile navigation', async () => {
+    const navigate = await renderDiscovery();
+
+    await fireEvent.changeText(screen.getByTestId('customer-home-search'), 'Clara');
     expect(screen.queryByTestId('customer-home-spotlight')).toBeNull();
     expect(screen.getByTestId('customer-home-barber-c')).toBeTruthy();
     expect(screen.queryByTestId('customer-home-barber-a')).toBeNull();
     expect(screen.queryByTestId('customer-home-barber-b')).toBeNull();
 
-    fireEvent.press(screen.getByTestId('customer-home-barber-c'));
+    await fireEvent.press(screen.getByTestId('customer-home-barber-c'));
     expect(navigate).toHaveBeenCalledWith('BarberProfile', { barberId: 'c' });
+  });
 
-    await act(async () => {
-      fireEvent.changeText(screen.getByTestId('customer-home-search'), '');
-      fireEvent.press(screen.getByLabelText('Filter by Fade'));
-    });
+  it('filters by service without retaining the spotlight', async () => {
+    await renderDiscovery();
+
+    await fireEvent.press(screen.getByLabelText('Filter by Fade'));
     expect(screen.queryByTestId('customer-home-spotlight')).toBeNull();
     expect(screen.getByTestId('customer-home-barber-a')).toBeTruthy();
     expect(screen.queryByTestId('customer-home-barber-b')).toBeNull();
     expect(screen.queryByTestId('customer-home-barber-c')).toBeNull();
+  });
+
+  it('sends profiles without a city to the editable profile screen', async () => {
+    mockFetchOwnProfile.mockResolvedValue({
+      status: 'ok',
+      profile: { ...profile, city: null, country: null },
+    });
+    const navigate = jest.fn();
+
+    await render(<DiscoverScreen navigation={{ navigate } as never} route={{} as never} />);
+    await waitFor(() => expect(screen.getByTestId('customer-home-add-city')).toBeTruthy());
+
+    expect(screen.getByText('Add your city to discover verified barbers near you.')).toBeTruthy();
+    expect(mockListBarbers).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId('customer-home-add-city'));
+    expect(navigate).toHaveBeenCalledWith('EditProfile');
   });
 });
