@@ -5,6 +5,7 @@
 ## Tasks
 
 - [ ] UI/UX audit follow-up (2026-09-17): complete the release/device gates for [the source-based Gluestack/UI audit](../quality/2026-09-17-ui-ux-gluestack-audit.md). Preserve fonts and supplied wordmark lettering. <!-- PROGRESS: Implemented and tested source-level fixes for booking availability/address validation, reset and expired-link recovery, root theme provider, cropped wordmark assets/icon/splash, profile/city editing, verification recovery, retry notices, truthful discovery labels, card accessibility, and reduced motion. Remaining: physical iOS/Android light/dark, keyboard, deep-link, icon/splash, accessibility, and two-device realtime validation; final release/security review. -->
+- [ ] RELEASE BLOCKER — replace all placeholder legal URLs and publish the approved Impressum, Datenschutzerklärung, customer terms, and barber terms before any App Store or Play Store submission. The app must not ship while `src/legal/legalConfig.ts` contains placeholder URLs.
 
 Maintenance protocol (authoritative):
 - This section lists every task still needed to build the app, in execution order. It is the single source of truth for "what's left".
