@@ -1,29 +1,15 @@
 /**
- * Customer Discover screen — visual rebuild of the web prototype's
- * customer.discover route (greeting header, search field, service chips,
- * featured editorial card, horizontal "Nearby masters" rail, static
- * "Trending this week" grid) on top of the existing step 9-10 data layer.
+ * Customer discovery using authenticated, approved-directory data only.
+ * Service data is optional enrichment: if its read fails, the directory and
+ * barber-name search remain available while service filters and prices hide.
  *
- * Data binding is real end to end: the signed-in customer's own city via
- * fetchOwnProfile (Contract B), approved barbers via listBarbersByCity, and
- * one batched services read (listServicesForBarberIds) that feeds both the
- * "from €X" price lines and the service-name filter chips. The services read
- * is decorative — if it fails, cards render without prices and the chip row
- * hides, rather than failing the whole screen.
- *
- * "Trending this week" is static editorial content carried over from the
- * prototype (curated style imagery, no backing table) — swap the entries in
- * TRENDING_STYLES to re-curate.
- *
- * Maestro contract preserved from the previous CustomerHomeScreen:
- * customer-home-screen / -loading / -error / -empty / -barber-{id} testIDs.
- * (customer-home-logout moved to the Account tab as customer-account-logout;
- * the two flows referencing it were updated in the same change.)
+ * Existing Maestro IDs are preserved:
+ * customer-home-screen / -loading / -error / -retry / -empty /
+ * -search / -barber-{id}.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -43,6 +29,11 @@ import { Notice } from '../../shared/components/Notice';
 import { Skeleton } from '../../shared/components/Skeleton';
 import type { BarberDirectoryRow, ServiceRow } from '../../types';
 import { listBarbersByCity, listServicesForBarberIds } from '../discoveryData';
+import {
+  buildDiscoverPresentation,
+  deriveServiceFilters,
+  groupServicesByBarber,
+} from '../discoverPresentation';
 import { firstName, timeOfDayGreeting } from '../format';
 import BarberCard from '../components/BarberCard';
 import type { CustomerTabParamList } from '../CustomerTabs';
@@ -53,27 +44,17 @@ type Props = CompositeScreenProps<
   NativeStackScreenProps<CustomerStackParamList>
 >;
 
-/** Static editorial content (see file header). */
-const TRENDING_STYLES = [
-  { name: 'Textured crop', image: 'https://images.unsplash.com/photo-1584316712724-f5d4b188fee2?w=600&q=80' },
-  { name: 'Sharp fade', image: 'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=600&q=80' },
-  { name: 'Soft layered', image: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=600&q=80' },
-  { name: 'Classic side part', image: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=600&q=80' },
-] as const;
-
-const MAX_CHIPS = 6;
+const SERVICE_AREA_LABEL = 'Nuremberg, Germany';
 
 export default function DiscoverScreen({ navigation }: Props) {
   const { colors, fonts } = useTheme();
-
   const [ownName, setOwnName] = useState<string | null>(null);
-  const [city, setCity] = useState<string | null>(null);
   const [barbers, setBarbers] = useState<BarberDirectoryRow[]>([]);
-  const [services, setServices] = useState<ServiceRow[]>([]);
+  const [services, setServices] = useState<ServiceRow[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const [activeChip, setActiveChip] = useState<string | null>(null);
+  const [activeService, setActiveService] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -87,15 +68,14 @@ export default function DiscoverScreen({ navigation }: Props) {
     }
     setOwnName(profileResult.profile?.name ?? null);
 
-    const ownCity = profileResult.profile?.city?.trim();
-    if (!ownCity) {
+    const city = profileResult.profile?.city?.trim();
+    if (!city) {
       setLoading(false);
       setError('We could not confirm your service area. Try again.');
       return;
     }
-    setCity(ownCity);
 
-    const barbersResult = await listBarbersByCity(ownCity);
+    const barbersResult = await listBarbersByCity(city);
     if (barbersResult.status !== 'ok') {
       setLoading(false);
       setError(barbersResult.message);
@@ -103,18 +83,27 @@ export default function DiscoverScreen({ navigation }: Props) {
     }
     setBarbers(barbersResult.barbers);
 
-    // Decorative enrichment: prices + chips. Silent graceful degrade on error.
     const servicesResult = await listServicesForBarberIds(
-      barbersResult.barbers.map((b) => b.id)
+      barbersResult.barbers.map((barber) => barber.id)
     );
-    setServices(servicesResult.status === 'ok' ? servicesResult.services : []);
+    if (servicesResult.status === 'ok') {
+      setServices(servicesResult.services);
+      setActiveService((current) => {
+        if (!current) return null;
+        const stillAvailable = servicesResult.services.some(
+          (service) => service.name.trim().toLowerCase() === current.toLowerCase()
+        );
+        return stillAvailable ? current : null;
+      });
+    } else {
+      setServices(null);
+      setActiveService(null);
+    }
     setLoading(false);
   }, []);
 
   useEffect(() => {
     let active = true;
-    // Deferred via .then() (not called directly) for the same
-    // react-hooks/set-state-in-effect reason as the other data screens.
     Promise.resolve().then(() => {
       if (active) void load();
     });
@@ -123,55 +112,30 @@ export default function DiscoverScreen({ navigation }: Props) {
     };
   }, [load]);
 
-  const servicesByBarber = useMemo(() => {
-    const map = new Map<string, ServiceRow[]>();
-    for (const s of services) {
-      const list = map.get(s.barber_id);
-      if (list) list.push(s);
-      else map.set(s.barber_id, [s]);
-    }
-    return map;
-  }, [services]);
-
-  // Chips are the distinct service names actually offered in this city,
-  // most-offered first — the prototype's hardcoded category list, made real.
-  const chips = useMemo(() => {
-    const counts = new Map<string, { label: string; count: number }>();
-    for (const s of services) {
-      const key = s.name.trim().toLowerCase();
-      if (!key) continue;
-      const entry = counts.get(key);
-      if (entry) entry.count += 1;
-      else counts.set(key, { label: s.name.trim(), count: 1 });
-    }
-    return [...counts.values()]
-      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
-      .slice(0, MAX_CHIPS)
-      .map((e) => e.label);
-  }, [services]);
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return barbers.filter((b) => {
-      const own = servicesByBarber.get(b.id) ?? [];
-      if (activeChip && !own.some((s) => s.name.trim().toLowerCase() === activeChip.toLowerCase())) {
-        return false;
-      }
-      if (!q) return true;
-      return (
-        b.name.toLowerCase().includes(q) ||
-        own.some((s) => s.name.toLowerCase().includes(q))
-      );
-    });
-  }, [barbers, servicesByBarber, query, activeChip]);
-
-  const featured = filtered[0];
-  const rail = filtered.slice(1);
+  const servicesByBarber = useMemo(
+    () => groupServicesByBarber(services ?? []),
+    [services]
+  );
+  const serviceFilters = useMemo(() => deriveServiceFilters(services), [services]);
+  const presentation = useMemo(
+    () =>
+      buildDiscoverPresentation({
+        barbers,
+        servicesByBarber,
+        servicesAvailable: services !== null,
+        query,
+        activeService,
+      }),
+    [barbers, servicesByBarber, services, query, activeService]
+  );
 
   const openProfile = useCallback(
     (barberId: string) => navigation.navigate('BarberProfile', { barberId }),
     [navigation]
   );
+
+  const spotlight = presentation.spotlight;
+  const hasResults = Boolean(spotlight) || presentation.directory.length > 0;
 
   return (
     <SafeAreaView
@@ -179,18 +143,40 @@ export default function DiscoverScreen({ navigation }: Props) {
       edges={['top', 'left', 'right']}
       testID="customer-home-screen"
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.pad}>
           <Text style={[styles.greeting, { color: colors.textSecondary, fontFamily: fonts.body }]}>
             {timeOfDayGreeting()},
           </Text>
-          <Text style={[styles.name, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+          <Text
+            accessibilityRole="header"
+            style={[styles.name, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}
+          >
             {firstName(ownName)}.
           </Text>
+          <View style={styles.serviceAreaRow}>
+            <Feather name="map-pin" size={13} color={colors.accentText} />
+            <Text
+              style={[
+                styles.serviceArea,
+                { color: colors.textSecondary, fontFamily: fonts.body },
+              ]}
+            >
+              {SERVICE_AREA_LABEL}
+            </Text>
+          </View>
         </View>
 
         <View style={[styles.pad, styles.searchWrap]}>
-          <View style={[styles.searchBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.searchBox,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
             <Feather name="search" size={16} color={colors.textSecondary} />
             <TextInput
               value={query}
@@ -200,30 +186,32 @@ export default function DiscoverScreen({ navigation }: Props) {
               style={[styles.searchInput, { color: colors.textPrimary, fontFamily: fonts.body }]}
               autoCapitalize="none"
               autoCorrect={false}
+              accessibilityLabel="Search barbers or services"
               testID="customer-home-search"
             />
           </View>
         </View>
 
-        {chips.length > 0 ? (
+        {serviceFilters.length > 0 ? (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            style={styles.chipsScroll}
-            contentContainerStyle={styles.chipsRow}
+            style={styles.filtersScroll}
+            contentContainerStyle={styles.filtersRow}
+            accessibilityLabel="Filter by service"
           >
-            {chips.map((chip) => {
-              const active = activeChip?.toLowerCase() === chip.toLowerCase();
+            {serviceFilters.map((service) => {
+              const selected = activeService?.toLowerCase() === service.toLowerCase();
               return (
                 <Pressable
-                  key={chip}
-                  onPress={() => setActiveChip(active ? null : chip)}
+                  key={service}
+                  onPress={() => setActiveService(selected ? null : service)}
                   accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  hitSlop={8}
+                  accessibilityLabel={`Filter by ${service}`}
+                  accessibilityState={{ selected }}
                   style={({ pressed }) => [
-                    styles.chip,
-                    active
+                    styles.filter,
+                    selected
                       ? { backgroundColor: colors.accent, borderColor: colors.accent }
                       : { borderColor: colors.border },
                     pressed ? { opacity: pressOpacity.soft } : null,
@@ -231,12 +219,14 @@ export default function DiscoverScreen({ navigation }: Props) {
                 >
                   <Text
                     style={[
-                      styles.chipText,
+                      styles.filterText,
                       { fontFamily: fonts.body },
-                      active ? { color: colors.onAccent } : { color: colors.textSecondary },
+                      selected
+                        ? { color: colors.onAccent }
+                        : { color: colors.textSecondary },
                     ]}
                   >
-                    {chip}
+                    {service}
                   </Text>
                 </Pressable>
               );
@@ -255,46 +245,75 @@ export default function DiscoverScreen({ navigation }: Props) {
               testID="customer-home-retry"
               style={styles.noticeAction}
             >
-              <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}>Try again</Text>
+              <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}>
+                Try again
+              </Text>
             </Pressable>
           </Notice>
-        ) : !featured ? (
+        ) : !hasResults ? (
           <Text
             style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}
             testID="customer-home-empty"
           >
             {barbers.length === 0
-              ? `No barbers found in ${city ?? 'your city'} yet.`
-              : 'No barbers match your search.'}
+              ? 'No verified barbers are available in Nuremberg yet.'
+              : 'No verified barbers match your search.'}
           </Text>
         ) : (
           <>
-            <View style={[styles.pad, styles.featured]}>
-              <BarberCard
-                barber={featured}
-                services={servicesByBarber.get(featured.id) ?? []}
-                variant="wide"
-                onPress={() => openProfile(featured.id)}
-              />
-            </View>
+            {spotlight ? (
+              <View style={[styles.pad, styles.section]} testID="customer-home-spotlight">
+                <Text
+                  accessibilityRole="header"
+                  style={[
+                    styles.sectionTitle,
+                    { color: colors.textPrimary, fontFamily: fonts.headingMedium },
+                  ]}
+                >
+                  Barber spotlight
+                </Text>
+                <View style={styles.spotlightCard}>
+                  <BarberCard
+                    barber={spotlight}
+                    services={servicesByBarber.get(spotlight.id) ?? []}
+                    variant="wide"
+                    onPress={() => openProfile(spotlight.id)}
+                  />
+                </View>
+              </View>
+            ) : null}
 
-            {rail.length > 0 ? (
-              <View style={styles.section}>
+            {presentation.directory.length > 0 ? (
+              <View style={styles.section} testID="customer-home-directory">
                 <View style={[styles.pad, styles.sectionHeader]}>
-                  <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-                    Nearby masters
+                  <Text
+                    accessibilityRole="header"
+                    style={[
+                      styles.sectionTitle,
+                      { color: colors.textPrimary, fontFamily: fonts.headingMedium },
+                    ]}
+                  >
+                    Verified barbers in Nuremberg
                   </Text>
-                  <Text style={[styles.sectionMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                    {rail.length} within reach
+                  <Text
+                    style={[
+                      styles.sectionMeta,
+                      { color: colors.textSecondary, fontFamily: fonts.body },
+                    ]}
+                  >
+                    {`${presentation.directory.length} ${
+                      presentation.directory.length === 1 ? 'barber' : 'barbers'
+                    }`}
                   </Text>
                 </View>
                 <FlatList
                   horizontal
-                  style={styles.rail}
-                  data={rail}
+                  style={styles.directory}
+                  data={presentation.directory}
                   keyExtractor={(item) => item.id}
                   showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.railContent}
+                  contentContainerStyle={styles.directoryContent}
+                  accessibilityLabel="Verified barbers in Nuremberg"
                   renderItem={({ item }) => (
                     <BarberCard
                       barber={item}
@@ -308,39 +327,16 @@ export default function DiscoverScreen({ navigation }: Props) {
             ) : null}
           </>
         )}
-
-        <View style={[styles.pad, styles.section]}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-            Style inspiration
-          </Text>
-          <View style={styles.trendingGrid}>
-            {TRENDING_STYLES.map((style) => (
-              <View key={style.name} style={[styles.trendingTile, { backgroundColor: colors.surface }]}>
-                <Image source={{ uri: style.image }} style={styles.trendingImage} resizeMode="cover" />
-                <View style={styles.trendingScrim}>
-                  <Text style={[styles.trendingLabel, { fontFamily: fonts.headingMedium }]}>
-                    {style.name}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-/**
- * Content-shaped loading placeholder — a featured-card block + a two-item
- * rail preview, reusing the exact spacing (`pad`/`featured`/`section`) the
- * real content renders with once loaded, so the swap-in is nearly seamless
- * rather than a layout jump. Keeps the `customer-home-loading` testID.
- */
 function DiscoverSkeleton() {
   return (
     <View testID="customer-home-loading">
-      <View style={[styles.pad, styles.featured]}>
+      <View style={[styles.pad, styles.section]}>
+        <Skeleton style={styles.skeletonLineTitle} />
         <Skeleton style={styles.skeletonImageWide} />
         <View style={styles.skeletonTextGroup}>
           <Skeleton style={styles.skeletonLineWide} />
@@ -348,15 +344,15 @@ function DiscoverSkeleton() {
         </View>
       </View>
       <View style={styles.section}>
-        <View style={[styles.pad, styles.skeletonRailHeader]}>
-          <Skeleton style={styles.skeletonLineTitle} />
+        <View style={styles.pad}>
+          <Skeleton style={styles.skeletonDirectoryTitle} />
         </View>
-        <View style={[styles.pad, styles.skeletonRailRow]}>
-          <View style={styles.skeletonRailItem}>
+        <View style={[styles.pad, styles.skeletonDirectoryRow]}>
+          <View style={styles.skeletonDirectoryItem}>
             <Skeleton style={styles.skeletonImageCompact} />
             <Skeleton style={styles.skeletonLineCompact} />
           </View>
-          <View style={styles.skeletonRailItem}>
+          <View style={styles.skeletonDirectoryItem}>
             <Skeleton style={styles.skeletonImageCompact} />
             <Skeleton style={styles.skeletonLineCompact} />
           </View>
@@ -368,78 +364,57 @@ function DiscoverSkeleton() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { paddingTop: 24, paddingBottom: 32 },
+  scrollContent: { paddingTop: 24, paddingBottom: 40 },
   pad: { paddingHorizontal: 24 },
-
   greeting: { fontSize: 13 },
   name: { fontSize: 30, marginTop: 4 },
-
+  serviceAreaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
+  serviceArea: { fontSize: 13, lineHeight: 18 },
   searchWrap: { marginTop: 24 },
   searchBox: {
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     borderWidth: 0.5,
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
   },
-  searchInput: { flex: 1, fontSize: 14, padding: 0 },
-
-  chipsScroll: { marginTop: 18, flexGrow: 0 },
-  chipsRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 24, paddingBottom: 2 },
-  chip: {
+  searchInput: { flex: 1, minWidth: 0, fontSize: 14, paddingVertical: 10 },
+  filtersScroll: { marginTop: 16, flexGrow: 0 },
+  filtersRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 24, paddingBottom: 2 },
+  filter: {
+    minHeight: 44,
+    justifyContent: 'center',
     borderWidth: 0.5,
-    borderRadius: 999,
+    borderRadius: 8,
     paddingHorizontal: 16,
-    paddingVertical: 7,
   },
-  chipText: { fontSize: 12 },
-
+  filterText: { fontSize: 12 },
   noticeMargins: { marginTop: 32, marginHorizontal: 24 },
   noticeAction: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
-  emptyText: { fontSize: 14, textAlign: 'center', marginTop: 48, paddingHorizontal: 24 },
-
-  featured: { marginTop: 30 },
-  section: { marginTop: 38 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  sectionTitle: { fontSize: 21 },
-  sectionMeta: { fontSize: 12 },
-  rail: { marginTop: 16 },
-
+  emptyText: {
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: 'center',
+    marginTop: 48,
+    paddingHorizontal: 24,
+  },
+  section: { marginTop: 34 },
+  sectionHeader: { gap: 8 },
+  sectionTitle: { fontSize: 21, lineHeight: 28 },
+  sectionMeta: { fontSize: 12, lineHeight: 18 },
+  spotlightCard: { marginTop: 16 },
+  directory: { marginTop: 16 },
+  directoryContent: { gap: 16, paddingHorizontal: 24, paddingBottom: 2 },
   skeletonTextGroup: { marginTop: 12, gap: 8 },
+  skeletonLineTitle: { width: 136, height: 18, marginBottom: 16 },
   skeletonImageWide: { width: '100%', aspectRatio: 16 / 10 },
   skeletonLineWide: { height: 18, width: '55%' },
   skeletonLineNarrow: { height: 12, width: '35%' },
-  skeletonRailHeader: { marginBottom: 16 },
-  skeletonLineTitle: { height: 18, width: 140 },
-  skeletonRailRow: { flexDirection: 'row', gap: 16 },
-  skeletonRailItem: { width: 256, gap: 8 },
+  skeletonDirectoryTitle: { width: 220, height: 18, marginBottom: 16 },
+  skeletonDirectoryRow: { flexDirection: 'row', gap: 16 },
+  skeletonDirectoryItem: { width: 256, gap: 8 },
   skeletonImageCompact: { width: 256, aspectRatio: 4 / 5 },
   skeletonLineCompact: { height: 14, width: '60%' },
-  railContent: { gap: 16, paddingHorizontal: 24, paddingBottom: 2 },
-
-  trendingGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 16 },
-  trendingTile: {
-    width: '48%',
-    flexGrow: 1,
-    aspectRatio: 4 / 5,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  trendingImage: { width: '100%', height: '100%' },
-  // Deliberately NOT the shared OVER_IMAGE_BG (rgba(18,18,20,0.72), see
-  // ScreenBackHeader): a lighter black scrim reads better under the smaller
-  // editorial labels here than the heavier hero-nav value would. Unifying
-  // the two remains an open founder design call, not made in this pass.
-  trendingScrim: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  trendingLabel: { color: '#F5F1E8', fontSize: 16 },
 });

@@ -216,9 +216,9 @@ export interface ChatReadStateRow {
  * created_at, or verification_status column — do not add one here without a
  * matching, deliberate schema change.
  *
- * `rating` is currently always the unmodified default: no review-aggregation
- * exists yet (build-order step 18). Treating `rating === 0` as "no ratings
- * yet" is a UI-layer decision, not something this row shape special-cases.
+ * `rating` is the server-owned aggregate of genuine completed-booking reviews
+ * (migration 0022). Treating `rating === 0` as "no ratings yet" remains a
+ * UI-layer decision, not something this row shape special-cases.
  */
 export interface BarberDirectoryRow {
   id: string;
