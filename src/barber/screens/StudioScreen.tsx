@@ -18,6 +18,7 @@ import { firstName, formatBookingWhen, formatMoney, timeOfDayGreeting } from '..
 import type { DashboardView, ReadinessItem, ReadinessItemKey, ReadinessState } from '../types';
 import type { BarberTabParamList } from '../BarberTabs';
 import type { BarberStackParamList } from '../BarberNavigator';
+import { LegalLinks } from '../../legal/LegalComponents';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<BarberTabParamList, 'Studio'>,
@@ -490,6 +491,7 @@ export default function StudioScreen({ navigation }: Props) {
                 />
               </View>
             </View>
+            <LegalLinks includeAll testIDPrefix="barber-studio-legal" />
           </>
         ) : null}
       </ScrollView>

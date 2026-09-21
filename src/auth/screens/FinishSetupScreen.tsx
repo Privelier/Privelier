@@ -16,6 +16,7 @@ import type { EnsureProfileResult, ProfilePrefill, SetupFormFields } from '../ty
 import { useTheme } from '../../theme/useTheme';
 import { radius } from '../../theme/spacing';
 import { optionalText, requiredText } from './validation';
+import { LegalConsentFields, LegalLinks } from '../../legal/LegalComponents';
 import {
   AuthScreenShell,
   FormTextField,
@@ -47,6 +48,9 @@ export default function FinishSetupScreen({ prefill, onSubmit, onSignOut }: Prop
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [adultConfirmed, setAdultConfirmed] = useState(false);
+  const [legalAttempted, setLegalAttempted] = useState(false);
 
   const submit = useCallback(async () => {
     const errors: FieldErrors = {
@@ -56,7 +60,8 @@ export default function FinishSetupScreen({ prefill, onSubmit, onSignOut }: Prop
     };
     setFieldErrors(errors);
     setFormError(null);
-    if (errors.role || errors.name || errors.city || role === null) return;
+    setLegalAttempted(true);
+    if (errors.role || errors.name || errors.city || role === null || !termsAccepted || !adultConfirmed) return;
 
     setSubmitting(true);
     const result = await onSubmit({
@@ -76,7 +81,7 @@ export default function FinishSetupScreen({ prefill, onSubmit, onSignOut }: Prop
       // Should not occur on the form path; keep the user's input and ask again.
       setFormError('We could not save that. Check the fields and try again.');
     }
-  }, [role, name, city, country, phone, bio, onSubmit]);
+  }, [role, name, city, country, phone, bio, onSubmit, termsAccepted, adultConfirmed]);
 
   return (
     <AuthScreenShell testID="setup-screen">
@@ -135,6 +140,17 @@ export default function FinishSetupScreen({ prefill, onSubmit, onSignOut }: Prop
           testID="setup-bio"
         />
       ) : null}
+      <LegalConsentFields
+        role={role}
+        termsAccepted={termsAccepted}
+        adultConfirmed={adultConfirmed}
+        onTermsChange={() => setTermsAccepted((current) => !current)}
+        onAdultChange={() => setAdultConfirmed((current) => !current)}
+        termsError={legalAttempted && !termsAccepted ? 'Accept the terms and acknowledge the privacy policy.' : undefined}
+        adultError={legalAttempted && !adultConfirmed ? 'You must confirm that you are at least 18.' : undefined}
+        testIDPrefix="setup"
+      />
+      <LegalLinks role={role} testIDPrefix="setup-legal" />
       <View style={styles.actions}>
         <PrimaryButton label="Continue" onPress={submit} loading={submitting} testID="setup-submit" />
         <TextLink label="Log out" onPress={onSignOut} disabled={submitting} testID="setup-sign-out" />

@@ -35,6 +35,7 @@ import { ACCOUNT_SECTIONS, type AccountSectionKey } from './AccountSectionScreen
 import type { CustomerTabParamList } from '../CustomerTabs';
 import type { CustomerStackParamList } from '../CustomerNavigator';
 import { Notice } from '../../shared/components/Notice';
+import { LegalLinks } from '../../legal/LegalComponents';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<CustomerTabParamList, 'Account'>,
@@ -159,6 +160,7 @@ export default function AccountScreen({ navigation }: Props) {
             Sign out
           </Text>
         </Pressable>
+        <LegalLinks includeAll testIDPrefix="customer-account-legal" />
       </ScrollView>
     </SafeAreaView>
   );

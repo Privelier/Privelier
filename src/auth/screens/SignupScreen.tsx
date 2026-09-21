@@ -16,6 +16,7 @@ import { useCallback, useRef, useState } from 'react';
 import { StyleSheet, Text, View, type TextInput } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { signInWithProvider, signUpBarber, signUpCustomer } from '../authService';
+import { LegalConsentFields, LegalLinks } from '../../legal/LegalComponents';
 import { useTheme } from '../../theme/useTheme';
 import type { AuthStackParamList } from './AuthNavigator';
 import { emailError, optionalText, requiredText, signupPasswordError, PASSWORD_MIN_LENGTH } from './validation';
@@ -56,6 +57,9 @@ export default function SignupScreen({ navigation, route }: Props) {
   const [emailInUse, setEmailInUse] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [providerSubmitting, setProviderSubmitting] = useState<'google' | 'apple' | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [adultConfirmed, setAdultConfirmed] = useState(false);
+  const [legalAttempted, setLegalAttempted] = useState(false);
   // Focus chain for the required fields: name → email → password → city → submit
   // (optional country/phone/bio are left out of the keyboard chain).
   const emailRef = useRef<TextInput>(null);
@@ -72,7 +76,8 @@ export default function SignupScreen({ navigation, route }: Props) {
     setFieldErrors(errors);
     setFormError(null);
     setEmailInUse(false);
-    if (errors.name || errors.email || errors.password || errors.city) return;
+    setLegalAttempted(true);
+    if (errors.name || errors.email || errors.password || errors.city || !termsAccepted || !adultConfirmed) return;
 
     const profileFields = {
       name: name.trim(),
@@ -105,7 +110,7 @@ export default function SignupScreen({ navigation, route }: Props) {
         }
         break;
     }
-  }, [name, email, password, city, country, phone, bio, isBarber, navigation, role]);
+  }, [name, email, password, city, country, phone, bio, isBarber, navigation, role, termsAccepted, adultConfirmed]);
 
   const onProviderPress = useCallback(async (provider: 'google' | 'apple') => {
     setFormError(null);
@@ -230,6 +235,16 @@ export default function SignupScreen({ navigation, route }: Props) {
           Your profile will be verified before you appear in search.
         </Text>
       ) : null}
+      <LegalConsentFields
+        role={role}
+        termsAccepted={termsAccepted}
+        adultConfirmed={adultConfirmed}
+        onTermsChange={() => setTermsAccepted((current) => !current)}
+        onAdultChange={() => setAdultConfirmed((current) => !current)}
+        termsError={legalAttempted && !termsAccepted ? 'Accept the terms and acknowledge the privacy policy.' : undefined}
+        adultError={legalAttempted && !adultConfirmed ? 'You must confirm that you are at least 18.' : undefined}
+        testIDPrefix="auth-signup"
+      />
       <View style={styles.actions}>
         <PrimaryButton
           label="Create account"
@@ -249,6 +264,7 @@ export default function SignupScreen({ navigation, route }: Props) {
         <OAuthButton provider="google" onPress={() => onProviderPress('google')} loading={providerSubmitting === 'google'} disabled={submitting || providerSubmitting !== null} testID="auth-signup-google" />
         <OAuthButton provider="apple" onPress={() => onProviderPress('apple')} loading={providerSubmitting === 'apple'} disabled={submitting || providerSubmitting !== null} testID="auth-signup-apple" />
       </View>
+      <LegalLinks role={role} testIDPrefix="auth-signup-legal" />
     </AuthScreenShell>
   );
 }
