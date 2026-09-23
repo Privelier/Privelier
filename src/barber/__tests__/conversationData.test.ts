@@ -5,7 +5,12 @@
  * get_booking_counterparts RPC (migration 0012).
  */
 import { supabase } from '../../../lib/supabase';
-import { fetchBookingCounterpart, fetchConversation, sendMessage } from '../conversationData';
+import {
+  fetchBookingCounterpart,
+  fetchConversation,
+  fetchConversationNewerThan,
+  sendMessage,
+} from '../conversationData';
 
 jest.mock('../../../lib/supabase', () => ({
   supabase: {
@@ -26,7 +31,9 @@ beforeEach(() => {
 interface ChainableBuilder {
   select: jest.Mock;
   eq: jest.Mock;
+  or: jest.Mock;
   order: jest.Mock;
+  limit: jest.Mock;
   insert: jest.Mock;
   single: jest.Mock;
   then: (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) => Promise<unknown>;
@@ -36,7 +43,9 @@ function chainable(result: unknown) {
   const obj: ChainableBuilder = {
     select: jest.fn(() => obj),
     eq: jest.fn(() => obj),
+    or: jest.fn(() => obj),
     order: jest.fn(() => obj),
+    limit: jest.fn(() => obj),
     insert: jest.fn(() => obj),
     single: jest.fn(() => Promise.resolve(result)),
     then: (resolve, reject) => Promise.resolve(result).then(resolve, reject),
@@ -45,7 +54,7 @@ function chainable(result: unknown) {
 }
 
 describe('fetchConversation / sendMessage', () => {
-  it('reads ascending by created_at scoped to the room', async () => {
+  it('reads a bounded newest-first page scoped to the room and returns ascending rows', async () => {
     const builder = chainable({ data: [], error: null });
     mockFrom.mockReturnValueOnce(builder);
 
@@ -53,8 +62,35 @@ describe('fetchConversation / sendMessage', () => {
 
     expect(mockFrom).toHaveBeenCalledWith('messages');
     expect(builder.eq).toHaveBeenCalledWith('chat_id', 'r1');
-    expect(builder.order).toHaveBeenCalledWith('created_at', { ascending: true });
-    expect(result).toEqual({ status: 'ok', messages: [] });
+    expect(builder.order).toHaveBeenNthCalledWith(1, 'created_at', { ascending: false });
+    expect(builder.order).toHaveBeenNthCalledWith(2, 'id', { ascending: false });
+    expect(builder.limit).toHaveBeenCalledWith(41);
+    expect(result).toEqual({
+      status: 'ok',
+      messages: [],
+      hasEarlier: false,
+      earliestCursor: null,
+      latestCursor: null,
+    });
+  });
+
+  it('uses the strict keyset predicate for a cursor page and rejects malformed cursors locally', async () => {
+    const builder = chainable({ data: [], error: null });
+    mockFrom.mockReturnValueOnce(builder);
+    const cursor = { createdAt: '2026-07-09T10:00:00+00:00', id: 'm-10' };
+
+    await fetchConversation('r1', cursor);
+
+    expect(builder.or).toHaveBeenCalledWith(
+      'created_at.lt.2026-07-09T10:00:00+00:00,and(created_at.eq.2026-07-09T10:00:00+00:00,id.lt.m-10)'
+    );
+
+    const invalid = await fetchConversation('r1', {
+      createdAt: '2026-07-09T10:00:00Z',
+      id: 'm-10),chat_id.eq.other-room',
+    });
+    expect(invalid).toMatchObject({ status: 'error', code: 'invalid_input' });
+    expect(mockFrom).toHaveBeenCalledTimes(1);
   });
 
   it('sends with the session user as sender_id and trims the text', async () => {
@@ -80,6 +116,39 @@ describe('fetchConversation / sendMessage', () => {
     const result = await sendMessage('r1', '');
     expect(result).toMatchObject({ status: 'error', code: 'invalid_input' });
     expect(mockFrom).not.toHaveBeenCalled();
+  });
+});
+
+describe('fetchConversationNewerThan', () => {
+  it('uses an ascending strict-greater keyset page for reconnect recovery', async () => {
+    const rows = [
+      {
+        id: 'm-11',
+        chat_id: 'r1',
+        sender_id: 'barber-1',
+        message: 'Missed while offline',
+        created_at: '2026-07-09T10:00:00+00:00',
+      },
+    ];
+    const builder = chainable({ data: rows, error: null });
+    mockFrom.mockReturnValueOnce(builder);
+
+    const result = await fetchConversationNewerThan('r1', {
+      createdAt: '2026-07-09T10:00:00+00:00',
+      id: 'm-10',
+    });
+
+    expect(builder.or).toHaveBeenCalledWith(
+      'created_at.gt.2026-07-09T10:00:00+00:00,and(created_at.eq.2026-07-09T10:00:00+00:00,id.gt.m-10)'
+    );
+    expect(builder.order).toHaveBeenNthCalledWith(1, 'created_at', { ascending: true });
+    expect(builder.order).toHaveBeenNthCalledWith(2, 'id', { ascending: true });
+    expect(result).toEqual({
+      status: 'ok',
+      messages: rows,
+      hasNewer: false,
+      latestCursor: { createdAt: rows[0].created_at, id: rows[0].id },
+    });
   });
 });
 

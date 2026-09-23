@@ -35,7 +35,13 @@ import { BackButton } from '../../shared/components/ScreenBackHeader';
 import type { Palette } from '../../theme/colors';
 import type { MessageRow } from '../../types';
 import type { BarberStackParamList } from '../BarberNavigator';
-import { fetchBookingCounterpart, fetchConversation, sendMessage } from '../conversationData';
+import type { ConversationCursor } from '../types';
+import {
+  fetchBookingCounterpart,
+  fetchConversation,
+  fetchConversationNewerThan,
+  sendMessage,
+} from '../conversationData';
 import {
   applyMessageChange,
   applyMessageChangeSorted,
@@ -60,12 +66,24 @@ function sortAsc(rows: MessageRow[]): MessageRow[] {
   });
 }
 
+function mergeMessageRows(previous: MessageRow[], rows: MessageRow[]): MessageRow[] {
+  let next = previous;
+  for (const row of rows) {
+    next = applyMessageChange(next, { eventType: 'INSERT', row });
+  }
+  return next === previous ? previous : sortAsc(next);
+}
+
 /** Inverted-list row: newest first (index 0 renders at the bottom). */
 type ListItem =
   | { kind: 'pending'; pending: PendingSend }
   | { kind: 'message'; message: MessageRow };
 
-export default function ConversationScreen({ route, navigation }: Props) {
+export default function ConversationScreen(props: Props) {
+  return <ConversationRoom key={props.route.params.room.id} {...props} />;
+}
+
+function ConversationRoom({ route, navigation }: Props) {
   const { room, title, subtitle } = route.params;
   const { colors } = useTheme();
   const styles = useStyles(colors);
@@ -76,6 +94,15 @@ export default function ConversationScreen({ route, navigation }: Props) {
   const [focused, setFocused] = useState(false);
   const [myId, setMyId] = useState<string | null>(null);
   const [counterpartName, setCounterpartName] = useState<string | null>(null);
+  const [hasEarlier, setHasEarlier] = useState(false);
+  const [earliestCursor, setEarliestCursor] = useState<ConversationCursor | null>(null);
+  const [loadingEarlier, setLoadingEarlier] = useState(false);
+  const [earlierError, setEarlierError] = useState<string | null>(null);
+  const paginationInitializedRef = useRef(false);
+  const loadingEarlierRef = useRef(false);
+  const restHighWaterRef = useRef<ConversationCursor | null>(null);
+  const refreshRunningRef = useRef(false);
+  const refreshQueuedRef = useRef(false);
 
   const [draft, setDraft] = useState('');
   // Synchronous mirror of the draft: a same-tick double-fire of Send reads
@@ -97,24 +124,97 @@ export default function ConversationScreen({ route, navigation }: Props) {
     };
   }, [room.booking_id]);
 
-  const load = useCallback(async () => {
+  const loadInitial = useCallback(async () => {
     setLoading(true);
     setError(null);
     const result = await fetchConversation(room.id);
     setLoading(false);
     if (result.status === 'ok') {
-      setMessages((prev) => {
-        let next = prev;
-        for (const row of result.messages) {
-          next = applyMessageChange(next, { eventType: 'INSERT', row });
-        }
-        // All-no-op snapshot (the common recovery case): same reference.
-        return next === prev ? prev : sortAsc(next);
-      });
+      paginationInitializedRef.current = true;
+      restHighWaterRef.current = result.latestCursor ?? null;
+      setHasEarlier(result.hasEarlier);
+      setEarliestCursor(result.earliestCursor);
+      setMessages((prev) => mergeMessageRows(prev, result.messages));
     } else {
       setError(result.message);
     }
   }, [room.id]);
+
+  const runRecoveryPass = useCallback(async () => {
+    const preRecoveryHighWater = restHighWaterRef.current;
+    setLoading(true);
+    setError(null);
+
+    const snapshot = await fetchConversation(room.id);
+    if (snapshot.status !== 'ok') {
+      setLoading(false);
+      setError(snapshot.message);
+      return;
+    }
+    setMessages((prev) => mergeMessageRows(prev, snapshot.messages));
+
+    if (!preRecoveryHighWater) {
+      restHighWaterRef.current = snapshot.latestCursor ?? null;
+      setLoading(false);
+      return;
+    }
+
+    let cursor = preRecoveryHighWater;
+    while (true) {
+      const page = await fetchConversationNewerThan(room.id, cursor);
+      if (page.status !== 'ok') {
+        setLoading(false);
+        setError(page.message);
+        return;
+      }
+      setMessages((prev) => mergeMessageRows(prev, page.messages));
+      if (page.latestCursor) cursor = page.latestCursor;
+      if (!page.hasNewer || !page.latestCursor) break;
+    }
+
+    restHighWaterRef.current = cursor;
+    setLoading(false);
+  }, [room.id]);
+
+  const refreshConversation = useCallback(async () => {
+    refreshQueuedRef.current = true;
+    if (refreshRunningRef.current) return;
+
+    refreshRunningRef.current = true;
+    try {
+      while (refreshQueuedRef.current) {
+        refreshQueuedRef.current = false;
+        if (paginationInitializedRef.current) {
+          await runRecoveryPass();
+        } else {
+          await loadInitial();
+        }
+      }
+    } finally {
+      refreshRunningRef.current = false;
+    }
+  }, [loadInitial, runRecoveryPass]);
+
+  const loadEarlier = useCallback(async () => {
+    if (loadingEarlierRef.current || !hasEarlier || !earliestCursor) return;
+
+    loadingEarlierRef.current = true;
+    setLoadingEarlier(true);
+    setEarlierError(null);
+    try {
+      const result = await fetchConversation(room.id, earliestCursor);
+      if (result.status === 'ok') {
+        setMessages((prev) => mergeMessageRows(prev, result.messages));
+        setHasEarlier(result.hasEarlier);
+        setEarliestCursor(result.earliestCursor);
+      } else {
+        setEarlierError(result.message);
+      }
+    } finally {
+      loadingEarlierRef.current = false;
+      setLoadingEarlier(false);
+    }
+  }, [earliestCursor, hasEarlier, room.id]);
 
   // Mark-as-read is owned by the unread provider; this screen only declares
   // which room is being looked at (the founder's trigger: OPENING this
@@ -127,12 +227,12 @@ export default function ConversationScreen({ route, navigation }: Props) {
       // blur.
       setFocused(true);
       setActiveRoom(room.id);
-      void load();
+      void refreshConversation();
       return () => {
         setFocused(false);
         setActiveRoom(null);
       };
-    }, [load, room.id, setActiveRoom])
+    }, [refreshConversation, room.id, setActiveRoom])
   );
 
   const onRealtimeChange = useCallback((event: MessageChangeEvent) => {
@@ -143,7 +243,7 @@ export default function ConversationScreen({ route, navigation }: Props) {
     roomId: room.id,
     onChange: onRealtimeChange,
     // Reconnect gap events are dropped, not replayed — refetch (lesson F1).
-    onRecovered: load,
+    onRecovered: refreshConversation,
     enabled: focused,
   });
 
@@ -261,11 +361,54 @@ export default function ConversationScreen({ route, navigation }: Props) {
         ) : (
           <FlatList
             inverted
+            testID="barber-conversation-list"
             data={listData}
             keyExtractor={(item) =>
               item.kind === 'pending' ? `pending-${item.pending.key}` : item.message.id
             }
             contentContainerStyle={styles.listContent}
+            maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+            ListFooterComponent={
+              hasEarlier ? (
+                <View style={styles.historyControl}>
+                  {earlierError ? (
+                    <Text
+                      accessibilityRole="alert"
+                      style={styles.earlierError}
+                      testID="barber-conversation-earlier-error"
+                    >
+                      {earlierError}
+                    </Text>
+                  ) : null}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Load earlier messages"
+                    accessibilityState={{ disabled: loadingEarlier, busy: loadingEarlier }}
+                    disabled={loadingEarlier}
+                    onPress={loadEarlier}
+                    style={({ pressed }) => [
+                      styles.loadEarlierButton,
+                      loadingEarlier
+                        ? styles.loadEarlierButtonDisabled
+                        : pressed
+                          ? { opacity: pressOpacity.firm }
+                          : null,
+                    ]}
+                    testID="barber-conversation-load-earlier"
+                  >
+                    {loadingEarlier ? (
+                      <ActivityIndicator
+                        size="small"
+                        color={colors.accent}
+                        style={styles.loadEarlierIndicator}
+                        testID="barber-conversation-loading-earlier"
+                      />
+                    ) : null}
+                    <Text style={styles.loadEarlierLabel}>Load earlier messages</Text>
+                  </Pressable>
+                </View>
+              ) : null
+            }
             ListEmptyComponent={
               // NO manual counter-transform here — see the customer screen's
               // identical note: RN counter-flips ListEmptyComponent itself,
@@ -408,6 +551,30 @@ function useStyles(colors: Palette) {
     noticeMargins: { marginTop: space.xl, marginHorizontal: space.xl },
 
     listContent: { paddingHorizontal: space.xl, paddingVertical: space.base, flexGrow: 1 },
+    historyControl: { alignItems: 'center', paddingBottom: space.base },
+    earlierError: {
+      maxWidth: 280,
+      marginBottom: space.sm,
+      fontSize: 12,
+      lineHeight: 16,
+      textAlign: 'center',
+      color: colors.errorText,
+      fontFamily: fonts.body,
+    },
+    loadEarlierButton: {
+      minWidth: 200,
+      minHeight: 44,
+      paddingHorizontal: space['3xl'],
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: HAIRLINE,
+      borderRadius: radius.sm,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    loadEarlierButtonDisabled: { opacity: 0.6 },
+    loadEarlierIndicator: { position: 'absolute', left: space.base },
+    loadEarlierLabel: { fontSize: 13, color: colors.accentText, fontFamily: fonts.bodyMedium },
     empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
     emptyText: { fontSize: 13, color: colors.textSecondary, fontFamily: fonts.body },
 

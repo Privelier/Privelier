@@ -13,19 +13,71 @@
  */
 import { supabase } from '../../lib/supabase';
 import type { MessageRow } from '../types';
+import {
+  buildConversationHistoryPage,
+  buildConversationRecoveryPage,
+  conversationKeysetFilter,
+  conversationNewerKeysetFilter,
+  isConversationCursor,
+  MESSAGE_HISTORY_PAGE_SIZE,
+} from '../shared/conversationPagination';
 import { failure, mapPostgrestError } from './errors';
-import type { FetchConversationResult, SendMessageResult } from './types';
+import type {
+  ConversationCursor,
+  FetchConversationNewerResult,
+  FetchConversationResult,
+  SendMessageResult,
+} from './types';
 
-/** Newest-last: the conversation screen renders ascending by created_at. */
-export async function fetchConversation(roomId: string): Promise<FetchConversationResult> {
+/** Reads a bounded newest-first database page and returns ascending display rows. */
+export async function fetchConversation(
+  roomId: string,
+  cursor?: ConversationCursor
+): Promise<FetchConversationResult> {
+  if (cursor && !isConversationCursor(cursor)) return failure('invalid_input');
+
+  const query = supabase
+    .from('messages')
+    .select('*')
+    .eq('chat_id', roomId);
+  const { data, error } = cursor
+    ? await query
+        .or(conversationKeysetFilter(cursor))
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(MESSAGE_HISTORY_PAGE_SIZE + 1)
+    : await query
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(MESSAGE_HISTORY_PAGE_SIZE + 1);
+
+  if (error) return mapPostgrestError('fetchConversation', error);
+  const page = buildConversationHistoryPage((data as MessageRow[]) ?? []);
+  return page ? { status: 'ok', ...page } : failure('unknown');
+}
+
+/**
+ * One ascending, bounded recovery page strictly after a previous REST high-water.
+ * The caller merges by id and repeats with `latestCursor` while `hasNewer` is true.
+ */
+export async function fetchConversationNewerThan(
+  roomId: string,
+  highWater: ConversationCursor
+): Promise<FetchConversationNewerResult> {
+  if (!isConversationCursor(highWater)) return failure('invalid_input');
+
   const { data, error } = await supabase
     .from('messages')
     .select('*')
     .eq('chat_id', roomId)
-    .order('created_at', { ascending: true });
+    .or(conversationNewerKeysetFilter(highWater))
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true })
+    .limit(MESSAGE_HISTORY_PAGE_SIZE + 1);
 
-  if (error) return mapPostgrestError('fetchConversation', error);
-  return { status: 'ok', messages: (data as MessageRow[]) ?? [] };
+  if (error) return mapPostgrestError('fetchConversationNewerThan', error);
+  const page = buildConversationRecoveryPage((data as MessageRow[]) ?? []);
+  return page ? { status: 'ok', ...page } : failure('unknown');
 }
 
 /**

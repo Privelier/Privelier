@@ -14,6 +14,7 @@ import type {
 } from '../types';
 import type { InboxThread } from '../shared/threads';
 import type { BusySlot } from '../shared/slots';
+import type { ConversationCursor } from '../shared/conversationPagination';
 import type { CustomerDataFailure } from './errors';
 
 // ---------------------------------------------------------------------------
@@ -139,8 +140,27 @@ export type OwnInboxViewResult =
 // ---------------------------------------------------------------------------
 
 export type FetchConversationResult =
-  | { status: 'ok'; messages: MessageRow[] }
+  | {
+      status: 'ok';
+      messages: MessageRow[];
+      hasEarlier: boolean;
+      earliestCursor: ConversationCursor | null;
+      /** Present on data-layer pages; optional for existing page-result mocks. */
+      latestCursor?: ConversationCursor | null;
+    }
   | CustomerDataFailure;
+
+/** Ascending page of messages strictly newer than a REST-derived high-water. */
+export type FetchConversationNewerResult =
+  | {
+      status: 'ok';
+      messages: MessageRow[];
+      hasNewer: boolean;
+      latestCursor: ConversationCursor | null;
+    }
+  | CustomerDataFailure;
+
+export type { ConversationCursor } from '../shared/conversationPagination';
 
 /** `message` is the authoritative inserted row (server id + created_at). */
 export type SendMessageResult =
