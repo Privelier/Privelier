@@ -1,25 +1,23 @@
-/**
- * PrimaryButton — the canonical brass CTA (Step-18 Ultra design pass).
- *
- * ONE size, reconciling the two variants that had silently drifted: the
- * customer/auth 16/16 · minHeight 52 is the canonical bar (comfortably above
- * the 44 floor); the barber 14/15 was drift and is retired. The only genuine
- * feature the barber buttons carried — a leading icon (check/plus) — is an
- * optional `icon` prop, not a size fork.
- *
- * Brass appears here as the one fill the brand allows. `loading` keeps the
- * button at full opacity with a spinner (busy ≠ dead); only a truly `disabled`
- * button dims. Press feedback is the standard soft dim — this also gives the
- * several call sites that had NO pressed state one, for free.
- */
 import type { ComponentProps } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useTheme } from '../../theme/useTheme';
+import Animated from 'react-native-reanimated';
 import { radius, space } from '../../theme/spacing';
-import { pressOpacity } from '../../theme/motion';
+import { useTheme } from '../../theme/useTheme';
+import { usePressFeedback } from '../motion';
 
 type FeatherName = ComponentProps<typeof Feather>['name'];
+
+type PrimaryButtonProps = {
+  label: string;
+  onPress: () => void;
+  testID: string;
+  icon?: FeatherName;
+  loading?: boolean;
+  disabled?: boolean;
+  accessibilityLabel?: string;
+  fullWidth?: boolean;
+};
 
 export function PrimaryButton({
   label,
@@ -30,63 +28,66 @@ export function PrimaryButton({
   disabled = false,
   accessibilityLabel,
   fullWidth = true,
-}: {
-  label: string;
-  onPress: () => void;
-  testID: string;
-  /** Optional leading glyph (barber add/save flows). */
-  icon?: FeatherName;
-  /** Spinner; also blocks the press. */
-  loading?: boolean;
-  disabled?: boolean;
-  /** Defaults to `label`. */
-  accessibilityLabel?: string;
-  /** Default true — every current call site stretches full width. */
-  fullWidth?: boolean;
-}) {
+}: PrimaryButtonProps) {
   const { colors, fonts } = useTheme();
   const inactive = disabled || loading;
+  const { animatedStyle, onPressIn, onPressOut } = usePressFeedback({ disabled: inactive });
+
   return (
     <Pressable
       onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       disabled={inactive}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled: inactive, busy: loading }}
       testID={testID}
-      style={({ pressed }) => [
-        styles.button,
+      style={[
+        styles.hitTarget,
         fullWidth ? styles.fullWidth : null,
-        {
-          backgroundColor: colors.accent,
-          opacity: loading ? 1 : disabled ? 0.6 : pressed ? pressOpacity.soft : 1,
-        },
+        disabled ? styles.disabled : null,
       ]}
     >
-      {loading ? (
-        <ActivityIndicator size="small" color={colors.onAccent} />
-      ) : (
-        <>
-          {icon ? <Feather name={icon} size={16} color={colors.onAccent} /> : null}
-          <Text style={[styles.label, { color: colors.onAccent, fontFamily: fonts.bodySemiBold }]}>
-            {label}
-          </Text>
-        </>
-      )}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.button,
+          fullWidth ? styles.fullWidth : null,
+          { backgroundColor: colors.accent },
+          animatedStyle,
+        ]}
+      >
+        {loading ? (
+          <ActivityIndicator size="small" color={colors.onAccent} />
+        ) : (
+          <>
+            {icon ? <Feather name={icon} size={16} color={colors.onAccent} /> : null}
+            <Text style={[styles.label, { color: colors.onAccent, fontFamily: fonts.bodySemiBold }]}>
+              {label}
+            </Text>
+          </>
+        )}
+      </Animated.View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  hitTarget: {
+    minHeight: 52,
+    borderRadius: radius.pill,
+  },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: space.sm, // inert when there's no icon
+    gap: space.sm,
     borderRadius: radius.pill,
     paddingVertical: space.base,
-    minHeight: 52, // > 44 floor; literal by design (no 52 on the scale)
+    minHeight: 52,
   },
   fullWidth: { width: '100%' },
+  disabled: { opacity: 0.6 },
   label: { fontSize: 16 },
 });
