@@ -161,6 +161,8 @@ env:
 # below is exactly TEST_LOCATION, not city+TEST_LOCATION concatenated.
 - eraseText
 - inputText: "${TEST_LOCATION}"
+# Keyboard Return advances through the fields; the final optional field's Done
+# action submits a valid address. This E2E path uses the visible Continue action.
 - tapOn:
     id: "customer-booking-location-continue"
 

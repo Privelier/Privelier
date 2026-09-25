@@ -44,7 +44,11 @@ it('waits for blur before showing street validation despite a real city prefill'
 
   await fireEvent.changeText(street, 'Main Street 12');
   expect(screen.queryByTestId('customer-booking-location-street-error')).toBeNull();
-  await fireEvent.press(screen.getByTestId('customer-booking-location-continue'));
+  expect(street.props.returnKeyType).toBe('next');
+  expect(screen.getByTestId('customer-booking-location-city').props.returnKeyType).toBe('next');
+  expect(screen.getByTestId('customer-booking-location-unit').props.returnKeyType).toBe('next');
+  expect(screen.getByTestId('customer-booking-location-instructions').props.returnKeyType).toBe('done');
+  await fireEvent(screen.getByTestId('customer-booking-location-instructions'), 'submitEditing');
   expect(navigation.navigate).toHaveBeenCalledWith('BookingConfirm', expect.objectContaining({
     location: 'Main Street 12, Berlin',
   }));
@@ -58,4 +62,14 @@ it('shows a city error only after the city field is touched', async () => {
   expect(screen.queryByTestId('customer-booking-location-city-error')).toBeNull();
   await fireEvent(city, 'blur');
   expect(screen.getByTestId('customer-booking-location-city-error').props.accessibilityRole).toBe('alert');
+});
+
+it('the last keyboard action reveals missing required fields without navigating', async () => {
+  jest.mocked(fetchOwnProfile).mockImplementation(() => new Promise(() => {}));
+  await render(<BookingLocationScreen route={route as never} navigation={navigation as never} />);
+
+  await fireEvent(screen.getByTestId('customer-booking-location-instructions'), 'submitEditing');
+  expect(screen.getByTestId('customer-booking-location-street-error')).toBeTruthy();
+  expect(screen.getByTestId('customer-booking-location-city-error')).toBeTruthy();
+  expect(navigation.navigate).not.toHaveBeenCalled();
 });

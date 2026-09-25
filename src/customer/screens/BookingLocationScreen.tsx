@@ -9,8 +9,8 @@
  * expand it to a real address, and city alone is never treated as
  * sufficient on its own.
  */
-import { useCallback, useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState, type Ref } from 'react';
+import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../../theme/useTheme';
@@ -33,6 +33,9 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
   const [instructions, setInstructions] = useState('');
   const [focused, setFocused] = useState<string | null>(null);
   const [touched, setTouched] = useState({ street: false, city: false });
+  const cityRef = useRef<TextInput>(null);
+  const unitRef = useRef<TextInput>(null);
+  const instructionsRef = useRef<TextInput>(null);
 
   useEffect(() => {
     let active = true;
@@ -68,6 +71,12 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
     });
   }, [navigation, barberId, barberName, service, date, time, location, canContinue]);
 
+  const onSubmitLastField = useCallback(() => {
+    Keyboard.dismiss();
+    if (canContinue) onContinue();
+    else setTouched({ street: true, city: true });
+  }, [canContinue, onContinue]);
+
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -81,7 +90,7 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
       />
 
       <KeyboardAvoidingView style={styles.content} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
         <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
           Where should the barber come to?
         </Text>
@@ -100,6 +109,9 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
           placeholder="Street and building number"
           placeholderTextColor={colors.textSecondary}
           multiline
+          returnKeyType="next"
+          submitBehavior="submit"
+          onSubmitEditing={() => cityRef.current?.focus()}
           accessibilityLabel="Street and building"
           selectionColor={colors.accent}
           cursorColor={colors.accent}
@@ -119,14 +131,30 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
               Add the street and building number.
             </Text>
           ) : null}
-          <AddressField label="City" value={city} onChangeText={setCity} focused={focused === 'city'} onFocus={() => setFocused('city')} onBlur={() => { setFocused(null); setTouched((current) => ({ ...current, city: true })); }} testID="customer-booking-location-city" />
+          <AddressField
+            label="City" value={city} onChangeText={setCity} inputRef={cityRef}
+            focused={focused === 'city'} onFocus={() => setFocused('city')}
+            onBlur={() => { setFocused(null); setTouched((current) => ({ ...current, city: true })); }}
+            onSubmitEditing={() => unitRef.current?.focus()} returnKeyType="next"
+            testID="customer-booking-location-city"
+          />
           {cityError ? (
             <Text style={[styles.validation, { color: colors.errorText, fontFamily: fonts.body }]} accessibilityRole="alert" testID="customer-booking-location-city-error">
               Add your city.
             </Text>
           ) : null}
-          <AddressField label="Apartment or unit (optional)" value={unit} onChangeText={setUnit} focused={focused === 'unit'} onFocus={() => setFocused('unit')} onBlur={() => setFocused(null)} testID="customer-booking-location-unit" />
-          <AddressField label="Access instructions (optional)" value={instructions} onChangeText={setInstructions} focused={focused === 'instructions'} onFocus={() => setFocused('instructions')} onBlur={() => setFocused(null)} testID="customer-booking-location-instructions" />
+          <AddressField
+            label="Apartment or unit (optional)" value={unit} onChangeText={setUnit} inputRef={unitRef}
+            focused={focused === 'unit'} onFocus={() => setFocused('unit')} onBlur={() => setFocused(null)}
+            onSubmitEditing={() => instructionsRef.current?.focus()} returnKeyType="next"
+            testID="customer-booking-location-unit"
+          />
+          <AddressField
+            label="Access instructions (optional)" value={instructions} onChangeText={setInstructions} inputRef={instructionsRef}
+            focused={focused === 'instructions'} onFocus={() => setFocused('instructions')} onBlur={() => setFocused(null)}
+            onSubmitEditing={onSubmitLastField} returnKeyType="done"
+            testID="customer-booking-location-instructions"
+          />
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -142,13 +170,16 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
   );
 }
 
-function AddressField({ label, value, onChangeText, focused, onFocus, onBlur, testID }: {
+function AddressField({ label, value, onChangeText, inputRef, focused, onFocus, onBlur, onSubmitEditing, returnKeyType, testID }: {
   label: string;
   value: string;
   onChangeText: (value: string) => void;
+  inputRef: Ref<TextInput>;
   focused: boolean;
   onFocus: () => void;
   onBlur: () => void;
+  onSubmitEditing: () => void;
+  returnKeyType: 'next' | 'done';
   testID: string;
 }) {
   const { colors, fonts } = useTheme();
@@ -156,10 +187,13 @@ function AddressField({ label, value, onChangeText, focused, onFocus, onBlur, te
     <View>
       <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>{label}</Text>
       <TextInput
+        ref={inputRef}
         value={value}
         onChangeText={onChangeText}
         onFocus={onFocus}
         onBlur={onBlur}
+        onSubmitEditing={onSubmitEditing}
+        returnKeyType={returnKeyType}
         accessibilityLabel={label}
         placeholderTextColor={colors.textSecondary}
         selectionColor={colors.accent}
