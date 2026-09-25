@@ -20,6 +20,8 @@ import LoginScreen from './LoginScreen';
 import SignupScreen from './SignupScreen';
 import AwaitEmailConfirmationScreen from './AwaitEmailConfirmationScreen';
 import ForgotPasswordScreen from './ForgotPasswordScreen';
+import LegalDocumentScreen from '../../legal/LegalDocumentScreen';
+import type { LegalDocument } from '../../legal/legalConfig';
 import type { Role } from '../../types';
 
 export type AuthStackParamList = {
@@ -29,6 +31,7 @@ export type AuthStackParamList = {
   Signup: { role: Role };
   AwaitEmailConfirmation: { email: string; role: Role };
   ForgotPassword: { role: Role; email?: string };
+  Legal: { document: LegalDocument };
 };
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
@@ -57,6 +60,7 @@ export default function AuthNavigator() {
       <Stack.Screen name="Signup" component={SignupScreen} />
       <Stack.Screen name="AwaitEmailConfirmation" component={AwaitEmailConfirmationScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <Stack.Screen name="Legal" component={LegalDocumentScreen} />
     </Stack.Navigator>
   );
 }

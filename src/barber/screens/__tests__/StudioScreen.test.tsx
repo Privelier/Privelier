@@ -9,7 +9,10 @@ import type { DashboardView } from '../../types';
 // test shim used by the other barber screens, including its callback cleanup.
 jest.mock('@react-navigation/native', () => {
   const React = jest.requireActual('react');
-  return { useFocusEffect: (callback: () => void | (() => void)) => React.useEffect(callback, [callback]) };
+  return {
+    useFocusEffect: (callback: () => void | (() => void)) => React.useEffect(callback, [callback]),
+    useNavigation: () => ({ navigate: jest.fn() }),
+  };
 });
 
 jest.mock('@expo/vector-icons', () => ({ Feather: () => null }));

@@ -9,6 +9,8 @@ import AvailabilityScreen from './screens/AvailabilityScreen';
 import BioEditScreen from './screens/BioEditScreen';
 import LocationEditScreen from './screens/LocationEditScreen';
 import ConversationScreen from './screens/ConversationScreen';
+import LegalDocumentScreen from '../legal/LegalDocumentScreen';
+import type { LegalDocument } from '../legal/legalConfig';
 
 export type BarberStackParamList = {
   BarberTabs: NavigatorScreenParams<BarberTabParamList> | undefined;
@@ -16,6 +18,7 @@ export type BarberStackParamList = {
   Availability: undefined;
   BioEdit: undefined;
   LocationEdit: undefined;
+  Legal: { document: LegalDocument };
   // Chat (build-order step 15-16): title from the Chats row (service name —
   // the customer's name is unreadable list-side under users RLS; the screen
   // itself upgrades the title via the 0012 counterparts RPC).
@@ -37,6 +40,7 @@ export default function BarberNavigator({ onExit }: { onExit: () => void }) {
           <Stack.Screen name="Availability" component={AvailabilityScreen} />
           <Stack.Screen name="BioEdit" component={BioEditScreen} />
           <Stack.Screen name="LocationEdit" component={LocationEditScreen} />
+          <Stack.Screen name="Legal" component={LegalDocumentScreen} />
           <Stack.Screen name="Conversation" component={ConversationScreen} />
         </Stack.Navigator>
       </UnreadProvider>

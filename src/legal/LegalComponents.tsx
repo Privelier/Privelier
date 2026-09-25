@@ -1,26 +1,29 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
+import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import type { Role } from '../types';
 import { useTheme } from '../theme/useTheme';
 import { space } from '../theme/spacing';
-import { LEGAL_URLS, type LegalDocument } from './legalConfig';
+import type { LegalDocument } from './legalConfig';
+
+type LegalNavigationParams = { Legal: { document: LegalDocument } };
 
 const DOCUMENT_LABELS: Record<LegalDocument, string> = {
   impressum: 'Impressum',
   privacy: 'Datenschutzerklärung',
-  customerTerms: 'Customer terms',
-  barberTerms: 'Barber terms',
+  customerTerms: 'Nutzungsbedingungen Kunden',
+  barberTerms: 'Nutzungsbedingungen Barber',
 };
 
-export async function openLegalDocument(document: LegalDocument): Promise<void> {
-  await WebBrowser.openBrowserAsync(LEGAL_URLS[document]);
+function openDocument(navigation: NavigationProp<LegalNavigationParams>, document: LegalDocument) {
+  navigation.navigate('Legal', { document });
 }
 
 function LegalLink({ document, testID }: { document: LegalDocument; testID: string }) {
   const { colors, fonts } = useTheme();
+  const navigation = useNavigation<NavigationProp<LegalNavigationParams>>();
   return (
     <Pressable
-      onPress={() => void openLegalDocument(document)}
+      onPress={() => openDocument(navigation, document)}
       accessibilityRole="link"
       accessibilityLabel={`Open ${DOCUMENT_LABELS[document]}`}
       testID={testID}
@@ -76,8 +79,9 @@ export function LegalConsentFields({
   testIDPrefix: string;
 }) {
   const { colors, fonts } = useTheme();
+  const navigation = useNavigation<NavigationProp<LegalNavigationParams>>();
   const termsDocument = role === 'barber' ? 'barberTerms' : role === 'customer' ? 'customerTerms' : null;
-  const termsLabel = role === 'barber' ? 'barber terms' : 'customer terms';
+  const termsLabel = role === 'barber' ? 'Nutzungsbedingungen Barber' : 'Nutzungsbedingungen Kunden';
 
   return (
     <View style={styles.consent} testID={`${testIDPrefix}-legal-consent`}>
@@ -93,29 +97,24 @@ export function LegalConsentFields({
           {termsAccepted ? <Text style={[styles.checkmark, { color: colors.accentText }]}>✓</Text> : null}
         </Pressable>
         <Text style={[styles.consentText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-          I accept the{' '}
+          Ich akzeptiere die{' '}
           {termsDocument ? (
             <Text
-              onPress={() => void openLegalDocument(termsDocument)}
+              onPress={() => openDocument(navigation, termsDocument)}
               accessibilityRole="link"
               testID={`${testIDPrefix}-legal-terms-link`}
               style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}
             >
               {termsLabel}
             </Text>
-          ) : (
-            <Text>{termsLabel}</Text>
-          )}{' '}
-          and acknowledge the{' '}
-          <Text
-            onPress={() => void openLegalDocument('privacy')}
+          ) : <Text>{termsLabel}</Text>}{' '}
+          und bestätige, die Datenschutzerklärung zur Kenntnis genommen zu haben.
+          {' '}<Text
+            onPress={() => openDocument(navigation, 'privacy')}
             accessibilityRole="link"
             testID={`${testIDPrefix}-legal-privacy-link`}
             style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}
-          >
-            privacy policy
-          </Text>
-          .
+          >Datenschutzerklärung</Text>.
         </Text>
       </View>
       {termsError ? <Text style={[styles.error, { color: colors.errorText, fontFamily: fonts.body }]}>{termsError}</Text> : null}
@@ -131,7 +130,7 @@ export function LegalConsentFields({
         >
           {adultConfirmed ? <Text style={[styles.checkmark, { color: colors.accentText }]}>✓</Text> : null}
         </Pressable>
-        <Text style={[styles.consentText, { color: colors.textSecondary, fontFamily: fonts.body }]}>I confirm that I am at least 18 years old.</Text>
+        <Text style={[styles.consentText, { color: colors.textSecondary, fontFamily: fonts.body }]}>Ich bestätige, mindestens 18 Jahre alt zu sein.</Text>
       </View>
       {adultError ? <Text style={[styles.error, { color: colors.errorText, fontFamily: fonts.body }]}>{adultError}</Text> : null}
     </View>

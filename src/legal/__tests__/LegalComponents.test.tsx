@@ -1,11 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import * as WebBrowser from 'expo-web-browser';
-import { LegalConsentFields, LegalLinks, openLegalDocument } from '../LegalComponents';
-import { LEGAL_URLS } from '../legalConfig';
+import { LegalConsentFields, LegalLinks } from '../LegalComponents';
+import impressum from '../documents/impressum';
+import privacy from '../documents/privacy';
+import customerTerms from '../documents/customerTerms';
+import barberTerms from '../documents/barberTerms';
 
-jest.mock('expo-web-browser', () => ({
-  openBrowserAsync: jest.fn(() => Promise.resolve({ type: 'opened' })),
-}));
+const mockNavigate = jest.fn();
+jest.mock('@react-navigation/native', () => ({ useNavigation: () => ({ navigate: mockNavigate }) }));
 
 jest.mock('../../theme/useTheme', () => ({
   useTheme: () => ({
@@ -18,15 +19,14 @@ jest.mock('../../theme/useTheme', () => ({
   }),
 }));
 
-const mockOpenBrowser = WebBrowser.openBrowserAsync as jest.Mock;
-
 beforeEach(() => jest.clearAllMocks());
 
 describe('legal infrastructure', () => {
-  it('keeps all four placeholder documents in one config and opens the selected URL', async () => {
-    await openLegalDocument('privacy');
-    expect(mockOpenBrowser).toHaveBeenCalledWith(LEGAL_URLS.privacy);
-    expect(Object.values(LEGAL_URLS).every((url) => url.includes('placeholder'))).toBe(true);
+  it('bundles all four draft texts and opens legal documents in the app', async () => {
+    expect([impressum, privacy, customerTerms, barberTerms].every((text) => text.startsWith('ENTWURF, NOCH NICHT RECHTSVERBINDLICH'))).toBe(true);
+    await render(<LegalLinks role="customer" testIDPrefix="login-legal" />);
+    await fireEvent.press(screen.getByTestId('login-legal-privacy'));
+    expect(mockNavigate).toHaveBeenCalledWith('Legal', { document: 'privacy' });
   });
 
   it('shows both app terms from the account placement', async () => {
@@ -54,5 +54,7 @@ describe('legal infrastructure', () => {
     expect(screen.getByTestId('signup-legal-privacy-link')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('signup-legal-terms'));
     await fireEvent.press(screen.getByTestId('signup-legal-adult'));
+    await fireEvent.press(screen.getByTestId('signup-legal-terms-link'));
+    expect(mockNavigate).toHaveBeenCalledWith('Legal', { document: 'barberTerms' });
   });
 });

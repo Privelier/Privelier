@@ -12,12 +12,15 @@ import BookingConfirmScreen from './screens/BookingConfirmScreen';
 import ConversationScreen from './screens/ConversationScreen';
 import ReviewSubmitScreen from './screens/ReviewSubmitScreen';
 import EditProfileScreen from './screens/EditProfileScreen';
+import LegalDocumentScreen from '../legal/LegalDocumentScreen';
+import type { LegalDocument } from '../legal/legalConfig';
 
 export type CustomerStackParamList = {
   CustomerTabs: NavigatorScreenParams<CustomerTabParamList> | undefined;
   BarberProfile: { barberId: string };
   AccountSection: { section: AccountSectionKey };
   EditProfile: undefined;
+  Legal: { document: LegalDocument };
   // Booking flow (build-order step 11-12): DateTime -> Location -> Confirm,
   // each screen carrying forward everything the next one needs so nothing
   // has to be re-fetched mid-flow. barberName rides along from
@@ -72,6 +75,7 @@ export default function CustomerNavigator({ onExit }: { onExit: () => void }) {
           <Stack.Screen name="BarberProfile" component={BarberProfileScreen} />
           <Stack.Screen name="AccountSection" component={AccountSectionScreen} />
           <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+          <Stack.Screen name="Legal" component={LegalDocumentScreen} />
           <Stack.Screen name="BookingDateTime" component={BookingDateTimeScreen} />
           <Stack.Screen name="BookingLocation" component={BookingLocationScreen} />
           <Stack.Screen name="BookingConfirm" component={BookingConfirmScreen} />
