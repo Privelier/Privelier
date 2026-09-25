@@ -1,0 +1,12 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "Privelier",
+    "NSCalendarsUsageDescription": "Privelier can add your appointment to your calendar and update or remove it when plans change.",
+    "NSCalendarsFullAccessUsageDescription": "Privelier can add your appointment to your calendar and update or remove it when plans change.",
+    "NSRemindersUsageDescription": "Privelier can access your calendar reminders.",
+    "NSRemindersFullAccessUsageDescription": "Privelier can access your calendar reminders."
+  },
+  "android": {
+    "app_name": "Privelier"
+  }
+}

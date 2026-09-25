@@ -1,0 +1,12 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "Privelier",
+    "NSCalendarsUsageDescription": "Privelier kann deinen Termin zu deinem Kalender hinzufügen und bei Änderungen aktualisieren oder entfernen.",
+    "NSCalendarsFullAccessUsageDescription": "Privelier kann deinen Termin zu deinem Kalender hinzufügen und bei Änderungen aktualisieren oder entfernen.",
+    "NSRemindersUsageDescription": "Privelier kann auf deine Kalendererinnerungen zugreifen.",
+    "NSRemindersFullAccessUsageDescription": "Privelier kann auf deine Kalendererinnerungen zugreifen."
+  },
+  "android": {
+    "app_name": "Privelier"
+  }
+}

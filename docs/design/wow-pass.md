@@ -125,3 +125,11 @@ Each item follows Plan → Design → Build → Validate → Secure → Integrat
 ### Baseline checks
 
 On 2026-09-25, before implementation: TypeScript passed; Expo lint exited zero with 19 pre-existing warnings; Jest passed 56 suites and 599 tests. `adb devices -l` showed no attached device. Maestro and EAS CLIs are installed, but no native flow or visual check ran during Wave 0.
+
+## Wave 1: native foundation batch
+
+Installed the eight planned native modules together before any development build. Added the four JS runtime packages and QR types in the same dependency item. The Expo installer could not write plugin entries automatically because this app uses a dynamic `app.config.js`; the packages installed successfully, and the required entries were added to the static `app.json` that the dynamic config extends. The effective config now contains image, localization, calendar and notifications plugins, German and English locales, and Android calendar permissions from the calendar plugin. Notification background remote mode remains disabled. The system notification permission prompt itself has no custom iOS usage-description key; app explanatory copy will be localized in Wave 6.
+
+Expo's compatibility check found three existing SDK 57 patch packages behind its current recommendations. Aligned `expo`, `expo-image-picker` and `expo-linking` before building, in this same native batch. No further native additions are planned. Calendar permission is full access because updating/removing an event by stored ID is part of the founder's requested behavior; access will only be requested when a user selects calendar integration. The locale files provide German and English system permission text, with English as the default config string.
+
+Validation after this item: `npm run typecheck` passed; `npm run lint` passed with the same 19 warnings; full Jest passed 56 suites and 599 tests; `npx expo install --check` reported current dependencies; `npx expo-doctor` passed 21/21 checks. Native device behavior, build links, and screenshots are pending development builds and an attached device.

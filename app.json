@@ -11,7 +11,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.privelier.app",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleAllowMixedLocalizations": true
       }
     },
     "android": {
@@ -26,8 +27,33 @@
     "web": {
       "favicon": "./assets/privelier-favicon.png"
     },
+    "locales": {
+      "de": "./locales/de.json",
+      "en": "./locales/en.json"
+    },
     "plugins": [
       "expo-font",
+      "expo-image",
+      [
+        "expo-localization",
+        {
+          "supportedLocales": ["de", "en"]
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Allow Privelier to manage appointment events in your calendar.",
+          "remindersPermission": "Allow Privelier to access calendar reminders."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#BFA06B",
+          "enableBackgroundRemoteNotifications": false
+        }
+      ],
       [
         "expo-splash-screen",
         {
