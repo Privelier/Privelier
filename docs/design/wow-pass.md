@@ -189,3 +189,9 @@ Focused Jest passed 2 suites/6 tests; full Jest passed 70 suites/642 tests. Type
 Customer Inbox and Barber Chats now expose the same brass native pull-to-refresh control. Refresh calls the existing focus-load data path; a prior thread preview remains visible during loading, and the prior content plus retry notice remains if the read fails. First load still uses conversation-shaped skeleton rows. Existing row/navigation IDs remain, with new list IDs for verification. Customer and Barber chat-list Maestro flows now pull down before opening a thread.
 
 Focused Jest passed 2 suites/6 tests; full Jest passed 70 suites/644 tests. Typecheck and lint passed with 19 pre-existing warnings. Device gesture checks remain open.
+
+### Customer Account profile-loading item
+
+Customer Account now shows a profile-shaped skeleton while the first profile read is pending. The edit-profile target and member identity appear only after the real `users` row arrives; a failed read leaves a labeled retry action, settings and sign-out without invented profile data. A later focus refresh retains the prior real profile while loading. The login-to-Account Maestro flow waits for the loading state to clear and asserts the real edit target.
+
+Focused Jest passed 1 suite/3 tests; full Jest passed 70 suites/646 tests. Typecheck and lint passed with 19 pre-existing warnings. Native visual checks remain open.

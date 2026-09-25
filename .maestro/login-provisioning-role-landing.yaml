@@ -74,5 +74,11 @@ env:
 # reachable there (also proves the tab bar renders and navigates).
 - tapOn:
     id: "customer-tab-account"
+- extendedWaitUntil:
+    notVisible:
+      id: "customer-account-loading"
+    timeout: 15000
+- assertVisible:
+    id: "customer-account-edit-profile"
 - assertVisible:
     id: "customer-account-logout"

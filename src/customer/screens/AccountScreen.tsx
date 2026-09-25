@@ -36,6 +36,7 @@ import type { CustomerTabParamList } from '../CustomerTabs';
 import type { CustomerStackParamList } from '../CustomerNavigator';
 import { Notice } from '../../shared/components/Notice';
 import { Avatar } from '../../shared/components/Avatar';
+import { Skeleton } from '../../shared/components/Skeleton';
 import { LegalLinks } from '../../legal/LegalComponents';
 
 type Props = CompositeScreenProps<
@@ -52,11 +53,14 @@ export default function AccountScreen({ navigation }: Props) {
   const { colors, fonts } = useTheme();
   const onSignOut = useExitRole();
   const [profile, setProfile] = useState<UsersRow | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    setLoading(true);
     setError(null);
     const result = await fetchOwnProfile();
+    setLoading(false);
     if (result.status === 'ok') setProfile(result.profile);
     else setError(result.message);
   }, []);
@@ -76,43 +80,44 @@ export default function AccountScreen({ navigation }: Props) {
 
         {error ? (
           <Notice message={error} testID="customer-account-error" style={styles.errorNotice}>
-            <Pressable onPress={() => void load()} accessibilityRole="button" style={styles.retryAction}>
+            <Pressable onPress={() => void load()} accessibilityRole="button" accessibilityLabel="Try loading profile again" style={styles.retryAction}>
               <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}>Try again</Text>
             </Pressable>
           </Notice>
         ) : null}
 
-        <Pressable
+        {loading && !profile ? (
+          <View testID="customer-account-loading" accessible accessibilityRole="progressbar" accessibilityLabel="Loading profile" style={styles.profileRow}>
+            <Skeleton style={styles.avatarPlaceholder} />
+            <View style={styles.profileText}>
+              <Skeleton style={styles.skeletonName} />
+              <Skeleton style={styles.skeletonEmail} />
+              <Skeleton style={styles.skeletonMember} />
+            </View>
+          </View>
+        ) : profile ? <Pressable
           onPress={() => navigation.navigate('EditProfile')}
           accessibilityRole="button"
           accessibilityLabel="Edit profile"
           testID="customer-account-edit-profile"
           style={({ pressed }) => [styles.profileRow, pressed ? { opacity: pressOpacity.soft } : null]}
         >
-          {profile ? (
-            <Avatar
-              id={profile.id}
-              name={profile.name}
-              imageUrl={profile.profile_image}
-              size={64}
-              accessible={false}
-              testID="customer-account-avatar"
-            />
-          ) : (
-            <View
-              accessible={false}
-              style={[styles.avatarPlaceholder, { backgroundColor: colors.surface }]}
-              testID="customer-account-avatar-placeholder"
-            />
-          )}
+          <Avatar
+            id={profile.id}
+            name={profile.name}
+            imageUrl={profile.profile_image}
+            size={64}
+            accessible={false}
+            testID="customer-account-avatar"
+          />
           <View style={styles.profileText}>
             <Text
               numberOfLines={1}
               style={[styles.name, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}
             >
-              {profile?.name || 'Member'}
+              {profile.name}
             </Text>
-            {profile?.email ? (
+            {profile.email ? (
               <Text
                 numberOfLines={1}
                 style={[styles.email, { color: colors.textSecondary, fontFamily: fonts.body }]}
@@ -125,7 +130,7 @@ export default function AccountScreen({ navigation }: Props) {
             </Text>
           </View>
           <Feather name="edit-2" size={16} color={colors.textSecondary} />
-        </Pressable>
+        </Pressable> : null}
 
         <View style={styles.settingsList}>
           {SETTINGS_ROWS.map(({ key, icon }, index) => (
@@ -182,6 +187,9 @@ const styles = StyleSheet.create({
   errorNotice: { marginTop: 20 },
   retryAction: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
   avatarPlaceholder: { width: 64, height: 64, borderRadius: 32 },
+  skeletonName: { width: 150, maxWidth: '80%', height: 20 },
+  skeletonEmail: { width: 190, maxWidth: '95%', height: 12, marginTop: 8 },
+  skeletonMember: { width: 72, height: 10, marginTop: 8 },
   profileText: { flexShrink: 1, minWidth: 0 },
   name: { fontSize: 20 },
   email: { fontSize: 12, marginTop: 2 },

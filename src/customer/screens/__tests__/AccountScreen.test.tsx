@@ -52,6 +52,7 @@ const profile: UsersRow = {
 const mockFetchProfile = jest.mocked(fetchOwnProfile);
 
 beforeEach(() => {
+  mockFetchProfile.mockReset();
   mockFetchProfile.mockResolvedValue({ status: 'ok', profile });
 });
 
@@ -61,6 +62,25 @@ afterEach(async () => {
 });
 
 describe('AccountScreen avatar integration', () => {
+  it('does not show a placeholder member identity while the real profile loads', async () => {
+    mockFetchProfile.mockImplementation(() => new Promise(() => {}));
+    await render(<AccountScreen navigation={{ navigate: jest.fn() } as never} route={{} as never} />);
+
+    expect(screen.getByTestId('customer-account-loading').props.accessibilityLabel).toBe('Loading profile');
+    expect(screen.queryByTestId('customer-account-edit-profile')).toBeNull();
+    expect(screen.queryByText('Member')).toBeNull();
+    expect(screen.getByTestId('customer-account-logout')).toBeTruthy();
+  });
+
+  it('keeps retry available without inventing member data on a load failure', async () => {
+    mockFetchProfile.mockResolvedValue({ status: 'error', code: 'network', retryable: true, message: 'Could not load profile.' });
+    await render(<AccountScreen navigation={{ navigate: jest.fn() } as never} route={{} as never} />);
+
+    await waitFor(() => expect(screen.getByTestId('customer-account-error')).toBeTruthy());
+    expect(screen.queryByTestId('customer-account-edit-profile')).toBeNull();
+    expect(screen.queryByText('Member')).toBeNull();
+  });
+
   it('replaces the neutral loading disc with the signed-in member monogram', async () => {
     await render(<AccountScreen navigation={{ navigate: jest.fn() } as never} route={{} as never} />);
 
