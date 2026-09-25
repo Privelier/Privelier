@@ -1,0 +1,46 @@
+# Barber chat inbox: existing room preview opens its booking conversation.
+# Requires a confirmed test barber with exactly one booking/chat room.
+# Not run without a connected device and Maestro CLI.
+appId: com.privelier.app
+env:
+  TEST_BARBER_EMAIL: barber.e2e@example.com
+  TEST_BARBER_PASSWORD: ChangeMe123!
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "role-select-barber"
+- tapOn:
+    id: "role-select-barber"
+- tapOn:
+    id: "auth-entry-login"
+- assertVisible:
+    id: "auth-login-screen"
+- tapOn:
+    id: "auth-login-email"
+- inputText: "${TEST_BARBER_EMAIL}"
+- tapOn:
+    id: "auth-login-password"
+- inputText: "${TEST_BARBER_PASSWORD}"
+- tapOn:
+    id: "auth-login-submit"
+- extendedWaitUntil:
+    visible:
+      id: "barber-dashboard-logout"
+    timeout: 15000
+- tapOn:
+    id: "barber-tab-chats"
+- assertVisible:
+    id: "barber-chats-screen"
+- extendedWaitUntil:
+    notVisible:
+      id: "barber-chats-loading"
+    timeout: 15000
+- assertNotVisible:
+    id: "barber-chats-error"
+- assertNotVisible:
+    id: "barber-chats-empty"
+- tapOn:
+    id: "barber-chats-row-.*"
+- assertVisible:
+    id: "barber-conversation-screen"

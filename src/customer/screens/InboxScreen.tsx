@@ -19,7 +19,7 @@
  * fresh last-message preview, and bottom-tab screens stay mounted.
  */
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import type { CompositeScreenProps } from '@react-navigation/native';
@@ -29,6 +29,7 @@ import { useTheme } from '../../theme/useTheme';
 import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
 import { Avatar } from '../../shared/components/Avatar';
+import { ThreadListSkeleton } from '../../shared/components/ThreadListSkeleton';
 import type { InboxThread } from '../types';
 import type { CustomerTabParamList } from '../CustomerTabs';
 import type { CustomerStackParamList } from '../CustomerNavigator';
@@ -95,16 +96,13 @@ export default function InboxScreen({ navigation }: Props) {
         </Text>
       </View>
 
-      {loading ? (
-        <ActivityIndicator
-          size="small"
-          color={colors.accent}
-          style={styles.spinner}
-          testID="customer-inbox-loading"
-        />
-      ) : error ? (
+      {loading && threads.length === 0 ? (
+        <ThreadListSkeleton testID="customer-inbox-loading" />
+      ) : error && threads.length === 0 ? (
         <RetryNotice testID="customer-inbox-error" message={error} onRetry={() => void load()} style={styles.noticeMargins} />
       ) : (
+        <>
+        {error ? <RetryNotice testID="customer-inbox-error" message={error} onRetry={() => void load()} style={styles.noticeMargins} /> : null}
         <FlatList
           data={threads}
           keyExtractor={(item) => item.room.id}
@@ -184,6 +182,7 @@ export default function InboxScreen({ navigation }: Props) {
             );
           }}
         />
+        </>
       )}
     </SafeAreaView>
   );
@@ -195,7 +194,6 @@ const styles = StyleSheet.create({
   heading: { fontSize: 30 },
   subtitle: { fontSize: 12, marginTop: 4 },
 
-  spinner: { marginTop: 48 },
   noticeMargins: { marginTop: 24, marginHorizontal: 24 },
 
   listContent: { paddingTop: 16, paddingBottom: 32 },

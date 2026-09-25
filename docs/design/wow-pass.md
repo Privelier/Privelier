@@ -171,3 +171,9 @@ The services Maestro flow now checks the formatted `€25 · 30 min` row. Focuse
 Reused the existing flat, brand-toned Skeleton primitive to compose two booking-card placeholders for Customer Bookings and Barber Requests. The first load now previews avatar, name, service, price, date and status positions instead of a bare spinner; empty copy appears only after a completed empty response. Both loading test IDs stay stable for Maestro. The placeholders form one accessible progress announcement, while decorative blocks stay out of the accessibility tree. The Skeleton pulse now reads the central Reduce Motion preference at first render and becomes static when enabled.
 
 Focused Jest passed 2 suites/4 tests; full Jest passed 70 suites/638 tests. Typecheck and lint passed with 19 pre-existing warnings. The rest of the list and detail screens still need their own content-shaped loading states; this item establishes the pattern. Native visual and motion checks remain open without a device.
+
+### Conversation-list skeleton item
+
+Customer Inbox and Barber Chats now show conversation-shaped first-load placeholders: avatar, name, preview and date. An empty state appears only after a completed empty response. Once real threads have loaded, returning to the tab keeps them visible during the refresh and retains them with a retry notice if that refresh fails. Existing loading, row and navigation test IDs remain. The Customer Maestro flow documents its stable loading ID; a new Barber chat-list flow checks login, loading, row and conversation navigation, subject to a real one-room test account.
+
+Focused Jest passed 2 suites/4 tests; full Jest passed 70 suites/640 tests. Typecheck and lint passed with the same 19 pre-existing warnings. The new Maestro flow has not run because no device is attached.

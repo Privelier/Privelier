@@ -64,6 +64,7 @@ env:
     id: "customer-tab-inbox"
 - assertVisible:
     id: "customer-inbox-screen"
+# The stable loading ID now contains conversation-preview skeleton rows.
 - extendedWaitUntil:
     notVisible:
       id: "customer-inbox-loading"

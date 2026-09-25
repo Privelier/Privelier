@@ -14,7 +14,7 @@
  * fresh last-message preview, and bottom-tab screens stay mounted.
  */
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import type { CompositeScreenProps } from '@react-navigation/native';
@@ -25,6 +25,7 @@ import { HAIRLINE, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
 import { Avatar } from '../../shared/components/Avatar';
+import { ThreadListSkeleton } from '../../shared/components/ThreadListSkeleton';
 import type { InboxThread } from '../../shared/threads';
 import type { BarberTabParamList } from '../BarberTabs';
 import type { BarberStackParamList } from '../BarberNavigator';
@@ -86,16 +87,13 @@ export default function ChatsScreen({ navigation }: Props) {
         Chats
       </Text>
 
-      {loading ? (
-        <ActivityIndicator
-          size="small"
-          color={colors.accent}
-          style={styles.spinner}
-          testID="barber-chats-loading"
-        />
-      ) : error ? (
+      {loading && threads.length === 0 ? (
+        <ThreadListSkeleton testID="barber-chats-loading" />
+      ) : error && threads.length === 0 ? (
         <RetryNotice testID="barber-chats-error" message={error} onRetry={() => void load()} style={styles.noticeMargins} />
       ) : (
+        <>
+        {error ? <RetryNotice testID="barber-chats-error" message={error} onRetry={() => void load()} style={styles.noticeMargins} /> : null}
         <FlatList
           data={threads}
           keyExtractor={(item) => item.room.id}
@@ -174,6 +172,7 @@ export default function ChatsScreen({ navigation }: Props) {
             );
           }}
         />
+        </>
       )}
     </SafeAreaView>
   );
@@ -183,7 +182,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   heading: { fontSize: 30, marginTop: space.xl, paddingHorizontal: space.xl },
 
-  spinner: { marginTop: 48 },
   noticeMargins: { marginTop: space.xl, marginHorizontal: space.xl },
 
   listContent: { paddingTop: space.base, paddingBottom: space['2xl'] },

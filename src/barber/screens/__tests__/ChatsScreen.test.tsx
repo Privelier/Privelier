@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react-native';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react-native';
 import type { ChatRoomRow } from '../../../types';
 import type { InboxThread } from '../../../shared/threads';
 import { fetchOwnChatsView } from '../../chatsData';
@@ -65,6 +65,18 @@ afterEach(async () => {
 });
 
 describe('ChatsScreen avatar integration', () => {
+  it('keeps the empty state hidden while thread previews load', async () => {
+    let finish!: (value: Awaited<ReturnType<typeof fetchOwnChatsView>>) => void;
+    mockFetchChats.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+    await render(<ChatsScreen navigation={{ navigate: jest.fn() } as never} route={{} as never} />);
+
+    expect(screen.getByTestId('barber-chats-loading').props.accessibilityRole).toBe('progressbar');
+    expect(screen.queryByTestId('barber-chats-empty')).toBeNull();
+    await act(async () => finish({ status: 'ok', threads: [thread] }));
+    await waitFor(() => expect(screen.getByTestId('barber-chats-row-room-2')).toBeTruthy());
+    expect(screen.queryByTestId('barber-chats-loading')).toBeNull();
+  });
+
   it('uses the real customer photo while the conversation row owns accessibility', async () => {
     await render(<ChatsScreen navigation={{ navigate: jest.fn() } as never} route={{} as never} />);
 

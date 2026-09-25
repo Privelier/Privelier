@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react-native';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react-native';
 import type { BarberDirectoryRow, ChatRoomRow } from '../../../types';
 import type { InboxThread } from '../../types';
 import { fetchOwnInboxView } from '../../inboxData';
@@ -79,6 +79,18 @@ afterEach(async () => {
 });
 
 describe('InboxScreen avatar integration', () => {
+  it('keeps the empty state hidden while thread previews load', async () => {
+    let finish!: (value: Awaited<ReturnType<typeof fetchOwnInboxView>>) => void;
+    mockFetchInbox.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+    await render(<InboxScreen navigation={{ navigate: jest.fn() } as never} route={{} as never} />);
+
+    expect(screen.getByTestId('customer-inbox-loading').props.accessibilityRole).toBe('progressbar');
+    expect(screen.queryByTestId('customer-inbox-empty')).toBeNull();
+    await act(async () => finish({ status: 'ok', threads: [thread] }));
+    await waitFor(() => expect(screen.getByTestId('customer-inbox-row-room-1')).toBeTruthy());
+    expect(screen.queryByTestId('customer-inbox-loading')).toBeNull();
+  });
+
   it('renders a decorative two-initial barber monogram inside the labelled row', async () => {
     await render(<InboxScreen navigation={{ navigate: jest.fn() } as never} route={{} as never} />);
 
