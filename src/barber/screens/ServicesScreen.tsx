@@ -29,11 +29,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../theme/useTheme';
+import { numericText } from '../../theme/typography';
 import { HAIRLINE, radius, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 import { PrimaryButton } from '../../shared/components/PrimaryButton';
 import { BackButton } from '../../shared/components/ScreenBackHeader';
 import { Notice } from '../../shared/components/Notice';
+import { formatMoney } from '../../shared/format';
 import type { Palette } from '../../theme/colors';
 import type { ServiceRow } from '../../types';
 import { createService, deleteService, listOwnServices, updateService } from '../servicesData';
@@ -393,8 +395,8 @@ export default function ServicesScreen({ navigation }: Props) {
               <Text style={[styles.rowName, { color: colors.textPrimary, fontFamily: fonts.bodySemiBold }]}>
                 {item.name}
               </Text>
-              <Text style={[styles.rowMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                {`${item.price} · ${item.duration_minutes} min`}
+              <Text style={[styles.rowMeta, numericText, { color: colors.textSecondary }]}>
+                {`${formatMoney(item.price)} · ${item.duration_minutes} min`}
               </Text>
             </View>
             <View style={styles.rowActions}>

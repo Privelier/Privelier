@@ -45,6 +45,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../theme/useTheme';
+import { numericText } from '../../theme/typography';
 import { HAIRLINE, radius, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
@@ -292,7 +293,7 @@ export default function RequestsScreen() {
                     </Text>
                   </View>
                   <View style={styles.cardRight}>
-                    <Text style={styles.cardPrice}>{formatMoney(item.price)}</Text>
+                    <Text style={[styles.cardPrice, numericText]}>{formatMoney(item.price)}</Text>
                     <StatusPill
                       status={item.status}
                       testID={`barber-requests-status-${item.id}`}

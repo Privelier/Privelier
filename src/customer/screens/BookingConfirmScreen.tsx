@@ -29,6 +29,7 @@ import { Notice } from '../../shared/components/Notice';
 import { ScreenBackHeader } from '../../shared/components/ScreenBackHeader';
 import { haptics } from '../../shared/haptics';
 import { useTheme } from '../../theme/useTheme';
+import { numericText } from '../../theme/typography';
 import { radius, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 import { BookingStepIndicator } from '../components/BookingStepIndicator';
@@ -164,7 +165,7 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
           <Text style={[styles.priceLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>
             Estimated total
           </Text>
-          <Text style={[styles.priceValue, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+          <Text style={[styles.priceValue, numericText, { color: colors.textPrimary }]}>
             {formatMoney(service.price)}
           </Text>
         </View>

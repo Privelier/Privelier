@@ -40,6 +40,7 @@ import { PortfolioTile } from '../../shared/components/PortfolioTile';
 import { StarRating } from '../../shared/components/StarRating';
 import { BackButton, OVER_IMAGE_BG, OVER_IMAGE_ICON } from '../../shared/components/ScreenBackHeader';
 import { useTheme } from '../../theme/useTheme';
+import { numericText } from '../../theme/typography';
 import { pressOpacity } from '../../theme/motion';
 import type { BarberDirectoryRow, PortfolioRow, ReviewRow, ServiceRow } from '../../types';
 import { getBarberProfile, listPortfolioForBarber, listServicesForBarber } from '../discoveryData';
@@ -238,7 +239,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
                   accessibilityLabel={`Rating ${barber.rating.toFixed(1)} out of 5`}
                 >
                   <Ionicons name="star" size={11} color={colors.accent} />
-                  <Text style={[styles.heroMeta, { fontFamily: fonts.body }]}>
+                  <Text style={[styles.heroMeta, numericText]}>
                     {barber.rating.toFixed(1)}
                   </Text>
                 </View>
@@ -332,7 +333,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
                     <Text style={[styles.serviceName, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
                       {service.name}
                     </Text>
-                    <Text style={[styles.serviceMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                    <Text style={[styles.serviceMeta, numericText, { color: colors.textSecondary }]}>
                       {`${service.duration_minutes} min · ${formatMoney(service.price)}`}
                     </Text>
                   </View>
@@ -417,7 +418,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
                   reviews.length === 1 ? '1 review' : `${reviews.length} reviews`
                 }`}
               >
-                <Text style={[styles.reviewsRating, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+                <Text style={[styles.reviewsRating, numericText, { color: colors.textPrimary }]}>
                   {barber.rating.toFixed(1)}
                 </Text>
                 <View style={styles.reviewsSummaryMeta}>

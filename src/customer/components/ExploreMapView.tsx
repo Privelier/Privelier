@@ -24,6 +24,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { AccessibilityInfo, Animated, Easing, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import Mapbox from '@rnmapbox/maps';
 import { useTheme } from '../../theme/useTheme';
+import { numericText } from '../../theme/typography';
 import { duration } from '../../theme/motion';
 import type { BarberDirectoryRow, ServiceRow } from '../../types';
 import { formatMoney } from '../format';
@@ -128,7 +129,7 @@ export default function ExploreMapView({
                   numberOfLines={1}
                   style={[
                     styles.pinText,
-                    { fontFamily: fonts.bodySemiBold },
+                    pin.fromPrice !== null ? numericText : { fontFamily: fonts.bodySemiBold },
                     { color: active ? colors.onAccent : colors.textPrimary },
                   ]}
                 >

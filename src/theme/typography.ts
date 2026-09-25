@@ -8,6 +8,7 @@ import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-goog
 // sent: React Native addresses fonts by family-name string, and weight
 // selection inside a variable font is not reliable across iOS/Android in Expo.
 import { Cinzel_400Regular, Cinzel_600SemiBold } from '@expo-google-fonts/cinzel';
+import type { TextStyle } from 'react-native';
 
 export const appFonts = {
   PlayfairDisplay_500Medium,
@@ -38,3 +39,9 @@ export const fontFamily = {
   logo: 'Cinzel_400Regular', // the PRIVELIER wordmark
   logoSemiBold: 'Cinzel_600SemiBold', // the roundel's P — one weight step up, for stroke hierarchy
 } as const;
+
+/** Lining, fixed-width figures keep prices, times and dashboard values aligned. */
+export const numericText: TextStyle = {
+  fontFamily: fontFamily.bodySemiBold,
+  fontVariant: ['lining-nums', 'tabular-nums'],
+};

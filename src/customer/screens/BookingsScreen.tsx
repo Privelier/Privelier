@@ -39,6 +39,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../theme/useTheme';
+import { numericText } from '../../theme/typography';
 import { radius, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
@@ -348,7 +349,7 @@ export default function BookingsScreen() {
                       {formatBookingWhen(item.date, item.time)}
                     </Text>
                   </View>
-                  <Text style={[styles.cardPrice, { color: colors.textPrimary, fontFamily: fonts.body }]}>
+                  <Text style={[styles.cardPrice, numericText, { color: colors.textPrimary }]}>
                     {formatMoney(item.price)}
                   </Text>
                 </View>

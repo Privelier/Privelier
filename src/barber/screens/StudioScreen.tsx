@@ -10,6 +10,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { fetchOwnProfile } from '../../auth/authService';
 import { useExitRole } from '../../RoleContext';
 import { useTheme } from '../../theme/useTheme';
+import { numericText } from '../../theme/typography';
 import { HAIRLINE, radius, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
@@ -141,7 +142,7 @@ function Metric({ label, value, detail, colors }: {
   return (
     <View style={styles.metric}>
       <Text style={[styles.metricLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>{label}</Text>
-      <Text style={[styles.metricValue, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{value}</Text>
+      <Text style={[styles.metricValue, numericText, { color: colors.textPrimary }]}>{value}</Text>
       <Text style={[styles.metricDetail, { color: colors.textSecondary, fontFamily: fonts.body }]}>{detail}</Text>
     </View>
   );
@@ -372,7 +373,7 @@ export default function StudioScreen({ navigation }: Props) {
                   </View>
 
                   <Text style={[styles.heroLabel, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>Umsatz aus Buchungen · diesen Monat</Text>
-                  <Text style={[styles.heroValue, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{formatMoney(data.bookedValueMonth)}</Text>
+                  <Text style={[styles.heroValue, numericText, { color: colors.textPrimary }]}>{formatMoney(data.bookedValueMonth)}</Text>
                   <Text style={[styles.heroFootnote, { color: colors.textSecondary, fontFamily: fonts.body }]}>Completed booking prices. No payments are processed in the app.</Text>
                   <View style={[styles.trendBlock, { borderTopColor: colors.border }]}>
                     <View style={styles.trendHeading}>
@@ -399,7 +400,7 @@ export default function StudioScreen({ navigation }: Props) {
                     style={({ pressed }) => [styles.pendingBanner, { borderColor: colors.border, opacity: pressed ? pressOpacity.soft : 1 }]}
                   >
                     <View style={[styles.pendingBadge, { backgroundColor: data.pendingCount > 0 ? colors.accent : colors.background }]}>
-                      <Text style={[styles.pendingBadgeValue, { color: data.pendingCount > 0 ? colors.onAccent : colors.textSecondary, fontFamily: fonts.headingMedium }]}>{data.pendingCount}</Text>
+                      <Text style={[styles.pendingBadgeValue, numericText, { color: data.pendingCount > 0 ? colors.onAccent : colors.textSecondary }]}>{data.pendingCount}</Text>
                     </View>
                     <View style={styles.pendingCopy}>
                       <Text style={[styles.pendingTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{data.pendingCount === 1 ? 'Open request' : 'Open requests'}</Text>
@@ -425,7 +426,7 @@ export default function StudioScreen({ navigation }: Props) {
                     <View style={[styles.insightCard, { backgroundColor: colors.background }]}>
                       <Text style={[styles.eyebrow, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>CLIENT LOVE</Text>
                       {data.reviewCount > 0 && data.ratingAverage !== null ? <>
-                        <Text testID="barber-dashboard-rating" style={[styles.insightValue, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{data.ratingAverage.toFixed(2)} <Text style={{ color: colors.accentText }}>★</Text></Text>
+                        <Text testID="barber-dashboard-rating" style={[styles.insightValue, numericText, { color: colors.textPrimary }]}>{data.ratingAverage.toFixed(2)} <Text style={{ color: colors.accentText }}>★</Text></Text>
                         <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.reviewCount} {data.reviewCount === 1 ? 'review' : 'reviews'} · {data.repeatCustomerCount} returning clients</Text>
                       </> : <>
                         <Text style={[styles.insightValue, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>—</Text>
@@ -448,9 +449,9 @@ export default function StudioScreen({ navigation }: Props) {
                     </View>
                     {data.topServices.length > 0 ? data.topServices.map((service, index) => (
                       <View key={`${service.name}-${index}`} style={[styles.serviceRank, index > 0 ? { borderTopColor: colors.border, borderTopWidth: 0.5 } : null]}>
-                        <Text style={[styles.serviceRankNumber, { color: colors.accentText, fontFamily: fonts.headingMedium }]}>{String(index + 1).padStart(2, '0')}</Text>
+                        <Text style={[styles.serviceRankNumber, numericText, { color: colors.accentText }]}>{String(index + 1).padStart(2, '0')}</Text>
                         <Text numberOfLines={1} style={[styles.serviceRankName, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{service.name}</Text>
-                        <Text style={[styles.serviceRankCount, { color: colors.textSecondary, fontFamily: fonts.body }]}>{service.completedCuts} · {formatMoney(service.bookedValue)}</Text>
+                        <Text style={[styles.serviceRankCount, numericText, { color: colors.textSecondary }]}>{service.completedCuts} · {formatMoney(service.bookedValue)}</Text>
                       </View>
                     )) : <Text style={[styles.emptyHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>Your best-performing services will appear here.</Text>}
                   </View>

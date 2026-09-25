@@ -84,6 +84,8 @@ env:
 - assertVisible:
     text: "Maestro test cut"
 - assertVisible:
+    text: "€25 · 30 min"
+- assertVisible:
     text: "Add a service"
 
 # --- Edit the service ---

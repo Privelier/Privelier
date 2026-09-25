@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import BookingConfirmScreen from '../BookingConfirmScreen';
 import { insertBooking } from '../../bookingCreateData';
 import { haptics } from '../../../shared/haptics';
@@ -41,6 +42,11 @@ beforeEach(() => {
 it('confirms on tap and plays success feedback only after a real booking insert', async () => {
   (insertBooking as jest.Mock).mockResolvedValue({ status: 'ok', booking: { price: 30 } });
   await render(<BookingConfirmScreen route={route as never} navigation={navigation as never} />);
+
+  expect(StyleSheet.flatten(screen.getByText('€30').props.style)).toMatchObject({
+    fontFamily: 'Inter_600SemiBold',
+    fontVariant: ['lining-nums', 'tabular-nums'],
+  });
 
   await fireEvent.press(screen.getByTestId('customer-booking-confirm-submit'));
   expect(haptics.confirm).toHaveBeenCalledTimes(1);

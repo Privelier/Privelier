@@ -159,3 +159,9 @@ Focused Jest passed 8 suites/16 tests; full Jest passed 66 suites/629 tests. Typ
 Added one safe haptics helper: light for selection, medium for primary confirmation, semantic success and warning for completed/destructive actions. Native haptic failures are swallowed so booking actions still complete. The Customer booking date and time selectors now request light feedback; booking submit requests medium feedback, and only a successful authoritative insert requests success feedback. The conflict path never announces success. No booking transition or selector test ID changed. Maestro continues to assert the observable date, slot, submit and success outcomes; it cannot sense device vibration.
 
 Focused Jest passed 3 suites/6 tests; full Jest passed 69 suites/635 tests. Typecheck and lint passed with 19 pre-existing warnings and no errors. The code graph was refreshed. Native haptic feel still needs a physical device check.
+
+### Lining numerals for prices and stats item
+
+Added one Inter semibold lining/tabular numeral style for money and numeric highlights. Applied it to the Customer booking review total and cards, barber card prices and ratings, profile service prices and review score, map price pins, Barber request prices, and dashboard totals/metrics/rating/rank counts. The Barber services list now formats the real service price as euros instead of a bare number. Playfair remains for editorial words and headings; empty-state words such as “New” keep that voice. Date and time locale formatting remains in Wave 6, where the full time-label sweep will use tabular figures too.
+
+The services Maestro flow now checks the formatted `€25 · 30 min` row. Focused Jest passed 3 suites/7 tests; full Jest passed 70 suites/636 tests. Typecheck and lint passed with 19 pre-existing warnings and no errors. Device visual comparison remains open without an attached phone.

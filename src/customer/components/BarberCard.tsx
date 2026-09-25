@@ -16,6 +16,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/useTheme';
+import { numericText } from '../../theme/typography';
 import { pressOpacity } from '../../theme/motion';
 import { Avatar } from '../../shared/components/Avatar';
 import type { BarberDirectoryRow, ServiceRow } from '../../types';
@@ -60,7 +61,7 @@ function RatingLine({ rating, size }: { rating: number; size: number }) {
     return (
       <View style={styles.ratingRow} accessibilityLabel={`Rating ${rating.toFixed(1)} out of 5`}>
         <Ionicons name="star" size={size} color={colors.accent} />
-        <Text style={[{ fontSize: size + 1, color: colors.textPrimary, fontFamily: fonts.body }]}>
+        <Text style={[numericText, { fontSize: size + 1, color: colors.textPrimary }]}>
           {rating.toFixed(1)}
         </Text>
       </View>
@@ -128,7 +129,7 @@ export default function BarberCard({ barber, services, variant = 'wide', feature
             {from !== null ? (
               <Text style={[styles.compactPrice, { color: colors.textSecondary, fontFamily: fonts.body }]}>
                 from{' '}
-                <Text style={{ color: colors.textPrimary, fontFamily: fonts.bodyMedium }}>
+                <Text style={[numericText, { color: colors.textPrimary }]}>
                   {formatMoney(from)}
                 </Text>
               </Text>
@@ -177,7 +178,7 @@ export default function BarberCard({ barber, services, variant = 'wide', feature
           {from !== null ? (
             <Text style={[styles.widePrice, { color: colors.textSecondary, fontFamily: fonts.body }]}>
               from{' '}
-              <Text style={{ color: colors.textPrimary, fontFamily: fonts.bodyMedium }}>
+              <Text style={[numericText, { color: colors.textPrimary }]}>
                 {formatMoney(from)}
               </Text>
             </Text>

@@ -1,5 +1,6 @@
 /** Studio presentation and navigation over the dashboard's section results. */
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import StudioScreen from '../StudioScreen';
 import { fetchOwnProfile } from '../../../auth/authService';
 import { fetchDashboardView } from '../../dashboardData';
@@ -222,6 +223,10 @@ describe('StudioScreen dashboard', () => {
     expect(screen.getByText('1 in the next 7 days')).toBeTruthy();
     expect(screen.getByTestId('barber-dashboard-earnings-trend')).toBeTruthy();
     expect(screen.getByTestId('barber-dashboard-rating')).toBeTruthy();
+    expect(StyleSheet.flatten(screen.getByText('€240').props.style)).toMatchObject({
+      fontFamily: 'Inter_600SemiBold',
+      fontVariant: ['lining-nums', 'tabular-nums'],
+    });
 
     // Incomplete setup remains visible, including pending verification.
     expect(screen.getByTestId('barber-dashboard-readiness')).toBeTruthy();
