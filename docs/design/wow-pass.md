@@ -213,3 +213,9 @@ Focused Jest passed 1 suite/3 tests; full Jest passed 71 suites/649 tests. Typec
 The initial availability wait now shows neutral date chips and slot shapes under the existing loading test ID, without asserting that any date or time is bookable. A refocus keeps previously verified availability visible while the authoritative read runs again, with Continue disabled during that check. A failed refresh shows retry above retained slots; an initial failure still shows the full error notice. The Customer booking Maestro flow retains its wait on the loading ID.
 
 Focused Jest passed 1 suite/1 test; full Jest passed 72 suites/650 tests. Typecheck and lint passed with 19 pre-existing warnings. Native loading motion and slot layout remain unverified without a device.
+
+### Barber Studio loading item
+
+Studio’s first load now previews the real greeting, verification line, analytics card, chart, metrics and management row as quiet neutral shapes. It does not say “there” or show sample stats while the barber profile is pending. The sign-out target remains available. The existing `barber-dashboard-loading` Maestro selector now wraps this content-shaped state; inline retry spinners remain confined to explicit retry actions.
+
+Focused Jest passed 1 suite/5 tests; full Jest passed 72 suites/651 tests. Typecheck and lint passed with 19 pre-existing warnings. Native visual checks remain open.

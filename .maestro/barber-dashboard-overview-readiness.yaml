@@ -65,6 +65,7 @@ env:
     timeout: 15000
 
 # --- Studio dashboard: first load ---
+# The stable loading ID now contains the header, analytics and agenda skeleton.
 - assertVisible:
     id: "barber-dashboard-screen"
 - extendedWaitUntil:

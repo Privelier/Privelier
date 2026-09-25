@@ -116,6 +116,16 @@ afterEach(async () => {
 });
 
 describe('StudioScreen dashboard', () => {
+  it('shows dashboard-shaped placeholders without inventing the barber name on first load', async () => {
+    mockFetchProfile.mockImplementation(() => new Promise(() => {}));
+    await render(<StudioScreen navigation={navigation as never} route={{} as never} />);
+
+    expect(screen.getByTestId('barber-dashboard-loading').props.accessibilityRole).toBe('progressbar');
+    expect(screen.queryByText('there.')).toBeNull();
+    expect(screen.queryByTestId('barber-dashboard-overview')).toBeNull();
+    expect(screen.getByTestId('barber-dashboard-logout')).toBeTruthy();
+  });
+
   it('gives a new barber a calm analytics empty state', async () => {
     mockFetchProfile.mockResolvedValue({ status: 'ok', profile: { id: 'u1', name: 'Ada Lovelace' } });
     mockFetchView.mockResolvedValue({

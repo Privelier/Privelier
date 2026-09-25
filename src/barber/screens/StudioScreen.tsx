@@ -14,6 +14,7 @@ import { numericText } from '../../theme/typography';
 import { HAIRLINE, radius, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
+import { Skeleton } from '../../shared/components/Skeleton';
 import type { AvailabilityRow, ServiceRow, VerificationStatus } from '../../types';
 import { fetchDashboardView } from '../dashboardData';
 import { firstName, formatBookingWhen, formatMoney, timeOfDayGreeting } from '../../shared/format';
@@ -300,12 +301,19 @@ export default function StudioScreen({ navigation }: Props) {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.headerRow}>
           <View style={styles.headerText}>
-            <Text style={[styles.greeting, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-              {timeOfDayGreeting()},
-            </Text>
-            <Text style={[styles.name, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-              {firstName(name)}.
-            </Text>
+            {loading && !view ? (
+              <View style={styles.headerSkeleton}>
+                <Skeleton style={styles.skeletonGreeting} />
+                <Skeleton style={styles.skeletonName} />
+              </View>
+            ) : name ? (
+              <>
+                <Text style={[styles.greeting, { color: colors.textSecondary, fontFamily: fonts.body }]}>{timeOfDayGreeting()},</Text>
+                <Text style={[styles.name, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{firstName(name)}.</Text>
+              </>
+            ) : (
+              <Text style={[styles.name, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>Studio</Text>
+            )}
           </View>
           <Pressable
             onPress={onSignOut}
@@ -322,12 +330,7 @@ export default function StudioScreen({ navigation }: Props) {
         </View>
 
         {loading && !view ? (
-          <View style={styles.loading} testID="barber-dashboard-loading">
-            <ActivityIndicator size="small" color={colors.accent} />
-            <Text style={[styles.loadingText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-              Loading your studio
-            </Text>
-          </View>
+          <StudioSkeleton />
         ) : error && !view ? (
           <RetryNotice testID="barber-dashboard-error" message={error} onRetry={retryDashboard} style={styles.noticeMargins} />
         ) : view ? (
@@ -592,6 +595,26 @@ export default function StudioScreen({ navigation }: Props) {
   );
 }
 
+function StudioSkeleton() {
+  const { colors } = useTheme();
+  return (
+    <View testID="barber-dashboard-loading" accessible accessibilityRole="progressbar" accessibilityLabel="Loading studio" style={styles.studioSkeleton}>
+      <Skeleton style={styles.skeletonVerification} />
+      <View style={[styles.skeletonAnalyticsCard, { borderColor: colors.border }]}>
+        <Skeleton style={styles.skeletonAnalyticsLabel} />
+        <Skeleton style={styles.skeletonAnalyticsValue} />
+        <Skeleton style={styles.skeletonChart} />
+      </View>
+      <View style={styles.skeletonMetrics}>
+        <Skeleton style={styles.skeletonMetric} />
+        <Skeleton style={styles.skeletonMetric} />
+      </View>
+      <Skeleton style={styles.skeletonSectionTitle} />
+      <Skeleton style={styles.skeletonSectionRow} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: space.xl, paddingTop: space.xl, paddingBottom: space['2xl'] },
@@ -601,8 +624,19 @@ const styles = StyleSheet.create({
   name: { fontSize: 30, lineHeight: 38, marginTop: space.xs },
   signOut: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.xs },
   signOutText: { fontSize: 13 },
-  loading: { minHeight: 120, alignItems: 'center', justifyContent: 'center', gap: space.md },
-  loadingText: { fontSize: 13 },
+  headerSkeleton: { gap: space.sm },
+  skeletonGreeting: { width: 110, height: 15 },
+  skeletonName: { width: 150, height: 31 },
+  studioSkeleton: { marginTop: space.lg },
+  skeletonVerification: { width: '80%', height: 18 },
+  skeletonAnalyticsCard: { marginTop: space.lg, borderWidth: HAIRLINE, borderRadius: radius.md, padding: space.base, gap: space.md },
+  skeletonAnalyticsLabel: { width: '60%', height: 14 },
+  skeletonAnalyticsValue: { width: 145, height: 44 },
+  skeletonChart: { width: '100%', height: 90 },
+  skeletonMetrics: { flexDirection: 'row', gap: space.sm, marginTop: space.lg },
+  skeletonMetric: { flex: 1, height: 82 },
+  skeletonSectionTitle: { width: '55%', height: 22, marginTop: space['2xl'] },
+  skeletonSectionRow: { width: '100%', height: 72, marginTop: space.md },
   noticeMargins: { marginTop: space.xl },
   verification: { marginTop: space.sm },
   verificationLink: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: space.sm },
