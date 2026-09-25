@@ -207,3 +207,9 @@ Focused Jest passed 1 suite/2 tests; full Jest passed 71 suites/648 tests. Typec
 The four address inputs now form a keyboard Return chain: street → city → optional unit → optional access instructions. The last Done action dismisses the keyboard and submits when the actual address is valid; otherwise it reveals both required-field errors without navigating. Dragging the form dismisses the keyboard. Existing field and Continue test IDs remain. Tap-outside dismissal and autofill hints will be handled in the broader form pass.
 
 Focused Jest passed 1 suite/3 tests; full Jest passed 71 suites/649 tests. Typecheck and lint passed with 19 pre-existing warnings. Device keyboard behavior still needs a native check.
+
+### Booking date and time loading item
+
+The initial availability wait now shows neutral date chips and slot shapes under the existing loading test ID, without asserting that any date or time is bookable. A refocus keeps previously verified availability visible while the authoritative read runs again, with Continue disabled during that check. A failed refresh shows retry above retained slots; an initial failure still shows the full error notice. The Customer booking Maestro flow retains its wait on the loading ID.
+
+Focused Jest passed 1 suite/1 test; full Jest passed 72 suites/650 tests. Typecheck and lint passed with 19 pre-existing warnings. Native loading motion and slot layout remain unverified without a device.

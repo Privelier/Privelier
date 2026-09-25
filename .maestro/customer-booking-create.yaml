@@ -116,6 +116,7 @@ env:
 # --- BookingDateTimeScreen (step 1 of 3): pick a day, then a time ---
 - assertVisible:
     id: "customer-booking-datetime-screen"
+# The existing loading ID now contains neutral date and slot placeholders.
 - extendedWaitUntil:
     notVisible:
       id: "customer-booking-datetime-loading"

@@ -33,7 +33,7 @@
  * flow, and every testID are unchanged.
  */
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -43,6 +43,7 @@ import { pressOpacity } from '../../theme/motion';
 import { PrimaryButton } from '../../shared/components/PrimaryButton';
 import { ScreenBackHeader } from '../../shared/components/ScreenBackHeader';
 import { Notice } from '../../shared/components/Notice';
+import { Skeleton } from '../../shared/components/Skeleton';
 import { haptics } from '../../shared/haptics';
 import type { AvailabilityRow } from '../../types';
 import { listBarberAvailability, listBarberBusySlots } from '../availabilityData';
@@ -215,14 +216,9 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
           {`${service.name} with ${barberName}`}
         </Text>
 
-        {loading ? (
-          <ActivityIndicator
-            size="small"
-            color={colors.accent}
-            style={styles.spinner}
-            testID="customer-booking-datetime-loading"
-          />
-        ) : error ? (
+        {loading && slotsByDate.size === 0 ? (
+          <DateTimeSkeleton />
+        ) : error && slotsByDate.size === 0 ? (
           <Notice
             message={error}
             testID="customer-booking-datetime-error"
@@ -247,6 +243,12 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
           </View>
         ) : (
           <>
+            {error ? (
+              <Notice message={error} testID="customer-booking-datetime-error" variant="error" style={styles.noticeSpacing}>
+                <RetryAvailability onPress={() => void load()} />
+              </Notice>
+            ) : null}
+            {loading ? <Text style={[styles.hintText, { color: colors.textSecondary, fontFamily: fonts.body }]} accessibilityLiveRegion="polite">Checking availability…</Text> : null}
             {unverifiedDates.size > 0 ? (
               <Notice
                 message="Some dates could not be verified and are temporarily unavailable."
@@ -369,6 +371,21 @@ function RetryAvailability({ onPress }: { onPress: () => void }) {
   );
 }
 
+function DateTimeSkeleton() {
+  return (
+    <View testID="customer-booking-datetime-loading" accessible accessibilityRole="progressbar" accessibilityLabel="Loading availability" style={styles.skeletonWrap}>
+      <Skeleton style={styles.skeletonLabel} />
+      <View style={styles.skeletonDates}>
+        {[0, 1, 2, 3].map((index) => <Skeleton key={index} style={styles.skeletonDay} />)}
+      </View>
+      <Skeleton style={styles.skeletonTimeLabel} />
+      <View style={styles.skeletonSlots}>
+        {[0, 1, 2, 3, 4, 5].map((index) => <Skeleton key={index} style={styles.skeletonSlot} />)}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
 
@@ -376,7 +393,13 @@ const styles = StyleSheet.create({
   heading: { fontSize: 24 },
   subheading: { fontSize: 13, marginTop: 6 },
 
-  spinner: { marginTop: space['4xl'] },
+  skeletonWrap: { marginTop: 28 },
+  skeletonLabel: { width: 88, height: 13, marginBottom: 16 },
+  skeletonDates: { flexDirection: 'row', gap: 10 },
+  skeletonDay: { width: 60, height: 72, borderRadius: radius.lg },
+  skeletonTimeLabel: { width: 70, height: 13, marginTop: space['3xl'], marginBottom: 16 },
+  skeletonSlots: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  skeletonSlot: { width: 72, height: 42, borderRadius: radius.lg },
   noticeSpacing: { marginTop: space.xl },
   retryLink: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
   emptyWrap: { gap: space.base, paddingVertical: space['3xl'] },
