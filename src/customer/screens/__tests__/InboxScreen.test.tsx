@@ -70,6 +70,7 @@ const thread: InboxThread = {
 const mockFetchInbox = jest.mocked(fetchOwnInboxView);
 
 beforeEach(() => {
+  mockFetchInbox.mockReset();
   mockFetchInbox.mockResolvedValue({ status: 'ok', threads: [thread] });
 });
 
@@ -79,6 +80,20 @@ afterEach(async () => {
 });
 
 describe('InboxScreen avatar integration', () => {
+  it('pulls to refresh with brass while retaining the thread preview', async () => {
+    await render(<InboxScreen navigation={{ navigate: jest.fn() } as never} route={{} as never} />);
+    await waitFor(() => expect(screen.getByTestId('customer-inbox-row-room-1')).toBeTruthy());
+    const refresh = screen.getByTestId('customer-inbox-list').props.refreshControl;
+    expect(refresh.props.tintColor).toBe('#BFA06B');
+    expect(refresh.props.colors).toEqual(['#BFA06B']);
+
+    mockFetchInbox.mockImplementationOnce(() => new Promise(() => {}));
+    await act(async () => refresh.props.onRefresh());
+    expect(mockFetchInbox).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId('customer-inbox-row-room-1')).toBeTruthy();
+    expect(screen.getByTestId('customer-inbox-list').props.refreshControl.props.refreshing).toBe(true);
+  });
+
   it('keeps the empty state hidden while thread previews load', async () => {
     let finish!: (value: Awaited<ReturnType<typeof fetchOwnInboxView>>) => void;
     mockFetchInbox.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));

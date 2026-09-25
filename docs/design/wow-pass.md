@@ -183,3 +183,9 @@ Focused Jest passed 2 suites/4 tests; full Jest passed 70 suites/640 tests. Type
 Customer Bookings and Barber Requests now use a native pull-to-refresh control tinted with the theme brass. It calls each screen’s existing authoritative load path and keeps already rendered cards visible while fetching. First-load skeletons remain reserved for a list with no loaded rows. New list test IDs make the refresh control verifiable without changing card/action IDs. Both booking Maestro flows now pull down and check that a real row remains visible.
 
 Focused Jest passed 2 suites/6 tests; full Jest passed 70 suites/642 tests. Typecheck and lint passed with the same 19 pre-existing warnings. The gesture still needs a native Maestro run; no device is attached.
+
+### Conversation-list pull-to-refresh item
+
+Customer Inbox and Barber Chats now expose the same brass native pull-to-refresh control. Refresh calls the existing focus-load data path; a prior thread preview remains visible during loading, and the prior content plus retry notice remains if the read fails. First load still uses conversation-shaped skeleton rows. Existing row/navigation IDs remain, with new list IDs for verification. Customer and Barber chat-list Maestro flows now pull down before opening a thread.
+
+Focused Jest passed 2 suites/6 tests; full Jest passed 70 suites/644 tests. Typecheck and lint passed with 19 pre-existing warnings. Device gesture checks remain open.

@@ -14,7 +14,7 @@
  * fresh last-message preview, and bottom-tab screens stay mounted.
  */
 import { useCallback, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import type { CompositeScreenProps } from '@react-navigation/native';
@@ -95,8 +95,18 @@ export default function ChatsScreen({ navigation }: Props) {
         <>
         {error ? <RetryNotice testID="barber-chats-error" message={error} onRetry={() => void load()} style={styles.noticeMargins} /> : null}
         <FlatList
+          testID="barber-chats-list"
           data={threads}
           keyExtractor={(item) => item.room.id}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading && threads.length > 0}
+              onRefresh={() => void load()}
+              progressViewOffset={12}
+              tintColor={colors.accent}
+              colors={[colors.accent]}
+            />
+          }
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
             <View style={styles.empty}>

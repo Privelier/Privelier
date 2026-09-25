@@ -40,6 +40,11 @@ env:
     id: "barber-chats-error"
 - assertNotVisible:
     id: "barber-chats-empty"
+- swipe:
+    direction: DOWN
+    duration: 400
+- assertVisible:
+    id: "barber-chats-row-.*"
 - tapOn:
     id: "barber-chats-row-.*"
 - assertVisible:

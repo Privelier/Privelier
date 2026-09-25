@@ -74,6 +74,12 @@ env:
 # A room exists per booking (migration 0013) -> the empty state must not show.
 - assertNotVisible:
     id: "customer-inbox-empty"
+# Pull to refresh keeps the existing conversation preview on screen.
+- swipe:
+    direction: DOWN
+    duration: 400
+- assertVisible:
+    id: "customer-inbox-row-.*"
 
 # Row testID is per-room (`customer-inbox-row-{uuid}`, unknown at authoring
 # time); exactly one room is seeded, so the regex matches exactly one row.

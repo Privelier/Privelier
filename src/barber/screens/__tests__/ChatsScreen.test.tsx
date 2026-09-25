@@ -56,6 +56,7 @@ const thread: InboxThread = {
 const mockFetchChats = jest.mocked(fetchOwnChatsView);
 
 beforeEach(() => {
+  mockFetchChats.mockReset();
   mockFetchChats.mockResolvedValue({ status: 'ok', threads: [thread] });
 });
 
@@ -65,6 +66,20 @@ afterEach(async () => {
 });
 
 describe('ChatsScreen avatar integration', () => {
+  it('pulls to refresh with brass while retaining the thread preview', async () => {
+    await render(<ChatsScreen navigation={{ navigate: jest.fn() } as never} route={{} as never} />);
+    await waitFor(() => expect(screen.getByTestId('barber-chats-row-room-2')).toBeTruthy());
+    const refresh = screen.getByTestId('barber-chats-list').props.refreshControl;
+    expect(refresh.props.tintColor).toBe('#BFA06B');
+    expect(refresh.props.colors).toEqual(['#BFA06B']);
+
+    mockFetchChats.mockImplementationOnce(() => new Promise(() => {}));
+    await act(async () => refresh.props.onRefresh());
+    expect(mockFetchChats).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId('barber-chats-row-room-2')).toBeTruthy();
+    expect(screen.getByTestId('barber-chats-list').props.refreshControl.props.refreshing).toBe(true);
+  });
+
   it('keeps the empty state hidden while thread previews load', async () => {
     let finish!: (value: Awaited<ReturnType<typeof fetchOwnChatsView>>) => void;
     mockFetchChats.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
