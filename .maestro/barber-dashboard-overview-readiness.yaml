@@ -1,7 +1,6 @@
-# Barber Studio dashboard flow (build-order step 17, last sub-feature): log in
-# as the barber -> land on the Studio tab -> assert the dashboard's two new
-# read-only sections render (bookings-overview card + "Readiness to go live"
-# meter with all five item rows) -> tap the overview card and confirm it
+# Barber Studio dashboard flow: log in as the barber -> land on Studio ->
+# assert the server-aggregated analytics card and setup/management sections
+# render -> tap the pending-request action and confirm it
 # deep-links to the Requests tab -> return to Studio via the tab bar and
 # confirm the dashboard re-renders cleanly (the focus refresh is silent — no
 # spinner blanks an already-loaded dashboard, so the assertion is simply that
@@ -9,13 +8,11 @@
 #
 # Deliberately NOT asserted, because they depend on backend state unknown at
 # authoring time (the flow must pass for ANY signed-in barber):
-# - Which readiness rows are complete vs incomplete (all five row testIDs exist
-#   in every state, so presence is asserted; per-row deep-links are not, since
-#   complete rows are intentionally inert).
-# - The pending pill / next-appointment line (only rendered when such bookings
-#   exist; the overview card testID itself is state-independent).
-# - "N of 5 complete" vs the is-live line (state-dependent; the section title
-#   "Readiness to go live" is static and asserted instead).
+# - Setup checklist visibility and individual rows: a completed profile hides
+#   the checklist by design, so an all-account no-seed run cannot assert it.
+#   Incomplete, pending-review, and rejected states are covered with a
+#   deliberately seeded account in device validation.
+# - Analytics values vary by account; this no-seed flow checks only stable IDs.
 #
 # These state-dependent variants remain device-only checks: exercising them
 # requires a deliberately seeded barber profile and can change account state.
@@ -77,23 +74,11 @@ env:
 - assertNotVisible:
     id: "barber-dashboard-error"
 
-# The two new sections, plus the pre-existing management cards.
+# The analytics action, plus the pre-existing management cards.
 - assertVisible:
     id: "barber-dashboard-overview"
 - assertVisible:
-    id: "barber-dashboard-readiness"
-- assertVisible: "Readiness to go live"
-# All five readiness rows exist in every completion state.
-- assertVisible:
-    id: "barber-dashboard-readiness-services"
-- assertVisible:
-    id: "barber-dashboard-readiness-availability"
-- assertVisible:
-    id: "barber-dashboard-readiness-bio"
-- assertVisible:
-    id: "barber-dashboard-readiness-portfolio"
-- assertVisible:
-    id: "barber-dashboard-readiness-verification"
+    id: "barber-dashboard-analytics"
 - assertVisible:
     id: "barber-dashboard-services"
 - assertVisible:
@@ -115,4 +100,4 @@ env:
 - assertVisible:
     id: "barber-dashboard-overview"
 - assertVisible:
-    id: "barber-dashboard-readiness"
+    id: "barber-dashboard-analytics"

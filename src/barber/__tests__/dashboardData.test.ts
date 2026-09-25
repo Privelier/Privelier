@@ -4,135 +4,50 @@
  * every sibling data module mocked, to prove per-field degradation (one failed
  * read blanks only its own section, never the whole dashboard).
  */
-import type { BookingRow, ServiceRow } from '../../types';
 import {
-  deriveBookingsOverview,
   deriveProfileReadiness,
   fetchDashboardView,
 } from '../dashboardData';
-import type { BookingCounterpart } from '../types';
-import { fetchOwnRequestsView } from '../requestsData';
+import { fetchDashboardAnalytics } from '../dashboardAnalyticsData';
 import { listOwnServices } from '../servicesData';
 import { listOwnAvailability } from '../availabilityData';
 import { listOwnPortfolio } from '../portfolioData';
 import { fetchOwnBarberProfile } from '../profileData';
 import { fetchOwnLocation } from '../locationData';
+import type { ServiceRow } from '../../types';
+import type { BarberDashboardAnalytics } from '../types';
 
 // Factory mocks (not bare auto-mocks): a bare jest.mock still requires the real
 // sibling module to introspect its shape, which pulls in lib/supabase and
 // throws in the jest env. Factories keep the real modules — and Supabase — out.
-jest.mock('../requestsData', () => ({ fetchOwnRequestsView: jest.fn() }));
+jest.mock('../dashboardAnalyticsData', () => ({ fetchDashboardAnalytics: jest.fn() }));
 jest.mock('../servicesData', () => ({ listOwnServices: jest.fn() }));
 jest.mock('../availabilityData', () => ({ listOwnAvailability: jest.fn() }));
 jest.mock('../portfolioData', () => ({ listOwnPortfolio: jest.fn() }));
 jest.mock('../profileData', () => ({ fetchOwnBarberProfile: jest.fn() }));
 jest.mock('../locationData', () => ({ fetchOwnLocation: jest.fn() }));
 
-const NOW = new Date('2026-07-14T12:00:00');
-
-// Pin the real clock to NOW as well: the pure derivations take `now` as a
-// parameter, but fetchDashboardView reads the real clock internally — its
-// fixtures (dated 2026-07-15, "+1 day" when written) started failing the
-// moment the real date caught up (same date-fragility class as slots.test.ts,
-// fixed 2026-07-15).
-beforeAll(() => {
-  jest.useFakeTimers({ now: NOW });
-});
-afterAll(() => {
-  jest.useRealTimers();
-});
-
-function booking(overrides: Partial<BookingRow>): BookingRow {
-  return {
-    id: 'b1',
-    customer_id: 'c1',
-    barber_id: 'brb1',
-    service_id: 's1',
-    date: '2026-07-15',
-    time: '10:00:00',
-    location: 'Home',
-    price: 40,
-    duration_minutes: 45,
-    status: 'accepted',
-    created_at: '2026-07-01T00:00:00Z',
-    ...overrides,
-  };
-}
-
 function service(overrides: Partial<ServiceRow>): ServiceRow {
   return { id: 's1', barber_id: 'brb1', name: 'Fade', price: 40, duration_minutes: 45, ...overrides };
 }
 
-const NO_SERVICES = new Map<string, ServiceRow>();
-const NO_COUNTERPARTS = new Map<string, BookingCounterpart>();
-
-describe('deriveBookingsOverview', () => {
-  it('counts pending requests regardless of slot time', () => {
-    const bookings = [
-      booking({ id: 'p1', status: 'pending', date: '2026-07-20' }),
-      booking({ id: 'p2', status: 'pending', date: '2026-07-01' }), // past pending still awaits a response
-      booking({ id: 'a1', status: 'accepted' }),
-    ];
-    expect(deriveBookingsOverview(bookings, NOW, NO_SERVICES, NO_COUNTERPARTS).pendingCount).toBe(2);
-  });
-
-  it('upcomingCount is accepted bookings within the next 7 days only', () => {
-    const bookings = [
-      booking({ id: 'a1', status: 'accepted', date: '2026-07-15' }), // +1 day  -> in
-      booking({ id: 'a2', status: 'accepted', date: '2026-07-20' }), // +6 days -> in
-      booking({ id: 'a3', status: 'accepted', date: '2026-07-25' }), // +11 days -> out of window
-      booking({ id: 'a4', status: 'accepted', date: '2026-07-10' }), // past    -> out
-      booking({ id: 'p1', status: 'pending', date: '2026-07-15' }), // pending -> never upcoming
-    ];
-    expect(deriveBookingsOverview(bookings, NOW, NO_SERVICES, NO_COUNTERPARTS).upcomingCount).toBe(2);
-  });
-
-  it('nextAppointment is the earliest FUTURE accepted booking, sort-independent', () => {
-    const bookings = [
-      booking({ id: 'later', status: 'accepted', date: '2026-07-25', time: '09:00:00' }),
-      booking({ id: 'soonest', status: 'accepted', date: '2026-07-15', time: '08:00:00' }),
-      booking({ id: 'pendingSooner', status: 'pending', date: '2026-07-14', time: '13:00:00' }),
-      booking({ id: 'pastAccepted', status: 'accepted', date: '2026-07-10', time: '08:00:00' }),
-    ];
-    const overview = deriveBookingsOverview(bookings, NOW, NO_SERVICES, NO_COUNTERPARTS);
-    expect(overview.nextAppointment?.booking.id).toBe('soonest');
-  });
-
-  it('resolves next-appointment names best-effort from the lookup maps', () => {
-    const next = booking({ id: 'a1', status: 'accepted', service_id: 's9' });
-    const services = new Map([['s9', service({ id: 's9', name: 'Beard trim' })]]);
-    const counterparts = new Map<string, BookingCounterpart>([
-      ['a1', { id: 'c1', name: 'Sam', profile_image: null }],
-    ]);
-    const overview = deriveBookingsOverview([next], NOW, services, counterparts);
-    expect(overview.nextAppointment).toMatchObject({ serviceName: 'Beard trim', counterpartName: 'Sam' });
-  });
-
-  it('leaves names null when the maps do not resolve, without dropping the appointment', () => {
-    const overview = deriveBookingsOverview([booking({ status: 'accepted' })], NOW, NO_SERVICES, NO_COUNTERPARTS);
-    expect(overview.nextAppointment).toMatchObject({ serviceName: null, counterpartName: null });
-    expect(overview.nextAppointment?.booking.id).toBe('b1');
-  });
-
-  it('ignores an accepted booking with an unparseable slot', () => {
-    const overview = deriveBookingsOverview(
-      [booking({ status: 'accepted', date: 'not-a-date' })],
-      NOW,
-      NO_SERVICES,
-      NO_COUNTERPARTS
-    );
-    expect(overview.upcomingCount).toBe(0);
-    expect(overview.nextAppointment).toBeNull();
-  });
-
-  it('is all-zero / null for an empty booking list', () => {
-    expect(deriveBookingsOverview([], NOW, NO_SERVICES, NO_COUNTERPARTS)).toEqual({
-      pendingCount: 0,
-      upcomingCount: 0,
-      nextAppointment: null,
-    });
-  });
-});
+const ANALYTICS: BarberDashboardAnalytics = {
+  completedWeek: 1,
+  completedMonth: 3,
+  completedAllTime: 12,
+  bookedValueWeek: 40,
+  bookedValueMonth: 120,
+  bookedValueAllTime: 480,
+  pendingCount: 1,
+  upcomingCount: 1,
+  nextAppointment: { date: '2026-07-15', time: '10:00:00', customerName: 'Sam', serviceName: 'Fade' },
+  weeklyTrend: [{ weekStart: '2026-07-13', completedCuts: 1, bookedValue: 40 }],
+  ratingAverage: 4.8,
+  reviewCount: 5,
+  repeatCustomerCount: 2,
+  topServices: [{ name: 'Fade', completedCuts: 8, bookedValue: 320 }],
+  busiestWeekday: { weekday: 'Friday', completedCuts: 4 },
+};
 
 describe('deriveProfileReadiness', () => {
   it('is fully live only when all six items are complete (approved verification)', () => {
@@ -215,7 +130,7 @@ describe('deriveProfileReadiness', () => {
 });
 
 describe('fetchDashboardView', () => {
-  const mockRequests = fetchOwnRequestsView as jest.Mock;
+  const mockAnalytics = fetchDashboardAnalytics as jest.Mock;
   const mockServices = listOwnServices as jest.Mock;
   const mockAvailability = listOwnAvailability as jest.Mock;
   const mockPortfolio = listOwnPortfolio as jest.Mock;
@@ -224,12 +139,8 @@ describe('fetchDashboardView', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockRequests.mockResolvedValue({
-      status: 'ok',
-      bookings: [booking({ id: 'a1', status: 'accepted', date: '2026-07-15' }), booking({ id: 'p1', status: 'pending' })],
-      servicesById: new Map([['s1', service({})]]),
-      counterpartsByBookingId: new Map(),
-    });
+    mockAnalytics.mockResolvedValue({ status: 'ok', data: ANALYTICS });
+    mockAnalytics.mockResolvedValue({ status: 'ok', data: ANALYTICS });
     mockServices.mockResolvedValue({ status: 'ok', services: [service({})] });
     mockAvailability.mockResolvedValue({ status: 'ok', windows: [{ id: 'w1' }] });
     mockPortfolio.mockResolvedValue({ status: 'ok', images: [{ id: 'img1' }] });
@@ -243,10 +154,9 @@ describe('fetchDashboardView', () => {
     });
   });
 
-  it('composes overview + readiness + summary arrays when every read succeeds', async () => {
+  it('composes server analytics + readiness + summary arrays when every read succeeds', async () => {
     const view = await fetchDashboardView('brb1');
-    expect(view.overview).toMatchObject({ status: 'ok', data: { pendingCount: 1 } });
-    if (view.overview.status === 'ok') expect(view.overview.data.nextAppointment?.booking.id).toBe('a1');
+    expect(view.analytics).toEqual({ status: 'ok', data: ANALYTICS });
     expect(view.services).toMatchObject({ status: 'ok', data: [expect.objectContaining({ id: 's1' })] });
     expect(view.availability).toMatchObject({ status: 'ok', data: [expect.objectContaining({ id: 'w1' })] });
     expect(view.portfolio).toMatchObject({ status: 'ok', data: [expect.objectContaining({ id: 'img1' })] });
@@ -264,10 +174,10 @@ describe('fetchDashboardView', () => {
     expect(view.readiness.isLive).toBeNull();
   });
 
-  it('degrades to an empty overview when the bookings read fails, without failing the dashboard', async () => {
-    mockRequests.mockResolvedValue({ status: 'error', code: 'network', message: 'x' });
+  it('degrades analytics when the aggregate RPC fails, without failing setup data', async () => {
+    mockAnalytics.mockResolvedValue({ status: 'error', code: 'network', message: 'x' });
     const view = await fetchDashboardView('brb1');
-    expect(view.overview).toMatchObject({ status: 'error', code: 'network' });
+    expect(view.analytics).toMatchObject({ status: 'error', code: 'network' });
     // readiness still derives from the other (successful) reads
     expect(view.readiness.items.find((i) => i.key === 'services')?.state).toBe('complete');
   });

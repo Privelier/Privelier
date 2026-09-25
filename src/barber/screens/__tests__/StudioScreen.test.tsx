@@ -70,26 +70,22 @@ const MIXED_VIEW: DashboardView = {
   portfolio: { status: 'ok', data: [] },
   profile: { status: 'ok', data: { verification: 'pending', bio: 'Ten years of fades.' } },
   location: { status: 'ok', data: 'Prinsengracht 263, Amsterdam' },
-  overview: { status: 'ok', data: {
+  analytics: { status: 'ok', data: {
+    completedWeek: 3,
+    completedMonth: 6,
+    completedAllTime: 14,
+    bookedValueWeek: 120,
+    bookedValueMonth: 240,
+    bookedValueAllTime: 560,
     pendingCount: 2,
     upcomingCount: 1,
-    nextAppointment: {
-      booking: {
-        id: 'b1',
-        customer_id: 'c1',
-        barber_id: 'brb1',
-        service_id: 's1',
-        date: '2026-07-15',
-        time: '14:30:00',
-        location: 'Home',
-        price: 40,
-        duration_minutes: 45,
-        status: 'accepted',
-        created_at: '2026-07-01T00:00:00Z',
-      },
-      serviceName: 'Fade',
-      counterpartName: 'Sam',
-    },
+    nextAppointment: { date: '2026-07-15', time: '14:30:00', customerName: 'Sam', serviceName: 'Fade' },
+    weeklyTrend: [{ weekStart: '2026-07-13', completedCuts: 3, bookedValue: 120 }],
+    ratingAverage: 4.8,
+    reviewCount: 6,
+    repeatCustomerCount: 2,
+    topServices: [{ name: 'Fade', completedCuts: 5, bookedValue: 200 }],
+    busiestWeekday: { weekday: 'Friday', completedCuts: 4 },
   } },
   readiness: {
     items: [
@@ -119,6 +115,38 @@ afterEach(async () => {
 });
 
 describe('StudioScreen dashboard', () => {
+  it('gives a new barber a calm analytics empty state', async () => {
+    mockFetchProfile.mockResolvedValue({ status: 'ok', profile: { id: 'u1', name: 'Ada Lovelace' } });
+    mockFetchView.mockResolvedValue({
+      ...MIXED_VIEW,
+      analytics: { status: 'ok', data: {
+        ...(MIXED_VIEW.analytics as Extract<DashboardView['analytics'], { status: 'ok' }>).data,
+        completedWeek: 0,
+        completedMonth: 0,
+        completedAllTime: 0,
+        bookedValueWeek: 0,
+        bookedValueMonth: 0,
+        bookedValueAllTime: 0,
+        pendingCount: 0,
+        upcomingCount: 0,
+        nextAppointment: null,
+        weeklyTrend: Array.from({ length: 8 }, (_, index) => ({ weekStart: `2026-09-${String(index + 1).padStart(2, '0')}`, completedCuts: 0, bookedValue: 0 })),
+        ratingAverage: null,
+        reviewCount: 0,
+        repeatCustomerCount: 0,
+        topServices: [],
+        busiestWeekday: null,
+      } },
+    });
+    await render(<StudioScreen navigation={navigation as never} route={{} as never} />);
+    await waitFor(() => expect(screen.getByTestId('barber-dashboard-earnings-trend')).toBeTruthy());
+    expect(screen.getByText('Your first completed booking will start this trend.')).toBeTruthy();
+    expect(screen.getByText('You’re all caught up')).toBeTruthy();
+    expect(screen.getByText('Nothing scheduled yet.')).toBeTruthy();
+    expect(screen.getByText(/no reviews yet/)).toBeTruthy();
+    expect(screen.queryByTestId('barber-dashboard-rating')).toBeNull();
+  });
+
   it('hides the setup checklist after all six setup steps are complete', async () => {
     mockFetchProfile.mockResolvedValue({ status: 'ok', profile: { id: 'u1', name: 'Ada Lovelace' } });
     mockFetchView.mockResolvedValue({
@@ -184,12 +212,16 @@ describe('StudioScreen dashboard', () => {
     expect(screen.getByTestId('barber-dashboard-availability')).toBeTruthy();
     expect(screen.getByTestId('barber-dashboard-bio')).toBeTruthy();
 
-    // Bookings show a pending count and the next accepted appointment.
+    // Analytics show genuine server aggregates and the next accepted appointment.
     expect(screen.getByText('2')).toBeTruthy();
-    expect(screen.getByText('Pending requests')).toBeTruthy();
+    expect(screen.getByText('Open requests')).toBeTruthy();
+    expect(screen.getByText('Umsatz aus Buchungen · diesen Monat')).toBeTruthy();
+    expect(screen.getByText(/No payments are processed/)).toBeTruthy();
     expect(screen.getByText(/Sam/)).toBeTruthy();
     expect(screen.getByText(/14:30/)).toBeTruthy();
-    expect(screen.getByText('1 upcoming in the next 7 days')).toBeTruthy();
+    expect(screen.getByText('1 in the next 7 days')).toBeTruthy();
+    expect(screen.getByTestId('barber-dashboard-earnings-trend')).toBeTruthy();
+    expect(screen.getByTestId('barber-dashboard-rating')).toBeTruthy();
 
     // Incomplete setup remains visible, including pending verification.
     expect(screen.getByTestId('barber-dashboard-readiness')).toBeTruthy();

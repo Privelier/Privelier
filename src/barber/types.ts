@@ -284,35 +284,26 @@ export type DeleteAvailabilityResult =
   | BarberDataFailure;
 
 // ---------------------------------------------------------------------------
-// Studio dashboard (bookings overview + profile readiness) — READ-ONLY glance
+// Studio dashboard (server-side analytics + profile readiness) — read-only
 // ---------------------------------------------------------------------------
 
-/**
- * Rendered form of the soonest confirmed appointment. Names are BEST-EFFORT:
- * `serviceName` is null if the service row was since deleted;
- * `counterpartName` is null if the `get_booking_counterparts` RPC did not
- * resolve this booking (the glance still renders the date/time either way).
- */
-export interface NextAppointmentView {
-  booking: BookingRow;
-  serviceName: string | null;
-  counterpartName: string | null;
-}
-
-/**
- * Read-only booking glance for the Studio tab. Counts are point-in-time
- * (refreshed on focus, deliberately NOT realtime — the Requests tab owns the
- * live channel; architect-review C3). This surface NEVER mutates a booking;
- * accept/reject/complete/cancel live only on the Requests tab.
- */
-export interface BookingsOverview {
-  /** status === 'pending' — requests awaiting the barber's response. */
+/** Server-aggregated Studio metrics and the minimal next-appointment summary. */
+export interface BarberDashboardAnalytics {
+  completedWeek: number;
+  completedMonth: number;
+  completedAllTime: number;
+  bookedValueWeek: number;
+  bookedValueMonth: number;
+  bookedValueAllTime: number;
   pendingCount: number;
-  /** status === 'accepted' with a slot within the next 7 days. */
   upcomingCount: number;
-  /** Earliest accepted booking whose slot is in the future (architect-review
-   * C2 — accepted only, never pending). null = nothing scheduled. */
-  nextAppointment: NextAppointmentView | null;
+  nextAppointment: { date: string; time: string; customerName: string | null; serviceName: string | null } | null;
+  weeklyTrend: { weekStart: string; completedCuts: number; bookedValue: number }[];
+  ratingAverage: number | null;
+  reviewCount: number;
+  repeatCustomerCount: number;
+  topServices: { name: string; completedCuts: number; bookedValue: number }[];
+  busiestWeekday: { weekday: string; completedCuts: number } | null;
 }
 
 /**
@@ -372,7 +363,7 @@ export interface DashboardProfile {
 }
 
 export interface DashboardView {
-  overview: DashboardSection<BookingsOverview>;
+  analytics: DashboardSection<BarberDashboardAnalytics>;
   services: DashboardSection<ServiceRow[]>;
   availability: DashboardSection<AvailabilityRow[]>;
   portfolio: DashboardSection<PortfolioRow[]>;

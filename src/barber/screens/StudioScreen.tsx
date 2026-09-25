@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import Svg, { Circle, Line, Path } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -16,6 +17,7 @@ import type { AvailabilityRow, ServiceRow, VerificationStatus } from '../../type
 import { fetchDashboardView } from '../dashboardData';
 import { firstName, formatBookingWhen, formatMoney, timeOfDayGreeting } from '../../shared/format';
 import type { DashboardView, ReadinessItem, ReadinessItemKey, ReadinessState } from '../types';
+import type { BarberDashboardAnalytics } from '../types';
 import type { BarberTabParamList } from '../BarberTabs';
 import type { BarberStackParamList } from '../BarberNavigator';
 import { LegalLinks } from '../../legal/LegalComponents';
@@ -92,6 +94,57 @@ function bioSummary(bio: string | null): string {
 
 function locationSummary(address: string | null): string {
   return address?.trim() || 'Add your address for the Explore map';
+}
+
+function EarningsTrend({ data, width, colors }: {
+  data: BarberDashboardAnalytics['weeklyTrend'];
+  width: number;
+  colors: ReturnType<typeof useTheme>['colors'];
+}) {
+  const { fonts } = useTheme();
+  const height = 100;
+  const values = data.map((point) => point.bookedValue);
+  const max = Math.max(...values, 0);
+  const coordinates = values.map((value, index) => ({
+    x: data.length < 2 ? width / 2 : 8 + (index / (data.length - 1)) * (width - 16),
+    y: max === 0 ? height - 12 : height - 12 - (value / max) * (height - 28),
+  }));
+  const path = coordinates.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
+
+  return (
+    <View testID="barber-dashboard-earnings-trend" accessibilityLabel={max === 0 ? 'No completed booking value in the last eight weeks' : `Eight week trend, peak ${formatMoney(max)}`}>
+      <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+        <Line x1={0} y1={height - 12} x2={width} y2={height - 12} stroke={colors.border} strokeWidth={1} />
+        {max > 0 ? <>
+          <Path d={path} stroke={colors.accent} strokeWidth={2.5} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          {coordinates.map((point, index) => <Circle key={index} cx={point.x} cy={point.y} r={index === coordinates.length - 1 ? 4 : 2.5} fill={colors.accent} />)}
+        </> : null}
+      </Svg>
+      <View style={styles.chartLabels}>
+        <Text style={[styles.chartLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+          {data[0]?.weekStart.slice(5) ?? ''}
+        </Text>
+        <Text style={[styles.chartLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>8 weeks</Text>
+        <Text style={[styles.chartLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>Now</Text>
+      </View>
+    </View>
+  );
+}
+
+function Metric({ label, value, detail, colors }: {
+  label: string;
+  value: string;
+  detail: string;
+  colors: ReturnType<typeof useTheme>['colors'];
+}) {
+  const { fonts } = useTheme();
+  return (
+    <View style={styles.metric}>
+      <Text style={[styles.metricLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>{label}</Text>
+      <Text style={[styles.metricValue, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{value}</Text>
+      <Text style={[styles.metricDetail, { color: colors.textSecondary, fontFamily: fonts.body }]}>{detail}</Text>
+    </View>
+  );
 }
 
 function SectionUnavailable({
@@ -181,6 +234,7 @@ function ManagementRow({
 
 export default function StudioScreen({ navigation }: Props) {
   const { colors, fonts } = useTheme();
+  const { width: windowWidth } = useWindowDimensions();
   const onSignOut = useExitRole();
   const [name, setName] = useState<string | null>(null);
   const [view, setView] = useState<DashboardView | null>(null);
@@ -303,72 +357,112 @@ export default function StudioScreen({ navigation }: Props) {
               )}
             </View>
 
-            <View style={[styles.overview, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Pressable
-                onPress={() => navigation.navigate('Requests')}
-                accessibilityRole="button"
-                accessibilityLabel={view.overview.status === 'ok'
-                  ? `Bookings. ${view.overview.data.pendingCount} pending requests. View requests.`
-                  : 'Bookings unavailable. View requests.'}
-                testID="barber-dashboard-overview"
-                style={({ pressed }) => [styles.overviewHeader, { opacity: pressed ? pressOpacity.soft : 1 }]}
-              >
-                <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-                  Bookings
-                </Text>
-                <Feather name="chevron-right" size={18} color={colors.textSecondary} />
-              </Pressable>
-              {view.overview.status === 'ok' ? (
-                <>
-                  <View style={styles.pendingRow}>
-                    <Text style={[styles.pendingNumber, { color: colors.accentText, fontFamily: fonts.headingMedium }]}>
-                      {view.overview.data.pendingCount}
-                    </Text>
-                    <View style={styles.pendingCopy}>
-                      <Text style={[styles.pendingTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>
-                        {view.overview.data.pendingCount === 1 ? 'Pending request' : 'Pending requests'}
-                      </Text>
-                      <Text style={[styles.pendingHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                        {view.overview.data.pendingCount > 0 ? 'Awaiting your response' : 'No requests waiting'}
-                      </Text>
+            <View testID="barber-dashboard-analytics" style={[styles.analyticsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              {view.analytics.status === 'ok' ? (() => {
+                const data = view.analytics.data;
+                const chartWidth = Math.max(180, windowWidth - 104);
+                const next = data.nextAppointment;
+                return <>
+                  <View style={styles.analyticsHeading}>
+                    <View>
+                      <Text style={[styles.eyebrow, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>STUDIO PERFORMANCE</Text>
+                      <Text style={[styles.analyticsTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>Your work, in focus</Text>
                     </View>
+                    <Feather name="activity" size={18} color={colors.accentText} />
                   </View>
-                  <View style={[styles.nextAppointment, { borderTopColor: colors.border }]}>
-                    <Text style={[styles.eyebrow, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-                      Next appointment
-                    </Text>
-                    {view.overview.data.nextAppointment ? (
-                      <>
-                        <Text style={[styles.appointmentName, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>
-                          {view.overview.data.nextAppointment.counterpartName ??
-                            view.overview.data.nextAppointment.serviceName ??
-                            'Appointment'}
-                        </Text>
-                        <Text style={[styles.appointmentWhen, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                          {formatBookingWhen(
-                            view.overview.data.nextAppointment.booking.date,
-                            view.overview.data.nextAppointment.booking.time
-                          )}
-                          {view.overview.data.nextAppointment.counterpartName &&
-                          view.overview.data.nextAppointment.serviceName
-                            ? ` · ${view.overview.data.nextAppointment.serviceName}`
-                            : ''}
-                        </Text>
-                      </>
-                    ) : (
-                      <Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                        Nothing scheduled yet.
-                      </Text>
-                    )}
-                    {view.overview.data.upcomingCount > 0 ? (
-                      <Text style={[styles.upcomingText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                        {view.overview.data.upcomingCount} upcoming in the next 7 days
-                      </Text>
+
+                  <Text style={[styles.heroLabel, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>Umsatz aus Buchungen · diesen Monat</Text>
+                  <Text style={[styles.heroValue, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{formatMoney(data.bookedValueMonth)}</Text>
+                  <Text style={[styles.heroFootnote, { color: colors.textSecondary, fontFamily: fonts.body }]}>Completed booking prices. No payments are processed in the app.</Text>
+                  <View style={[styles.trendBlock, { borderTopColor: colors.border }]}>
+                    <View style={styles.trendHeading}>
+                      <Text style={[styles.trendTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>Booked value</Text>
+                      <Text style={[styles.trendPeriod, { color: colors.textSecondary, fontFamily: fonts.body }]}>8 weeks</Text>
+                    </View>
+                    <EarningsTrend data={data.weeklyTrend} width={chartWidth} colors={colors} />
+                    {data.completedAllTime === 0 ? (
+                      <Text style={[styles.emptyHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>Your first completed booking will start this trend.</Text>
                     ) : null}
                   </View>
+
+                  <View style={[styles.metricRow, { borderTopColor: colors.border, borderBottomColor: colors.border }]}>
+                    <Metric label="This week" value={`${data.completedWeek}`} detail="completed cuts" colors={colors} />
+                    <Metric label="This month" value={`${data.completedMonth}`} detail="completed cuts" colors={colors} />
+                    <Metric label="All time" value={`${data.completedAllTime}`} detail="completed cuts" colors={colors} />
+                  </View>
+
+                  <Pressable
+                    onPress={() => navigation.navigate('Requests')}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${data.pendingCount} pending requests. View requests.`}
+                    testID="barber-dashboard-overview"
+                    style={({ pressed }) => [styles.pendingBanner, { borderColor: colors.border, opacity: pressed ? pressOpacity.soft : 1 }]}
+                  >
+                    <View style={[styles.pendingBadge, { backgroundColor: data.pendingCount > 0 ? colors.accent : colors.background }]}>
+                      <Text style={[styles.pendingBadgeValue, { color: data.pendingCount > 0 ? colors.onAccent : colors.textSecondary, fontFamily: fonts.headingMedium }]}>{data.pendingCount}</Text>
+                    </View>
+                    <View style={styles.pendingCopy}>
+                      <Text style={[styles.pendingTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{data.pendingCount === 1 ? 'Open request' : 'Open requests'}</Text>
+                      <Text style={[styles.pendingHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.pendingCount > 0 ? 'Waiting for your reply' : 'You’re all caught up'}</Text>
+                    </View>
+                    <Feather name="arrow-up-right" size={17} color={colors.textSecondary} />
+                  </Pressable>
+
+                  <View style={[styles.appointmentCard, { backgroundColor: colors.background }]}>
+                    <View style={styles.appointmentTopline}>
+                      <Text style={[styles.eyebrow, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>NEXT APPOINTMENT</Text>
+                      <Text style={[styles.upcomingText, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.upcomingCount} in the next 7 days</Text>
+                    </View>
+                    {next ? <>
+                      <Text style={[styles.appointmentName, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{next.customerName ?? next.serviceName ?? 'Confirmed appointment'}</Text>
+                      <Text style={[styles.appointmentWhen, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                        {formatBookingWhen(next.date, next.time)}{next.customerName && next.serviceName ? ` · ${next.serviceName}` : ''}
+                      </Text>
+                    </> : <Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}>Nothing scheduled yet.</Text>}
+                  </View>
+
+                  <View style={styles.insightRow}>
+                    <View style={[styles.insightCard, { backgroundColor: colors.background }]}>
+                      <Text style={[styles.eyebrow, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>CLIENT LOVE</Text>
+                      {data.reviewCount > 0 && data.ratingAverage !== null ? <>
+                        <Text testID="barber-dashboard-rating" style={[styles.insightValue, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{data.ratingAverage.toFixed(2)} <Text style={{ color: colors.accentText }}>★</Text></Text>
+                        <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.reviewCount} {data.reviewCount === 1 ? 'review' : 'reviews'} · {data.repeatCustomerCount} returning clients</Text>
+                      </> : <>
+                        <Text style={[styles.insightValue, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>—</Text>
+                        <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.repeatCustomerCount} returning clients · no reviews yet</Text>
+                      </>}
+                    </View>
+                    <View style={[styles.insightCard, { backgroundColor: colors.background }]}>
+                      <Text style={[styles.eyebrow, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>BUSIEST DAY</Text>
+                      {data.busiestWeekday ? <>
+                        <Text style={[styles.insightValue, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{data.busiestWeekday.weekday}</Text>
+                        <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.busiestWeekday.completedCuts} completed cuts</Text>
+                      </> : <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>Will appear after your first completed booking.</Text>}
+                    </View>
+                  </View>
+
+                  <View style={[styles.serviceInsight, { borderTopColor: colors.border }]}>
+                    <View style={styles.trendHeading}>
+                      <Text style={[styles.trendTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>Top services</Text>
+                      <Text style={[styles.trendPeriod, { color: colors.textSecondary, fontFamily: fonts.body }]}>completed</Text>
+                    </View>
+                    {data.topServices.length > 0 ? data.topServices.map((service, index) => (
+                      <View key={`${service.name}-${index}`} style={[styles.serviceRank, index > 0 ? { borderTopColor: colors.border, borderTopWidth: 0.5 } : null]}>
+                        <Text style={[styles.serviceRankNumber, { color: colors.accentText, fontFamily: fonts.headingMedium }]}>{String(index + 1).padStart(2, '0')}</Text>
+                        <Text numberOfLines={1} style={[styles.serviceRankName, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{service.name}</Text>
+                        <Text style={[styles.serviceRankCount, { color: colors.textSecondary, fontFamily: fonts.body }]}>{service.completedCuts} · {formatMoney(service.bookedValue)}</Text>
+                      </View>
+                    )) : <Text style={[styles.emptyHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>Your best-performing services will appear here.</Text>}
+                  </View>
+                </>;
+              })() : (
+                <>
+                  <View style={styles.analyticsHeading}>
+                    <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>Studio performance</Text>
+                    <Feather name="activity" size={18} color={colors.accentText} />
+                  </View>
+                  <SectionUnavailable label="Studio analytics" testID="barber-dashboard-overview-unavailable" onRetry={retryDashboard} retrying={retrying} />
                 </>
-              ) : (
-                <SectionUnavailable label="Bookings" testID="barber-dashboard-overview-unavailable" onRetry={retryDashboard} retrying={retrying} />
               )}
             </View>
 
@@ -512,20 +606,47 @@ const styles = StyleSheet.create({
   verification: { marginTop: space.sm },
   verificationLink: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: space.sm },
   verificationText: { flex: 1, fontSize: 13, lineHeight: 19 },
-  overview: { marginTop: space.lg, borderWidth: HAIRLINE, borderRadius: radius.sm, paddingHorizontal: space.base, paddingVertical: space.md },
-  overviewHeader: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  sectionTitle: { fontSize: 19, lineHeight: 26 },
-  pendingRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md },
-  pendingNumber: { minWidth: 34, fontSize: 34, lineHeight: 42 },
+  analyticsCard: { marginTop: space.lg, borderWidth: HAIRLINE, borderRadius: radius.md, paddingHorizontal: space.base, paddingVertical: space.lg },
+  analyticsHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.lg },
+  analyticsTitle: { fontSize: 23, lineHeight: 30, marginTop: space.xs },
+  heroLabel: { fontSize: 13, lineHeight: 19 },
+  heroValue: { fontSize: 40, lineHeight: 50, marginTop: space.xs },
+  heroFootnote: { fontSize: 11, lineHeight: 16, marginTop: space.xs },
+  trendBlock: { marginTop: space.lg, paddingTop: space.md, borderTopWidth: HAIRLINE },
+  trendHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: space.xs },
+  trendTitle: { fontSize: 14, lineHeight: 20 },
+  trendPeriod: { fontSize: 11, lineHeight: 17 },
+  chartLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: -space.xs },
+  chartLabel: { fontSize: 10, lineHeight: 15 },
+  emptyHint: { fontSize: 12, lineHeight: 18, marginTop: space.sm },
+  metricRow: { flexDirection: 'row', borderTopWidth: HAIRLINE, borderBottomWidth: HAIRLINE, paddingVertical: space.md, marginTop: space.md },
+  metric: { flex: 1, minWidth: 0, paddingHorizontal: space.xs },
+  metricLabel: { fontSize: 11, lineHeight: 16 },
+  metricValue: { fontSize: 24, lineHeight: 31, marginTop: space.xs },
+  metricDetail: { fontSize: 10, lineHeight: 15 },
+  pendingBanner: { minHeight: 68, flexDirection: 'row', alignItems: 'center', gap: space.md, borderWidth: HAIRLINE, borderRadius: radius.sm, paddingHorizontal: space.md, marginTop: space.md },
+  pendingBadge: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: 19 },
+  pendingBadgeValue: { fontSize: 18 },
   pendingCopy: { flex: 1 },
-  pendingTitle: { fontSize: 15, lineHeight: 22 },
-  pendingHint: { fontSize: 13, lineHeight: 19 },
-  nextAppointment: { borderTopWidth: HAIRLINE, paddingTop: space.md, paddingBottom: space.xs },
-  eyebrow: { fontSize: 12, lineHeight: 18 },
-  appointmentName: { fontSize: 16, lineHeight: 24, marginTop: space.xs },
+  pendingTitle: { fontSize: 14, lineHeight: 21 },
+  pendingHint: { fontSize: 12, lineHeight: 18 },
+  appointmentCard: { marginTop: space.md, borderRadius: radius.sm, paddingHorizontal: space.md, paddingVertical: space.md },
+  appointmentTopline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm },
+  eyebrow: { fontSize: 10, lineHeight: 16, letterSpacing: 0.8 },
+  appointmentName: { fontSize: 19, lineHeight: 26, marginTop: space.md },
   appointmentWhen: { fontSize: 13, lineHeight: 20, marginTop: space.xs },
-  emptyText: { fontSize: 13, lineHeight: 20, marginTop: space.xs },
-  upcomingText: { fontSize: 12, lineHeight: 18, marginTop: space.sm },
+  emptyText: { fontSize: 13, lineHeight: 20, marginTop: space.md },
+  upcomingText: { fontSize: 11, lineHeight: 16 },
+  insightRow: { flexDirection: 'row', gap: space.sm, marginTop: space.md },
+  insightCard: { flex: 1, minHeight: 114, borderRadius: radius.sm, padding: space.md },
+  insightValue: { fontSize: 24, lineHeight: 31, marginTop: space.md },
+  insightCaption: { fontSize: 11, lineHeight: 17, marginTop: space.xs },
+  serviceInsight: { marginTop: space.lg, paddingTop: space.md, borderTopWidth: HAIRLINE },
+  serviceRank: { minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
+  serviceRankNumber: { width: 24, fontSize: 14 },
+  serviceRankName: { flex: 1, fontSize: 13 },
+  serviceRankCount: { fontSize: 11 },
+  sectionTitle: { fontSize: 19, lineHeight: 26 },
   readiness: { marginTop: space.xl, paddingTop: space.lg, borderTopWidth: HAIRLINE },
   readinessStatus: { fontSize: 13, lineHeight: 20, marginTop: space.xs },
   meter: { flexDirection: 'row', gap: space.xs, marginTop: space.base },

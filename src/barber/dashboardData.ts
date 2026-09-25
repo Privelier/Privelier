@@ -1,10 +1,9 @@
 /**
  * Barber Studio dashboard data layer (build-order step 17, last sub-feature).
  *
- * This module adds NO new read to the backend — it composes the SAME
- * RLS-scoped reads the individual barber tabs already use (Requests, Services,
- * Availability, Portfolio, Verify) into two read-only derived surfaces for the
- * Studio tab: a bookings-overview glance and a profile-readiness meter. It
+ * Booking analytics arrive as a bounded result from a barber-scoped Postgres
+ * RPC; setup sections reuse the same owner-scoped reads as the relevant tabs.
+ * This module composes them into the Studio analytics and readiness view. It
  * never writes: booking mutations stay on the Requests tab, and the
  * admin-owned verification columns are read-only (migration 0005). Every
  * derivation is a PURE function over already-fetched rows so it unit-tests
@@ -12,83 +11,25 @@
  * StudioScreen's existing loader, so one failed sub-read blanks only its own
  * section rather than the whole dashboard (architect-review C4/C5).
  *
- * Time handling reuses the shared `bookingSlotStart` composition
- * (src/shared/bookingTime.ts) — the same `${date}T${time}` local-instant
- * interpretation the customer Bookings tab uses (architect-review C1).
+ * Booking aggregates stay in Postgres; the phone receives no raw booking list.
  */
-import { bookingSlotStart } from '../shared/bookingTime';
-import type { BookingRow, ServiceRow, VerificationStatus } from '../types';
+import type { VerificationStatus } from '../types';
 import { listOwnAvailability } from './availabilityData';
 import { fetchOwnLocation } from './locationData';
 import { fetchOwnBarberProfile } from './profileData';
 import { listOwnPortfolio } from './portfolioData';
-import { fetchOwnRequestsView } from './requestsData';
+import { fetchDashboardAnalytics } from './dashboardAnalyticsData';
 import { listOwnServices } from './servicesData';
 import type {
-  BookingCounterpart,
-  BookingsOverview,
   DashboardView,
   ProfileReadiness,
   ReadinessItem,
   ReadinessState,
 } from './types';
 
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-
 /**
- * Derive the read-only bookings glance from the barber's own bookings.
- *
- * - `pendingCount` — every booking still awaiting the barber's response.
- * - `upcomingCount` — accepted bookings whose slot falls within [now, now+7d).
- * - `nextAppointment` — the earliest accepted booking with a future slot
- *   (architect-review C2: accepted only, never pending; a pending request is
- *   not a confirmed appointment). Sort-independent: picks the minimum slot
- *   rather than trusting caller ordering. Names are resolved best-effort from
- *   the same lookup maps `fetchOwnRequestsView` already returns.
- */
-export function deriveBookingsOverview(
-  bookings: BookingRow[],
-  now: Date,
-  servicesById: Map<string, ServiceRow>,
-  counterpartsByBookingId: Map<string, BookingCounterpart>
-): BookingsOverview {
-  const nowMs = now.getTime();
-  let pendingCount = 0;
-  let upcomingCount = 0;
-  let nextBooking: BookingRow | null = null;
-  let nextMs = Infinity;
-
-  for (const booking of bookings) {
-    if (booking.status === 'pending') {
-      pendingCount += 1;
-      continue;
-    }
-    if (booking.status !== 'accepted') continue;
-
-    const slotMs = bookingSlotStart(booking).getTime();
-    if (Number.isNaN(slotMs) || slotMs < nowMs) continue;
-
-    if (slotMs < nowMs + SEVEN_DAYS_MS) upcomingCount += 1;
-    if (slotMs < nextMs) {
-      nextMs = slotMs;
-      nextBooking = booking;
-    }
-  }
-
-  const nextAppointment = nextBooking
-    ? {
-        booking: nextBooking,
-        serviceName: servicesById.get(nextBooking.service_id)?.name ?? null,
-        counterpartName: counterpartsByBookingId.get(nextBooking.id)?.name ?? null,
-      }
-    : null;
-
-  return { pendingCount, upcomingCount, nextAppointment };
-}
-
-/**
- * Derive the six-item setup checklist. The content items are simple presence checks — bio counts only
- * when non-empty after trimming, matching the DB CHECK and updateOwnBio's
+ * Derive the six-item setup checklist. Content items use presence checks; bio
+ * counts only when non-empty after trimming, matching the DB CHECK and updateOwnBio's
  * empty→NULL normalization. Verification maps its admin-owned status onto a
  * state that never blames the barber for a pending manual review: approved →
  * complete, rejected → attention, pending/absent → in_progress (calm).
@@ -141,18 +82,16 @@ export function deriveProfileReadiness(input: {
 /**
  * Fetch and compose everything the Studio dashboard renders (except the
  * barber's name, which the screen reads via fetchOwnProfile as its identity
- * gate). Runs the five owner-scoped reads in parallel; each degrades to an
+ * gate). Runs the aggregate RPC and owner-scoped setup reads in parallel; each degrades to an
  * empty/neutral value on its own, so this resolves to a `DashboardView` in
  * all cases — it never rejects and never surfaces a whole-dashboard error
  * (matching StudioScreen's existing behaviour). `barberId` is the caller's own
  * user id; RLS scopes every read to them, so no query carries an extra filter.
  */
 export async function fetchDashboardView(barberId: string): Promise<DashboardView> {
-  const now = new Date();
-
-  const [requests, servicesResult, availabilityResult, portfolioResult, profileResult, locationResult] =
+  const [analytics, servicesResult, availabilityResult, portfolioResult, profileResult, locationResult] =
     await Promise.all([
-      fetchOwnRequestsView(),
+      fetchDashboardAnalytics(),
       listOwnServices(barberId),
       listOwnAvailability(barberId),
       listOwnPortfolio(barberId),
@@ -182,19 +121,6 @@ export async function fetchDashboardView(barberId: string): Promise<DashboardVie
     locationResult.status === 'ok'
       ? { status: 'ok' as const, data: locationResult.location?.address ?? null }
       : locationResult;
-  const overview =
-    requests.status === 'ok'
-      ? {
-          status: 'ok' as const,
-          data: deriveBookingsOverview(
-            requests.bookings,
-            now,
-            requests.servicesById,
-            requests.counterpartsByBookingId
-          ),
-        }
-      : requests;
-
   const readiness = deriveProfileReadiness({
     serviceCount: services.status === 'ok' ? services.data.length : null,
     availabilityCount: availability.status === 'ok' ? availability.data.length : null,
@@ -203,5 +129,5 @@ export async function fetchDashboardView(barberId: string): Promise<DashboardVie
     profile: profile.status === 'ok' ? profile.data : null,
   });
 
-  return { overview, services, availability, portfolio, profile, location, readiness };
+  return { analytics, services, availability, portfolio, profile, location, readiness };
 }
