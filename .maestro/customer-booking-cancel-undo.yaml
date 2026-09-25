@@ -7,7 +7,8 @@ appId: com.privelier.app
 - tapOn:
     id: "booking-cancel-.*"
 - assertVisible: "Cancel this booking?"
-- tapOn: "Cancel booking"
+- tapOn:
+    id: "customer-bookings-cancel-sheet-confirm"
 - assertVisible:
     id: "customer-bookings-row-undo-window-.*"
 - assertVisible: "Booking cancellation pending"

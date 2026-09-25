@@ -21,6 +21,8 @@ import { useCallback, type ReactElement } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import AuthNavigator from './src/auth/screens/AuthNavigator';
@@ -101,13 +103,17 @@ export default function App() {
   }
 
   return (
-    <GluestackUIProvider mode="system">
-      <SafeAreaProvider onLayout={onLayoutRootView}>
-        <ToastProvider>
-          <NavigationContainer>{renderRoot(shell)}</NavigationContainer>
-        </ToastProvider>
-        <StatusBar style="auto" />
-      </SafeAreaProvider>
-    </GluestackUIProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <GluestackUIProvider mode="system">
+        <SafeAreaProvider onLayout={onLayoutRootView}>
+          <BottomSheetModalProvider>
+            <ToastProvider>
+              <NavigationContainer>{renderRoot(shell)}</NavigationContainer>
+            </ToastProvider>
+          </BottomSheetModalProvider>
+          <StatusBar style="auto" />
+        </SafeAreaProvider>
+      </GluestackUIProvider>
+    </GestureHandlerRootView>
   );
 }

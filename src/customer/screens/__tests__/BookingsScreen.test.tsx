@@ -1,5 +1,4 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 import type { BarberDirectoryRow, BookingRow, ServiceRow } from '../../../types';
 import { cancelBookingAsCustomer, fetchOwnBookingsView } from '../../bookingsData';
 import type { ToastOptions } from '../../../shared/components/ToastProvider';
@@ -45,6 +44,15 @@ const mockShowToast = jest.fn();
 jest.mock('../../../shared/components/ToastProvider', () => ({
   useToast: () => ({ showToast: mockShowToast }),
 }));
+
+jest.mock('../../../shared/components/ConfirmSheet', () => {
+  const React = jest.requireActual('react');
+  const { Pressable } = jest.requireActual('react-native');
+  return {
+    ConfirmSheet: ({ open, onConfirm, testID }: { open: boolean; onConfirm: () => void; testID: string }) =>
+      open ? React.createElement(Pressable, { testID: `${testID}-confirm`, onPress: onConfirm }) : null,
+  };
+});
 
 jest.mock('../../../theme/useTheme', () => ({
   useTheme: () => ({
@@ -140,12 +148,12 @@ afterEach(async () => {
 
 describe('BookingsScreen status presentation', () => {
   it('waits for the undo window before sending cancellation', async () => {
-    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     await render(<BookingsScreen />);
     await waitFor(() => expect(screen.getByTestId('booking-cancel-booking-1')).toBeTruthy());
 
     await act(async () => fireEvent.press(screen.getByTestId('booking-cancel-booking-1')));
-    await act(async () => alert.mock.calls[0][2]?.[1]?.onPress?.());
+    expect(screen.getByTestId('customer-bookings-cancel-sheet-confirm')).toBeTruthy();
+    await act(async () => fireEvent.press(screen.getByTestId('customer-bookings-cancel-sheet-confirm')));
     const first = mockShowToast.mock.calls[0][0] as ToastOptions;
     expect(first.durationMs).toBe(5000);
     expect(first.action?.label).toBe('Undo');
@@ -157,11 +165,10 @@ describe('BookingsScreen status presentation', () => {
     expect(screen.getByTestId('booking-cancel-booking-1')).toBeTruthy();
 
     await act(async () => fireEvent.press(screen.getByTestId('booking-cancel-booking-1')));
-    await act(async () => alert.mock.calls[1][2]?.[1]?.onPress?.());
+    await act(async () => fireEvent.press(screen.getByTestId('customer-bookings-cancel-sheet-confirm')));
     const second = mockShowToast.mock.calls[1][0] as ToastOptions;
     await act(async () => second.onClose?.('timeout'));
     await waitFor(() => expect(mockCancelBooking).toHaveBeenCalledWith('booking-1'));
-    alert.mockRestore();
   });
 
   it('refreshes in brass while keeping the loaded booking visible', async () => {

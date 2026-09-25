@@ -32,7 +32,7 @@
  *   so a stale snapshot can't flip an optimistic card backward.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -46,6 +46,7 @@ import { RetryNotice } from '../../shared/components/RetryNotice';
 import { StatusPill } from '../../shared/components/StatusPill';
 import { Avatar } from '../../shared/components/Avatar';
 import { BookingListSkeleton } from '../../shared/components/BookingListSkeleton';
+import { ConfirmSheet } from '../../shared/components/ConfirmSheet';
 import { useToast } from '../../shared/components/ToastProvider';
 import type { BarberDirectoryRow, BookingRow, ServiceRow } from '../../types';
 import { cancelBookingAsCustomer, fetchOwnBookingsView, isUpcomingBooking } from '../bookingsData';
@@ -64,16 +65,6 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'upcoming', label: 'Upcoming' },
   { key: 'past', label: 'Past' },
 ];
-
-/**
- * Confirm before starting the cancellation undo window.
- */
-function confirmCancel(onConfirm: () => void) {
-  Alert.alert('Cancel this booking?', 'You can undo for 5 seconds.', [
-    { text: 'Keep', style: 'cancel' },
-    { text: 'Cancel booking', style: 'destructive', onPress: onConfirm },
-  ]);
-}
 
 /** Bookings render newest-first: sort by (date, time) descending. */
 function sortDesc(rows: BookingRow[]): BookingRow[] {
@@ -111,6 +102,7 @@ export default function BookingsScreen() {
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const queuedRef = useRef<Set<string>>(new Set());
   const [queued, setQueued] = useState<Record<string, boolean>>({});
+  const [confirmingBooking, setConfirmingBooking] = useState<BookingRow | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -415,7 +407,7 @@ export default function BookingsScreen() {
                       accessibilityRole="button"
                       accessibilityLabel="Cancel booking"
                       testID={`booking-cancel-${item.id}`}
-                      onPress={() => confirmCancel(() => queueCancellation(item))}
+                      onPress={() => setConfirmingBooking(item)}
                       style={({ pressed }) => [
                         styles.cancelButton,
                         { borderColor: colors.error },
@@ -471,6 +463,21 @@ export default function BookingsScreen() {
           />
         </>
       )}
+      <ConfirmSheet
+        open={confirmingBooking !== null}
+        title="Cancel this booking?"
+        message="You can undo for 5 seconds."
+        cancelLabel="Keep booking"
+        confirmLabel="Cancel booking"
+        destructive
+        testID="customer-bookings-cancel-sheet"
+        onClose={() => setConfirmingBooking(null)}
+        onConfirm={() => {
+          const row = confirmingBooking;
+          setConfirmingBooking(null);
+          if (row) queueCancellation(row);
+        }}
+      />
     </SafeAreaView>
   );
 }
