@@ -195,3 +195,9 @@ Focused Jest passed 2 suites/6 tests; full Jest passed 70 suites/644 tests. Type
 Customer Account now shows a profile-shaped skeleton while the first profile read is pending. The edit-profile target and member identity appear only after the real `users` row arrives; a failed read leaves a labeled retry action, settings and sign-out without invented profile data. A later focus refresh retains the prior real profile while loading. The login-to-Account Maestro flow waits for the loading state to clear and asserts the real edit target.
 
 Focused Jest passed 1 suite/3 tests; full Jest passed 70 suites/646 tests. Typecheck and lint passed with 19 pre-existing warnings. Native visual checks remain open.
+
+### Booking address validation item
+
+The street and city fields now show short, field-specific errors only after blur, clearing each error as soon as the real input becomes valid. A profile city prefill no longer triggers a premature message. The street placeholder describes the expected field rather than showing a sample address. The disabled Continue control still protects the existing booking payload and state machine. The Customer booking Maestro flow checks that no error is present on entry; the full form journey remains unchanged.
+
+Focused Jest passed 1 suite/2 tests; full Jest passed 71 suites/648 tests. Typecheck and lint passed with 19 pre-existing warnings. German/English placeholder and error copy will move into the Wave 6 translation layer.

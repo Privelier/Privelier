@@ -32,6 +32,7 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
   const [unit, setUnit] = useState('');
   const [instructions, setInstructions] = useState('');
   const [focused, setFocused] = useState<string | null>(null);
+  const [touched, setTouched] = useState({ street: false, city: false });
 
   useEffect(() => {
     let active = true;
@@ -51,6 +52,8 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
   const trimmedStreet = street.trim();
   const trimmedCity = city.trim();
   const canContinue = trimmedStreet.length >= 5 && trimmedCity.length >= 2;
+  const streetError = touched.street && trimmedStreet.length < 5;
+  const cityError = touched.city && trimmedCity.length < 2;
   const location = [trimmedStreet, unit.trim(), trimmedCity, instructions.trim()].filter(Boolean).join(', ');
 
   const onContinue = useCallback(() => {
@@ -93,8 +96,8 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
           value={street}
           onChangeText={setStreet}
           onFocus={() => setFocused('street')}
-          onBlur={() => setFocused(null)}
-          placeholder="12 Example Street, building 4"
+          onBlur={() => { setFocused(null); setTouched((current) => ({ ...current, street: true })); }}
+          placeholder="Street and building number"
           placeholderTextColor={colors.textSecondary}
           multiline
           accessibilityLabel="Street and building"
@@ -111,14 +114,19 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
           ]}
           testID="customer-booking-location-input"
         />
-          <AddressField label="City" value={city} onChangeText={setCity} focused={focused === 'city'} onFocus={() => setFocused('city')} onBlur={() => setFocused(null)} testID="customer-booking-location-city" />
-          <AddressField label="Apartment or unit (optional)" value={unit} onChangeText={setUnit} focused={focused === 'unit'} onFocus={() => setFocused('unit')} onBlur={() => setFocused(null)} testID="customer-booking-location-unit" />
-          <AddressField label="Access instructions (optional)" value={instructions} onChangeText={setInstructions} focused={focused === 'instructions'} onFocus={() => setFocused('instructions')} onBlur={() => setFocused(null)} testID="customer-booking-location-instructions" />
-          {!canContinue && (street.length > 0 || city.length > 0) ? (
-            <Text style={[styles.validation, { color: colors.errorText, fontFamily: fonts.body }]} accessibilityRole="alert">
-              Enter a street and building plus your city.
+          {streetError ? (
+            <Text style={[styles.validation, { color: colors.errorText, fontFamily: fonts.body }]} accessibilityRole="alert" testID="customer-booking-location-street-error">
+              Add the street and building number.
             </Text>
           ) : null}
+          <AddressField label="City" value={city} onChangeText={setCity} focused={focused === 'city'} onFocus={() => setFocused('city')} onBlur={() => { setFocused(null); setTouched((current) => ({ ...current, city: true })); }} testID="customer-booking-location-city" />
+          {cityError ? (
+            <Text style={[styles.validation, { color: colors.errorText, fontFamily: fonts.body }]} accessibilityRole="alert" testID="customer-booking-location-city-error">
+              Add your city.
+            </Text>
+          ) : null}
+          <AddressField label="Apartment or unit (optional)" value={unit} onChangeText={setUnit} focused={focused === 'unit'} onFocus={() => setFocused('unit')} onBlur={() => setFocused(null)} testID="customer-booking-location-unit" />
+          <AddressField label="Access instructions (optional)" value={instructions} onChangeText={setInstructions} focused={focused === 'instructions'} onFocus={() => setFocused('instructions')} onBlur={() => setFocused(null)} testID="customer-booking-location-instructions" />
         </ScrollView>
       </KeyboardAvoidingView>
 

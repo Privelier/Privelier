@@ -149,6 +149,11 @@ env:
 # --- BookingLocationScreen (step 2 of 3): where the barber should come to ---
 - assertVisible:
     id: "customer-booking-location-screen"
+# A city prefill must not show an error before the customer touches the form.
+- assertNotVisible:
+    id: "customer-booking-location-street-error"
+- assertNotVisible:
+    id: "customer-booking-location-city-error"
 - tapOn:
     id: "customer-booking-location-input"
 # The field may already be prefilled with the signed-in customer's own city
