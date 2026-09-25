@@ -87,18 +87,18 @@ export function deriveBookingsOverview(
 }
 
 /**
- * Derive the five-item readiness meter. The four content items (services,
- * availability, portfolio, bio) are simple presence checks — bio counts only
+ * Derive the six-item setup checklist. The content items are simple presence checks — bio counts only
  * when non-empty after trimming, matching the DB CHECK and updateOwnBio's
  * empty→NULL normalization. Verification maps its admin-owned status onto a
  * state that never blames the barber for a pending manual review: approved →
  * complete, rejected → attention, pending/absent → in_progress (calm).
- * `isLive` is true only when all five are complete.
+ * `isLive` is true only when all six are complete.
  */
 export function deriveProfileReadiness(input: {
   serviceCount: number | null;
   availabilityCount: number | null;
   portfolioCount: number | null;
+  hasLocation: boolean | null;
   profile: { bio: string | null; verification: VerificationStatus | null } | null;
 }): ProfileReadiness {
   const contentState = (count: number | null): ReadinessState =>
@@ -121,6 +121,7 @@ export function deriveProfileReadiness(input: {
   const items: ReadinessItem[] = [
     { key: 'services', state: contentState(input.serviceCount) },
     { key: 'availability', state: contentState(input.availabilityCount) },
+    { key: 'location', state: input.hasLocation === null ? 'unavailable' : input.hasLocation ? 'complete' : 'incomplete' },
     { key: 'portfolio', state: contentState(input.portfolioCount) },
     { key: 'bio', state: bioState },
     { key: 'verification', state: verificationState },
@@ -198,6 +199,7 @@ export async function fetchDashboardView(barberId: string): Promise<DashboardVie
     serviceCount: services.status === 'ok' ? services.data.length : null,
     availabilityCount: availability.status === 'ok' ? availability.data.length : null,
     portfolioCount: portfolio.status === 'ok' ? portfolio.data.length : null,
+    hasLocation: location.status === 'ok' ? Boolean(location.data?.trim()) : null,
     profile: profile.status === 'ok' ? profile.data : null,
   });
 

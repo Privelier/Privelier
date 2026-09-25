@@ -36,6 +36,7 @@ function readinessLabel(item: ReadinessItem): string {
     switch (item.key) {
       case 'services': return 'Could not check services';
       case 'availability': return 'Could not check availability';
+      case 'location': return 'Could not check location';
       case 'portfolio': return 'Could not check portfolio';
       case 'bio': return 'Could not check bio';
       case 'verification': return 'Could not check verification';
@@ -46,6 +47,8 @@ function readinessLabel(item: ReadinessItem): string {
       return item.state === 'complete' ? 'Services added' : 'Add a service';
     case 'availability':
       return item.state === 'complete' ? 'Availability set' : 'Set your availability';
+    case 'location':
+      return item.state === 'complete' ? 'Location added' : 'Add your location';
     case 'portfolio':
       return item.state === 'complete' ? 'Portfolio photos added' : 'Add portfolio photos';
     case 'bio':
@@ -219,6 +222,7 @@ export default function StudioScreen({ navigation }: Props) {
       switch (key) {
         case 'services': navigation.navigate('Services'); return;
         case 'availability': navigation.navigate('Availability'); return;
+        case 'location': navigation.navigate('LocationEdit'); return;
         case 'portfolio': navigation.navigate('Portfolio'); return;
         case 'bio': navigation.navigate('BioEdit'); return;
         case 'verification': navigation.navigate('Verify'); return;
@@ -368,21 +372,15 @@ export default function StudioScreen({ navigation }: Props) {
               )}
             </View>
 
-            <View testID="barber-dashboard-readiness" style={[styles.readiness, { borderTopColor: colors.border }]}>
+            {view.readiness.isLive === true ? null : <View testID="barber-dashboard-readiness" style={[styles.readiness, { borderTopColor: colors.border }]}>
               <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
                 Studio setup
               </Text>
-              {view.readiness.isLive === true ? (
-                <Text style={[styles.readinessStatus, { color: colors.successText, fontFamily: fonts.bodyMedium }]}>
-                  Studio setup complete.
-                </Text>
-              ) : (
-                <Text style={[styles.readinessStatus, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                  {view.readiness.isLive === null
-                    ? `${view.readiness.completeCount} confirmed complete; ${view.readiness.unavailableCount} unavailable`
-                    : `${view.readiness.completeCount} of ${view.readiness.total} complete`}
-                </Text>
-              )}
+              <Text style={[styles.readinessStatus, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                {view.readiness.isLive === null
+                  ? `${view.readiness.completeCount} confirmed complete; ${view.readiness.unavailableCount} unavailable`
+                  : `${view.readiness.completeCount} of ${view.readiness.total} complete`}
+              </Text>
               {view.readiness.unavailableCount > 0 ? (
                 <SectionUnavailable label="Some setup details" testID="barber-dashboard-readiness-unavailable" onRetry={retryDashboard} retrying={retrying} />
               ) : null}
@@ -431,7 +429,7 @@ export default function StudioScreen({ navigation }: Props) {
                   );
                 })}
               </View>
-            </View>
+            </View>}
 
             <View style={[styles.management, { borderTopColor: colors.border }]}>
               <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>

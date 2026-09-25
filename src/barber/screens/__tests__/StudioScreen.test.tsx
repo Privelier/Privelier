@@ -92,12 +92,13 @@ const MIXED_VIEW: DashboardView = {
     items: [
       { key: 'services', state: 'complete' },
       { key: 'availability', state: 'incomplete' },
+      { key: 'location', state: 'complete' },
       { key: 'portfolio', state: 'incomplete' },
       { key: 'bio', state: 'incomplete' },
       { key: 'verification', state: 'in_progress' },
     ],
-    completeCount: 1,
-    total: 5,
+    completeCount: 2,
+    total: 6,
     isLive: false,
     unavailableCount: 0,
   },
@@ -115,6 +116,23 @@ afterEach(async () => {
 });
 
 describe('StudioScreen dashboard', () => {
+  it('hides the setup checklist after all six setup steps are complete', async () => {
+    mockFetchProfile.mockResolvedValue({ status: 'ok', profile: { id: 'u1', name: 'Ada Lovelace' } });
+    mockFetchView.mockResolvedValue({
+      ...MIXED_VIEW,
+      readiness: {
+        items: MIXED_VIEW.readiness.items.map((item) => ({ ...item, state: 'complete' as const })),
+        completeCount: 6,
+        unavailableCount: 0,
+        total: 6,
+        isLive: true,
+      },
+    });
+    await render(<StudioScreen navigation={navigation as never} route={{} as never} />);
+    await waitFor(() => expect(screen.queryByTestId('barber-dashboard-readiness')).toBeNull());
+    expect(screen.getByTestId('barber-dashboard-overview')).toBeTruthy();
+  });
+
   it('does not turn a failed section into an empty state and retries it', async () => {
     mockFetchProfile.mockResolvedValue({ status: 'ok', profile: { id: 'u1', name: 'Ada Lovelace' } });
     const failedView: DashboardView = {
@@ -170,9 +188,9 @@ describe('StudioScreen dashboard', () => {
     expect(screen.getByText(/14:30/)).toBeTruthy();
     expect(screen.getByText('1 upcoming in the next 7 days')).toBeTruthy();
 
-    // Readiness stays a five-item setup state, separate from verification.
+    // Incomplete setup remains visible, including pending verification.
     expect(screen.getByTestId('barber-dashboard-readiness')).toBeTruthy();
-    expect(screen.getByText('1 of 5 complete')).toBeTruthy();
+    expect(screen.getByText('2 of 6 complete')).toBeTruthy();
     expect(screen.getByTestId('barber-dashboard-readiness-verification')).toBeTruthy();
     expect(screen.getByTestId('barber-dashboard-readiness-bio')).toBeTruthy();
     expect(screen.getByText('Verification is under manual review.')).toBeTruthy();

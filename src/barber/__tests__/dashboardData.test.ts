@@ -135,15 +135,16 @@ describe('deriveBookingsOverview', () => {
 });
 
 describe('deriveProfileReadiness', () => {
-  it('is fully live only when all five items are complete (approved verification)', () => {
+  it('is fully live only when all six items are complete (approved verification)', () => {
     const r = deriveProfileReadiness({
       serviceCount: 2,
       availabilityCount: 1,
       portfolioCount: 3,
+      hasLocation: true,
       profile: { bio: 'Sharp fades since 2015.', verification: 'approved' },
     });
-    expect(r.completeCount).toBe(5);
-    expect(r.total).toBe(5);
+    expect(r.completeCount).toBe(6);
+    expect(r.total).toBe(6);
     expect(r.isLive).toBe(true);
   });
 
@@ -152,6 +153,7 @@ describe('deriveProfileReadiness', () => {
       serviceCount: 0,
       availabilityCount: 0,
       portfolioCount: 0,
+      hasLocation: false,
       profile: { bio: null, verification: 'approved' },
     });
     const byKey = Object.fromEntries(r.items.map((i) => [i.key, i.state]));
@@ -161,7 +163,7 @@ describe('deriveProfileReadiness', () => {
       portfolio: 'incomplete',
       bio: 'incomplete',
     });
-    expect(r.total).toBe(5);
+    expect(r.total).toBe(6);
     expect(r.completeCount).toBe(1); // only verification
     expect(r.isLive).toBe(false);
   });
@@ -176,6 +178,7 @@ describe('deriveProfileReadiness', () => {
       serviceCount: 1,
       availabilityCount: 1,
       portfolioCount: 1,
+      hasLocation: true,
       profile: { bio, verification: 'approved' },
     });
     expect(r.items.find((i) => i.key === 'bio')?.state).toBe(expected);
@@ -191,6 +194,7 @@ describe('deriveProfileReadiness', () => {
       serviceCount: 1,
       availabilityCount: 1,
       portfolioCount: 1,
+      hasLocation: true,
       profile: { bio: 'x', verification },
     });
     const v = r.items.find((i) => i.key === 'verification');
@@ -202,9 +206,10 @@ describe('deriveProfileReadiness', () => {
       serviceCount: 1,
       availabilityCount: 1,
       portfolioCount: 1,
+      hasLocation: true,
       profile: { bio: null, verification: 'pending' },
     });
-    expect(r.completeCount).toBe(3);
+    expect(r.completeCount).toBe(4);
     expect(r.isLive).toBe(false);
   });
 });
@@ -250,14 +255,13 @@ describe('fetchDashboardView', () => {
     expect(view.readiness.isLive).toBe(true);
   });
 
-  it('degrades locationAddress to null on a failed location read — and location is NOT a readiness item', async () => {
+  it('keeps setup incomplete when a location read fails', async () => {
     mockLocation.mockResolvedValue({ status: 'error', code: 'network', message: 'x' });
     const view = await fetchDashboardView('brb1');
     expect(view.location).toMatchObject({ status: 'error', code: 'network' });
-    // The meter stays the founder-scoped five items; location joins Explore, not readiness.
-    expect(view.readiness.total).toBe(5);
-    expect(view.readiness.items.map((i) => i.key)).not.toContain('location');
-    expect(view.readiness.isLive).toBe(true);
+    expect(view.readiness.total).toBe(6);
+    expect(view.readiness.items.find((i) => i.key === 'location')?.state).toBe('unavailable');
+    expect(view.readiness.isLive).toBeNull();
   });
 
   it('degrades to an empty overview when the bookings read fails, without failing the dashboard', async () => {

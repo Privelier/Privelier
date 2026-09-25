@@ -323,7 +323,7 @@ export interface BookingsOverview {
  */
 export type ReadinessState = 'complete' | 'incomplete' | 'in_progress' | 'attention' | 'unavailable';
 
-export type ReadinessItemKey = 'services' | 'availability' | 'portfolio' | 'bio' | 'verification';
+export type ReadinessItemKey = 'services' | 'availability' | 'location' | 'bio' | 'portfolio' | 'verification';
 
 export interface ReadinessItem {
   key: ReadinessItemKey;
@@ -331,8 +331,8 @@ export interface ReadinessItem {
 }
 
 /**
- * "Readiness to go live" — NOT a score. Five items: services, availability,
- * portfolio, bio, verification (bio was re-added 2026-07-15 once the bio-edit
+ * "Readiness to go live" — NOT a score. Six items: services, availability,
+ * location, portfolio, bio, verification (bio was re-added 2026-07-15 once the bio-edit
  * screen shipped). `isLive` is true only when ALL items are complete — this is
  * the meter's soft "profile fully set up" notion, not the literal search gate
  * (the DB gates customer visibility on approved verification alone). A barber
@@ -380,9 +380,7 @@ export interface DashboardView {
   /** The barber's own bio (null = none set). Backs the Studio "Bio" launch
    * card's summary and the bio readiness item. */
   /** The barber's own saved address (null = no location set / read failed).
-   * Backs the Studio "Location" launch card's summary only — location is
-   * deliberately NOT a readiness item (the meter stays the founder-scoped
-   * five; revisit as an option once Explore ships). */
+   * Backs the Studio "Location" launch card and readiness item. */
   location: DashboardSection<string | null>;
   readiness: ProfileReadiness;
 }
