@@ -225,3 +225,9 @@ Focused Jest passed 1 suite/5 tests; full Jest passed 72 suites/651 tests. Typec
 The public barber profile first load now shows a neutral full hero, name/meta lines, bio, tabs and service rows rather than a spinner. These are shapes only: no false rating, service, portrait or empty state is shown before the real reads finish. The back action and existing `barber-profile-loading` Maestro ID remain. The no-photo hero composition itself remains scheduled for Wave 2.
 
 Focused Jest passed 1 suite/1 test; full Jest passed 73 suites/652 tests. Typecheck and lint passed with 19 pre-existing warnings. Device visual checks remain open.
+
+### Customer Discover refresh item
+
+Discover now offers a brass-toned pull to refresh and keeps its last confirmed barber directory visible while a new read runs. A network error appears as a retry notice above the retained directory. If the customer removes their city, the old city label and results clear before the profile action appears. The first visit still uses layout-shaped skeletons; the personal name stays a neutral shape until the real profile arrives. The discovery Maestro flow pulls to refresh before searching. Native gesture and visual checks remain open without a device.
+
+Focused Jest passed 2 suites/6 tests; full Jest passed 73 suites/653 tests. Typecheck and lint passed with 19 pre-existing warnings.

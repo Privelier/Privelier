@@ -69,13 +69,21 @@ env:
     timeout: 15000
 
 # --- Discovery: the approved, same-city test barber appears ---
+# Refresh the verified directory before filtering; its current cards stay visible.
+- extendedWaitUntil:
+    notVisible:
+      id: "customer-home-loading"
+    timeout: 15000
+- swipe:
+    direction: DOWN
+    duration: 400
 # Search first so the result is rendered in the filtered directory, independent
 # of which approved barber rotates into the daily spotlight.
 - tapOn:
     id: "customer-home-search"
 - inputText: "${TEST_BARBER_NAME}"
 
-# The loading spinner is transient; wait past it rather than asserting it.
+# The loading skeleton is transient; wait for the real barber name.
 - extendedWaitUntil:
     visible:
       text: "${TEST_BARBER_NAME}"

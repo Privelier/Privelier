@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { BarberDirectoryRow, ServiceRow, UsersRow } from '../../../types';
 import { fetchOwnProfile } from '../../../auth/authService';
 import { listBarbersByCity, listServicesForBarberIds } from '../../discoveryData';
@@ -143,6 +143,24 @@ describe('DiscoverScreen', () => {
     expect(screen.getAllByTestId('customer-home-barber-c')).toHaveLength(1);
     expect(screen.getByTestId('customer-barber-avatar-a-image')).toBeTruthy();
     expect(screen.getByTestId('customer-barber-avatar-c-monogram').props.children).toBe('C');
+  });
+
+  it('pulls to refresh in brass and retains verified barbers through a network error', async () => {
+    await renderDiscovery();
+    const refresh = screen.getByTestId('customer-home-scroll').props.refreshControl;
+    expect(refresh.props.tintColor).toBe('#BFA06B');
+    expect(refresh.props.colors).toEqual(['#BFA06B']);
+
+    let finish!: (value: Awaited<ReturnType<typeof fetchOwnProfile>>) => void;
+    mockFetchOwnProfile.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+    await act(async () => refresh.props.onRefresh());
+    expect(screen.getByTestId('customer-home-scroll').props.refreshControl.props.refreshing).toBe(true);
+    expect(screen.getAllByTestId('customer-home-barber-a').length).toBeGreaterThan(0);
+
+    await act(async () => finish({ status: 'error', code: 'network', retryable: true, message: 'Connection lost.' }));
+    await waitFor(() => expect(screen.getByTestId('customer-home-error')).toBeTruthy());
+    expect(screen.getAllByTestId('customer-home-barber-a').length).toBeGreaterThan(0);
+    expect(screen.queryByTestId('customer-home-loading')).toBeNull();
   });
 
   it('filters by barber name and preserves profile navigation', async () => {

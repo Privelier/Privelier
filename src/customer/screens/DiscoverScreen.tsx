@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -52,6 +53,7 @@ export default function DiscoverScreen({ navigation }: Props) {
   const [barbers, setBarbers] = useState<BarberDirectoryRow[]>([]);
   const [services, setServices] = useState<ServiceRow[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasSnapshot, setHasSnapshot] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [missingCity, setMissingCity] = useState(false);
   const [query, setQuery] = useState('');
@@ -61,8 +63,6 @@ export default function DiscoverScreen({ navigation }: Props) {
     setLoading(true);
     setError(null);
     setMissingCity(false);
-    setCityName(null);
-    setServiceArea(null);
 
     const profileResult = await fetchOwnProfile();
     if (profileResult.status === 'error') {
@@ -76,20 +76,25 @@ export default function DiscoverScreen({ navigation }: Props) {
     if (!city) {
       setLoading(false);
       setMissingCity(true);
+      setHasSnapshot(false);
+      setCityName(null);
+      setServiceArea(null);
+      setBarbers([]);
+      setServices(null);
       setError('Add your city to discover verified barbers near you.');
       return;
     }
     const country = profileResult.profile?.country?.trim();
-    setCityName(city);
-    setServiceArea(country ? `${city}, ${country}` : city);
-
     const barbersResult = await listBarbersByCity(city);
     if (barbersResult.status !== 'ok') {
       setLoading(false);
       setError(barbersResult.message);
       return;
     }
+    setCityName(city);
+    setServiceArea(country ? `${city}, ${country}` : city);
     setBarbers(barbersResult.barbers);
+    setHasSnapshot(true);
 
     const servicesResult = await listServicesForBarberIds(
       barbersResult.barbers.map((barber) => barber.id)
@@ -144,6 +149,24 @@ export default function DiscoverScreen({ navigation }: Props) {
 
   const spotlight = presentation.spotlight;
   const hasResults = Boolean(spotlight) || presentation.directory.length > 0;
+  const errorNotice = error ? (
+    <Notice testID="customer-home-error" message={error} style={styles.noticeMargins}>
+      <Pressable
+        onPress={() => {
+          if (missingCity) navigation.navigate('EditProfile');
+          else void load();
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={missingCity ? 'Add city to profile' : 'Retry discovery'}
+        testID={missingCity ? 'customer-home-add-city' : 'customer-home-retry'}
+        style={styles.noticeAction}
+      >
+        <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}>
+          {missingCity ? 'Add city' : 'Try again'}
+        </Text>
+      </Pressable>
+    </Notice>
+  ) : null;
 
   return (
     <SafeAreaView
@@ -152,19 +175,33 @@ export default function DiscoverScreen({ navigation }: Props) {
       testID="customer-home-screen"
     >
       <ScrollView
+        testID="customer-home-scroll"
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={loading && hasSnapshot}
+            onRefresh={() => void load()}
+            progressViewOffset={12}
+            tintColor={colors.accent}
+            colors={[colors.accent]}
+          />
+        }
       >
         <View style={styles.pad}>
           <Text style={[styles.greeting, { color: colors.textSecondary, fontFamily: fonts.body }]}>
             {timeOfDayGreeting()},
           </Text>
-          <Text
-            accessibilityRole="header"
-            style={[styles.name, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}
-          >
-            {firstName(ownName)}.
-          </Text>
+          {loading && !hasSnapshot && !ownName ? (
+            <Skeleton style={styles.skeletonPersonalName} />
+          ) : (
+            <Text
+              accessibilityRole="header"
+              style={[styles.name, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}
+            >
+              {firstName(ownName)}.
+            </Text>
+          )}
           <View style={styles.serviceAreaRow}>
             <Feather name="map-pin" size={13} color={colors.accentText} />
             <Text
@@ -242,25 +279,11 @@ export default function DiscoverScreen({ navigation }: Props) {
           </ScrollView>
         ) : null}
 
-        {loading ? (
+        {hasSnapshot ? errorNotice : null}
+        {loading && !hasSnapshot ? (
           <DiscoverSkeleton />
-        ) : error ? (
-          <Notice testID="customer-home-error" message={error} style={styles.noticeMargins}>
-            <Pressable
-              onPress={() => {
-                if (missingCity) navigation.navigate('EditProfile');
-                else void load();
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={missingCity ? 'Add city to profile' : 'Retry discovery'}
-              testID={missingCity ? 'customer-home-add-city' : 'customer-home-retry'}
-              style={styles.noticeAction}
-            >
-              <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}>
-                {missingCity ? 'Add city' : 'Try again'}
-              </Text>
-            </Pressable>
-          </Notice>
+        ) : error && !hasSnapshot ? (
+          errorNotice
         ) : !hasResults ? (
           <Text
             style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}
@@ -420,6 +443,7 @@ const styles = StyleSheet.create({
   directoryContent: { gap: 16, paddingHorizontal: 24, paddingBottom: 2 },
   skeletonTextGroup: { marginTop: 12, gap: 8 },
   skeletonLineTitle: { width: 136, height: 18, marginBottom: 16 },
+  skeletonPersonalName: { width: 140, height: 30, marginTop: 4 },
   skeletonImageWide: { width: '100%', aspectRatio: 16 / 10 },
   skeletonLineWide: { height: 18, width: '55%' },
   skeletonLineNarrow: { height: 12, width: '35%' },
