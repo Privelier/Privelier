@@ -231,3 +231,9 @@ Focused Jest passed 1 suite/1 test; full Jest passed 73 suites/652 tests. Typech
 Discover now offers a brass-toned pull to refresh and keeps its last confirmed barber directory visible while a new read runs. A network error appears as a retry notice above the retained directory. If the customer removes their city, the old city label and results clear before the profile action appears. The first visit still uses layout-shaped skeletons; the personal name stays a neutral shape until the real profile arrives. The discovery Maestro flow pulls to refresh before searching. Native gesture and visual checks remain open without a device.
 
 Focused Jest passed 2 suites/6 tests; full Jest passed 73 suites/653 tests. Typecheck and lint passed with 19 pre-existing warnings.
+
+### Shared toast item
+
+A root-level toast now provides one quiet, hairline-bordered feedback surface to both apps. It fades in using the system Reduce Motion setting, announces its message politely, and supports an optional labeled 44pt action. Showing a later message replaces the earlier one and resets its dismissal timer. The 5-second cancellation undo flow will use this shared primitive in its own booking item; no cancellation behavior changed here. Focused Jest passed 1 suite/2 tests. Native visual checks remain open without a device.
+
+Full Jest passed 74 suites/655 tests. Typecheck and lint passed with 19 pre-existing warnings.

@@ -33,6 +33,7 @@ import { useAuthShell, type AuthShell } from './src/auth/useAuthShell';
 import CustomerNavigator from './src/customer/CustomerNavigator';
 import BarberNavigator from './src/barber/BarberNavigator';
 import { appFonts } from './src/theme/typography';
+import { ToastProvider } from './src/shared/components/ToastProvider';
 
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import '@/global.css';
@@ -102,7 +103,9 @@ export default function App() {
   return (
     <GluestackUIProvider mode="system">
       <SafeAreaProvider onLayout={onLayoutRootView}>
-        <NavigationContainer>{renderRoot(shell)}</NavigationContainer>
+        <ToastProvider>
+          <NavigationContainer>{renderRoot(shell)}</NavigationContainer>
+        </ToastProvider>
         <StatusBar style="auto" />
       </SafeAreaProvider>
     </GluestackUIProvider>
