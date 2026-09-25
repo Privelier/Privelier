@@ -42,6 +42,7 @@ import { useTheme } from '../../theme/useTheme';
 import { radius, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
+import { StatusPill } from '../../shared/components/StatusPill';
 import type { BarberDirectoryRow, BookingRow, ServiceRow } from '../../types';
 import { cancelBookingAsCustomer, fetchOwnBookingsView, isUpcomingBooking } from '../bookingsData';
 import { fetchOwnReviewedBookingIds } from '../reviewsData';
@@ -52,7 +53,7 @@ import {
   type BookingChangeEvent,
 } from '../../shared/bookingRealtime';
 import { useBookingsRealtime } from '../../shared/useBookingsRealtime';
-import { BOOKING_STATUS_LABELS, formatBookingWhen, formatMoney } from '../format';
+import { formatBookingWhen, formatMoney } from '../format';
 
 type TabKey = 'upcoming' | 'past';
 const TABS: { key: TabKey; label: string }[] = [
@@ -309,17 +310,6 @@ export default function BookingsScreen() {
             const actionable = item.status === 'pending' || item.status === 'accepted';
             const busy = inFlight[item.id] === true;
             const rowError = rowErrors[item.id];
-            // Ration brass to the one live/awaiting state; green for confirmed;
-            // mute the receded/neutral (completed, cancelled); error only for a
-            // genuine negative (rejected). Text colour + weight, never a fill.
-            const statusTone =
-              item.status === 'pending'
-                ? colors.accentText
-                : item.status === 'accepted'
-                  ? colors.successText
-                  : item.status === 'rejected'
-                    ? colors.errorText
-                    : colors.textSecondary;
             return (
               <View
                 style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
@@ -343,9 +333,10 @@ export default function BookingsScreen() {
                       >
                         {barber?.name ?? 'Barber'}
                       </Text>
-                      <Text style={[styles.cardStatus, { color: statusTone, fontFamily: fonts.bodyMedium }]}>
-                        {BOOKING_STATUS_LABELS[item.status]}
-                      </Text>
+                      <StatusPill
+                        status={item.status}
+                        testID={`customer-bookings-status-${item.id}`}
+                      />
                     </View>
                     <Text
                       numberOfLines={1}
@@ -474,9 +465,8 @@ const styles = StyleSheet.create({
   avatarFallback: { alignItems: 'center', justifyContent: 'center' },
   avatarInitial: { fontSize: 20 },
   cardInfo: { flex: 1, minWidth: 0 },
-  cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cardTitleRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space.sm },
   cardName: { fontSize: 16, flexShrink: 1 },
-  cardStatus: { fontSize: 10, letterSpacing: 1.5 },
   cardMeta: { fontSize: 12, marginTop: 3 },
   cardPrice: { fontSize: 14 },
   cardLocation: { fontSize: 12, marginTop: 12 },

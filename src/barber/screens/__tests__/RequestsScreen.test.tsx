@@ -1,0 +1,125 @@
+import { cleanup, render, screen, waitFor } from '@testing-library/react-native';
+import type { BookingRow, ServiceRow } from '../../../types';
+import { fetchOwnRequestsView } from '../../requestsData';
+import RequestsScreen from '../RequestsScreen';
+
+jest.mock('@react-navigation/native', () => {
+  const React = jest.requireActual('react');
+  return {
+    useFocusEffect: (callback: () => void | (() => void)) =>
+      React.useEffect(callback, [callback]),
+  };
+});
+
+jest.mock('../../../../lib/supabase', () => ({
+  supabase: {
+    auth: {
+      getSession: jest.fn().mockResolvedValue({
+        data: { session: { user: { id: 'barber-1' } } },
+      }),
+    },
+  },
+}));
+
+jest.mock('../../requestsData', () => ({
+  acceptBooking: jest.fn(),
+  cancelBookingAsBarber: jest.fn(),
+  completeBooking: jest.fn(),
+  fetchOwnRequestsView: jest.fn(),
+  rejectBooking: jest.fn(),
+}));
+
+jest.mock('../../../shared/useBookingsRealtime', () => ({
+  useBookingsRealtime: jest.fn(),
+}));
+
+jest.mock('../../../theme/useTheme', () => ({
+  useTheme: () => ({
+    colors: {
+      background: '#121214',
+      surface: '#1B1B1E',
+      border: '#2A2A2E',
+      textPrimary: '#F5F1E8',
+      textSecondary: '#9A968C',
+      accent: '#BFA06B',
+      accentText: '#BFA06B',
+      onAccent: '#121214',
+      success: '#51785C',
+      successText: '#7FA98B',
+      error: '#A8453E',
+      errorText: '#CE7A73',
+    },
+    fonts: {
+      headingMedium: 'serif',
+      body: 'sans',
+      bodyMedium: 'sans',
+      bodySemiBold: 'sans',
+    },
+  }),
+}));
+
+jest.mock('react-native-safe-area-context', () => {
+  const React = jest.requireActual('react');
+  const { View } = jest.requireActual('react-native');
+  return {
+    SafeAreaView: ({ children, ...props }: { children?: unknown }) =>
+      React.createElement(View, props, children),
+  };
+});
+
+const mockFetchRequests = jest.mocked(fetchOwnRequestsView);
+
+const BOOKING: BookingRow = {
+  id: 'booking-2',
+  customer_id: 'customer-2',
+  barber_id: 'barber-1',
+  service_id: 'service-2',
+  date: '2099-09-26',
+  time: '14:30:00',
+  location: 'Friedrichstraße 10, Berlin',
+  price: 55,
+  duration_minutes: 60,
+  status: 'accepted',
+  created_at: '2099-09-01T12:00:00.000Z',
+};
+
+const SERVICE: ServiceRow = {
+  id: 'service-2',
+  barber_id: 'barber-1',
+  name: 'Cut and beard',
+  price: 55,
+  duration_minutes: 60,
+};
+
+beforeEach(() => {
+  mockFetchRequests.mockResolvedValue({
+    status: 'ok',
+    bookings: [BOOKING],
+    servicesById: new Map([[SERVICE.id, SERVICE]]),
+    counterpartsByBookingId: new Map([
+      ['booking-2', { id: 'customer-2', name: 'Mina Hassan', profile_image: null }],
+    ]),
+  });
+});
+
+afterEach(async () => {
+  cleanup();
+  await new Promise<void>((resolve) => setImmediate(resolve));
+});
+
+describe('RequestsScreen status presentation', () => {
+  it('renders the booking state through an accessible semantic pill', async () => {
+    await render(<RequestsScreen />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId('barber-requests-status-booking-2')).toBeTruthy()
+    );
+    const status = screen.getByTestId('barber-requests-status-booking-2');
+
+    expect(status.props.accessibilityLabel).toBe('Status: Accepted');
+    expect(screen.getByText('Accepted')).toBeTruthy();
+    expect(screen.getByTestId('barber-requests-row-booking-2')).toBeTruthy();
+    expect(screen.getByTestId('request-cancel-booking-2')).toBeTruthy();
+    expect(screen.getByTestId('request-complete-booking-2')).toBeTruthy();
+  });
+});

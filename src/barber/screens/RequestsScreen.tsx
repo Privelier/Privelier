@@ -48,6 +48,7 @@ import { useTheme } from '../../theme/useTheme';
 import { HAIRLINE, radius, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
+import { StatusPill } from '../../shared/components/StatusPill';
 import type { Palette } from '../../theme/colors';
 import type { BookingCounterpart, TransitionBookingResult } from '../types';
 import type { BookingRow, ServiceRow } from '../../types';
@@ -64,7 +65,7 @@ import {
   type BookingChangeEvent,
 } from '../../shared/bookingRealtime';
 import { useBookingsRealtime } from '../../shared/useBookingsRealtime';
-import { BOOKING_STATUS_LABELS, formatBookingWhen, formatMoney } from '../../shared/format';
+import { formatBookingWhen, formatMoney } from '../../shared/format';
 
 /**
  * Confirm an irreversible transition before running it, matching the
@@ -264,19 +265,6 @@ export default function RequestsScreen() {
             // Lead with the customer's name when known; fall back to service.
             const title = counterpart?.name ?? service?.name ?? 'Booking';
             const subline = counterpart ? service?.name ?? 'Service' : formatBookingWhen(item.date, item.time);
-            // Brass is reserved for the one live "awaiting you" state; every
-            // other status recedes (accepted/rejected read via their own
-            // success/error tone, completed/cancelled are muted) — mirrors the
-            // rationing fix BookingsScreen already applied on the customer side.
-            const statusTone =
-              item.status === 'pending'
-                ? colors.accentText
-                : item.status === 'accepted'
-                  ? colors.successText
-                  : item.status === 'rejected'
-                    ? colors.errorText
-                    : colors.textSecondary;
-
             return (
               <View style={styles.card} testID={`barber-requests-row-${item.id}`}>
                 <View style={styles.cardTop}>
@@ -305,9 +293,11 @@ export default function RequestsScreen() {
                   </View>
                   <View style={styles.cardRight}>
                     <Text style={styles.cardPrice}>{formatMoney(item.price)}</Text>
-                    <Text style={[styles.cardStatus, { color: statusTone }]}>
-                      {BOOKING_STATUS_LABELS[item.status]}
-                    </Text>
+                    <StatusPill
+                      status={item.status}
+                      testID={`barber-requests-status-${item.id}`}
+                      style={styles.cardStatus}
+                    />
                   </View>
                 </View>
 
@@ -459,15 +449,11 @@ function useStyles(colors: Palette) {
     cardInfo: { flex: 1, minWidth: 0 },
     cardTitle: { fontSize: 18, color: colors.textPrimary, fontFamily: fonts.headingMedium },
     cardMeta: { fontSize: 12, marginTop: 4, color: colors.textSecondary, fontFamily: fonts.body },
-    cardRight: { alignItems: 'flex-end' },
+    cardRight: { alignItems: 'flex-end', flexShrink: 1, maxWidth: '45%' },
     cardPrice: { fontSize: 14, color: colors.textPrimary, fontFamily: fonts.body },
-    // Colour is applied inline per-row via `statusTone` — rationed brass, not a
-    // static accent (Step-18 Ultra pass, increment 6).
     cardStatus: {
-      fontSize: 10,
-      letterSpacing: 1.5,
-      marginTop: 4,
-      fontFamily: fonts.bodyMedium,
+      marginTop: space.xs,
+      alignSelf: 'flex-end',
     },
 
     actions: { flexDirection: 'row', gap: space.md, marginTop: space.base, alignItems: 'center' },
