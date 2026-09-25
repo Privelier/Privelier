@@ -258,6 +258,31 @@ describe('signIn', () => {
     expect(result).toEqual({ status: 'signed_in' });
   });
 
+  it('signs out a barber who entered through the customer login', async () => {
+    mockAuth.signInWithPassword.mockResolvedValue({ data: {}, error: null } as never);
+    okSession(makeSession({ id: 'barber-1' }));
+    mockAuth.signOut.mockResolvedValue({ error: null } as never);
+    queueFrom(chainable({ data: { role: 'barber' }, error: null }));
+
+    await expect(signIn('barber@example.com', 'password123', 'customer')).resolves.toEqual({
+      status: 'role_mismatch',
+      actualRole: 'barber',
+    });
+    expect(mockAuth.signOut).toHaveBeenCalledTimes(1);
+    expect(mockFrom).toHaveBeenCalledWith('users');
+  });
+
+  it('keeps the session when the database role matches the selected login', async () => {
+    mockAuth.signInWithPassword.mockResolvedValue({ data: {}, error: null } as never);
+    okSession(makeSession({ id: 'customer-1' }));
+    queueFrom(chainable({ data: { role: 'customer' }, error: null }));
+
+    await expect(signIn('customer@example.com', 'password123', 'customer')).resolves.toEqual({
+      status: 'signed_in',
+    });
+    expect(mockAuth.signOut).not.toHaveBeenCalled();
+  });
+
   it('surfaces email_not_confirmed as a first-class arm, not a generic error', async () => {
     const { AuthApiError } = jest.requireActual('@supabase/supabase-js');
     mockAuth.signInWithPassword.mockResolvedValue({
@@ -304,6 +329,24 @@ describe('signInWithProvider', () => {
       'privelier://auth-callback'
     );
     expect(applyAuthCallbackUrl).toHaveBeenCalledWith('privelier://auth-callback?code=pkce-code-1');
+  });
+
+  it('signs out OAuth sessions whose database role conflicts with the selected role', async () => {
+    mockAuth.signInWithOAuth.mockResolvedValue({
+      data: { url: 'https://project.supabase.co/auth/v1/authorize' },
+      error: null,
+    } as never);
+    openAuthSessionAsync.mockResolvedValue({ type: 'success', url: 'privelier://auth-callback?code=pkce' });
+    applyAuthCallbackUrl.mockResolvedValue('applied');
+    okSession(makeSession({ id: 'barber-1' }));
+    mockAuth.signOut.mockResolvedValue({ error: null } as never);
+    queueFrom(chainable({ data: { role: 'barber' }, error: null }));
+
+    await expect(signInWithProvider('google', 'customer')).resolves.toEqual({
+      status: 'role_mismatch',
+      actualRole: 'barber',
+    });
+    expect(mockAuth.signOut).toHaveBeenCalledTimes(1);
   });
 
   it('does not start OAuth in Expo Go because it cannot receive a stable callback', async () => {

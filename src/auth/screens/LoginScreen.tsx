@@ -5,9 +5,7 @@
  * - 'email_not_confirmed'  → route to AwaitEmailConfirmation with that email.
  * - AuthFailure            → calm inline error.
  *
- * The role param affects copy only. Routing authority after login is
- * public.users.role — a barber logging in through the customer login still
- * lands in the barber app.
+ * Existing accounts must enter through their database-backed role's login.
  */
 import { useCallback, useRef, useState } from 'react';
 import { StyleSheet, View, type TextInput } from 'react-native';
@@ -34,6 +32,12 @@ interface FieldErrors {
   password?: string;
 }
 
+function roleMismatchMessage(actualRole: 'customer' | 'barber'): string {
+  return actualRole === 'barber'
+    ? "Dies ist ein Barber-Konto. Bitte melde dich über 'Als Barber' an."
+    : "Dies ist ein Kundenkonto. Bitte melde dich über 'Als Kunde' an.";
+}
+
 export default function LoginScreen({ navigation, route }: Props) {
   const { role } = route.params;
   const [email, setEmail] = useState('');
@@ -54,12 +58,18 @@ export default function LoginScreen({ navigation, route }: Props) {
     if (errors.email || errors.password) return;
 
     setSubmitting(true);
-    const result = await signIn(email, password);
+    const result = await signIn(email, password, role);
     setSubmitting(false);
 
     switch (result.status) {
       case 'signed_in':
         // Root switch handles the transition via the auth event.
+        break;
+      case 'role_mismatch':
+        navigation.replace('Login', {
+          role: result.actualRole,
+          mismatchMessage: roleMismatchMessage(result.actualRole),
+        });
         break;
       case 'email_not_confirmed':
         navigation.navigate('AwaitEmailConfirmation', { email: result.email, role });
@@ -73,10 +83,16 @@ export default function LoginScreen({ navigation, route }: Props) {
   const onProviderPress = useCallback(async (provider: 'google' | 'apple') => {
     setFormError(null);
     setProviderSubmitting(provider);
-    const result = await signInWithProvider(provider);
+    const result = await signInWithProvider(provider, role);
     setProviderSubmitting(null);
     if (result.status === 'error') setFormError(result.message);
-  }, []);
+    else if (result.status === 'role_mismatch') {
+      navigation.replace('Login', {
+        role: result.actualRole,
+        mismatchMessage: roleMismatchMessage(result.actualRole),
+      });
+    }
+  }, [navigation, role]);
 
   return (
     <AuthScreenShell testID="auth-login-screen">
@@ -89,6 +105,7 @@ export default function LoginScreen({ navigation, route }: Props) {
             : 'Welcome back.'
         }
       />
+      {route.params.mismatchMessage ? <Notice kind="error" message={route.params.mismatchMessage} testID="auth-login-role-mismatch" /> : null}
       {formError ? <Notice kind="error" message={formError} testID="auth-login-error" /> : null}
       <FormTextField
         label="Email"

@@ -123,7 +123,17 @@ export function signUpBarber(
 // Sign in / resend confirmation / sign out
 // ---------------------------------------------------------------------------
 
-export async function signIn(email: string, password: string): Promise<SignInResult> {
+async function signOutOnRoleMismatch(expectedRole: Role): Promise<Role | null> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const userId = sessionData.session?.user.id;
+  if (!userId) return null;
+  const { data, error } = await supabase.from('users').select('role').eq('id', userId).maybeSingle();
+  if (error || !data || !isClientRole(data.role) || data.role === expectedRole) return null;
+  await supabase.auth.signOut();
+  return data.role;
+}
+
+export async function signIn(email: string, password: string, expectedRole?: Role): Promise<SignInResult> {
   const normalizedEmail = email.trim();
   const { error } = await supabase.auth.signInWithPassword({
     email: normalizedEmail,
@@ -137,13 +147,18 @@ export async function signIn(email: string, password: string): Promise<SignInRes
     }
     return mapped;
   }
+  if (expectedRole) {
+    const actualRole = await signOutOnRoleMismatch(expectedRole);
+    if (actualRole) return { status: 'role_mismatch', actualRole };
+  }
   // Session is persisted by the client (encrypted SecureStore). The caller's
   // next step is ensureProfile().
   return { status: 'signed_in' };
 }
 
 export async function signInWithProvider(
-  provider: 'google' | 'apple'
+  provider: 'google' | 'apple',
+  expectedRole?: Role
 ): Promise<OAuthSignInResult> {
   if (!hasStableAuthRedirect()) return failure('development_build_required');
   try {
@@ -159,6 +174,10 @@ export async function signInWithProvider(
     const outcome = await applyAuthCallbackUrl(result.url);
     if (outcome === 'error' || outcome === 'expired_or_used' || outcome === 'ignored') {
       return failure('unknown');
+    }
+    if (expectedRole) {
+      const actualRole = await signOutOnRoleMismatch(expectedRole);
+      if (actualRole) return { status: 'role_mismatch', actualRole };
     }
     return { status: 'started' };
   } catch (raw) {

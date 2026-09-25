@@ -36,10 +36,11 @@ export type SignUpResult =
  */
 export type SignInResult =
   | { status: 'signed_in' }
+  | { status: 'role_mismatch'; actualRole: Role }
   | { status: 'email_not_confirmed'; email: string }
   | AuthFailure;
 
-export type OAuthSignInResult = { status: 'started' } | AuthFailure;
+export type OAuthSignInResult = { status: 'started' } | { status: 'role_mismatch'; actualRole: Role } | AuthFailure;
 
 /** Result of resendConfirmation. */
 export type ResendConfirmationResult = { status: 'sent' } | AuthFailure;

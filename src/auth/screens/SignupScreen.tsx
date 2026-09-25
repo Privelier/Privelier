@@ -115,10 +115,18 @@ export default function SignupScreen({ navigation, route }: Props) {
   const onProviderPress = useCallback(async (provider: 'google' | 'apple') => {
     setFormError(null);
     setProviderSubmitting(provider);
-    const result = await signInWithProvider(provider);
+    const result = await signInWithProvider(provider, role);
     setProviderSubmitting(null);
     if (result.status === 'error') setFormError(result.message);
-  }, []);
+    else if (result.status === 'role_mismatch') {
+      navigation.replace('Login', {
+        role: result.actualRole,
+        mismatchMessage: result.actualRole === 'barber'
+          ? "Dies ist ein Barber-Konto. Bitte melde dich über 'Als Barber' an."
+          : "Dies ist ein Kundenkonto. Bitte melde dich über 'Als Kunde' an.",
+      });
+    }
+  }, [navigation, role]);
 
   return (
     <AuthScreenShell testID="auth-signup-screen">

@@ -25,7 +25,7 @@ import type { Role } from '../../types';
 export type AuthStackParamList = {
   RoleSelect: undefined;
   AuthEntry: { role: Role };
-  Login: { role: Role };
+  Login: { role: Role; mismatchMessage?: string };
   Signup: { role: Role };
   AwaitEmailConfirmation: { email: string; role: Role };
   ForgotPassword: { role: Role; email?: string };

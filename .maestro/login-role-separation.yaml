@@ -1,0 +1,37 @@
+# Wrong-role credentials must be signed out and returned to the matching login.
+# NOT YET RUN: requires the development build and Maestro tooling described in
+# .maestro/README.md. Supply a pre-confirmed Barber account at runtime.
+appId: com.privelier.app # TODO: replace once app.json defines a real package/bundleIdentifier
+env:
+  TEST_BARBER_EMAIL: barber.e2e@example.com
+  TEST_BARBER_PASSWORD: ChangeMe123!
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "role-select-customer"
+- tapOn:
+    id: "role-select-customer"
+- tapOn:
+    id: "auth-entry-login"
+- assertVisible:
+    id: "auth-login-screen"
+- tapOn:
+    id: "auth-login-email"
+- inputText: "${TEST_BARBER_EMAIL}"
+- tapOn:
+    id: "auth-login-password"
+- inputText: "${TEST_BARBER_PASSWORD}"
+- tapOn:
+    id: "auth-login-submit"
+- extendedWaitUntil:
+    visible:
+      id: "auth-login-role-mismatch"
+    timeout: 15000
+- assertVisible: "Dies ist ein Barber-Konto. Bitte melde dich über 'Als Barber' an."
+- assertVisible:
+    id: "auth-login-screen"
+- assertNotVisible:
+    id: "customer-home-screen"
+- assertNotVisible:
+    id: "barber-dashboard-screen"
