@@ -43,6 +43,7 @@ import { pressOpacity } from '../../theme/motion';
 import { PrimaryButton } from '../../shared/components/PrimaryButton';
 import { ScreenBackHeader } from '../../shared/components/ScreenBackHeader';
 import { Notice } from '../../shared/components/Notice';
+import { haptics } from '../../shared/haptics';
 import type { AvailabilityRow } from '../../types';
 import { listBarberAvailability, listBarberBusySlots } from '../availabilityData';
 import { deriveAvailableSlots } from '../../shared/slots';
@@ -290,7 +291,10 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
                         return (
                           <Pressable
                             key={time}
-                            onPress={() => setSelection((current) => ({ ...current, time }))}
+                            onPress={() => {
+                              void haptics.selection();
+                              setSelection((current) => ({ ...current, time }));
+                            }}
                             accessibilityRole="button"
                             accessibilityState={{ selected: active }}
                             accessibilityLabel={time.slice(0, 5)}

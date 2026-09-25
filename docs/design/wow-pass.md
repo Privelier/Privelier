@@ -153,3 +153,9 @@ Focused Jest passed 3 suites/8 tests; full Jest passed 62 suites/620 tests. Type
 Added a shared monogram avatar with two initials from a real name, a deterministic warm tint from the user ID, and a thin brass ring. Real profile photos use Expo Image memory/disk caching, a neutral blurred placeholder, and a brief crossfade; a failed image returns to the monogram. Applied it to Discover barber cards, Customer bookings/inbox/account, and Barber requests/chats. When a linked profile has not loaded, the avatar shows no invented initial. Decorative avatars remain inside the existing accessible row target; the Account avatar announces the real name. The no-photo barber card is now an intentional large monogram, while the full profile hero will receive its separate Wave 2 treatment.
 
 Focused Jest passed 8 suites/16 tests; full Jest passed 66 suites/629 tests. Typecheck and lint passed with the same 19 pre-existing warnings. No Maestro navigation/action contract changed. Native visual and screenshot checks remain open because no device is attached.
+
+### Centralized haptics item
+
+Added one safe haptics helper: light for selection, medium for primary confirmation, semantic success and warning for completed/destructive actions. Native haptic failures are swallowed so booking actions still complete. The Customer booking date and time selectors now request light feedback; booking submit requests medium feedback, and only a successful authoritative insert requests success feedback. The conflict path never announces success. No booking transition or selector test ID changed. Maestro continues to assert the observable date, slot, submit and success outcomes; it cannot sense device vibration.
+
+Focused Jest passed 3 suites/6 tests; full Jest passed 69 suites/635 tests. Typecheck and lint passed with 19 pre-existing warnings and no errors. The code graph was refreshed. Native haptic feel still needs a physical device check.

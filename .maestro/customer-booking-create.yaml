@@ -128,6 +128,8 @@ env:
 # Day index 0 is "today" (BookingDateTimeScreen's 14-day lookahead starts
 # today-inclusive) — see the prerequisite note above on why the test
 # barber's availability must make this reliably non-empty.
+# The date, time and final confirm taps also trigger native haptics; Maestro
+# verifies their selection/submit outcomes because vibration is not observable.
 - tapOn:
     id: "customer-booking-datetime-day-0"
 

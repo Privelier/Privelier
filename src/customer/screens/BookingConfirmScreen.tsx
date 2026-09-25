@@ -27,6 +27,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { PrimaryButton } from '../../shared/components/PrimaryButton';
 import { Notice } from '../../shared/components/Notice';
 import { ScreenBackHeader } from '../../shared/components/ScreenBackHeader';
+import { haptics } from '../../shared/haptics';
 import { useTheme } from '../../theme/useTheme';
 import { radius, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
@@ -50,6 +51,7 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
   const [conflict, setConflict] = useState(false);
 
   const onConfirm = useCallback(async () => {
+    void haptics.confirm();
     setSubmitting(true);
     setError(null);
     setConflict(false);
@@ -58,6 +60,7 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
 
     if (result.status === 'ok') {
       setConfirmedPrice(result.booking.price);
+      void haptics.success();
       return;
     }
     if (result.status === 'conflict') {

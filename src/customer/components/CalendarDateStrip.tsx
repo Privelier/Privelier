@@ -14,6 +14,7 @@
 import { memo, useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
+import { haptics } from '../../shared/haptics';
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 const MONTH_LABELS = [
@@ -83,7 +84,10 @@ function CalendarDateStrip({
             <Pressable
               key={date}
               disabled={disabled}
-              onPress={() => onSelectDate(date)}
+              onPress={() => {
+                void haptics.selection();
+                onSelectDate(date);
+              }}
               accessibilityRole="button"
               accessibilityState={{ disabled, selected: active }}
               accessibilityLabel={`${weekday} ${day}`}
