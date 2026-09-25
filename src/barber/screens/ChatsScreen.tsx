@@ -7,10 +7,7 @@
  * messages). No rooms exist until step 15-16 ships chat, so the empty
  * state is the expected first render.
  *
- * Honesty deviations from the prototype: rows lead with the booking's
- * service name and a neutral avatar — the customer's name/photo is
- * unreadable list-side under users RLS (the conversation screen itself
- * upgrades to the real name via the 0012 counterparts RPC). Tapping a
+ * Counterpart identity is resolved through the narrow 0012 RPC. Tapping a
  * thread opens the real conversation screen (step 15-16).
  *
  * Loads on FOCUS (not mount): returning from a conversation must show the
@@ -72,10 +69,8 @@ export default function ChatsScreen({ navigation }: Props) {
     (item: InboxThread) => {
       navigation.navigate('Conversation', {
         room: item.room,
-        title: item.service?.name ?? 'Booking',
-        // No list-side subtitle: the screen swaps the service name down to
-        // the subtitle slot once the counterparts RPC resolves the name.
-        subtitle: null,
+        title: item.customer?.name ?? item.service?.name ?? 'Booking',
+        subtitle: item.customer?.name ? item.service?.name ?? null : null,
       });
     },
     [navigation]
@@ -119,14 +114,15 @@ export default function ChatsScreen({ navigation }: Props) {
             </View>
           }
           renderItem={({ item, index }) => {
-            const title = item.service?.name ?? 'Booking';
+            const name = item.customer?.name ?? 'Customer';
+            const service = item.service?.name ?? 'Booking';
             const preview = item.lastMessage?.message ?? 'No messages yet.';
             const unread = unreadRoomIds.has(item.room.id);
             return (
               <Pressable
                 onPress={() => onOpenThread(item)}
                 accessibilityRole="button"
-                accessibilityLabel={`Open conversation about ${title}`}
+                accessibilityLabel={`Open conversation with ${name}`}
                 testID={`barber-chats-row-${item.room.id}`}
                 style={({ pressed }) => [
                   styles.row,
@@ -142,7 +138,7 @@ export default function ChatsScreen({ navigation }: Props) {
                     numberOfLines={1}
                     style={[styles.rowName, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}
                   >
-                    {title}
+                    {name}
                   </Text>
                   <Text
                     numberOfLines={1}
@@ -153,7 +149,7 @@ export default function ChatsScreen({ navigation }: Props) {
                         : { color: colors.textSecondary, fontFamily: fonts.body },
                     ]}
                   >
-                    {preview}
+                    {item.service ? `${service} · ${preview}` : preview}
                   </Text>
                 </View>
                 {item.lastActivityIso ? (

@@ -24,6 +24,7 @@ import type {
 export interface InboxThread {
   room: ChatRoomRow;
   barber: BarberDirectoryRow | null;
+  customer: { id: string; name: string | null; profile_image: string | null } | null;
   booking: BookingRow | null;
   service: ServiceRow | null;
   lastMessage: MessageRow | null;
@@ -40,7 +41,8 @@ export function buildInboxThreads(
   messages: MessageRow[],
   bookingsById: Map<string, BookingRow>,
   barbersById: Map<string, BarberDirectoryRow>,
-  servicesById: Map<string, ServiceRow>
+  servicesById: Map<string, ServiceRow>,
+  customersByBookingId: Map<string, { id: string; name: string | null; profile_image: string | null }> = new Map()
 ): InboxThread[] {
   const lastMessageByRoom = new Map<string, MessageRow>();
   for (const m of messages) {
@@ -54,6 +56,7 @@ export function buildInboxThreads(
     return {
       room,
       barber: barbersById.get(room.barber_id) ?? null,
+      customer: customersByBookingId.get(room.booking_id) ?? null,
       booking,
       service: booking ? (servicesById.get(booking.service_id) ?? null) : null,
       lastMessage,

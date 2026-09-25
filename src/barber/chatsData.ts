@@ -50,12 +50,23 @@ export async function fetchOwnChatsView(): Promise<OwnChatsViewResult> {
     for (const row of (servicesResult.data as ServiceRow[]) ?? []) servicesById.set(row.id, row);
   }
 
+  const { data: counterpartData, error: counterpartError } = await supabase.rpc('get_booking_counterparts', {
+    p_booking_ids: bookingIds,
+  });
+  const customersByBookingId = new Map<string, { id: string; name: string | null; profile_image: string | null }>();
+  if (!counterpartError) {
+    for (const row of (counterpartData as ({ booking_id: string; id: string; name: string | null; profile_image: string | null }[] | null) ?? [])) {
+      customersByBookingId.set(row.booking_id, row);
+    }
+  }
+
   const threads = buildInboxThreads(
     rooms,
     (messagesResult.data as MessageRow[]) ?? [],
     bookingsById,
     new Map(), // no counterpart lookup — see file header
-    servicesById
+    servicesById,
+    customersByBookingId
   );
   return { status: 'ok', threads };
 }
