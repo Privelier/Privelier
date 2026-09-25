@@ -32,7 +32,7 @@
  *   so a stale snapshot can't flip an optimistic card backward.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -289,8 +289,18 @@ export default function BookingsScreen() {
         <>
           {error ? <RetryNotice testID="customer-bookings-error" message={error} onRetry={() => void load()} style={styles.noticeMargins} /> : null}
           <FlatList
+          testID="customer-bookings-list"
           data={list}
           keyExtractor={(item) => item.id}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading && bookings.length > 0}
+              onRefresh={() => void load()}
+              progressViewOffset={12}
+              tintColor={colors.accent}
+              colors={[colors.accent]}
+            />
+          }
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
             <Text

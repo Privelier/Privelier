@@ -201,6 +201,12 @@ env:
 # state must not show.
 - assertNotVisible:
     id: "customer-bookings-empty"
+# Pull down on the populated list to refresh without losing the booking card.
+- swipe:
+    direction: DOWN
+    duration: 400
+- assertVisible:
+    id: "customer-bookings-row-.*"
 - assertVisible:
     text: "${TEST_SERVICE_NAME}"
 - assertVisible:

@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react-native';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react-native';
 import type { BarberDirectoryRow, BookingRow, ServiceRow } from '../../../types';
 import { fetchOwnBookingsView } from '../../bookingsData';
 import { fetchOwnReviewedBookingIds } from '../../reviewsData';
@@ -112,6 +112,7 @@ const SERVICE: ServiceRow = {
 };
 
 beforeEach(() => {
+  mockFetchBookings.mockReset();
   mockFetchBookings.mockResolvedValue({
     status: 'ok',
     bookings: [BOOKING],
@@ -127,6 +128,20 @@ afterEach(async () => {
 });
 
 describe('BookingsScreen status presentation', () => {
+  it('refreshes in brass while keeping the loaded booking visible', async () => {
+    await render(<BookingsScreen />);
+    await waitFor(() => expect(screen.getByTestId('customer-bookings-row-booking-1')).toBeTruthy());
+    const refresh = screen.getByTestId('customer-bookings-list').props.refreshControl;
+    expect(refresh.props.tintColor).toBe('#BFA06B');
+    expect(refresh.props.colors).toEqual(['#BFA06B']);
+
+    mockFetchBookings.mockImplementationOnce(() => new Promise(() => {}));
+    await act(async () => refresh.props.onRefresh());
+    expect(mockFetchBookings).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId('customer-bookings-row-booking-1')).toBeTruthy();
+    expect(screen.getByTestId('customer-bookings-list').props.refreshControl.props.refreshing).toBe(true);
+  });
+
   it('shows content-shaped placeholders without an empty-state flash on first load', async () => {
     mockFetchBookings.mockImplementation(() => new Promise(() => {}));
     await render(<BookingsScreen />);

@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react-native';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 import type { BookingRow, ServiceRow } from '../../../types';
 import { fetchOwnRequestsView } from '../../requestsData';
@@ -93,6 +93,7 @@ const SERVICE: ServiceRow = {
 };
 
 beforeEach(() => {
+  mockFetchRequests.mockReset();
   mockFetchRequests.mockResolvedValue({
     status: 'ok',
     bookings: [BOOKING],
@@ -109,6 +110,20 @@ afterEach(async () => {
 });
 
 describe('RequestsScreen status presentation', () => {
+  it('refreshes in brass while keeping the loaded request visible', async () => {
+    await render(<RequestsScreen />);
+    await waitFor(() => expect(screen.getByTestId('barber-requests-row-booking-2')).toBeTruthy());
+    const refresh = screen.getByTestId('barber-requests-list').props.refreshControl;
+    expect(refresh.props.tintColor).toBe('#BFA06B');
+    expect(refresh.props.colors).toEqual(['#BFA06B']);
+
+    mockFetchRequests.mockImplementationOnce(() => new Promise(() => {}));
+    await act(async () => refresh.props.onRefresh());
+    expect(mockFetchRequests).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId('barber-requests-row-booking-2')).toBeTruthy();
+    expect(screen.getByTestId('barber-requests-list').props.refreshControl.props.refreshing).toBe(true);
+  });
+
   it('shows content-shaped placeholders without an empty-state flash on first load', async () => {
     mockFetchRequests.mockImplementation(() => new Promise(() => {}));
     await render(<RequestsScreen />);

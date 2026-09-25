@@ -40,7 +40,7 @@
  *   even a snapshot that raced past the write converges to the correct status.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../../lib/supabase';
@@ -242,8 +242,18 @@ export default function RequestsScreen() {
         <>
           {error ? <RetryNotice testID="barber-requests-error" message={error} onRetry={() => void load()} style={styles.noticeMargins} /> : null}
           <FlatList
+          testID="barber-requests-list"
           data={bookings}
           keyExtractor={(item) => item.id}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading && bookings.length > 0}
+              onRefresh={() => void load()}
+              progressViewOffset={12}
+              tintColor={colors.accent}
+              colors={[colors.accent]}
+            />
+          }
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
             <View style={styles.empty}>

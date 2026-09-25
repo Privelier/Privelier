@@ -177,3 +177,9 @@ Focused Jest passed 2 suites/4 tests; full Jest passed 70 suites/638 tests. Type
 Customer Inbox and Barber Chats now show conversation-shaped first-load placeholders: avatar, name, preview and date. An empty state appears only after a completed empty response. Once real threads have loaded, returning to the tab keeps them visible during the refresh and retains them with a retry notice if that refresh fails. Existing loading, row and navigation test IDs remain. The Customer Maestro flow documents its stable loading ID; a new Barber chat-list flow checks login, loading, row and conversation navigation, subject to a real one-room test account.
 
 Focused Jest passed 2 suites/4 tests; full Jest passed 70 suites/640 tests. Typecheck and lint passed with the same 19 pre-existing warnings. The new Maestro flow has not run because no device is attached.
+
+### Booking-list pull-to-refresh item
+
+Customer Bookings and Barber Requests now use a native pull-to-refresh control tinted with the theme brass. It calls each screen’s existing authoritative load path and keeps already rendered cards visible while fetching. First-load skeletons remain reserved for a list with no loaded rows. New list test IDs make the refresh control verifiable without changing card/action IDs. Both booking Maestro flows now pull down and check that a real row remains visible.
+
+Focused Jest passed 2 suites/6 tests; full Jest passed 70 suites/642 tests. Typecheck and lint passed with the same 19 pre-existing warnings. The gesture still needs a native Maestro run; no device is attached.

@@ -89,6 +89,12 @@ env:
 # Two seeded pending bookings -> the empty state must not show.
 - assertNotVisible:
     id: "barber-requests-empty"
+# Refresh keeps actionable request cards visible while the read is in flight.
+- swipe:
+    direction: DOWN
+    duration: 400
+- assertVisible:
+    id: "barber-requests-row-.*"
 
 # --- ACCEPT the first (soonest) pending request ---
 # Accept is one-tap (not destructive, no confirmation alert). The card flips
