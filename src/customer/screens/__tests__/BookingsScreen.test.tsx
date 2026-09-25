@@ -138,6 +138,8 @@ describe('BookingsScreen status presentation', () => {
     expect(status.props.accessibilityLabel).toBe('Status: Pending');
     expect(screen.getByText('Pending')).toBeTruthy();
     expect(screen.getByTestId('customer-bookings-row-booking-1')).toBeTruthy();
+    expect(screen.getByTestId('customer-bookings-avatar-booking-1-monogram').props.children).toBe('TM');
+    expect(screen.getByTestId('customer-bookings-avatar-booking-1').props.accessible).toBe(false);
     expect(screen.getByTestId('booking-cancel-booking-1')).toBeTruthy();
   });
 });

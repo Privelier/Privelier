@@ -40,7 +40,7 @@
  *   even a snapshot that raced past the write converges to the correct status.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../../lib/supabase';
@@ -49,6 +49,7 @@ import { HAIRLINE, radius, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
 import { StatusPill } from '../../shared/components/StatusPill';
+import { Avatar } from '../../shared/components/Avatar';
 import type { Palette } from '../../theme/colors';
 import type { BookingCounterpart, TransitionBookingResult } from '../types';
 import type { BookingRow, ServiceRow } from '../../types';
@@ -268,15 +269,14 @@ export default function RequestsScreen() {
             return (
               <View style={styles.card} testID={`barber-requests-row-${item.id}`}>
                 <View style={styles.cardTop}>
-                  {counterpart?.profile_image ? (
-                    <Image source={{ uri: counterpart.profile_image }} style={styles.avatar} />
-                  ) : counterpart ? (
-                    <View style={[styles.avatar, styles.avatarFallback]}>
-                      <Text style={styles.avatarInitial}>
-                        {counterpart.name.trim().charAt(0).toUpperCase() || '?'}
-                      </Text>
-                    </View>
-                  ) : null}
+                  <Avatar
+                    id={counterpart?.id ?? item.customer_id}
+                    name={counterpart?.name}
+                    imageUrl={counterpart?.profile_image}
+                    size={44}
+                    accessible={false}
+                    testID={`barber-requests-avatar-${item.id}`}
+                  />
                   <View style={styles.cardInfo}>
                     <Text numberOfLines={1} style={styles.cardTitle}>
                       {title}
@@ -443,9 +443,6 @@ function useStyles(colors: Palette) {
       backgroundColor: colors.surface,
     },
     cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
-    avatar: { width: 44, height: 44, borderRadius: radius.xs },
-    avatarFallback: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
-    avatarInitial: { fontSize: 16, color: colors.textSecondary, fontFamily: fonts.headingMedium },
     cardInfo: { flex: 1, minWidth: 0 },
     cardTitle: { fontSize: 18, color: colors.textPrimary, fontFamily: fonts.headingMedium },
     cardMeta: { fontSize: 12, marginTop: 4, color: colors.textSecondary, fontFamily: fonts.body },

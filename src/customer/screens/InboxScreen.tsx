@@ -19,7 +19,7 @@
  * fresh last-message preview, and bottom-tab screens stay mounted.
  */
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import type { CompositeScreenProps } from '@react-navigation/native';
@@ -28,6 +28,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../../theme/useTheme';
 import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
+import { Avatar } from '../../shared/components/Avatar';
 import type { InboxThread } from '../types';
 import type { CustomerTabParamList } from '../CustomerTabs';
 import type { CustomerStackParamList } from '../CustomerNavigator';
@@ -139,15 +140,14 @@ export default function InboxScreen({ navigation }: Props) {
                   pressed ? { opacity: pressOpacity.soft } : null,
                 ]}
               >
-                {item.barber?.profile_image ? (
-                  <Image source={{ uri: item.barber.profile_image }} style={styles.avatar} />
-                ) : (
-                  <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: colors.surface }]}>
-                    <Text style={[styles.avatarInitial, { color: colors.textSecondary, fontFamily: fonts.headingMedium }]}>
-                      {name.trim().charAt(0).toUpperCase() || '?'}
-                    </Text>
-                  </View>
-                )}
+                <Avatar
+                  id={item.barber?.id ?? item.room.barber_id}
+                  name={item.barber?.name}
+                  imageUrl={item.barber?.profile_image}
+                  size={48}
+                  accessible={false}
+                  testID={`customer-inbox-avatar-${item.room.id}`}
+                />
                 <View style={styles.rowInfo}>
                   <Text
                     numberOfLines={1}
@@ -210,9 +210,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 16,
   },
-  avatar: { width: 48, height: 48, borderRadius: 24 },
-  avatarFallback: { alignItems: 'center', justifyContent: 'center' },
-  avatarInitial: { fontSize: 18 },
   rowInfo: { flex: 1, minWidth: 0 },
   rowName: { fontSize: 16 },
   rowPreview: { fontSize: 12, marginTop: 3 },

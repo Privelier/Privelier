@@ -141,6 +141,8 @@ describe('DiscoverScreen', () => {
     expect(screen.getAllByTestId('customer-home-barber-a')).toHaveLength(1);
     expect(screen.getAllByTestId('customer-home-barber-b')).toHaveLength(1);
     expect(screen.getAllByTestId('customer-home-barber-c')).toHaveLength(1);
+    expect(screen.getByTestId('customer-barber-avatar-a-image')).toBeTruthy();
+    expect(screen.getByTestId('customer-barber-avatar-c-monogram').props.children).toBe('C');
   });
 
   it('filters by barber name and preserves profile navigation', async () => {

@@ -20,11 +20,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../theme/useTheme';
 import { HAIRLINE, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
+import { Avatar } from '../../shared/components/Avatar';
 import type { InboxThread } from '../../shared/threads';
 import type { BarberTabParamList } from '../BarberTabs';
 import type { BarberStackParamList } from '../BarberNavigator';
@@ -130,9 +130,14 @@ export default function ChatsScreen({ navigation }: Props) {
                   pressed ? { opacity: pressOpacity.soft } : null,
                 ]}
               >
-                <View style={[styles.avatar, { backgroundColor: colors.surface }]}>
-                  <Feather name="user" size={18} color={colors.textSecondary} />
-                </View>
+                <Avatar
+                  id={item.customer?.id ?? item.room.customer_id}
+                  name={item.customer?.name}
+                  imageUrl={item.customer?.profile_image}
+                  size={48}
+                  accessible={false}
+                  testID={`barber-chats-avatar-${item.room.id}`}
+                />
                 <View style={styles.rowInfo}>
                   <Text
                     numberOfLines={1}

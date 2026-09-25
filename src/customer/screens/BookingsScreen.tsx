@@ -32,7 +32,7 @@
  *   so a stale snapshot can't flip an optimistic card backward.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -43,6 +43,7 @@ import { radius, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
 import { StatusPill } from '../../shared/components/StatusPill';
+import { Avatar } from '../../shared/components/Avatar';
 import type { BarberDirectoryRow, BookingRow, ServiceRow } from '../../types';
 import { cancelBookingAsCustomer, fetchOwnBookingsView, isUpcomingBooking } from '../bookingsData';
 import { fetchOwnReviewedBookingIds } from '../reviewsData';
@@ -316,15 +317,14 @@ export default function BookingsScreen() {
                 testID={`customer-bookings-row-${item.id}`}
               >
                 <View style={styles.cardMain}>
-                  {barber?.profile_image ? (
-                    <Image source={{ uri: barber.profile_image }} style={styles.avatar} />
-                  ) : (
-                    <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: colors.background }]}>
-                      <Text style={[styles.avatarInitial, { color: colors.textSecondary, fontFamily: fonts.headingMedium }]}>
-                        {barber?.name.trim().charAt(0).toUpperCase() || '?'}
-                      </Text>
-                    </View>
-                  )}
+                  <Avatar
+                    id={barber?.id ?? item.barber_id}
+                    name={barber?.name}
+                    imageUrl={barber?.profile_image}
+                    size={56}
+                    accessible={false}
+                    testID={`customer-bookings-avatar-${item.id}`}
+                  />
                   <View style={styles.cardInfo}>
                     <View style={styles.cardTitleRow}>
                       <Text
@@ -461,9 +461,6 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 32 },
   card: { borderWidth: 0.5, borderRadius: radius.sm, padding: 16, marginBottom: 12 },
   cardMain: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: { width: 56, height: 56, borderRadius: radius.xs },
-  avatarFallback: { alignItems: 'center', justifyContent: 'center' },
-  avatarInitial: { fontSize: 20 },
   cardInfo: { flex: 1, minWidth: 0 },
   cardTitleRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space.sm },
   cardName: { fontSize: 16, flexShrink: 1 },

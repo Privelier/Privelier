@@ -1,4 +1,5 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import type { BookingRow, ServiceRow } from '../../../types';
 import { fetchOwnRequestsView } from '../../requestsData';
 import RequestsScreen from '../RequestsScreen';
@@ -119,6 +120,12 @@ describe('RequestsScreen status presentation', () => {
     expect(status.props.accessibilityLabel).toBe('Status: Accepted');
     expect(screen.getByText('Accepted')).toBeTruthy();
     expect(screen.getByTestId('barber-requests-row-booking-2')).toBeTruthy();
+    expect(screen.getByTestId('barber-requests-avatar-booking-2-monogram').props.children).toBe('MH');
+    expect(StyleSheet.flatten(screen.getByTestId('barber-requests-avatar-booking-2').props.style)).toMatchObject({
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+    });
     expect(screen.getByTestId('request-cancel-booking-2')).toBeTruthy();
     expect(screen.getByTestId('request-complete-booking-2')).toBeTruthy();
   });

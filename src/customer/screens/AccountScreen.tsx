@@ -19,7 +19,7 @@
  * flow).
  */
 import { useCallback, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import type { CompositeScreenProps } from '@react-navigation/native';
@@ -35,6 +35,7 @@ import { ACCOUNT_SECTIONS, type AccountSectionKey } from './AccountSectionScreen
 import type { CustomerTabParamList } from '../CustomerTabs';
 import type { CustomerStackParamList } from '../CustomerNavigator';
 import { Notice } from '../../shared/components/Notice';
+import { Avatar } from '../../shared/components/Avatar';
 import { LegalLinks } from '../../legal/LegalComponents';
 
 type Props = CompositeScreenProps<
@@ -88,14 +89,21 @@ export default function AccountScreen({ navigation }: Props) {
           testID="customer-account-edit-profile"
           style={({ pressed }) => [styles.profileRow, pressed ? { opacity: pressOpacity.soft } : null]}
         >
-          {profile?.profile_image ? (
-            <Image source={{ uri: profile.profile_image }} style={styles.avatar} />
+          {profile ? (
+            <Avatar
+              id={profile.id}
+              name={profile.name}
+              imageUrl={profile.profile_image}
+              size={64}
+              accessible={false}
+              testID="customer-account-avatar"
+            />
           ) : (
-            <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: colors.surface }]}>
-              <Text style={[styles.avatarInitial, { color: colors.textSecondary, fontFamily: fonts.headingMedium }]}>
-                {profile?.name.trim().charAt(0).toUpperCase() || '?'}
-              </Text>
-            </View>
+            <View
+              accessible={false}
+              style={[styles.avatarPlaceholder, { backgroundColor: colors.surface }]}
+              testID="customer-account-avatar-placeholder"
+            />
           )}
           <View style={styles.profileText}>
             <Text
@@ -173,9 +181,7 @@ const styles = StyleSheet.create({
   profileRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 32 },
   errorNotice: { marginTop: 20 },
   retryAction: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
-  avatar: { width: 64, height: 64, borderRadius: 32 },
-  avatarFallback: { alignItems: 'center', justifyContent: 'center' },
-  avatarInitial: { fontSize: 24 },
+  avatarPlaceholder: { width: 64, height: 64, borderRadius: 32 },
   profileText: { flexShrink: 1, minWidth: 0 },
   name: { fontSize: 20 },
   email: { fontSize: 12, marginTop: 2 },

@@ -13,11 +13,11 @@
  * verification_status = 'approved'), so every visible row is verified by
  * construction.
  */
-import { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/useTheme';
 import { pressOpacity } from '../../theme/motion';
+import { Avatar } from '../../shared/components/Avatar';
 import type { BarberDirectoryRow, ServiceRow } from '../../types';
 import { formatMoney } from '../format';
 
@@ -40,24 +40,17 @@ function startingPrice(services: ServiceRow[]): number | null {
 }
 
 function CardImage({ barber, aspectRatio }: { barber: BarberDirectoryRow; aspectRatio: number }) {
-  const { colors, fonts } = useTheme();
-  const [failed, setFailed] = useState(false);
-  if (barber.profile_image && !failed) {
-    return (
-      <Image
-        source={{ uri: barber.profile_image }}
-        style={[styles.image, { aspectRatio, backgroundColor: colors.surface }]}
-        resizeMode="cover"
-        onError={() => setFailed(true)}
-      />
-    );
-  }
   return (
-    <View style={[styles.image, styles.imageFallback, { aspectRatio, backgroundColor: colors.surface }]}>
-      <Text style={[styles.imageInitial, { color: colors.textSecondary, fontFamily: fonts.headingMedium }]}>
-        {barber.name.trim().charAt(0).toUpperCase() || '?'}
-      </Text>
-    </View>
+    <Avatar
+      id={barber.id}
+      name={barber.name}
+      imageUrl={barber.profile_image}
+      shape="rounded"
+      monogramFontSize={44}
+      accessible={false}
+      testID={`customer-barber-avatar-${barber.id}`}
+      style={[styles.image, { aspectRatio }]}
+    />
   );
 }
 
@@ -197,8 +190,6 @@ export default function BarberCard({ barber, services, variant = 'wide', feature
 
 const styles = StyleSheet.create({
   image: { width: '100%', borderRadius: 8 },
-  imageFallback: { alignItems: 'center', justifyContent: 'center' },
-  imageInitial: { fontSize: 44 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4, justifyContent: 'flex-end' },
 
