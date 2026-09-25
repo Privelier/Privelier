@@ -237,3 +237,9 @@ Focused Jest passed 2 suites/6 tests; full Jest passed 73 suites/653 tests. Type
 A root-level toast now provides one quiet, hairline-bordered feedback surface to both apps. It fades in using the system Reduce Motion setting, announces its message politely, and supports an optional labeled 44pt action. Showing a later message replaces the earlier one and resets its dismissal timer. The 5-second cancellation undo flow will use this shared primitive in its own booking item; no cancellation behavior changed here. Focused Jest passed 1 suite/2 tests. Native visual checks remain open without a device.
 
 Full Jest passed 74 suites/655 tests. Typecheck and lint passed with 19 pre-existing warnings.
+
+### Customer cancellation undo item
+
+After confirmation, Customer Bookings leaves the real booking status untouched for five seconds and displays a quiet pending line plus an Undo toast action. Undo sends no cancellation. Expiry, explicit dismissal, or replacement closes the window and starts the existing RLS-backed cancellation mutation; a server rejection restores the row and refreshes its authoritative state. No booking state or payment flow changed. The customer cancellation Maestro flow creates a real booking and exercises Undo. The current native confirmation alert will move to the shared confirmation sheet in the remaining Wave 1 work. Focused Jest passed 2 suites/7 tests. Native behavior remains unverified without a device.
+
+Full Jest passed 74 suites/657 tests. Typecheck and lint passed with 19 pre-existing warnings.

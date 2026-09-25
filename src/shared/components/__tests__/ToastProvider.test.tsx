@@ -6,11 +6,11 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 
-function Trigger({ onAction }: { onAction: () => void }) {
+function Trigger({ onAction, onClose }: { onAction: () => void; onClose?: (reason: string) => void }) {
   const { showToast } = useToast();
   return (
     <>
-      <Pressable testID="show-toast" onPress={() => showToast({ message: 'Adresse gespeichert', action: { label: 'Rückgängig', onPress: onAction }, durationMs: 5000 })}>
+      <Pressable testID="show-toast" onPress={() => showToast({ message: 'Adresse gespeichert', action: { label: 'Rückgängig', onPress: onAction }, durationMs: 5000, onClose })}>
         <Text>Show</Text>
       </Pressable>
       <Pressable testID="replace-toast" onPress={() => showToast({ message: 'Profil gespeichert', durationMs: 4000 })}>
@@ -38,13 +38,25 @@ describe('ToastProvider', () => {
   });
 
   it('replaces the prior message and expires only the latest toast', async () => {
-    const view = await render(<ToastProvider><Trigger onAction={jest.fn()} /></ToastProvider>);
+    const onClose = jest.fn();
+    const view = await render(<ToastProvider><Trigger onAction={jest.fn()} onClose={onClose} /></ToastProvider>);
     await act(async () => fireEvent.press(view.getByTestId('show-toast')));
     await act(async () => { jest.advanceTimersByTime(3000); });
     await act(async () => fireEvent.press(view.getByTestId('replace-toast')));
+    expect(onClose).toHaveBeenCalledWith('replace');
     await act(async () => { jest.advanceTimersByTime(2000); });
     expect(view.getByText('Profil gespeichert')).toBeTruthy();
     await act(async () => { jest.advanceTimersByTime(2000); });
+    expect(view.queryByTestId('global-toast')).toBeNull();
+  });
+
+  it('closes the undo window on timeout exactly once', async () => {
+    const onClose = jest.fn();
+    const view = await render(<ToastProvider><Trigger onAction={jest.fn()} onClose={onClose} /></ToastProvider>);
+    await act(async () => fireEvent.press(view.getByTestId('show-toast')));
+    await act(async () => { jest.advanceTimersByTime(5000); });
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledWith('timeout');
     expect(view.queryByTestId('global-toast')).toBeNull();
   });
 });

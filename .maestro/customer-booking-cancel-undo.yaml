@@ -1,0 +1,18 @@
+# Creates a real pending booking, then verifies the five-second cancellation undo.
+# Requires the same seeded customer/barber/service availability as customer-booking-create.
+# Not run: no connected Android or iOS device is available in this workspace.
+appId: com.privelier.app
+---
+- runFlow: customer-booking-create.yaml
+- tapOn:
+    id: "booking-cancel-.*"
+- assertVisible: "Cancel this booking?"
+- tapOn: "Cancel booking"
+- assertVisible:
+    id: "customer-bookings-row-undo-window-.*"
+- assertVisible: "Booking cancellation pending"
+- tapOn: "Undo"
+- assertNotVisible:
+    id: "customer-bookings-row-undo-window-.*"
+- assertVisible:
+    id: "booking-cancel-.*"

@@ -10,6 +10,7 @@ export type ToastOptions = {
   message: string;
   durationMs?: number;
   action?: { label: string; onPress: () => void };
+  onClose?: (reason: 'timeout' | 'replace' | 'dismiss' | 'action') => void;
 };
 
 type ToastContextValue = {
@@ -25,7 +26,7 @@ export function useToast(): ToastContextValue {
   return value;
 }
 
-function ToastSurface({ toast, onDismiss }: { toast: ToastOptions; onDismiss: () => void }) {
+function ToastSurface({ toast, onAction }: { toast: ToastOptions; onAction: () => void }) {
   const { colors, fonts } = useTheme();
   const insets = useSafeAreaInsets();
   const opacity = useSharedValue(0);
@@ -57,7 +58,7 @@ function ToastSurface({ toast, onDismiss }: { toast: ToastOptions; onDismiss: ()
           testID="global-toast-action"
           accessibilityRole="button"
           accessibilityLabel={toast.action.label}
-          onPress={() => { onDismiss(); toast.action?.onPress(); }}
+          onPress={onAction}
           style={styles.action}
         >
           <Text style={[styles.actionText, { color: colors.accentText, fontFamily: fonts.bodySemiBold }]}>
@@ -73,22 +74,32 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<{ id: number; options: ToastOptions } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const nextId = useRef(0);
+  const currentToast = useRef<{ id: number; options: ToastOptions } | null>(null);
 
-  const dismissToast = useCallback(() => {
+  const closeToast = useCallback((reason: 'timeout' | 'replace' | 'dismiss' | 'action') => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
+    const previous = currentToast.current;
+    currentToast.current = null;
     setToast(null);
+    previous?.options.onClose?.(reason);
+    if (reason === 'action') previous?.options.action?.onPress();
   }, []);
 
+  const dismissToast = useCallback(() => {
+    closeToast('dismiss');
+  }, [closeToast]);
+
   const showToast = useCallback((options: ToastOptions) => {
-    if (timer.current) clearTimeout(timer.current);
+    if (currentToast.current) closeToast('replace');
     const id = ++nextId.current;
-    setToast({ id, options });
+    const next = { id, options };
+    currentToast.current = next;
+    setToast(next);
     timer.current = setTimeout(() => {
-      setToast((current) => current?.id === id ? null : current);
-      timer.current = null;
+      if (currentToast.current?.id === id) closeToast('timeout');
     }, Math.max(1000, options.durationMs ?? 4000));
-  }, []);
+  }, [closeToast]);
 
   useEffect(() => () => {
     if (timer.current) clearTimeout(timer.current);
@@ -99,7 +110,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={value}>
       <View style={styles.root}>
         {children}
-        {toast ? <ToastSurface key={toast.id} toast={toast.options} onDismiss={dismissToast} /> : null}
+        {toast ? <ToastSurface key={toast.id} toast={toast.options} onAction={() => closeToast('action')} /> : null}
       </View>
     </ToastContext.Provider>
   );

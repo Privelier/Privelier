@@ -24,9 +24,9 @@
  *   applyBookingChange (idempotent upsert-by-id); we re-sort date/time DESC
  *   after each merge (matching the fetch order the Upcoming/Past useMemo
  *   expects).
- * - Optimistic cancel: on tap we apply status='cancelled' locally at once and
- *   mark the card in-flight; on success we re-apply the authoritative row; on
- *   failure we roll the card back and surface the reason inline.
+ * - Cancellation starts a five-second undo window. Only after it closes do we
+ *   apply status='cancelled' optimistically and send the request. On failure
+ *   we restore the card, show the reason, and refetch the authoritative row.
  * - Clobber guard: while a booking id is in-flight the baseline refetch SKIPS
  *   it, and the mutation's authoritative row is re-applied after it resolves,
  *   so a stale snapshot can't flip an optimistic card backward.
@@ -46,6 +46,7 @@ import { RetryNotice } from '../../shared/components/RetryNotice';
 import { StatusPill } from '../../shared/components/StatusPill';
 import { Avatar } from '../../shared/components/Avatar';
 import { BookingListSkeleton } from '../../shared/components/BookingListSkeleton';
+import { useToast } from '../../shared/components/ToastProvider';
 import type { BarberDirectoryRow, BookingRow, ServiceRow } from '../../types';
 import { cancelBookingAsCustomer, fetchOwnBookingsView, isUpcomingBooking } from '../bookingsData';
 import { fetchOwnReviewedBookingIds } from '../reviewsData';
@@ -65,11 +66,10 @@ const TABS: { key: TabKey; label: string }[] = [
 ];
 
 /**
- * Confirm before cancelling — cancelling is irreversible and money-adjacent,
- * matching the destructive-action convention (Alert.alert) used elsewhere.
+ * Confirm before starting the cancellation undo window.
  */
 function confirmCancel(onConfirm: () => void) {
-  Alert.alert('Cancel this booking?', 'This cannot be undone.', [
+  Alert.alert('Cancel this booking?', 'You can undo for 5 seconds.', [
     { text: 'Keep', style: 'cancel' },
     { text: 'Cancel booking', style: 'destructive', onPress: onConfirm },
   ]);
@@ -86,6 +86,7 @@ function sortDesc(rows: BookingRow[]): BookingRow[] {
 
 export default function BookingsScreen() {
   const { colors, fonts } = useTheme();
+  const { showToast } = useToast();
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
 
   const [bookings, setBookings] = useState<BookingRow[]>([]);
@@ -108,6 +109,8 @@ export default function BookingsScreen() {
   const inFlightRef = useRef<Set<string>>(new Set());
   const [inFlight, setInFlight] = useState<Record<string, boolean>>({});
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
+  const queuedRef = useRef<Set<string>>(new Set());
+  const [queued, setQueued] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     let active = true;
@@ -213,8 +216,29 @@ export default function BookingsScreen() {
           ? 'That booking could no longer be found. Refresh to see its current status.'
           : result.message;
       setRowErrors((p) => ({ ...p, [row.id]: message }));
+      void load();
     }
-  }, []);
+  }, [load]);
+
+  const queueCancellation = useCallback((row: BookingRow) => {
+    if (queuedRef.current.has(row.id) || inFlightRef.current.has(row.id)) return;
+    queuedRef.current.add(row.id);
+    setQueued((previous) => ({ ...previous, [row.id]: true }));
+    showToast({
+      message: 'Booking cancellation pending',
+      durationMs: 5000,
+      action: { label: 'Undo', onPress: () => {} },
+      onClose: (reason) => {
+        queuedRef.current.delete(row.id);
+        setQueued((previous) => {
+          const next = { ...previous };
+          delete next[row.id];
+          return next;
+        });
+        if (reason !== 'action') void cancelBooking(row);
+      },
+    });
+  }, [cancelBooking, showToast]);
 
   const leaveReview = useCallback(
     (row: BookingRow) => {
@@ -317,6 +341,7 @@ export default function BookingsScreen() {
             const service = servicesById.get(item.service_id);
             const actionable = item.status === 'pending' || item.status === 'accepted';
             const busy = inFlight[item.id] === true;
+            const cancellationQueued = queued[item.id] === true;
             const rowError = rowErrors[item.id];
             return (
               <View
@@ -367,7 +392,15 @@ export default function BookingsScreen() {
                 </Text>
 
                 {actionable ? (
-                  busy ? (
+                  cancellationQueued ? (
+                    <Text
+                      testID={`customer-bookings-row-undo-window-${item.id}`}
+                      accessibilityLiveRegion="polite"
+                      style={[styles.reviewedText, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}
+                    >
+                      Cancellation pending · Undo below
+                    </Text>
+                  ) : busy ? (
                     <ActivityIndicator
                       size="small"
                       color={colors.accent}
@@ -382,7 +415,7 @@ export default function BookingsScreen() {
                       accessibilityRole="button"
                       accessibilityLabel="Cancel booking"
                       testID={`booking-cancel-${item.id}`}
-                      onPress={() => confirmCancel(() => cancelBooking(item))}
+                      onPress={() => confirmCancel(() => queueCancellation(item))}
                       style={({ pressed }) => [
                         styles.cancelButton,
                         { borderColor: colors.error },
