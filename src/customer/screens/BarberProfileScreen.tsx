@@ -23,7 +23,6 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Image,
   Pressable,
   ScrollView,
@@ -38,6 +37,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { PortfolioGrid } from '../../shared/components/PortfolioGrid';
 import { PortfolioTile } from '../../shared/components/PortfolioTile';
 import { StarRating } from '../../shared/components/StarRating';
+import { Skeleton } from '../../shared/components/Skeleton';
 import { BackButton, OVER_IMAGE_BG, OVER_IMAGE_ICON } from '../../shared/components/ScreenBackHeader';
 import { useTheme } from '../../theme/useTheme';
 import { numericText } from '../../theme/typography';
@@ -166,12 +166,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
           <BackButton onPress={goBack} testID="barber-profile-back" tone="surface" />
         </View>
         {loading ? (
-          <ActivityIndicator
-            size="small"
-            color={colors.accent}
-            style={styles.spinner}
-            testID="barber-profile-loading"
-          />
+          <BarberProfileSkeleton />
         ) : error ? (
           <View
             testID="barber-profile-error"
@@ -481,11 +476,40 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
   );
 }
 
+function BarberProfileSkeleton() {
+  return (
+    <ScrollView testID="barber-profile-loading" accessible accessibilityRole="progressbar" accessibilityLabel="Loading barber profile" contentContainerStyle={styles.profileSkeleton}>
+      <Skeleton style={styles.skeletonHero} />
+      <Skeleton style={styles.skeletonName} />
+      <Skeleton style={styles.skeletonMeta} />
+      <Skeleton style={styles.skeletonBio} />
+      <View style={styles.skeletonTabs}>
+        {[0, 1, 2].map((index) => <Skeleton key={index} style={styles.skeletonTab} />)}
+      </View>
+      {[0, 1].map((index) => (
+        <View key={index} style={styles.skeletonService}>
+          <Skeleton style={styles.skeletonServiceName} />
+          <Skeleton style={styles.skeletonServiceMeta} />
+        </View>
+      ))}
+    </ScrollView>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
 
   plainHeader: { paddingHorizontal: 24, paddingTop: 12 },
-  spinner: { marginTop: 48 },
+  profileSkeleton: { paddingBottom: 32 },
+  skeletonHero: { height: 320, width: '100%', borderRadius: 0 },
+  skeletonName: { width: '65%', height: 29, marginHorizontal: 24, marginTop: 24 },
+  skeletonMeta: { width: '45%', height: 13, marginHorizontal: 24, marginTop: 12 },
+  skeletonBio: { width: '82%', height: 48, marginHorizontal: 24, marginTop: 32 },
+  skeletonTabs: { flexDirection: 'row', gap: 16, paddingHorizontal: 24, marginTop: 30 },
+  skeletonTab: { flex: 1, height: 18 },
+  skeletonService: { marginHorizontal: 24, marginTop: 24, gap: 10 },
+  skeletonServiceName: { width: '58%', height: 18 },
+  skeletonServiceMeta: { width: '38%', height: 12 },
   notice: { borderWidth: 0.5, borderRadius: 8, padding: 12, marginTop: 24, marginHorizontal: 24 },
   noticeText: { fontSize: 14 },
   emptyText: { fontSize: 14, textAlign: 'center', marginTop: 48, paddingHorizontal: 24 },

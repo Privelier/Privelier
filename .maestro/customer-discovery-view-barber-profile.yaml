@@ -91,6 +91,7 @@ env:
 # --- Barber profile: the tapped barber's public profile and services ---
 - assertVisible:
     id: "barber-profile-screen"
+# The stable loading ID now previews the hero, details and service rows.
 - extendedWaitUntil:
     notVisible:
       id: "barber-profile-loading"

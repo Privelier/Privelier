@@ -219,3 +219,9 @@ Focused Jest passed 1 suite/1 test; full Jest passed 72 suites/650 tests. Typech
 Studio’s first load now previews the real greeting, verification line, analytics card, chart, metrics and management row as quiet neutral shapes. It does not say “there” or show sample stats while the barber profile is pending. The sign-out target remains available. The existing `barber-dashboard-loading` Maestro selector now wraps this content-shaped state; inline retry spinners remain confined to explicit retry actions.
 
 Focused Jest passed 1 suite/5 tests; full Jest passed 72 suites/651 tests. Typecheck and lint passed with 19 pre-existing warnings. Native visual checks remain open.
+
+### Customer barber-profile loading item
+
+The public barber profile first load now shows a neutral full hero, name/meta lines, bio, tabs and service rows rather than a spinner. These are shapes only: no false rating, service, portrait or empty state is shown before the real reads finish. The back action and existing `barber-profile-loading` Maestro ID remain. The no-photo hero composition itself remains scheduled for Wave 2.
+
+Focused Jest passed 1 suite/1 test; full Jest passed 73 suites/652 tests. Typecheck and lint passed with 19 pre-existing warnings. Device visual checks remain open.
