@@ -51,6 +51,7 @@ import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
 import { StatusPill } from '../../shared/components/StatusPill';
 import { Avatar } from '../../shared/components/Avatar';
+import { BookingListSkeleton } from '../../shared/components/BookingListSkeleton';
 import type { Palette } from '../../theme/colors';
 import type { BookingCounterpart, TransitionBookingResult } from '../types';
 import type { BookingRow, ServiceRow } from '../../types';
@@ -219,7 +220,7 @@ export default function RequestsScreen() {
     []
   );
 
-  const showSpinner = loading && bookings.length === 0;
+  const showSkeleton = loading && bookings.length === 0;
   const showError = error !== null && bookings.length === 0;
 
   return (
@@ -233,13 +234,8 @@ export default function RequestsScreen() {
         <Text style={styles.subtitle}>Booking requests from your clients.</Text>
       </View>
 
-      {showSpinner ? (
-        <ActivityIndicator
-          size="small"
-          color={colors.accent}
-          style={styles.spinner}
-          testID="barber-requests-loading"
-        />
+      {showSkeleton ? (
+        <BookingListSkeleton testID="barber-requests-loading" avatarSize={44} />
       ) : showError ? (
         <RetryNotice testID="barber-requests-error" message={error ?? ''} onRetry={() => void load()} style={styles.noticeMargins} />
       ) : (
@@ -427,7 +423,6 @@ function useStyles(colors: Palette) {
     heading: { fontSize: 30, color: colors.textPrimary, fontFamily: fonts.headingMedium },
     subtitle: { fontSize: 12, marginTop: 4, color: colors.textSecondary, fontFamily: fonts.body },
 
-    spinner: { marginTop: 48 },
     noticeMargins: { marginTop: space.xl, marginHorizontal: space.xl },
 
     listContent: { paddingHorizontal: space.xl, paddingTop: space.xl, paddingBottom: space['2xl'] },

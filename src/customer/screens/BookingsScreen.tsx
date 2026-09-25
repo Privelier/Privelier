@@ -45,6 +45,7 @@ import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
 import { StatusPill } from '../../shared/components/StatusPill';
 import { Avatar } from '../../shared/components/Avatar';
+import { BookingListSkeleton } from '../../shared/components/BookingListSkeleton';
 import type { BarberDirectoryRow, BookingRow, ServiceRow } from '../../types';
 import { cancelBookingAsCustomer, fetchOwnBookingsView, isUpcomingBooking } from '../bookingsData';
 import { fetchOwnReviewedBookingIds } from '../reviewsData';
@@ -237,7 +238,7 @@ export default function BookingsScreen() {
     return upcoming ? [...filtered].reverse() : filtered;
   }, [bookings, tab]);
 
-  const showSpinner = loading && bookings.length === 0;
+  const showSkeleton = loading && bookings.length === 0;
   const showError = error !== null && bookings.length === 0;
 
   return (
@@ -280,13 +281,8 @@ export default function BookingsScreen() {
         })}
       </View>
 
-      {showSpinner ? (
-        <ActivityIndicator
-          size="small"
-          color={colors.accent}
-          style={styles.spinner}
-          testID="customer-bookings-loading"
-        />
+      {showSkeleton ? (
+        <BookingListSkeleton testID="customer-bookings-loading" avatarSize={56} />
       ) : showError ? (
         <RetryNotice testID="customer-bookings-error" message={error ?? ''} onRetry={() => void load()} style={styles.noticeMargins} />
       ) : (
@@ -455,7 +451,6 @@ const styles = StyleSheet.create({
   },
   tabLabel: { fontSize: 12, letterSpacing: 1.5 },
 
-  spinner: { marginTop: 48 },
   noticeMargins: { marginTop: space.xl, marginHorizontal: space.xl },
   emptyText: { fontSize: 13, textAlign: 'center', paddingVertical: 40 },
 

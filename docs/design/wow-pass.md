@@ -165,3 +165,9 @@ Focused Jest passed 3 suites/6 tests; full Jest passed 69 suites/635 tests. Type
 Added one Inter semibold lining/tabular numeral style for money and numeric highlights. Applied it to the Customer booking review total and cards, barber card prices and ratings, profile service prices and review score, map price pins, Barber request prices, and dashboard totals/metrics/rating/rank counts. The Barber services list now formats the real service price as euros instead of a bare number. Playfair remains for editorial words and headings; empty-state words such as “New” keep that voice. Date and time locale formatting remains in Wave 6, where the full time-label sweep will use tabular figures too.
 
 The services Maestro flow now checks the formatted `€25 · 30 min` row. Focused Jest passed 3 suites/7 tests; full Jest passed 70 suites/636 tests. Typecheck and lint passed with 19 pre-existing warnings and no errors. Device visual comparison remains open without an attached phone.
+
+### Booking-list skeleton item
+
+Reused the existing flat, brand-toned Skeleton primitive to compose two booking-card placeholders for Customer Bookings and Barber Requests. The first load now previews avatar, name, service, price, date and status positions instead of a bare spinner; empty copy appears only after a completed empty response. Both loading test IDs stay stable for Maestro. The placeholders form one accessible progress announcement, while decorative blocks stay out of the accessibility tree. The Skeleton pulse now reads the central Reduce Motion preference at first render and becomes static when enabled.
+
+Focused Jest passed 2 suites/4 tests; full Jest passed 70 suites/638 tests. Typecheck and lint passed with 19 pre-existing warnings. The rest of the list and detail screens still need their own content-shaped loading states; this item establishes the pattern. Native visual and motion checks remain open without a device.

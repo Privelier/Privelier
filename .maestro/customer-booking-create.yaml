@@ -189,6 +189,7 @@ env:
     timeout: 10000
 
 # --- Bookings tab: the just-created booking is now visible ---
+# The first-load skeleton retains the existing loading test ID.
 - extendedWaitUntil:
     notVisible:
       id: "customer-bookings-loading"

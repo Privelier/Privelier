@@ -127,6 +127,15 @@ afterEach(async () => {
 });
 
 describe('BookingsScreen status presentation', () => {
+  it('shows content-shaped placeholders without an empty-state flash on first load', async () => {
+    mockFetchBookings.mockImplementation(() => new Promise(() => {}));
+    await render(<BookingsScreen />);
+
+    expect(screen.getByTestId('customer-bookings-loading').props.accessibilityLabel).toBe('Loading bookings');
+    expect(screen.queryByTestId('customer-bookings-empty')).toBeNull();
+    expect(screen.queryByTestId('customer-bookings-row-booking-1')).toBeNull();
+  });
+
   it('renders the booking state through an accessible semantic pill', async () => {
     await render(<BookingsScreen />);
 

@@ -79,6 +79,7 @@ env:
     id: "barber-tab-requests"
 - assertVisible:
     id: "barber-requests-screen"
+# Loading now shows booking-shaped placeholders under this stable test ID.
 - extendedWaitUntil:
     notVisible:
       id: "barber-requests-loading"
