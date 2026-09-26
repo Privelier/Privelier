@@ -65,6 +65,8 @@ env:
     visible:
       id: "customer-home-screen"
     timeout: 15000
+- assertVisible:
+    id: "customer-home-notifications"
 
 # --- Inbox tab -> the single thread row ---
 - tapOn:

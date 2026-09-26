@@ -1,6 +1,11 @@
 import type { BookingRow } from '../types';
 
 export type NotificationEventType = 'message' | 'new_request' | 'booking_status';
+export function formatNotificationBadge(count: number): string | null {
+  if (count <= 0) return null;
+  return count > 99 ? '99+' : String(count);
+}
+
 export interface NotificationRow {
   id: string;
   recipient_id: string;

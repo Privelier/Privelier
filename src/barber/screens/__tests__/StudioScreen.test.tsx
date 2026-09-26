@@ -40,6 +40,7 @@ jest.mock('../../../theme/useTheme', () => ({
 
 jest.mock('../../../auth/authService', () => ({ fetchOwnProfile: jest.fn() }));
 jest.mock('../../dashboardData', () => ({ fetchDashboardView: jest.fn() }));
+jest.mock('../../../shared/components/NotificationBell', () => ({ NotificationBell: () => null }));
 jest.mock('../../../RoleContext', () => ({ useExitRole: () => jest.fn() }));
 
 // SafeAreaView must forward props so the barber-dashboard-screen testID (on the

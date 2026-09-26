@@ -37,6 +37,7 @@ import {
 } from '../discoverPresentation';
 import { firstName, timeOfDayGreeting } from '../format';
 import BarberCard from '../components/BarberCard';
+import { NotificationBell } from '../../shared/components/NotificationBell';
 import type { CustomerTabParamList } from '../CustomerTabs';
 import type { CustomerStackParamList } from '../CustomerNavigator';
 
@@ -189,19 +190,24 @@ export default function DiscoverScreen({ navigation }: Props) {
         }
       >
         <View style={styles.pad}>
-          <Text style={[styles.greeting, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-            {timeOfDayGreeting()},
-          </Text>
-          {loading && !hasSnapshot && !ownName ? (
-            <Skeleton style={styles.skeletonPersonalName} />
-          ) : (
-            <Text
-              accessibilityRole="header"
-              style={[styles.name, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}
-            >
-              {firstName(ownName)}.
-            </Text>
-          )}
+          <View style={styles.introRow}>
+            <View style={styles.greetingBlock}>
+              <Text style={[styles.greeting, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                {timeOfDayGreeting()},
+              </Text>
+              {loading && !hasSnapshot && !ownName ? (
+                <Skeleton style={styles.skeletonPersonalName} />
+              ) : (
+                <Text
+                  accessibilityRole="header"
+                  style={[styles.name, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}
+                >
+                  {firstName(ownName)}.
+                </Text>
+              )}
+            </View>
+            <NotificationBell onPress={() => navigation.navigate('NotificationCenter')} testID="customer-home-notifications" />
+          </View>
           <View style={styles.serviceAreaRow}>
             <Feather name="map-pin" size={13} color={colors.accentText} />
             <Text
@@ -401,6 +407,8 @@ const styles = StyleSheet.create({
   scrollContent: { paddingTop: 24, paddingBottom: 40 },
   pad: { paddingHorizontal: 24 },
   greeting: { fontSize: 13 },
+  introRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  greetingBlock: { flex: 1, minWidth: 0 },
   name: { fontSize: 30, marginTop: 4 },
   serviceAreaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
   serviceArea: { fontSize: 13, lineHeight: 18 },

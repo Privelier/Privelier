@@ -10,6 +10,7 @@ jest.mock('@react-navigation/native', () => {
   };
 });
 jest.mock('../../../auth/authService', () => ({ fetchOwnProfile: jest.fn() }));
+jest.mock('../../../shared/components/NotificationBell', () => ({ NotificationBell: () => null }));
 jest.mock('../../../RoleContext', () => ({ useExitRole: () => jest.fn() }));
 jest.mock('../../../legal/LegalComponents', () => ({ LegalLinks: () => null }));
 jest.mock('@expo/vector-icons', () => ({ Feather: () => null }));

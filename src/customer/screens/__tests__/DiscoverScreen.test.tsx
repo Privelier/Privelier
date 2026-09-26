@@ -5,6 +5,11 @@ import { listBarbersByCity, listServicesForBarberIds } from '../../discoveryData
 import DiscoverScreen from '../DiscoverScreen';
 
 jest.mock('../../../auth/authService', () => ({ fetchOwnProfile: jest.fn() }));
+jest.mock('../../../shared/components/NotificationBell', () => {
+  const React = jest.requireActual('react');
+  const { Pressable } = jest.requireActual('react-native');
+  return { NotificationBell: ({ testID }: { testID: string }) => React.createElement(Pressable, { testID }) };
+});
 jest.mock('../../discoveryData', () => ({
   listBarbersByCity: jest.fn(),
   listServicesForBarberIds: jest.fn(),
@@ -143,6 +148,11 @@ describe('DiscoverScreen', () => {
     expect(screen.getAllByTestId('customer-home-barber-c')).toHaveLength(1);
     expect(screen.getByTestId('customer-barber-avatar-a-image')).toBeTruthy();
     expect(screen.getByTestId('customer-barber-avatar-c-monogram').props.children).toBe('C');
+  });
+
+  it('keeps the notification center reachable from Discover', async () => {
+    await renderDiscovery();
+    expect(screen.getByTestId('customer-home-notifications')).toBeTruthy();
   });
 
   it('pulls to refresh in brass and retains verified barbers through a network error', async () => {

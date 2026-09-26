@@ -23,6 +23,7 @@ import type { BarberDashboardAnalytics } from '../types';
 import type { BarberTabParamList } from '../BarberTabs';
 import type { BarberStackParamList } from '../BarberNavigator';
 import { LegalLinks } from '../../legal/LegalComponents';
+import { NotificationBell } from '../../shared/components/NotificationBell';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<BarberTabParamList, 'Studio'>,
@@ -315,18 +316,7 @@ export default function StudioScreen({ navigation }: Props) {
               <Text style={[styles.name, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>Studio</Text>
             )}
           </View>
-          <Pressable
-            onPress={() => navigation.navigate('NotificationCenter')}
-            accessibilityRole="button"
-            accessibilityLabel="Open notifications"
-            testID="barber-dashboard-notifications"
-            style={({ pressed }) => [
-              { width: 44, height: 44, borderWidth: 0.5, borderRadius: 22, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
-              pressed ? { opacity: pressOpacity.soft } : null,
-            ]}
-          >
-            <Feather name="bell" size={18} color={colors.accentText} />
-          </Pressable>
+          <NotificationBell onPress={() => navigation.navigate('NotificationCenter')} testID="barber-dashboard-notifications" />
           <Pressable
             onPress={onSignOut}
             accessibilityRole="button"

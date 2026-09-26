@@ -36,6 +36,7 @@ import type { CustomerTabParamList } from '../CustomerTabs';
 import type { CustomerStackParamList } from '../CustomerNavigator';
 import { Notice } from '../../shared/components/Notice';
 import { Avatar } from '../../shared/components/Avatar';
+import { NotificationBell } from '../../shared/components/NotificationBell';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { LegalLinks } from '../../legal/LegalComponents';
 
@@ -76,9 +77,7 @@ export default function AccountScreen({ navigation }: Props) {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.headingRow}>
           <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>Account</Text>
-          <Pressable onPress={() => navigation.navigate('NotificationCenter')} accessibilityRole="button" accessibilityLabel="Open notifications" testID="customer-account-notifications" style={[styles.notificationButton, { borderColor: colors.border }]}>
-            <Feather name="bell" size={18} color={colors.accentText} />
-          </Pressable>
+          <NotificationBell onPress={() => navigation.navigate('NotificationCenter')} testID="customer-account-notifications" />
         </View>
 
         {error ? (
@@ -187,7 +186,6 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 24, paddingBottom: 32 },
   heading: { fontSize: 30, marginTop: 24 },
   headingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  notificationButton: { width: 44, height: 44, marginTop: 20, borderWidth: 0.5, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   profileRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 32 },
   errorNotice: { marginTop: 20 },
   retryAction: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
