@@ -21,6 +21,7 @@ import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../../theme/useTheme';
+import { formatBookingWhen, formatShortDate } from '../../shared/format';
 import { HAIRLINE, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
@@ -30,7 +31,6 @@ import type { InboxThread } from '../../shared/threads';
 import type { BarberTabParamList } from '../BarberTabs';
 import type { BarberStackParamList } from '../BarberNavigator';
 import { fetchOwnChatsView } from '../chatsData';
-import { formatShortDate } from '../../shared/format';
 import { useUnread } from '../UnreadContext';
 
 type Props = CompositeScreenProps<
@@ -71,7 +71,8 @@ export default function ChatsScreen({ navigation }: Props) {
       navigation.navigate('Conversation', {
         room: item.room,
         title: item.customer?.name ?? item.service?.name ?? 'Booking',
-        subtitle: item.customer?.name ? item.service?.name ?? null : null,
+        subtitle: [item.service?.name, item.booking ? formatBookingWhen(item.booking.date, item.booking.time) : null].filter(Boolean).join(' · ') || null,
+        counterpart: item.customer,
       });
     },
     [navigation]

@@ -49,3 +49,13 @@ env:
     id: "barber-chats-row-.*"
 - assertVisible:
     id: "barber-conversation-screen"
+- assertVisible:
+    id: "barber-conversation-avatar"
+- tapOn:
+    id: "barber-conversation-back"
+- tapOn:
+    id: "barber-tab-studio"
+- tapOn:
+    id: "barber-dashboard-notifications"
+- assertVisible:
+    text: "Notifications"

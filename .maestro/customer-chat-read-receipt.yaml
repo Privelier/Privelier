@@ -81,6 +81,8 @@ env:
 # --- Conversation: send one message ---
 - assertVisible:
     id: "customer-conversation-screen"
+- assertVisible:
+    id: "customer-conversation-avatar"
 - extendedWaitUntil:
     notVisible:
       id: "customer-conversation-loading"
@@ -111,3 +113,18 @@ env:
 # and fail the step in Maestro.
 - assertVisible:
     id: "customer-conversation-read-marker"
+
+# Messages are grouped under a centered day divider; only the chat clock is
+# attached to a sender group's final bubble.
+- assertVisible:
+    text: "Today"
+
+# A sent request/message also leaves the customer center reachable from Account.
+- tapOn:
+    id: "customer-conversation-back"
+- tapOn:
+    id: "customer-tab-account"
+- tapOn:
+    id: "customer-account-notifications"
+- assertVisible:
+    text: "Notifications"

@@ -73,6 +73,23 @@ export function formatMessageTime(iso: string, now: Date = new Date()): string {
   return sameDay ? clock : `${d.getDate()} ${MONTHS[d.getMonth()]} · ${clock}`;
 }
 
+/** Chat bubble clock only; the centered day divider carries the date. */
+export function formatMessageClock(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '' : `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+export function formatChatDay(iso: string, now: Date = new Date()): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const date = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const daysAgo = Math.round((today - date) / 86_400_000);
+  if (daysAgo === 0) return 'Today';
+  if (daysAgo === 1) return 'Yesterday';
+  return `${WEEKDAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+}
+
 /**
  * Price display. Whole-euro amounts render without decimals ("€110");
  * fractional amounts keep their cents exactly ("€42.50") — never rounded,

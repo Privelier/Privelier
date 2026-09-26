@@ -36,6 +36,7 @@ import type { CustomerStackParamList } from '../CustomerNavigator';
 import { fetchOwnInboxView } from '../inboxData';
 import { formatShortDate } from '../format';
 import { useUnread } from '../UnreadContext';
+import { formatBookingWhen } from '../../shared/format';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<CustomerTabParamList, 'Inbox'>,
@@ -75,7 +76,8 @@ export default function InboxScreen({ navigation }: Props) {
       navigation.navigate('Conversation', {
         room: item.room,
         title: item.barber?.name ?? 'Barber',
-        subtitle: item.service?.name ?? null,
+        subtitle: [item.service?.name, item.booking ? formatBookingWhen(item.booking.date, item.booking.time) : null].filter(Boolean).join(' · ') || null,
+        counterpart: item.barber ? { id: item.barber.id, name: item.barber.name, profile_image: item.barber.profile_image } : null,
       });
     },
     [navigation]

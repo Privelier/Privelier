@@ -64,7 +64,9 @@ import { useTypingBroadcast } from '../../shared/useTypingBroadcast';
 import { deriveReadMarkerId } from '../../shared/readReceipts';
 import { useSendQueue, type PendingSend } from '../../shared/useSendQueue';
 import { MAX_MESSAGE_LENGTH, MESSAGE_COUNTER_VISIBLE_AT } from '../../shared/messageLimits';
-import { formatMessageTime } from '../../shared/format';
+import { formatMessageClock } from '../../shared/format';
+import { buildInvertedChatItems } from '../../shared/chatPresentation';
+import { Avatar } from '../../shared/components/Avatar';
 import { useUnread } from '../UnreadContext';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'Conversation'>;
@@ -88,14 +90,14 @@ function mergeMessageRows(previous: MessageRow[], rows: MessageRow[]): MessageRo
 /** Inverted-list row: newest first (index 0 renders at the bottom). */
 type ListItem =
   | { kind: 'pending'; pending: PendingSend }
-  | { kind: 'message'; message: MessageRow };
+  | ReturnType<typeof buildInvertedChatItems>[number];
 
 export default function ConversationScreen(props: Props) {
   return <ConversationRoom key={props.route.params.room.id} {...props} />;
 }
 
 function ConversationRoom({ route, navigation }: Props) {
-  const { room, title, subtitle } = route.params;
+  const { room, title, subtitle, counterpart } = route.params;
   const { colors } = useTheme();
   const styles = useStyles(colors);
 
@@ -319,9 +321,7 @@ function ConversationRoom({ route, navigation }: Props) {
     for (let i = pending.length - 1; i >= 0; i--) {
       rows.push({ kind: 'pending', pending: pending[i] });
     }
-    for (let i = messages.length - 1; i >= 0; i--) {
-      rows.push({ kind: 'message', message: messages[i] });
-    }
+    rows.push(...buildInvertedChatItems(messages));
     return rows;
   }, [pending, messages]);
 
@@ -337,6 +337,7 @@ function ConversationRoom({ route, navigation }: Props) {
           accessibilityLabel="Back"
           testID="customer-conversation-back"
         />
+        <Avatar id={counterpart?.id ?? room.barber_id} name={counterpart?.name ?? title} imageUrl={counterpart?.profile_image} size={44} accessible={false} testID="customer-conversation-avatar" />
         <View style={styles.headerText}>
           <Text numberOfLines={1} style={styles.headerTitle}>
             {title}
@@ -368,7 +369,7 @@ function ConversationRoom({ route, navigation }: Props) {
             testID="customer-conversation-list"
             data={listData}
             keyExtractor={(item) =>
-              item.kind === 'pending' ? `pending-${item.pending.key}` : item.message.id
+              item.kind === 'pending' ? `pending-${item.pending.key}` : item.kind === 'day' ? item.key : item.message.id
             }
             contentContainerStyle={styles.listContent}
             maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
@@ -427,6 +428,7 @@ function ConversationRoom({ route, navigation }: Props) {
               </View>
             }
             renderItem={({ item }) => {
+              if (item.kind === 'day') return <View style={styles.dayDivider}><Text style={styles.dayLabel}>{item.label}</Text></View>;
               if (item.kind === 'pending') {
                 const p = item.pending;
                 return (
@@ -467,10 +469,10 @@ function ConversationRoom({ route, navigation }: Props) {
                   testID={`customer-conversation-message-${m.id}`}
                 >
                   <Text style={styles.bubbleText}>{m.message}</Text>
-                  <Text style={styles.bubbleMeta}>{formatMessageTime(m.created_at)}</Text>
+                  {item.showTimestamp ? <Text style={styles.bubbleMeta}>{formatMessageClock(m.created_at)}</Text> : null}
                   {own && m.id === readMarkerId ? (
-                    <Text style={styles.bubbleMeta} testID="customer-conversation-read-marker">
-                      Read
+                    <Text accessibilityLabel="Read" style={styles.readMarker} testID="customer-conversation-read-marker">
+                      ✓✓ Read
                     </Text>
                   ) : null}
                 </View>
@@ -557,6 +559,8 @@ function useStyles(colors: Palette) {
     noticeMargins: { marginTop: 24, marginHorizontal: 24 },
 
     listContent: { paddingHorizontal: 24, paddingVertical: 16, flexGrow: 1 },
+    dayDivider: { alignSelf: 'center', minHeight: 32, justifyContent: 'center', marginVertical: 6, paddingHorizontal: 12, borderRadius: 16, backgroundColor: colors.surface },
+    dayLabel: { color: colors.textSecondary, fontSize: 11, fontFamily: fonts.bodyMedium },
     historyControl: { alignItems: 'center', paddingBottom: 16 },
     earlierError: {
       maxWidth: 280,
@@ -598,6 +602,7 @@ function useStyles(colors: Palette) {
     bubbleFailed: { borderColor: colors.error },
     bubbleText: { fontSize: 14, lineHeight: 20, color: colors.textPrimary, fontFamily: fonts.body },
     bubbleMeta: { fontSize: 10, marginTop: 4, color: colors.textSecondary, fontFamily: fonts.body },
+    readMarker: { fontSize: 11, marginTop: 4, color: colors.accentText, fontFamily: fonts.bodySemiBold, textAlign: 'right' },
     bubbleMetaFailed: { fontSize: 10, marginTop: 4, color: colors.errorText, fontFamily: fonts.bodyMedium },
     bubbleFailureReason: {
       fontSize: 11,

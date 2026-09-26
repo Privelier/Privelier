@@ -53,7 +53,9 @@ import { useTypingBroadcast } from '../../shared/useTypingBroadcast';
 import { deriveReadMarkerId } from '../../shared/readReceipts';
 import { useSendQueue, type PendingSend } from '../../shared/useSendQueue';
 import { MAX_MESSAGE_LENGTH, MESSAGE_COUNTER_VISIBLE_AT } from '../../shared/messageLimits';
-import { formatMessageTime } from '../../shared/format';
+import { formatMessageClock } from '../../shared/format';
+import { buildInvertedChatItems } from '../../shared/chatPresentation';
+import { Avatar } from '../../shared/components/Avatar';
 import { useUnread } from '../UnreadContext';
 
 type Props = NativeStackScreenProps<BarberStackParamList, 'Conversation'>;
@@ -77,7 +79,7 @@ function mergeMessageRows(previous: MessageRow[], rows: MessageRow[]): MessageRo
 /** Inverted-list row: newest first (index 0 renders at the bottom). */
 type ListItem =
   | { kind: 'pending'; pending: PendingSend }
-  | { kind: 'message'; message: MessageRow };
+  | ReturnType<typeof buildInvertedChatItems>[number];
 
 export default function ConversationScreen(props: Props) {
   return <ConversationRoom key={props.route.params.room.id} {...props} />;
@@ -93,7 +95,7 @@ function ConversationRoom({ route, navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [focused, setFocused] = useState(false);
   const [myId, setMyId] = useState<string | null>(null);
-  const [counterpartName, setCounterpartName] = useState<string | null>(null);
+  const [counterpart, setCounterpart] = useState(route.params.counterpart ?? null);
   const [hasEarlier, setHasEarlier] = useState(false);
   const [earliestCursor, setEarliestCursor] = useState<ConversationCursor | null>(null);
   const [loadingEarlier, setLoadingEarlier] = useState(false);
@@ -117,7 +119,7 @@ function ConversationRoom({ route, navigation }: Props) {
     });
     // Best-effort title upgrade to the customer's real name (0012 RPC).
     void fetchBookingCounterpart(room.booking_id).then((counterpart) => {
-      if (active && counterpart) setCounterpartName(counterpart.name);
+      if (active && counterpart) setCounterpart({ id: counterpart.id, name: counterpart.name, profile_image: counterpart.profile_image });
     });
     return () => {
       active = false;
@@ -312,9 +314,7 @@ function ConversationRoom({ route, navigation }: Props) {
     for (let i = pending.length - 1; i >= 0; i--) {
       rows.push({ kind: 'pending', pending: pending[i] });
     }
-    for (let i = messages.length - 1; i >= 0; i--) {
-      rows.push({ kind: 'message', message: messages[i] });
-    }
+    rows.push(...buildInvertedChatItems(messages));
     return rows;
   }, [pending, messages]);
 
@@ -322,8 +322,8 @@ function ConversationRoom({ route, navigation }: Props) {
   const showError = error !== null && messages.length === 0;
   const canSend = draft.trim().length > 0;
   // Title upgrades to the customer's name; the fallback then becomes context.
-  const headerTitle = counterpartName ?? title;
-  const headerSubtitle = counterpartName ? title : subtitle;
+  const headerTitle = counterpart?.name ?? title;
+  const headerSubtitle = subtitle;
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']} testID="barber-conversation-screen">
@@ -333,6 +333,7 @@ function ConversationRoom({ route, navigation }: Props) {
           accessibilityLabel="Back"
           testID="barber-conversation-back"
         />
+        <Avatar id={counterpart?.id ?? room.customer_id} name={counterpart?.name ?? headerTitle} imageUrl={counterpart?.profile_image} size={44} accessible={false} testID="barber-conversation-avatar" />
         <View style={styles.headerText}>
           <Text numberOfLines={1} style={styles.headerTitle}>
             {headerTitle}
@@ -364,7 +365,7 @@ function ConversationRoom({ route, navigation }: Props) {
             testID="barber-conversation-list"
             data={listData}
             keyExtractor={(item) =>
-              item.kind === 'pending' ? `pending-${item.pending.key}` : item.message.id
+              item.kind === 'pending' ? `pending-${item.pending.key}` : item.kind === 'day' ? item.key : item.message.id
             }
             contentContainerStyle={styles.listContent}
             maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
@@ -421,6 +422,7 @@ function ConversationRoom({ route, navigation }: Props) {
               </View>
             }
             renderItem={({ item }) => {
+              if (item.kind === 'day') return <View style={styles.dayDivider}><Text style={styles.dayLabel}>{item.label}</Text></View>;
               if (item.kind === 'pending') {
                 const p = item.pending;
                 return (
@@ -461,10 +463,10 @@ function ConversationRoom({ route, navigation }: Props) {
                   testID={`barber-conversation-message-${m.id}`}
                 >
                   <Text style={styles.bubbleText}>{m.message}</Text>
-                  <Text style={styles.bubbleMeta}>{formatMessageTime(m.created_at)}</Text>
+                  {item.showTimestamp ? <Text style={styles.bubbleMeta}>{formatMessageClock(m.created_at)}</Text> : null}
                   {own && m.id === readMarkerId ? (
-                    <Text style={styles.bubbleMeta} testID="barber-conversation-read-marker">
-                      Read
+                    <Text accessibilityLabel="Read" style={styles.readMarker} testID="barber-conversation-read-marker">
+                      ✓✓ Read
                     </Text>
                   ) : null}
                 </View>
@@ -551,6 +553,8 @@ function useStyles(colors: Palette) {
     noticeMargins: { marginTop: space.xl, marginHorizontal: space.xl },
 
     listContent: { paddingHorizontal: space.xl, paddingVertical: space.base, flexGrow: 1 },
+    dayDivider: { alignSelf: 'center', minHeight: 32, justifyContent: 'center', marginVertical: 6, paddingHorizontal: 12, borderRadius: 16, backgroundColor: colors.surface },
+    dayLabel: { color: colors.textSecondary, fontSize: 11, fontFamily: fonts.bodyMedium },
     historyControl: { alignItems: 'center', paddingBottom: space.base },
     earlierError: {
       maxWidth: 280,
@@ -592,6 +596,7 @@ function useStyles(colors: Palette) {
     bubbleFailed: { borderColor: colors.error },
     bubbleText: { fontSize: 14, lineHeight: 20, color: colors.textPrimary, fontFamily: fonts.body },
     bubbleMeta: { fontSize: 10, marginTop: 4, color: colors.textSecondary, fontFamily: fonts.body },
+    readMarker: { fontSize: 11, marginTop: 4, color: colors.accentText, fontFamily: fonts.bodySemiBold, textAlign: 'right' },
     bubbleMetaFailed: { fontSize: 10, marginTop: 4, color: colors.errorText, fontFamily: fonts.bodyMedium },
     bubbleFailureReason: {
       fontSize: 11,
