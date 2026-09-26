@@ -68,6 +68,10 @@ env:
 # The stable loading ID now contains the header, analytics and agenda skeleton.
 - assertVisible:
     id: "barber-dashboard-screen"
+- assertVisible:
+    id: "barber-tab-studio"
+- assertVisible:
+    id: "barber-tab-requests"
 - extendedWaitUntil:
     notVisible:
       id: "barber-dashboard-loading"

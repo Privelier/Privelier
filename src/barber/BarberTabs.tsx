@@ -8,6 +8,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../theme/useTheme';
 import { useUnread } from './UnreadContext';
+import { BrassTabIcon, HapticTabButton } from '../shared/components/BrassTabBarItem';
 import StudioScreen from './screens/StudioScreen';
 import RequestsScreen from './screens/RequestsScreen';
 import PortfolioScreen from './screens/PortfolioScreen';
@@ -50,7 +51,9 @@ export default function BarberTabs() {
           elevation: 0,
         },
         tabBarLabelStyle: { fontSize: 10, fontFamily: fonts.body },
-        tabBarIcon: ({ color }) => <Feather name={TAB_ICONS[route.name]} size={20} color={color} />,
+        tabBarIcon: ({ color, focused }) => <BrassTabIcon name={TAB_ICONS[route.name]} color={color} focused={focused} />,
+        tabBarButton: (props) => <HapticTabButton {...props} />,
+        tabBarAccessibilityLabel: route.name,
         tabBarButtonTestID: `barber-tab-${route.name.toLowerCase()}`,
       })}
     >

@@ -247,3 +247,7 @@ Full Jest passed 74 suites/657 tests. Typecheck and lint passed with 19 pre-exis
 ### Shared confirmation sheet item
 
 The app root now provides gesture handling and a bottom-sheet portal. A reusable confirmation sheet uses the brand surface, hairline border and brass handle, with 52pt labeled choices, backdrop dismissal, pan-down dismissal, keyboard handling and the OS Reduce Motion setting. Customer booking cancellation now opens this sheet before its five-second undo window; the native alert is removed from that flow. The cancellation Maestro flow targets the sheet's confirm action. Focused component and booking tests passed. Full Jest passed 75 suites/658 tests; typecheck and lint passed with 19 pre-existing warnings. Native sheet gestures, keyboard movement and visual appearance remain unverified without a device.
+
+### Customer and Barber tab feedback item
+
+Both tab bars now use a shared 44pt tab button with a light selection haptic, explicit accessible labels and a subtle brass underline that animates beneath the selected icon. Real unread badges remain attached to Inbox and Chats. Reduced Motion shortens the underline to a simple opacity change. Customer and Barber Maestro flows now exercise tab navigation. Focused Jest passed 1 suite/2 tests; full Jest passed 76 suites/660 tests. Typecheck and lint passed with 19 pre-existing warnings. Native haptic and indicator behavior remains unverified without a device. The indicator appears under each selected icon; a single indicator that travels across the full bar remains open.

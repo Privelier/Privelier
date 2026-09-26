@@ -68,6 +68,16 @@ env:
       id: "customer-home-screen"
     timeout: 15000
 
+# Tab labels, the brass indicator and haptic selection use the shared tab item.
+- tapOn:
+    id: "customer-tab-explore"
+- assertVisible:
+    id: "customer-explore-screen"
+- tapOn:
+    id: "customer-tab-discover"
+- assertVisible:
+    id: "customer-home-screen"
+
 # --- Discovery: the approved, same-city test barber appears ---
 # Refresh the verified directory before filtering; its current cards stay visible.
 - extendedWaitUntil:
