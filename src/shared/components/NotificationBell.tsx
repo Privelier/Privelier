@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { supabase } from '../../../lib/supabase';
 import { pressOpacity } from '../../theme/motion';
@@ -15,16 +15,22 @@ export function NotificationBell({ onPress, testID }: { onPress: () => void; tes
     let active = true;
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let recipientId: string | null = null;
+    let latestCountRequest = 0;
 
     const loadCount = async () => {
       if (!recipientId) return;
+      const requestId = ++latestCountRequest;
       const { count, error } = await supabase
         .from('notifications')
         .select('id', { count: 'exact', head: true })
         .eq('recipient_id', recipientId)
         .is('read_at', null);
-      if (active && !error) setUnreadCount(count ?? 0);
+      if (active && !error && requestId === latestCountRequest) setUnreadCount(count ?? 0);
     };
+
+    const appState = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void loadCount();
+    });
 
     void supabase.auth.getSession().then(({ data }) => {
       if (!active) return;
@@ -39,6 +45,7 @@ export function NotificationBell({ onPress, testID }: { onPress: () => void; tes
 
     return () => {
       active = false;
+      appState.remove();
       if (channel) void supabase.removeChannel(channel);
     };
   }, []);

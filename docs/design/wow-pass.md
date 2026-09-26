@@ -234,7 +234,7 @@ Full Jest passed 80 suites/669 tests; typecheck passed; lint passed with zero er
 
 Mapbox empty-state follow-up: Expo Go now explains that the native map requires the Privelier development build, and a native build without the public runtime token shows a clear setup state instead of an unconfigured blank map. Geocoding already reports the missing-token state. A working token still needs to be configured before either address search or map tiles can be verified.
 
-Notification access follow-up: the live unread badge is now reusable and appears on Customer Discover and Account, and Barber Studio. It counts unread own rows and updates over Realtime; the badge caps visually at `99+` while the full count stays available to assistive technology.
+Notification access follow-up: the live unread badge is now reusable and appears on Customer Discover and Account, and Barber Studio. It counts unread own rows, updates over Realtime, and reloads when the app returns to the foreground; the badge caps visually at `99+` while the full count stays available to assistive technology.
 
 ### Customer Discover refresh item
 
