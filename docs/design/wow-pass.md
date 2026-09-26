@@ -226,6 +226,12 @@ The public barber profile first load now shows a neutral full hero, name/meta li
 
 Focused Jest passed 1 suite/1 test; full Jest passed 73 suites/652 tests. Typecheck and lint passed with 19 pre-existing warnings. Device visual checks remain open.
 
+### Chat grouping and notification center item
+
+Both chat headers now show the real counterpart photo or the existing branded monogram fallback, alongside the service and appointment context already loaded by the inbox. Consecutive messages share one timestamp, with centered Today/Yesterday/date dividers; read receipts are rendered as a visible brass double check while retaining their existing testID and real read-state source. Both apps now have an Account/Studio bell entry to a durable notification center. A new RLS-protected `notifications` table is filled only by trusted message/booking triggers and is published for realtime updates; user rows expose no message text, only participant identity and event references. It covers new messages, barber booking requests, and booking status changes for the other participant. Migration 0035 was applied directly to Supabase under Taha's prior authorization. No booking states, payments, server push, or new dependencies were added. UI strings follow the current English app; the planned de/en i18n layer remains Wave 6.
+
+Full Jest passed 78 suites/666 tests; typecheck passed; lint passed with zero errors and the same 19 existing warnings. Maestro flows now assert chat avatars, the customer day divider/read marker, and both notification centers. No native device is attached, so visual phone review remains open; Expo Go's running Metro server is still available. Mapbox remains blocked by missing `EXPO_PUBLIC_MAPBOX_TOKEN` in local `.env` and every EAS environment; the EAS native download secret is present. Explore's native map also intentionally cannot load in Expo Go and requires the custom dev build.
+
 ### Customer Discover refresh item
 
 Discover now offers a brass-toned pull to refresh and keeps its last confirmed barber directory visible while a new read runs. A network error appears as a retry notice above the retained directory. If the customer removes their city, the old city label and results clear before the profile action appears. The first visit still uses layout-shaped skeletons; the personal name stays a neutral shape until the real profile arrives. The discovery Maestro flow pulls to refresh before searching. Native gesture and visual checks remain open without a device.

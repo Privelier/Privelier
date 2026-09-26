@@ -14,6 +14,7 @@ import ReviewSubmitScreen from './screens/ReviewSubmitScreen';
 import EditProfileScreen from './screens/EditProfileScreen';
 import LegalDocumentScreen from '../legal/LegalDocumentScreen';
 import type { LegalDocument } from '../legal/legalConfig';
+import NotificationCenterScreen from '../shared/screens/NotificationCenterScreen';
 
 export type CustomerStackParamList = {
   CustomerTabs: NavigatorScreenParams<CustomerTabParamList> | undefined;
@@ -47,7 +48,8 @@ export type CustomerStackParamList = {
   // never re-fetches what the list already knew. title = barber name,
   // subtitle = service context (both best-effort strings, prepared by the
   // Inbox row).
-  Conversation: { room: ChatRoomRow; title: string; subtitle: string | null };
+  Conversation: { room: ChatRoomRow; title: string; subtitle: string | null; counterpart?: { id: string; name: string | null; profile_image: string | null } | null };
+  NotificationCenter: undefined;
   // Review submission (build-order step 18): reached from a completed booking's
   // Past card on the Bookings tab. barberName/serviceName ride along (already
   // loaded on that card) purely for the summary; barberId is passed to the
@@ -80,6 +82,16 @@ export default function CustomerNavigator({ onExit }: { onExit: () => void }) {
           <Stack.Screen name="BookingLocation" component={BookingLocationScreen} />
           <Stack.Screen name="BookingConfirm" component={BookingConfirmScreen} />
           <Stack.Screen name="Conversation" component={ConversationScreen} />
+          <Stack.Screen name="NotificationCenter">
+            {(props) => <NotificationCenterScreen
+              role="customer"
+              onBack={() => props.navigation.goBack()}
+              onOpenNotification={(row) => {
+                props.navigation.goBack();
+                props.navigation.navigate('CustomerTabs', { screen: row.event_type === 'message' ? 'Inbox' : 'Bookings' });
+              }}
+            />}
+          </Stack.Screen>
           <Stack.Screen name="ReviewSubmit" component={ReviewSubmitScreen} />
         </Stack.Navigator>
       </UnreadProvider>

@@ -74,9 +74,12 @@ export default function AccountScreen({ navigation }: Props) {
       testID="customer-account-screen"
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-          Account
-        </Text>
+        <View style={styles.headingRow}>
+          <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>Account</Text>
+          <Pressable onPress={() => navigation.navigate('NotificationCenter')} accessibilityRole="button" accessibilityLabel="Open notifications" testID="customer-account-notifications" style={[styles.notificationButton, { borderColor: colors.border }]}>
+            <Feather name="bell" size={18} color={colors.accentText} />
+          </Pressable>
+        </View>
 
         {error ? (
           <Notice message={error} testID="customer-account-error" style={styles.errorNotice}>
@@ -183,6 +186,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: 24, paddingBottom: 32 },
   heading: { fontSize: 30, marginTop: 24 },
+  headingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  notificationButton: { width: 44, height: 44, marginTop: 20, borderWidth: 0.5, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   profileRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 32 },
   errorNotice: { marginTop: 20 },
   retryAction: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },

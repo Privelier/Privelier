@@ -11,6 +11,7 @@ import LocationEditScreen from './screens/LocationEditScreen';
 import ConversationScreen from './screens/ConversationScreen';
 import LegalDocumentScreen from '../legal/LegalDocumentScreen';
 import type { LegalDocument } from '../legal/legalConfig';
+import NotificationCenterScreen from '../shared/screens/NotificationCenterScreen';
 
 export type BarberStackParamList = {
   BarberTabs: NavigatorScreenParams<BarberTabParamList> | undefined;
@@ -22,7 +23,8 @@ export type BarberStackParamList = {
   // Chat (build-order step 15-16): title from the Chats row (service name —
   // the customer's name is unreadable list-side under users RLS; the screen
   // itself upgrades the title via the 0012 counterparts RPC).
-  Conversation: { room: ChatRoomRow; title: string; subtitle: string | null };
+  Conversation: { room: ChatRoomRow; title: string; subtitle: string | null; counterpart?: { id: string; name: string | null; profile_image: string | null } | null };
+  NotificationCenter: undefined;
 };
 
 const Stack = createNativeStackNavigator<BarberStackParamList>();
@@ -42,6 +44,16 @@ export default function BarberNavigator({ onExit }: { onExit: () => void }) {
           <Stack.Screen name="LocationEdit" component={LocationEditScreen} />
           <Stack.Screen name="Legal" component={LegalDocumentScreen} />
           <Stack.Screen name="Conversation" component={ConversationScreen} />
+          <Stack.Screen name="NotificationCenter">
+            {(props) => <NotificationCenterScreen
+              role="barber"
+              onBack={() => props.navigation.goBack()}
+              onOpenNotification={(row) => {
+                props.navigation.goBack();
+                props.navigation.navigate('BarberTabs', { screen: row.event_type === 'message' ? 'Chats' : 'Requests' });
+              }}
+            />}
+          </Stack.Screen>
         </Stack.Navigator>
       </UnreadProvider>
     </RoleExitProvider>

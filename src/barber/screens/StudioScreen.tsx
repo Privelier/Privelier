@@ -316,6 +316,18 @@ export default function StudioScreen({ navigation }: Props) {
             )}
           </View>
           <Pressable
+            onPress={() => navigation.navigate('NotificationCenter')}
+            accessibilityRole="button"
+            accessibilityLabel="Open notifications"
+            testID="barber-dashboard-notifications"
+            style={({ pressed }) => [
+              { width: 44, height: 44, borderWidth: 0.5, borderRadius: 22, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+              pressed ? { opacity: pressOpacity.soft } : null,
+            ]}
+          >
+            <Feather name="bell" size={18} color={colors.accentText} />
+          </Pressable>
+          <Pressable
             onPress={onSignOut}
             accessibilityRole="button"
             accessibilityLabel="Sign out"
