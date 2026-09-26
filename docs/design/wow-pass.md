@@ -232,6 +232,8 @@ Both chat headers now show the real counterpart photo or the existing branded mo
 
 Full Jest passed 78 suites/666 tests; typecheck passed; lint passed with zero errors and the same 19 existing warnings. Maestro flows now assert chat avatars, the customer day divider/read marker, and both notification centers. No native device is attached, so visual phone review remains open; Expo Go's running Metro server is still available. Mapbox remains blocked by missing `EXPO_PUBLIC_MAPBOX_TOKEN` in local `.env` and every EAS environment; the EAS native download secret is present. Explore's native map also intentionally cannot load in Expo Go and requires the custom dev build.
 
+Mapbox empty-state follow-up: Expo Go now explains that the native map requires the Privelier development build, and a native build without the public runtime token shows a clear setup state instead of an unconfigured blank map. Geocoding already reports the missing-token state. A working token still needs to be configured before either address search or map tiles can be verified.
+
 ### Customer Discover refresh item
 
 Discover now offers a brass-toned pull to refresh and keeps its last confirmed barber directory visible while a new read runs. A network error appears as a retry notice above the retained directory. If the customer removes their city, the old city label and results clear before the profile action appears. The first visit still uses layout-shaped skeletons; the personal name stays a neutral shape until the real profile arrives. The discovery Maestro flow pulls to refresh before searching. Native gesture and visual checks remain open without a device.

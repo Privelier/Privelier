@@ -13,3 +13,7 @@ import { NativeModules } from 'react-native';
 export function isMapNativeAvailable(): boolean {
   return NativeModules.RNMBXModule != null;
 }
+
+export function hasMapboxPublicToken(): boolean {
+  return Boolean(process.env.EXPO_PUBLIC_MAPBOX_TOKEN);
+}

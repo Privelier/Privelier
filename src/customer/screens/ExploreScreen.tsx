@@ -46,7 +46,7 @@ import type { AvailabilityRow, BarberDirectoryRow, ServiceRow } from '../../type
 import { listBarbersByCity, listServicesForBarberIds } from '../discoveryData';
 import { listAvailabilityForBarberIds } from '../availabilityData';
 import { applyExploreFilter, toMapPin, type ExploreFilterKey } from '../exploreData';
-import { isMapNativeAvailable } from '../mapRuntime';
+import { hasMapboxPublicToken, isMapNativeAvailable } from '../mapRuntime';
 import BarberCard from '../components/BarberCard';
 import type ExploreMapViewType from '../components/ExploreMapView';
 import type { CustomerTabParamList } from '../CustomerTabs';
@@ -190,6 +190,7 @@ export default function ExploreScreen({ navigation }: Props) {
   // is absent (pre-Mapbox dev client, jest) — so the map pane is require()d
   // lazily, and only when the native module reports present.
   const mapAvailable = useMemo(() => isMapNativeAvailable(), []);
+  const mapTokenAvailable = hasMapboxPublicToken();
   const ExploreMapView = useMemo<typeof ExploreMapViewType | null>(() => {
     if (!mapAvailable) return null;
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -301,12 +302,17 @@ export default function ExploreScreen({ navigation }: Props) {
             <View style={styles.mapSoon} testID="customer-explore-map-soon">
               <Feather name="map" size={22} color={colors.textSecondary} />
               <Text style={[styles.mapSoonTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-                The map arrives with the next app update
+                Open the Privelier test build to use the map
               </Text>
               <Text style={[styles.mapSoonBlurb, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                Barbers who have set their location will appear as price pins in their
-                approximate area. Use the list view meanwhile.
+                Expo Go does not include the native map. Install the Privelier development build, or switch to list view.
               </Text>
+            </View>
+          ) : !mapTokenAvailable ? (
+            <View style={styles.mapSoon} testID="customer-explore-map-not-configured">
+              <Feather name="map" size={22} color={colors.textSecondary} />
+              <Text style={[styles.mapSoonTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>Map service unavailable</Text>
+              <Text style={[styles.mapSoonBlurb, { color: colors.textSecondary, fontFamily: fonts.body }]}>Switch to list view while Mapbox access is configured for this build.</Text>
             </View>
           ) : pins.length === 0 ? (
             // Honest empty state: no located barbers ⇒ no pins ⇒ no pointless
