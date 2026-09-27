@@ -1,6 +1,8 @@
 import { act, render, screen, waitFor } from '@testing-library/react-native';
 import ConversationScreen from '../ConversationScreen';
 import { fetchConversation } from '../../conversationData';
+import { useReadReceipt } from '../../../shared/useReadReceipt';
+import { useSendQueue } from '../../../shared/useSendQueue';
 
 jest.mock('@react-navigation/native', () => {
   const React = jest.requireActual('react');
@@ -71,7 +73,7 @@ jest.mock('../../../shared/components/ScreenBackHeader', () => {
 
 jest.mock('../../../shared/useMessagesRealtime', () => ({ useMessagesRealtime: jest.fn() }));
 jest.mock('../../../shared/useReadReceipt', () => ({
-  useReadReceipt: () => ({ counterpartLastReadAt: null }),
+  useReadReceipt: jest.fn(() => ({ counterpartLastReadAt: null })),
 }));
 jest.mock('../../../shared/useTypingBroadcast', () => {
   const notifyActivity = jest.fn();
@@ -81,7 +83,7 @@ jest.mock('../../../shared/useTypingBroadcast', () => {
   };
 });
 jest.mock('../../../shared/useSendQueue', () => ({
-  useSendQueue: () => ({ pending: [], submit: jest.fn(), retry: jest.fn() }),
+  useSendQueue: jest.fn(() => ({ pending: [], submit: jest.fn(), retry: jest.fn() })),
 }));
 jest.mock('../../UnreadContext', () => {
   const setActiveRoom = jest.fn();
@@ -89,6 +91,8 @@ jest.mock('../../UnreadContext', () => {
 });
 
 const mockFetchConversation = fetchConversation as jest.MockedFunction<typeof fetchConversation>;
+const mockUseReadReceipt = useReadReceipt as jest.MockedFunction<typeof useReadReceipt>;
+const mockUseSendQueue = useSendQueue as jest.Mock;
 type FetchResult = Awaited<ReturnType<typeof fetchConversation>>;
 
 const cursor = { createdAt: '2026-09-23T10:00:00.000Z', id: 'message-40' };
@@ -117,6 +121,8 @@ function deferred<T>() {
 beforeEach(() => {
   jest.clearAllMocks();
   mockFetchConversation.mockReset();
+  mockUseReadReceipt.mockReturnValue({ counterpartLastReadAt: null });
+  mockUseSendQueue.mockReturnValue({ pending: [], submit: jest.fn(), retry: jest.fn() });
 });
 
 describe('Barber ConversationScreen history pagination', () => {
@@ -204,5 +210,38 @@ describe('Barber message receipts', () => {
     await render(<ConversationScreen route={route} navigation={navigation} />);
 
     expect(screen.getByTestId('barber-conversation-receipt-barber-message').props.accessibilityLabel).toBe('Sent, not read');
+  });
+
+  it('shows two brass checks when the customer has read the latest message', async () => {
+    mockUseReadReceipt.mockReturnValue({ counterpartLastReadAt: '2026-09-23T10:00:01.000Z' });
+    mockFetchConversation.mockResolvedValue({
+      status: 'ok',
+      messages: [{
+        id: 'barber-message',
+        chat_id: 'room-1',
+        sender_id: 'barber-1',
+        message: 'On my way',
+        created_at: '2026-09-23T10:00:00.000Z',
+      }],
+      hasEarlier: false,
+      earliestCursor: null,
+    });
+
+    await render(<ConversationScreen route={route} navigation={navigation} />);
+
+    expect(screen.getByTestId('barber-conversation-read-marker').props.accessibilityLabel).toBe('Read');
+  });
+
+  it('shows one neutral check for a message that failed to send', async () => {
+    mockUseSendQueue.mockReturnValue({
+      pending: [{ key: 1, text: 'On my way', failed: true, failureMessage: 'Connection lost.' }],
+      submit: jest.fn(),
+      retry: jest.fn(),
+    });
+    mockFetchConversation.mockResolvedValue({ status: 'ok', messages: [], hasEarlier: false, earliestCursor: null });
+
+    await render(<ConversationScreen route={route} navigation={navigation} />);
+
+    expect(screen.getByTestId('barber-conversation-failed-receipt-1').props.accessibilityLabel).toBe('Not sent, tap to retry');
   });
 });
