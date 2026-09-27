@@ -8,7 +8,8 @@ import { useTheme } from '../../theme/useTheme';
 import { formatMessageTime } from '../format';
 import { BackButton } from '../components/ScreenBackHeader';
 import { Skeleton } from '../components/Skeleton';
-import { notificationCopy, type NotificationRow } from '../notifications';
+import { notificationChannelTopic, notificationCopy, type NotificationRow } from '../notifications';
+import { getAppLanguage } from '../locale';
 
 export default function NotificationCenterScreen({
   role,
@@ -20,6 +21,7 @@ export default function NotificationCenterScreen({
   onOpenNotification: (row: NotificationRow) => void;
 }) {
   const { colors, fonts } = useTheme();
+  const isGerman = getAppLanguage() === 'de';
   const [rows, setRows] = useState<NotificationRow[]>([]);
   const [names, setNames] = useState<Record<string, string | null>>({});
   const [loading, setLoading] = useState(true);
@@ -57,7 +59,7 @@ export default function NotificationCenterScreen({
   useEffect(() => {
     if (!recipientId) return undefined;
     const channel = supabase
-      .channel(`notifications:${recipientId}`)
+      .channel(notificationChannelTopic('notifications', recipientId))
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${recipientId}` }, () => { void load(); })
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
@@ -73,16 +75,16 @@ export default function NotificationCenterScreen({
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']} testID={`${role}-notification-center`}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <BackButton onPress={onBack} accessibilityLabel="Back" testID={`${role}-notifications-back`} />
+        <BackButton onPress={onBack} accessibilityLabel={isGerman ? 'Zurück' : 'Back'} testID={`${role}-notifications-back`} />
         <View style={styles.headerCopy}>
-          <Text style={[styles.title, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>Notifications</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: fonts.body }]}>Booking and message updates</Text>
+          <Text style={[styles.title, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{isGerman ? 'Benachrichtigungen' : 'Notifications'}</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: fonts.body }]}>{isGerman ? 'Updates zu Terminen und Nachrichten' : 'Booking and message updates'}</Text>
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Refresh notifications" onPress={() => void load()} style={styles.refresh}>
+        <Pressable accessibilityRole="button" accessibilityLabel={isGerman ? 'Benachrichtigungen aktualisieren' : 'Refresh notifications'} onPress={() => void load()} style={styles.refresh}>
           <Feather name="refresh-cw" size={18} color={colors.textSecondary} />
         </Pressable>
       </View>
-      {error ? <Text accessibilityRole="alert" style={[styles.emptyText, { color: colors.errorText }]}>Notifications could not load. Pull down to try again.</Text> : null}
+      {error ? <Text accessibilityRole="alert" style={[styles.emptyText, { color: colors.errorText }]}>{isGerman ? 'Benachrichtigungen konnten nicht geladen werden. Tippe auf Aktualisieren, um es erneut zu versuchen.' : 'Notifications could not load. Tap refresh to try again.'}</Text> : null}
       <FlatList
         data={rows}
         keyExtractor={(item) => item.id}
@@ -90,17 +92,17 @@ export default function NotificationCenterScreen({
         onRefresh={() => void load()}
         contentContainerStyle={styles.list}
         ListEmptyComponent={loading ? (
-          <View style={styles.skeletonList} accessibilityRole="progressbar" accessibilityLabel="Loading notifications">
+          <View style={styles.skeletonList} accessibilityRole="progressbar" accessibilityLabel={isGerman ? 'Benachrichtigungen werden geladen' : 'Loading notifications'}>
             {[0, 1, 2].map((item) => <View key={item} style={styles.skeletonRow}><Skeleton style={styles.skeletonDot} /><View style={styles.skeletonCopy}><Skeleton style={styles.skeletonTitle} /><Skeleton style={styles.skeletonBody} /><Skeleton style={styles.skeletonTime} /></View></View>)}
           </View>
-        ) : !error ? <View style={styles.empty}><Feather name="bell" size={24} color={colors.accent} /><Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}>You’re all caught up.</Text></View> : null}
+        ) : !error ? <View style={styles.empty}><Feather name="bell" size={24} color={colors.accent} /><Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}>{isGerman ? 'Du bist auf dem neuesten Stand.' : 'You’re all caught up.'}</Text></View> : null}
         renderItem={({ item }) => {
           const copy = notificationCopy(item, names[item.actor_id] ?? null);
           return (
             <Pressable
               onPress={() => { if (!item.read_at) void markRead(item.id); onOpenNotification(item); }}
               accessibilityRole="button"
-              accessibilityLabel={`${copy.title}. ${copy.body}${item.read_at ? '' : '. Unread'}`}
+              accessibilityLabel={`${copy.title}. ${copy.body}${item.read_at ? '' : isGerman ? '. Ungelesen' : '. Unread'}`}
               accessibilityState={{ selected: !item.read_at }}
               testID={`${role}-notification-${item.id}`}
               style={[styles.row, { borderBottomColor: colors.border }, item.read_at ? null : { backgroundColor: colors.surface }]}

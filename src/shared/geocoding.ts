@@ -28,7 +28,7 @@ export type ForwardGeocodeResult =
 
 /** User-facing copy per code. Sentence case, calm, no exclamation marks. */
 export const geocodeErrorCopy: Record<GeocodeErrorCode, string> = {
-  missing_token: 'Address search is not configured on this build. Contact support.',
+  missing_token: 'Mapbox address search is not configured for this build yet. Try again later.',
   network: 'We could not reach the address service. Check your connection and try again.',
   bad_response: 'The address service had a problem. Try again in a moment.',
 };

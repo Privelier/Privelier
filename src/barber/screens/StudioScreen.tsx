@@ -15,11 +15,11 @@ import { HAIRLINE, radius, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
 import { Skeleton } from '../../shared/components/Skeleton';
-import type { AvailabilityRow, ServiceRow, VerificationStatus } from '../../types';
+import { GlassSurface } from '../../shared/components/GlassSurface';
+import type { VerificationStatus } from '../../types';
 import { fetchDashboardView } from '../dashboardData';
 import { firstName, formatBookingWhen, formatMoney, timeOfDayGreeting } from '../../shared/format';
-import type { DashboardView, ReadinessItem, ReadinessItemKey, ReadinessState } from '../types';
-import type { BarberDashboardAnalytics } from '../types';
+import type { BarberDashboardAnalytics, DashboardView, ReadinessItem, ReadinessItemKey, ReadinessState } from '../types';
 import type { BarberTabParamList } from '../BarberTabs';
 import type { BarberStackParamList } from '../BarberNavigator';
 import { LegalLinks } from '../../legal/LegalComponents';
@@ -74,30 +74,6 @@ const READINESS_ICONS: Record<ReadinessState, keyof typeof Feather.glyphMap> = {
   attention: 'alert-circle',
   unavailable: 'help-circle',
 };
-
-function servicesSummary(services: ServiceRow[]): string {
-  if (services.length === 0) return 'No services yet.';
-  const count = services.length === 1 ? '1 service' : `${services.length} services`;
-  return `${count} · from ${formatMoney(Math.min(...services.map((service) => service.price)))}`;
-}
-
-function availabilitySummary(windows: AvailabilityRow[]): string {
-  if (windows.length === 0) return 'No windows set.';
-  return windows.length === 1 ? '1 window' : `${windows.length} windows`;
-}
-
-function portfolioSummary(count: number): string {
-  if (count === 0) return 'No photos yet.';
-  return count === 1 ? '1 of 6 photos' : `${count} of 6 photos`;
-}
-
-function bioSummary(bio: string | null): string {
-  return bio?.trim() || 'Add a short introduction';
-}
-
-function locationSummary(address: string | null): string {
-  return address?.trim() || 'Add your address for the Explore map';
-}
 
 function EarningsTrend({ data, width, colors }: {
   data: BarberDashboardAnalytics['weeklyTrend'];
@@ -186,55 +162,6 @@ function SectionUnavailable({
   );
 }
 
-function ManagementRow({
-  title,
-  summary,
-  icon,
-  testID,
-  onPress,
-  unavailable,
-  onRetry,
-  retrying,
-  last = false,
-}: {
-  title: string;
-  summary: string;
-  icon: keyof typeof Feather.glyphMap;
-  testID: string;
-  onPress: () => void;
-  unavailable: boolean;
-  onRetry: () => void;
-  retrying: boolean;
-  last?: boolean;
-}) {
-  const { colors, fonts } = useTheme();
-  return (
-    <View style={[styles.managementItem, { borderBottomColor: colors.border, borderBottomWidth: last ? 0 : HAIRLINE }]}>
-      <Pressable
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityLabel={`${title}. ${summary}`}
-        testID={testID}
-        style={({ pressed }) => [styles.managementLink, { opacity: pressed ? pressOpacity.soft : 1 }]}
-      >
-        <Feather name={icon} size={18} color={colors.textSecondary} />
-        <View style={styles.managementText}>
-          <Text style={[styles.managementTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>
-            {title}
-          </Text>
-          <Text numberOfLines={2} style={[styles.managementSummary, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-            {summary}
-          </Text>
-        </View>
-        <Feather name="chevron-right" size={18} color={colors.textSecondary} />
-      </Pressable>
-      {unavailable ? (
-        <SectionUnavailable label={title} testID={`${testID}-unavailable`} onRetry={onRetry} retrying={retrying} />
-      ) : null}
-    </View>
-  );
-}
-
 export default function StudioScreen({ navigation }: Props) {
   const { colors, fonts } = useTheme();
   const { width: windowWidth } = useWindowDimensions();
@@ -313,7 +240,7 @@ export default function StudioScreen({ navigation }: Props) {
                 <Text style={[styles.name, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{firstName(name)}.</Text>
               </>
             ) : (
-              <Text style={[styles.name, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>Studio</Text>
+              <Text style={[styles.name, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>Dashboard</Text>
             )}
           </View>
           <NotificationBell onPress={() => navigation.navigate('NotificationCenter')} testID="barber-dashboard-notifications" />
@@ -363,7 +290,7 @@ export default function StudioScreen({ navigation }: Props) {
               )}
             </View>
 
-            <View testID="barber-dashboard-analytics" style={[styles.analyticsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <GlassSurface testID="barber-dashboard-analytics" style={styles.analyticsCard}>
               {view.analytics.status === 'ok' ? (() => {
                 const data = view.analytics.data;
                 const chartWidth = Math.max(180, windowWidth - 104);
@@ -470,7 +397,7 @@ export default function StudioScreen({ navigation }: Props) {
                   <SectionUnavailable label="Studio analytics" testID="barber-dashboard-overview-unavailable" onRetry={retryDashboard} retrying={retrying} />
                 </>
               )}
-            </View>
+            </GlassSurface>
 
             {view.readiness.isLive === true ? null : <View testID="barber-dashboard-readiness" style={[styles.readiness, { borderTopColor: colors.border }]}>
               <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
@@ -531,64 +458,6 @@ export default function StudioScreen({ navigation }: Props) {
               </View>
             </View>}
 
-            <View style={[styles.management, { borderTopColor: colors.border }]}>
-              <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-                Manage your studio
-              </Text>
-              <View style={styles.managementRows}>
-                <ManagementRow
-                  title="Services"
-                  summary={view.services.status === 'ok' ? servicesSummary(view.services.data) : 'Service summary unavailable'}
-                  icon="scissors"
-                  testID="barber-dashboard-services"
-                  onPress={() => navigation.navigate('Services')}
-                  unavailable={view.services.status !== 'ok'}
-                  onRetry={retryDashboard}
-                  retrying={retrying}
-                />
-                <ManagementRow
-                  title="Availability"
-                  summary={view.availability.status === 'ok' ? availabilitySummary(view.availability.data) : 'Availability summary unavailable'}
-                  icon="calendar"
-                  testID="barber-dashboard-availability"
-                  onPress={() => navigation.navigate('Availability')}
-                  unavailable={view.availability.status !== 'ok'}
-                  onRetry={retryDashboard}
-                  retrying={retrying}
-                />
-                <ManagementRow
-                  title="Portfolio"
-                  summary={view.portfolio.status === 'ok' ? portfolioSummary(view.portfolio.data.length) : 'Portfolio summary unavailable'}
-                  icon="image"
-                  testID="barber-dashboard-portfolio"
-                  onPress={() => navigation.navigate('Portfolio')}
-                  unavailable={view.portfolio.status !== 'ok'}
-                  onRetry={retryDashboard}
-                  retrying={retrying}
-                />
-                <ManagementRow
-                  title="Bio"
-                  summary={view.profile.status === 'ok' ? bioSummary(view.profile.data.bio) : 'Bio summary unavailable'}
-                  icon="edit-3"
-                  testID="barber-dashboard-bio"
-                  onPress={() => navigation.navigate('BioEdit')}
-                  unavailable={view.profile.status !== 'ok'}
-                  onRetry={retryDashboard}
-                  retrying={retrying}
-                />
-                <ManagementRow
-                  title="Location"
-                  summary={view.location.status === 'ok' ? locationSummary(view.location.data) : 'Location summary unavailable'}
-                  icon="map-pin"
-                  testID="barber-dashboard-location"
-                  onPress={() => navigation.navigate('LocationEdit')}
-                  unavailable={view.location.status !== 'ok'}
-                  onRetry={retryDashboard}
-                  retrying={retrying}
-                  last
-                />
-              </View>
-            </View>
             <LegalLinks includeAll testIDPrefix="barber-studio-legal" />
           </>
         ) : null}
@@ -643,7 +512,7 @@ const styles = StyleSheet.create({
   verification: { marginTop: space.sm },
   verificationLink: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: space.sm },
   verificationText: { flex: 1, fontSize: 13, lineHeight: 19 },
-  analyticsCard: { marginTop: space.lg, borderWidth: HAIRLINE, borderRadius: radius.md, paddingHorizontal: space.base, paddingVertical: space.lg },
+  analyticsCard: { marginTop: space.lg, borderRadius: radius.md, paddingHorizontal: space.base, paddingVertical: space.lg },
   analyticsHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.lg },
   analyticsTitle: { fontSize: 23, lineHeight: 30, marginTop: space.xs },
   heroLabel: { fontSize: 13, lineHeight: 19 },
@@ -691,13 +560,6 @@ const styles = StyleSheet.create({
   readinessItems: { marginTop: space.sm },
   readinessRow: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
   readinessLabel: { flex: 1, fontSize: 14, lineHeight: 21 },
-  management: { marginTop: space.xl, paddingTop: space.lg, borderTopWidth: HAIRLINE },
-  managementRows: { marginTop: space.sm },
-  managementItem: { borderBottomWidth: HAIRLINE },
-  managementLink: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
-  managementText: { flex: 1, minWidth: 0 },
-  managementTitle: { fontSize: 15, lineHeight: 22 },
-  managementSummary: { fontSize: 13, lineHeight: 19, marginTop: space.xs },
   unavailable: { paddingVertical: space.sm },
   unavailableText: { fontSize: 13, lineHeight: 20 },
   retryAction: { minHeight: 44, alignSelf: 'flex-start', justifyContent: 'center' },

@@ -185,3 +185,24 @@ describe('Barber ConversationScreen history pagination', () => {
     expect(screen.queryByTestId('barber-conversation-load-earlier')).toBeNull();
   });
 });
+
+describe('Barber message receipts', () => {
+  it('shows a two-check sent receipt on every own message before it has been read', async () => {
+    mockFetchConversation.mockResolvedValue({
+      status: 'ok',
+      messages: [{
+        id: 'barber-message',
+        chat_id: 'room-1',
+        sender_id: 'barber-1',
+        message: 'On my way',
+        created_at: '2026-09-23T10:00:00.000Z',
+      }],
+      hasEarlier: false,
+      earliestCursor: null,
+    });
+
+    await render(<ConversationScreen route={route} navigation={navigation} />);
+
+    expect(screen.getByTestId('barber-conversation-receipt-barber-message').props.accessibilityLabel).toBe('Sent, not read');
+  });
+});

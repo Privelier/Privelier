@@ -311,8 +311,8 @@ export default function ExploreScreen({ navigation }: Props) {
           ) : !mapTokenAvailable ? (
             <View style={styles.mapSoon} testID="customer-explore-map-not-configured">
               <Feather name="map" size={22} color={colors.textSecondary} />
-              <Text style={[styles.mapSoonTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>Map service unavailable</Text>
-              <Text style={[styles.mapSoonBlurb, { color: colors.textSecondary, fontFamily: fonts.body }]}>Switch to list view while Mapbox access is configured for this build.</Text>
+              <Text style={[styles.mapSoonTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>Mapbox is not configured</Text>
+              <Text style={[styles.mapSoonBlurb, { color: colors.textSecondary, fontFamily: fonts.body }]}>Add the public Mapbox token to this build to use the map. You can switch to list view in the meantime.</Text>
             </View>
           ) : pins.length === 0 ? (
             // Honest empty state: no located barbers ⇒ no pins ⇒ no pointless

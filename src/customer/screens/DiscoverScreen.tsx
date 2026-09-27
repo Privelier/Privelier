@@ -17,6 +17,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -28,11 +29,13 @@ import { useTheme } from '../../theme/useTheme';
 import { pressOpacity } from '../../theme/motion';
 import { Notice } from '../../shared/components/Notice';
 import { Skeleton } from '../../shared/components/Skeleton';
+import { GlassSurface } from '../../shared/components/GlassSurface';
 import type { BarberDirectoryRow, ServiceRow } from '../../types';
 import { listBarbersByCity, listServicesForBarberIds } from '../discoveryData';
 import {
   buildDiscoverPresentation,
   deriveServiceFilters,
+  getDiscoverBrandMessages,
   groupServicesByBarber,
 } from '../discoverPresentation';
 import { firstName, timeOfDayGreeting } from '../format';
@@ -48,6 +51,7 @@ type Props = CompositeScreenProps<
 
 export default function DiscoverScreen({ navigation }: Props) {
   const { colors, fonts } = useTheme();
+  const { width: viewportWidth } = useWindowDimensions();
   const [ownName, setOwnName] = useState<string | null>(null);
   const [cityName, setCityName] = useState<string | null>(null);
   const [serviceArea, setServiceArea] = useState<string | null>(null);
@@ -59,6 +63,8 @@ export default function DiscoverScreen({ navigation }: Props) {
   const [missingCity, setMissingCity] = useState(false);
   const [query, setQuery] = useState('');
   const [activeService, setActiveService] = useState<string | null>(null);
+  const [activeBrandMessage, setActiveBrandMessage] = useState(0);
+  const brandMessages = getDiscoverBrandMessages(Intl.DateTimeFormat().resolvedOptions().locale);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -222,10 +228,10 @@ export default function DiscoverScreen({ navigation }: Props) {
         </View>
 
         <View style={[styles.pad, styles.searchWrap]}>
-          <View
+          <GlassSurface
+            testID="customer-home-search-surface"
             style={[
               styles.searchBox,
-              { backgroundColor: colors.surface, borderColor: colors.border },
             ]}
           >
             <Feather name="search" size={16} color={colors.textSecondary} />
@@ -240,6 +246,40 @@ export default function DiscoverScreen({ navigation }: Props) {
               accessibilityLabel="Search barbers or services"
               testID="customer-home-search"
             />
+          </GlassSurface>
+        </View>
+
+        <View style={styles.messageCarousel} testID="customer-home-brand-carousel">
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            accessibilityLabel={`Privelier inspiration, ${activeBrandMessage + 1} of ${brandMessages.length}`}
+            onMomentumScrollEnd={({ nativeEvent }) =>
+              setActiveBrandMessage(Math.max(0, Math.min(brandMessages.length - 1, Math.round(nativeEvent.contentOffset.x / viewportWidth))))
+            }
+          >
+            {brandMessages.map((message, index) => (
+              <View key={message} style={[styles.messagePage, { width: viewportWidth }]}>
+                <GlassSurface style={styles.messageCard} testID={`customer-home-brand-message-${index + 1}`}>
+                  <Feather name="star" size={16} color={colors.accentText} />
+                  <Text style={[styles.messageCopy, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+                    {message}
+                  </Text>
+                  <Text style={[styles.messageBrand, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
+                    PRIVELIER
+                  </Text>
+                </GlassSurface>
+              </View>
+            ))}
+          </ScrollView>
+          <View style={styles.messageDots} accessible accessibilityLabel={`Slide ${activeBrandMessage + 1} of ${brandMessages.length}`}>
+            {brandMessages.map((message, index) => (
+              <View
+                key={message}
+                style={[styles.messageDot, { backgroundColor: index === activeBrandMessage ? colors.accent : colors.border }]}
+              />
+            ))}
           </View>
         </View>
 
@@ -422,6 +462,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 14,
   },
+  messageCarousel: { marginTop: 16 },
+  messagePage: { paddingHorizontal: 24 },
+  messageCard: { minHeight: 120, padding: 20, justifyContent: 'space-between' },
+  messageCopy: { fontSize: 19, lineHeight: 27, marginTop: 12 },
+  messageBrand: { fontSize: 9, letterSpacing: 1.4, marginTop: 12 },
+  messageDots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 10 },
+  messageDot: { width: 5, height: 5, borderRadius: 3 },
   searchInput: { flex: 1, minWidth: 0, fontSize: 14, paddingVertical: 10 },
   filtersScroll: { marginTop: 16, flexGrow: 0 },
   filtersRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 24, paddingBottom: 2 },

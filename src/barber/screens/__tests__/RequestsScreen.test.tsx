@@ -1,8 +1,8 @@
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react-native';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 import type { BookingRow, ServiceRow } from '../../../types';
 import { fetchOwnRequestsView } from '../../requestsData';
-import RequestsScreen from '../RequestsScreen';
+import RequestsScreen, { buildRequestSections } from '../RequestsScreen';
 
 jest.mock('@react-navigation/native', () => {
   const React = jest.requireActual('react');
@@ -110,6 +110,39 @@ afterEach(async () => {
 });
 
 describe('RequestsScreen status presentation', () => {
+  it('prioritizes action and appointments and keeps terminal history collapsed', async () => {
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const pending = { ...BOOKING, id: 'pending-booking', status: 'pending' as const, date: '2099-09-25' };
+    const todaysAppointment = { ...BOOKING, id: 'today-booking', status: 'accepted' as const, date: today };
+    const cancelled = { ...BOOKING, id: 'history-booking', status: 'cancelled' as const, date: '2025-01-01' };
+    const expectedSections = buildRequestSections([BOOKING, cancelled, todaysAppointment, pending], today);
+    expect(expectedSections.map((section) => section.key)).toEqual([
+      'needs-action',
+      'today',
+      'upcoming',
+      'history',
+    ]);
+    expect(expectedSections[3].data).toHaveLength(1);
+    mockFetchRequests.mockResolvedValueOnce({
+      status: 'ok',
+      bookings: [BOOKING, cancelled, todaysAppointment, pending],
+      servicesById: new Map([[SERVICE.id, SERVICE]]),
+      counterpartsByBookingId: new Map(),
+    });
+
+    await render(<RequestsScreen />);
+
+    expect(screen.getByTestId('barber-requests-section-needs-action')).toBeTruthy();
+    expect(screen.getByTestId('barber-requests-section-today')).toBeTruthy();
+    expect(screen.getByTestId('barber-requests-section-upcoming')).toBeTruthy();
+    expect(screen.getByTestId('barber-requests-row-pending-booking')).toBeTruthy();
+    expect(screen.queryByTestId('barber-requests-row-history-booking')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('barber-requests-history-toggle'));
+    expect(screen.getByTestId('barber-requests-history-toggle').props.accessibilityState.expanded).toBe(true);
+  });
+
   it('refreshes in brass while keeping the loaded request visible', async () => {
     await render(<RequestsScreen />);
     await waitFor(() => expect(screen.getByTestId('barber-requests-row-booking-2')).toBeTruthy());

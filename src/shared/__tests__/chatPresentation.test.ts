@@ -1,5 +1,6 @@
 import type { MessageRow } from '../../types';
 import { buildInvertedChatItems } from '../chatPresentation';
+import { formatChatDay } from '../format';
 
 const message = (id: string, sender_id: string, created_at: string): MessageRow => ({
   id, chat_id: 'chat-1', sender_id, created_at, message: id,
@@ -14,6 +15,6 @@ describe('buildInvertedChatItems', () => {
     ]);
     expect(result.map((item) => item.kind)).toEqual(['message', 'day', 'message', 'message', 'day']);
     expect(result.filter((item) => item.kind === 'message').map((item) => item.kind === 'message' && item.showTimestamp)).toEqual([true, true, false]);
-    expect(result.find((item) => item.kind === 'day' && item.label === 'Today')).toBeDefined();
+    expect(result.find((item) => item.kind === 'day' && item.label === formatChatDay('2026-09-26T10:03:00.000Z'))).toBeDefined();
   });
 });

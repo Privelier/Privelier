@@ -194,18 +194,18 @@ describe('StudioScreen dashboard', () => {
     mockFetchView.mockResolvedValue(failedView);
 
     await render(<StudioScreen navigation={navigation as never} route={{} as never} />);
-    await waitFor(() => expect(screen.getByTestId('barber-dashboard-services-unavailable')).toBeTruthy());
-    expect(screen.getByText('Service summary unavailable')).toBeTruthy();
+    await waitFor(() => expect(screen.getByTestId('barber-dashboard-readiness-unavailable')).toBeTruthy());
+    expect(screen.getByText('Could not check services')).toBeTruthy();
     expect(screen.getByText('0 confirmed complete; 1 unavailable')).toBeTruthy();
     expect(screen.queryByText('No services yet.')).toBeNull();
 
     mockFetchView.mockResolvedValue(MIXED_VIEW);
     await act(async () => {
-      fireEvent.press(screen.getByTestId('barber-dashboard-services-unavailable-retry'));
+      fireEvent.press(screen.getByTestId('barber-dashboard-readiness-unavailable-retry'));
       await Promise.resolve();
       await Promise.resolve();
     });
-    await waitFor(() => expect(screen.getByText(/1 service/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByTestId('barber-dashboard-analytics')).toBeTruthy());
     expect(mockFetchView).toHaveBeenCalledTimes(2);
   });
 
@@ -220,9 +220,9 @@ describe('StudioScreen dashboard', () => {
     expect(screen.getByTestId('barber-dashboard-screen')).toBeTruthy();
     expect(screen.getByTestId('barber-dashboard-logout')).toBeTruthy();
     expect(screen.getByTestId('barber-dashboard-verification')).toBeTruthy();
-    expect(screen.getByTestId('barber-dashboard-services')).toBeTruthy();
-    expect(screen.getByTestId('barber-dashboard-availability')).toBeTruthy();
-    expect(screen.getByTestId('barber-dashboard-bio')).toBeTruthy();
+    expect(screen.queryByTestId('barber-dashboard-services')).toBeNull();
+    expect(screen.queryByTestId('barber-dashboard-availability')).toBeNull();
+    expect(screen.queryByTestId('barber-dashboard-bio')).toBeNull();
 
     // Analytics show genuine server aggregates and the next accepted appointment.
     expect(screen.getByText('2')).toBeTruthy();
@@ -253,18 +253,9 @@ describe('StudioScreen dashboard', () => {
     fireEvent.press(screen.getByTestId('barber-dashboard-readiness-availability'));
     expect(navigation.navigate).toHaveBeenCalledWith('Availability');
 
-    // Bio: both the readiness row and the management card deep-link to BioEdit.
+    // Incomplete dashboard readiness items still deep-link to their editor.
     fireEvent.press(screen.getByTestId('barber-dashboard-readiness-bio'));
     expect(navigation.navigate).toHaveBeenCalledWith('BioEdit');
-    fireEvent.press(screen.getByTestId('barber-dashboard-bio'));
-    expect(navigation.navigate).toHaveBeenCalledWith('BioEdit');
-    fireEvent.press(screen.getByTestId('barber-dashboard-portfolio'));
-    expect(navigation.navigate).toHaveBeenCalledWith('Portfolio');
-
-    // Location card (Explore Run A): shows the saved address, links to LocationEdit.
-    expect(screen.getByText('Prinsengracht 263, Amsterdam')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('barber-dashboard-location'));
-    expect(navigation.navigate).toHaveBeenCalledWith('LocationEdit');
 
     // The overview deep-links to Requests (glance only — Requests owns mutations).
     fireEvent.press(screen.getByTestId('barber-dashboard-overview'));

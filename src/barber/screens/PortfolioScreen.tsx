@@ -43,6 +43,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import type { CompositeScreenProps } from '@react-navigation/native';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { fetchOwnProfile } from '../../auth/authService';
 import { PortfolioGrid, portfolioTileStyle } from '../../shared/components/PortfolioGrid';
 import { PortfolioTile } from '../../shared/components/PortfolioTile';
@@ -50,6 +53,8 @@ import { useTheme } from '../../theme/useTheme';
 import { HAIRLINE, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
+import { GlassSurface } from '../../shared/components/GlassSurface';
+import { getAppLanguage } from '../../shared/locale';
 import type { PortfolioRow } from '../../types';
 import {
   deletePortfolioImage,
@@ -58,6 +63,28 @@ import {
   MAX_PORTFOLIO_IMAGES,
   uploadPortfolioImage,
 } from '../portfolioData';
+import type { BarberTabParamList } from '../BarberTabs';
+import type { BarberStackParamList } from '../BarberNavigator';
+
+type Props = CompositeScreenProps<
+  BottomTabScreenProps<BarberTabParamList, 'Portfolio'>,
+  NativeStackScreenProps<BarberStackParamList>
+>;
+
+const STUDIO_ACTIONS = {
+  en: [
+    { title: 'Services', summary: 'Prices and durations', icon: 'scissors', screen: 'Services', testID: 'barber-dashboard-services' },
+    { title: 'Availability', summary: 'Your weekly schedule', icon: 'calendar', screen: 'Availability', testID: 'barber-dashboard-availability' },
+    { title: 'Bio', summary: 'Your public introduction', icon: 'edit-3', screen: 'BioEdit', testID: 'barber-dashboard-bio' },
+    { title: 'Location', summary: 'Your service area', icon: 'map-pin', screen: 'LocationEdit', testID: 'barber-dashboard-location' },
+  ],
+  de: [
+    { title: 'Leistungen', summary: 'Preise und Dauer', icon: 'scissors', screen: 'Services', testID: 'barber-dashboard-services' },
+    { title: 'Verfügbarkeit', summary: 'Dein Wochenplan', icon: 'calendar', screen: 'Availability', testID: 'barber-dashboard-availability' },
+    { title: 'Profiltext', summary: 'Deine öffentliche Vorstellung', icon: 'edit-3', screen: 'BioEdit', testID: 'barber-dashboard-bio' },
+    { title: 'Standort', summary: 'Dein Servicegebiet', icon: 'map-pin', screen: 'LocationEdit', testID: 'barber-dashboard-location' },
+  ],
+} as const;
 
 // LayoutAnimation is opt-in on Android; enable it once at module load so the
 // (reduce-motion-gated) delete-removal fade animates there too. No-op on iOS.
@@ -65,8 +92,9 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-export default function PortfolioScreen() {
+export default function PortfolioScreen({ navigation }: Props) {
   const { colors, fonts } = useTheme();
+  const language = getAppLanguage();
 
   const [barberId, setBarberId] = useState<string | null>(null);
   const [images, setImages] = useState<PortfolioRow[]>([]);
@@ -211,8 +239,28 @@ export default function PortfolioScreen() {
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-          Portfolio
+          Studio
         </Text>
+        <GlassSurface style={styles.managementSurface} testID="barber-studio-management">
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{language === 'de' ? 'Verwalte dein Studio' : 'Manage your studio'}</Text>
+          <View style={styles.managementGrid}>
+            {STUDIO_ACTIONS[language].map((action) => (
+              <Pressable
+                key={action.testID}
+                onPress={() => navigation.navigate(action.screen)}
+                accessibilityRole="button"
+                accessibilityLabel={`${action.title}. ${action.summary}`}
+                testID={action.testID}
+                style={({ pressed }) => [styles.managementAction, { borderColor: colors.border, backgroundColor: colors.surface, opacity: pressed ? pressOpacity.soft : 1 }]}
+              >
+                <Feather name={action.icon} size={17} color={colors.accentText} />
+                <Text style={[styles.managementTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{action.title}</Text>
+                <Text style={[styles.managementSummary, { color: colors.textSecondary, fontFamily: fonts.body }]}>{action.summary}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </GlassSurface>
+        <Text style={[styles.workHeading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{language === 'de' ? 'Deine Arbeit' : 'Your work'}</Text>
         <Text
           style={[styles.subtitle, { color: colors.textSecondary, fontFamily: fonts.body }]}
           testID="barber-portfolio-counter"
@@ -220,7 +268,7 @@ export default function PortfolioScreen() {
           <Text style={{ color: colors.accentText, fontFamily: fonts.bodySemiBold }}>
             {images.length}
           </Text>
-          {` of ${MAX_PORTFOLIO_IMAGES} — a curated set.`}
+          {language === 'de' ? ` von ${MAX_PORTFOLIO_IMAGES} · eine kuratierte Auswahl.` : ` of ${MAX_PORTFOLIO_IMAGES} — a curated set.`}
         </Text>
 
         {loading ? (
@@ -281,7 +329,7 @@ export default function PortfolioScreen() {
             </PortfolioGrid>
             {images.length === 0 && !uploading ? (
               <Text style={[styles.emptyHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                Your best work, shown on your public profile.
+                {language === 'de' ? 'Zeig deine besten Arbeiten auf deinem öffentlichen Profil.' : 'Your best work, shown on your public profile.'}
               </Text>
             ) : null}
           </>
@@ -306,6 +354,13 @@ const styles = StyleSheet.create({
   noticeMargins: { marginTop: space.xl },
 
   gridSpacing: { marginTop: space.xl },
+  managementSurface: { marginTop: space.xl, padding: space.base },
+  sectionTitle: { fontSize: 20, lineHeight: 27 },
+  managementGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.md },
+  managementAction: { width: '48%', minHeight: 92, borderWidth: HAIRLINE, borderRadius: 10, padding: space.md },
+  managementTitle: { fontSize: 14, lineHeight: 20, marginTop: space.sm },
+  managementSummary: { fontSize: 11, lineHeight: 15, marginTop: 2 },
+  workHeading: { fontSize: 21, lineHeight: 28, marginTop: space['2xl'] },
   uploadingImage: { width: '100%', height: '100%' },
   uploadingScrim: {
     position: 'absolute',

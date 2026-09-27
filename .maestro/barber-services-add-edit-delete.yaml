@@ -58,6 +58,8 @@ env:
       id: "barber-dashboard-logout"
     timeout: 15000
 
+- tapOn:
+    id: "barber-tab-portfolio"
 - assertVisible:
     id: "barber-dashboard-services"
 - tapOn:

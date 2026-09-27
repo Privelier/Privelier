@@ -1,8 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import ConversationScreen from '../ConversationScreen';
 import { fetchConversation, fetchConversationNewerThan } from '../../conversationData';
-import { useMessagesRealtime } from '../../../shared/useMessagesRealtime';
-import { useSendQueue } from '../../../shared/useSendQueue';
 
 jest.mock('@react-navigation/native', () => {
   const React = jest.requireActual('react');
@@ -93,10 +91,7 @@ jest.mock('../../UnreadContext', () => {
 const mockFetchConversation = fetchConversation as jest.MockedFunction<typeof fetchConversation>;
 const mockFetchConversationNewerThan =
   fetchConversationNewerThan as jest.MockedFunction<typeof fetchConversationNewerThan>;
-const mockUseMessagesRealtime = useMessagesRealtime as jest.Mock;
-const mockUseSendQueue = useSendQueue as jest.Mock;
 type FetchResult = Awaited<ReturnType<typeof fetchConversation>>;
-type FetchNewerResult = Awaited<ReturnType<typeof fetchConversationNewerThan>>;
 
 const roomOneCursor = { createdAt: '2026-09-23T10:00:00.000Z', id: 'message-40' };
 const roomTwoCursor = { createdAt: '2026-09-23T12:00:00.000Z', id: 'message-80' };
@@ -245,5 +240,26 @@ describe('Customer ConversationScreen history pagination', () => {
     await waitFor(() => expect(screen.getByText('Room two earlier')).toBeTruthy());
     expect(screen.getByText('Room two latest')).toBeTruthy();
     expect(screen.queryByTestId('customer-conversation-load-earlier')).toBeNull();
+  });
+});
+
+describe('Customer message receipts', () => {
+  it('shows a two-check sent receipt on every own message before it has been read', async () => {
+    mockFetchConversation.mockResolvedValue({
+      status: 'ok',
+      messages: [{
+        id: 'customer-message',
+        chat_id: 'room-1',
+        sender_id: 'customer-1',
+        message: 'Thanks',
+        created_at: '2026-09-23T10:00:00.000Z',
+      }],
+      hasEarlier: false,
+      earliestCursor: null,
+    });
+
+    await render(<ConversationScreen route={routeFor('room-1')} navigation={navigation} />);
+
+    expect(screen.getByTestId('customer-conversation-receipt-customer-message').props.accessibilityLabel).toBe('Sent, not read');
   });
 });

@@ -155,6 +155,37 @@ describe('VerifyScreen', () => {
     expect(screen.getByTestId('barber-verify-status')).toBeTruthy();
   });
 
+  it('collapses document controls after approval and shows the real review date', async () => {
+    mockFetchBarberProfile.mockResolvedValue({ status: 'ok', profile: { verification_status: 'approved' } });
+    mockFetchRequest.mockResolvedValue({
+      status: 'ok',
+      request: { ...EMPTY_REQUEST, status: 'approved', reviewed_at: '2026-09-23T10:00:00.000Z' },
+    });
+    await renderLoaded();
+
+    expect(screen.getByText(/Verified since/)).toBeTruthy();
+    expect(screen.queryByTestId('barber-verify-doc-id')).toBeNull();
+    expect(screen.queryByTestId('barber-verify-doc-license')).toBeNull();
+  });
+
+  it('shows membership methods and clearly avoids claiming an unconfigured discount or payment', async () => {
+    await renderLoaded();
+
+    expect(screen.getByTestId('barber-membership')).toBeTruthy();
+    expect(screen.getByText(new Intl.NumberFormat(undefined, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(35))).toBeTruthy();
+    expect(screen.getByTestId('barber-membership-continue').props.accessibilityState.disabled).toBe(true);
+
+    await fireEvent.changeText(screen.getByTestId('barber-membership-code'), 'WELCOME');
+    await fireEvent.press(screen.getByTestId('barber-membership-code-apply'));
+    expect(screen.getByTestId('barber-membership-code-feedback').props.children).toMatch(/No discount has been applied/);
+
+    await fireEvent.press(screen.getByTestId('barber-membership-apple-pay'));
+    expect(screen.getByTestId('barber-membership-apple-pay').props.accessibilityState.selected).toBe(true);
+    expect(screen.getByTestId('barber-membership-continue').props.accessibilityState.disabled).toBe(false);
+    await fireEvent.press(screen.getByTestId('barber-membership-continue'));
+    expect(screen.getByTestId('barber-membership-payment-feedback').props.children).toMatch(/No charge has been made/);
+  });
+
   it('does nothing (no upload) when photo permission is denied', async () => {
     mockRequestPerm.mockResolvedValue({ granted: false });
     await renderLoaded();

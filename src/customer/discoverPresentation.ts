@@ -2,6 +2,25 @@ import type { BarberDirectoryRow, ServiceRow } from '../types';
 
 export const MAX_DISCOVER_SERVICE_FILTERS = 6;
 
+const BRAND_MESSAGES = {
+  de: [
+    'Dein Barber kommt zu dir.',
+    'Ein guter Schnitt beginnt mit Zeit für dich.',
+    'Dein Zuhause. Dein Termin. Dein Rhythmus.',
+    'Persönlicher Service, ganz in deiner Nähe.',
+  ],
+  en: [
+    'Your barber comes to you.',
+    'A great cut starts with time for yourself.',
+    'Your place. Your appointment. Your pace.',
+    'Personal service, right where you are.',
+  ],
+} as const;
+
+export function getDiscoverBrandMessages(languageCode: string | null | undefined): readonly string[] {
+  return languageCode?.toLowerCase().startsWith('de') ? BRAND_MESSAGES.de : BRAND_MESSAGES.en;
+}
+
 const DAY_IN_MS = 86_400_000;
 
 export function groupServicesByBarber(

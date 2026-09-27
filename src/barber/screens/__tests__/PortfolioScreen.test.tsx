@@ -110,6 +110,8 @@ const mockList = listOwnPortfolio as jest.Mock;
 const mockUpload = uploadPortfolioImage as jest.Mock;
 const mockInsert = insertPortfolioRow as jest.Mock;
 const mockDelete = deletePortfolioImage as jest.Mock;
+const mockNavigate = jest.fn();
+const navigation = { navigate: mockNavigate };
 
 let alertSpy: jest.SpyInstance;
 
@@ -139,6 +141,7 @@ function installAlertAutoConfirm() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockNavigate.mockReset();
   alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
 
@@ -156,7 +159,7 @@ afterEach(() => {
 async function renderLoaded() {
   // v14 render() is async — awaiting it binds `screen` and flushes the initial
   // load's state updates inside act(), avoiding cross-test bleed.
-  await render(<PortfolioScreen />);
+  await render(<PortfolioScreen navigation={navigation as never} route={{} as never} />);
   await waitFor(() => expect(screen.queryByTestId('barber-portfolio-loading')).toBeNull());
 }
 
@@ -165,8 +168,17 @@ describe('PortfolioScreen', () => {
     await renderLoaded();
 
     expect(screen.getByTestId('barber-portfolio-screen')).toBeTruthy();
+    expect(screen.getByText('Studio')).toBeTruthy();
+    expect(screen.getByTestId('barber-studio-management')).toBeTruthy();
+    expect(screen.getByTestId('barber-dashboard-services')).toBeTruthy();
     expect(screen.getByTestId('barber-portfolio-counter')).toBeTruthy();
     expect(screen.getByTestId('barber-portfolio-add')).toBeTruthy();
+  });
+
+  it('opens service management from the Studio tab', async () => {
+    await renderLoaded();
+    await fireEvent.press(screen.getByTestId('barber-dashboard-services'));
+    expect(mockNavigate).toHaveBeenCalledWith('Services');
   });
 
   describe('upload → insert ordering', () => {

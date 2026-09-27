@@ -39,8 +39,8 @@
  *   and the mutation's authoritative row is re-applied AFTER it resolves — so
  *   even a snapshot that raced past the write converges to the correct status.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, RefreshControl, SectionList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../../lib/supabase';
@@ -50,6 +50,7 @@ import { HAIRLINE, radius, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
 import { StatusPill } from '../../shared/components/StatusPill';
+import { GlassSurface } from '../../shared/components/GlassSurface';
 import { Avatar } from '../../shared/components/Avatar';
 import { BookingListSkeleton } from '../../shared/components/BookingListSkeleton';
 import type { Palette } from '../../theme/colors';
@@ -69,6 +70,7 @@ import {
 } from '../../shared/bookingRealtime';
 import { useBookingsRealtime } from '../../shared/useBookingsRealtime';
 import { formatBookingWhen, formatMoney } from '../../shared/format';
+import { getAppLanguage } from '../../shared/locale';
 
 /**
  * Confirm an irreversible transition before running it, matching the
@@ -92,9 +94,33 @@ function sortAsc(rows: BookingRow[]): BookingRow[] {
   });
 }
 
+type RequestSection = { key: 'needs-action' | 'today' | 'upcoming' | 'history'; title: string; data: BookingRow[] };
+
+function localDateKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+export function buildRequestSections(bookings: BookingRow[], today: string, language = getAppLanguage()): RequestSection[] {
+  const sorted = sortAsc(bookings);
+  const needsAction = sorted.filter((row) => row.status === 'pending');
+  const accepted = sorted.filter((row) => row.status === 'accepted');
+  const history = sorted
+    .filter((row) => row.status === 'rejected' || row.status === 'completed' || row.status === 'cancelled')
+    .reverse();
+  const result: RequestSection[] = [];
+  if (needsAction.length) result.push({ key: 'needs-action', title: language === 'de' ? 'Aktion nötig' : 'Needs action', data: needsAction });
+  const todaysBookings = accepted.filter((row) => row.date === today);
+  const upcoming = accepted.filter((row) => row.date !== today);
+  if (todaysBookings.length) result.push({ key: 'today', title: language === 'de' ? 'Heute' : 'Today', data: todaysBookings });
+  if (upcoming.length) result.push({ key: 'upcoming', title: language === 'de' ? 'Demnächst' : 'Upcoming', data: upcoming });
+  if (history.length) result.push({ key: 'history', title: language === 'de' ? 'Verlauf' : 'History', data: history });
+  return result;
+}
+
 export default function RequestsScreen() {
   const { colors } = useTheme();
   const styles = useStyles(colors);
+  const language = getAppLanguage();
 
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [servicesById, setServicesById] = useState<Map<string, ServiceRow>>(new Map());
@@ -113,6 +139,13 @@ export default function RequestsScreen() {
   const inFlightRef = useRef<Set<string>>(new Set());
   const [inFlight, setInFlight] = useState<Record<string, boolean>>({});
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
+  const [historyExpanded, setHistoryExpanded] = useState(false);
+
+  const today = localDateKey(new Date());
+  const sections = useMemo(
+    () => buildRequestSections(bookings, today),
+    [bookings, today]
+  );
 
   useEffect(() => {
     let active = true;
@@ -241,10 +274,32 @@ export default function RequestsScreen() {
       ) : (
         <>
           {error ? <RetryNotice testID="barber-requests-error" message={error} onRetry={() => void load()} style={styles.noticeMargins} /> : null}
-          <FlatList
+          <SectionList<BookingRow, RequestSection>
           testID="barber-requests-list"
-          data={bookings}
+          sections={sections}
+          extraData={historyExpanded}
           keyExtractor={(item) => item.id}
+          renderSectionHeader={({ section }) => section.key === 'history' ? (
+            <Pressable
+              onPress={() => setHistoryExpanded((expanded) => !expanded)}
+              accessibilityRole="button"
+              accessibilityLabel={language === 'de'
+                ? `${bookings.filter((row) => row.status === 'cancelled' || row.status === 'completed' || row.status === 'rejected').length} Termine im Verlauf ${historyExpanded ? 'ausblenden' : 'anzeigen'}`
+                : `${historyExpanded ? 'Hide' : 'Show'} ${bookings.filter((row) => row.status === 'cancelled' || row.status === 'completed' || row.status === 'rejected').length} history bookings`}
+              accessibilityState={{ expanded: historyExpanded }}
+              testID="barber-requests-history-toggle"
+              style={styles.historyToggle}
+            >
+              <Text style={styles.sectionTitle}>{language === 'de' ? 'Verlauf' : 'History'}</Text>
+              <Text style={styles.sectionCount}>{bookings.filter((row) => row.status === 'cancelled' || row.status === 'completed' || row.status === 'rejected').length}</Text>
+              <Text style={styles.historyAction}>{language === 'de' ? historyExpanded ? 'Ausblenden' : 'Anzeigen' : historyExpanded ? 'Hide' : 'Show'}</Text>
+            </Pressable>
+          ) : (
+            <View style={styles.sectionHeader} testID={`barber-requests-section-${section.key}`}>
+              <Text style={styles.sectionTitle}>{section.title}</Text>
+              <Text style={styles.sectionCount}>{section.data.length}</Text>
+            </View>
+          )}
           refreshControl={
             <RefreshControl
               refreshing={loading && bookings.length > 0}
@@ -255,7 +310,7 @@ export default function RequestsScreen() {
             />
           }
           contentContainerStyle={styles.listContent}
-          ListEmptyComponent={
+          ListEmptyComponent={bookings.length === 0 ? (
             <View style={styles.empty}>
               <Text style={styles.emptyText} testID="barber-requests-empty">
                 No booking requests yet.
@@ -264,8 +319,9 @@ export default function RequestsScreen() {
                 Requests appear here the moment a client books you.
               </Text>
             </View>
-          }
-          renderItem={({ item }) => {
+          ) : null}
+          renderItem={({ item, section }) => {
+            if (section.key === 'history' && !historyExpanded) return null;
             const service = servicesById.get(item.service_id);
             const counterpart = counterpartsById.get(item.id);
             const busy = inFlight[item.id] === true;
@@ -274,7 +330,7 @@ export default function RequestsScreen() {
             const title = counterpart?.name ?? service?.name ?? 'Booking';
             const subline = counterpart ? service?.name ?? 'Service' : formatBookingWhen(item.date, item.time);
             return (
-              <View style={styles.card} testID={`barber-requests-row-${item.id}`}>
+              <GlassSurface style={styles.card} testID={`barber-requests-row-${item.id}`}>
                 <View style={styles.cardTop}>
                   <Avatar
                     id={counterpart?.id ?? item.customer_id}
@@ -375,7 +431,7 @@ export default function RequestsScreen() {
                     <Text style={styles.rowErrorText}>{rowError}</Text>
                   </View>
                 ) : null}
-              </View>
+              </GlassSurface>
             );
           }}
           />
@@ -436,17 +492,18 @@ function useStyles(colors: Palette) {
     noticeMargins: { marginTop: space.xl, marginHorizontal: space.xl },
 
     listContent: { paddingHorizontal: space.xl, paddingTop: space.xl, paddingBottom: space['2xl'] },
+    sectionHeader: { minHeight: 36, flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.md, marginBottom: space.sm },
+    sectionTitle: { color: colors.textPrimary, fontSize: 16, fontFamily: fonts.bodyMedium },
+    sectionCount: { minWidth: 22, color: colors.textSecondary, fontSize: 12, fontFamily: fonts.body, textAlign: 'center' },
+    historyToggle: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.xl, borderTopWidth: HAIRLINE, borderColor: colors.border },
+    historyAction: { marginLeft: 'auto', color: colors.accentText, fontSize: 12, fontFamily: fonts.bodyMedium },
     empty: { alignItems: 'center', paddingVertical: 40 },
     emptyText: { fontSize: 13, color: colors.textSecondary, fontFamily: fonts.body },
     emptyHint: { fontSize: 12, marginTop: 6, color: colors.textSecondary, fontFamily: fonts.body },
 
     card: {
-      borderWidth: HAIRLINE,
-      borderRadius: radius.sm,
       padding: space.base,
       marginBottom: space.md,
-      borderColor: colors.border,
-      backgroundColor: colors.surface,
     },
     cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
     cardInfo: { flex: 1, minWidth: 0 },

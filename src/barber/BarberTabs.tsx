@@ -57,9 +57,9 @@ export default function BarberTabs() {
         tabBarButtonTestID: `barber-tab-${route.name.toLowerCase()}`,
       })}
     >
-      <Tab.Screen name="Studio" component={StudioScreen} />
+        <Tab.Screen name="Studio" component={StudioScreen} options={{ tabBarLabel: 'Dashboard', tabBarAccessibilityLabel: 'Dashboard' }} />
       <Tab.Screen name="Requests" component={RequestsScreen} />
-      <Tab.Screen name="Portfolio" component={PortfolioScreen} />
+      <Tab.Screen name="Portfolio" component={PortfolioScreen} options={{ tabBarLabel: 'Studio', tabBarAccessibilityLabel: 'Studio' }} />
       <Tab.Screen
         name="Chats"
         component={ChatsScreen}

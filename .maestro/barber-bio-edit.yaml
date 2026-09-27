@@ -70,6 +70,8 @@ env:
     notVisible:
       id: "barber-dashboard-loading"
     timeout: 15000
+- tapOn:
+    id: "barber-tab-portfolio"
 - scrollUntilVisible:
     element:
       id: "barber-dashboard-bio"

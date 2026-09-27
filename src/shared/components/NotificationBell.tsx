@@ -4,10 +4,12 @@ import { Feather } from '@expo/vector-icons';
 import { supabase } from '../../../lib/supabase';
 import { pressOpacity } from '../../theme/motion';
 import { useTheme } from '../../theme/useTheme';
-import { formatNotificationBadge } from '../notifications';
+import { formatNotificationBadge, notificationChannelTopic } from '../notifications';
+import { getAppLanguage } from '../locale';
 
 export function NotificationBell({ onPress, testID }: { onPress: () => void; testID: string }) {
   const { colors, fonts } = useTheme();
+  const isGerman = getAppLanguage() === 'de';
   const [unreadCount, setUnreadCount] = useState(0);
   const badge = formatNotificationBadge(unreadCount);
 
@@ -37,7 +39,7 @@ export function NotificationBell({ onPress, testID }: { onPress: () => void; tes
       recipientId = data.session?.user.id ?? null;
       if (!recipientId) return;
       channel = supabase
-        .channel(`notification-badge:${recipientId}`)
+        .channel(notificationChannelTopic('notification-badge', recipientId))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${recipientId}` }, () => { void loadCount(); })
         .subscribe();
       void loadCount();
@@ -54,7 +56,9 @@ export function NotificationBell({ onPress, testID }: { onPress: () => void; tes
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={unreadCount > 0 ? `Open notifications, ${unreadCount} unread` : 'Open notifications'}
+      accessibilityLabel={unreadCount > 0
+        ? isGerman ? `Benachrichtigungen öffnen, ${unreadCount} ungelesen` : `Open notifications, ${unreadCount} unread`
+        : isGerman ? 'Benachrichtigungen öffnen' : 'Open notifications'}
       testID={testID}
       style={({ pressed }) => [styles.button, { borderColor: colors.border, opacity: pressed ? pressOpacity.soft : 1 }]}
     >

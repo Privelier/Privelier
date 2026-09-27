@@ -79,15 +79,23 @@ env:
 - assertNotVisible:
     id: "barber-dashboard-error"
 
-# The analytics action, plus the pre-existing management cards.
+# Performance stays on Dashboard; studio editing lives on the Studio tab.
 - assertVisible:
     id: "barber-dashboard-overview"
 - assertVisible:
     id: "barber-dashboard-analytics"
+- assertNotVisible:
+    id: "barber-dashboard-services"
+- tapOn:
+    id: "barber-tab-portfolio"
+- assertVisible:
+    id: "barber-studio-management"
 - assertVisible:
     id: "barber-dashboard-services"
 - assertVisible:
     id: "barber-dashboard-availability"
+- tapOn:
+    id: "barber-tab-studio"
 
 # --- Overview card deep-links to the Requests tab (always enabled) ---
 - tapOn:

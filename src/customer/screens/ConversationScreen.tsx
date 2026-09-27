@@ -61,7 +61,8 @@ import {
 import { useMessagesRealtime } from '../../shared/useMessagesRealtime';
 import { useReadReceipt } from '../../shared/useReadReceipt';
 import { useTypingBroadcast } from '../../shared/useTypingBroadcast';
-import { deriveReadMarkerId } from '../../shared/readReceipts';
+import { deriveIsRead, deriveReadMarkerId } from '../../shared/readReceipts';
+import { MessageReceipt } from '../../shared/components/MessageReceipt';
 import { useSendQueue, type PendingSend } from '../../shared/useSendQueue';
 import { MAX_MESSAGE_LENGTH, MESSAGE_COUNTER_VISIBLE_AT } from '../../shared/messageLimits';
 import { formatMessageClock } from '../../shared/format';
@@ -448,6 +449,7 @@ function ConversationRoom({ route, navigation }: Props) {
                     <Text style={p.failed ? styles.bubbleMetaFailed : styles.bubbleMeta}>
                       {p.failed ? 'Not sent — tap to retry' : 'Sending…'}
                     </Text>
+                    {p.failed ? <MessageReceipt state="failed" testID={`customer-conversation-failed-receipt-${p.key}`} /> : null}
                     {/* The reason, when the data layer gave one. Without it a
                         failure retrying cannot fix is an undiagnosable dead end. */}
                     {p.failed && p.failureMessage ? (
@@ -470,10 +472,11 @@ function ConversationRoom({ route, navigation }: Props) {
                 >
                   <Text style={styles.bubbleText}>{m.message}</Text>
                   {item.showTimestamp ? <Text style={styles.bubbleMeta}>{formatMessageClock(m.created_at)}</Text> : null}
-                  {own && m.id === readMarkerId ? (
-                    <Text accessibilityLabel="Read" style={styles.readMarker} testID="customer-conversation-read-marker">
-                      ✓✓ Read
-                    </Text>
+                  {own ? (
+                    <MessageReceipt
+                      state={deriveIsRead(counterpartLastReadAt, m.created_at) ? 'read' : 'sent'}
+                      testID={m.id === readMarkerId ? 'customer-conversation-read-marker' : `customer-conversation-receipt-${m.id}`}
+                    />
                   ) : null}
                 </View>
               );
@@ -602,7 +605,6 @@ function useStyles(colors: Palette) {
     bubbleFailed: { borderColor: colors.error },
     bubbleText: { fontSize: 14, lineHeight: 20, color: colors.textPrimary, fontFamily: fonts.body },
     bubbleMeta: { fontSize: 10, marginTop: 4, color: colors.textSecondary, fontFamily: fonts.body },
-    readMarker: { fontSize: 11, marginTop: 4, color: colors.accentText, fontFamily: fonts.bodySemiBold, textAlign: 'right' },
     bubbleMetaFailed: { fontSize: 10, marginTop: 4, color: colors.errorText, fontFamily: fonts.bodyMedium },
     bubbleFailureReason: {
       fontSize: 11,

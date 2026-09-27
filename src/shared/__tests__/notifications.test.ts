@@ -1,4 +1,4 @@
-import { notificationCopy, type NotificationRow } from '../notifications';
+import { notificationChannelTopic, notificationCopy, type NotificationRow } from '../notifications';
 
 const notification = (event_type: NotificationRow['event_type'], booking_status: NotificationRow['booking_status'] = null): NotificationRow => ({
   id: 'notification-1', recipient_id: 'recipient-1', event_type,
@@ -15,5 +15,16 @@ describe('notificationCopy', () => {
 
   it.each(['accepted', 'rejected', 'cancelled', 'completed'] as const)('describes %s booking updates', (status) => {
     expect(notificationCopy(notification('booking_status', status), 'Taha').body).toContain('Taha');
+  });
+
+  it('formats notification copy in German and English', () => {
+    expect(notificationCopy(notification('message'), 'Taha', 'de')).toEqual({ title: 'Neue Nachricht', body: 'Taha hat dir eine Nachricht geschickt.' });
+    expect(notificationCopy(notification('message'), 'Taha', 'en')).toEqual({ title: 'New message', body: 'Taha sent you a message.' });
+  });
+});
+
+describe('notificationChannelTopic', () => {
+  it('creates a new topic when a mounted channel is replaced', () => {
+    expect(notificationChannelTopic('notification-badge', 'user-1')).not.toBe(notificationChannelTopic('notification-badge', 'user-1'));
   });
 });

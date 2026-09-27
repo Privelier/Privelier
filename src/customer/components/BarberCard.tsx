@@ -18,6 +18,7 @@ import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/useTheme';
 import { numericText } from '../../theme/typography';
 import { pressOpacity } from '../../theme/motion';
+import { HAIRLINE, radius } from '../../theme/spacing';
 import { Avatar } from '../../shared/components/Avatar';
 import type { BarberDirectoryRow, ServiceRow } from '../../types';
 import { formatMoney } from '../format';
@@ -100,8 +101,9 @@ export default function BarberCard({ barber, services, variant = 'wide', feature
         accessibilityLabel={cardLabel}
         accessibilityHint="Opens the barber profile"
         testID={`customer-home-barber-${barber.id}`}
-        style={({ pressed }) => [styles.compact, { opacity: pressed ? pressOpacity.soft : 1 }]}
+      style={({ pressed }) => [styles.compact, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? pressOpacity.soft : 1 }]}
       >
+        <View pointerEvents="none" style={[styles.surfaceHighlight, { backgroundColor: colors.border }]} />
         <CardImage barber={barber} aspectRatio={4 / 5} />
         <View style={styles.compactMetaRow}>
           <View style={styles.compactMetaLeft}>
@@ -147,8 +149,9 @@ export default function BarberCard({ barber, services, variant = 'wide', feature
       accessibilityLabel={cardLabel}
       accessibilityHint="Opens the barber profile"
       testID={`customer-home-barber-${barber.id}`}
-      style={({ pressed }) => ({ opacity: pressed ? pressOpacity.soft : 1 })}
+      style={({ pressed }) => [styles.wide, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? pressOpacity.soft : 1 }]}
     >
+      <View pointerEvents="none" style={[styles.surfaceHighlight, { backgroundColor: colors.border }]} />
       <CardImage barber={barber} aspectRatio={16 / 10} />
       <View style={styles.wideMetaRow}>
         <View style={styles.wideMetaLeft}>
@@ -190,12 +193,13 @@ export default function BarberCard({ barber, services, variant = 'wide', feature
 }
 
 const styles = StyleSheet.create({
-  image: { width: '100%', borderRadius: 8 },
+  image: { width: '100%', borderRadius: 0 },
+  surfaceHighlight: { position: 'absolute', top: 0, left: 0, right: 0, height: HAIRLINE, zIndex: 1 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4, justifyContent: 'flex-end' },
 
-  compact: { width: 256 },
-  compactMetaRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8, marginTop: 12 },
+  compact: { width: 256, position: 'relative', overflow: 'hidden', borderWidth: HAIRLINE, borderRadius: radius.lg },
+  compactMetaRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8, marginTop: 12, paddingHorizontal: 12, paddingBottom: 14 },
   compactMetaLeft: { flexShrink: 1, minWidth: 0 },
   compactMetaRight: { alignItems: 'flex-end' },
   compactName: { fontSize: 17, flexShrink: 1 },
@@ -203,7 +207,8 @@ const styles = StyleSheet.create({
   compactLocation: { fontSize: 12 },
   compactPrice: { fontSize: 12, marginTop: 3 },
 
-  wideMetaRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginTop: 12 },
+  wide: { position: 'relative', overflow: 'hidden', borderWidth: HAIRLINE, borderRadius: radius.xl },
+  wideMetaRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginTop: 12, paddingHorizontal: 16, paddingBottom: 16 },
   wideMetaLeft: { flexShrink: 1, minWidth: 0 },
   wideMetaRight: { alignItems: 'flex-end' },
   editorsPick: { fontSize: 10, letterSpacing: 2 },

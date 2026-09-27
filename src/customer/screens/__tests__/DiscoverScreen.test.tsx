@@ -148,6 +148,11 @@ describe('DiscoverScreen', () => {
     expect(screen.getAllByTestId('customer-home-barber-c')).toHaveLength(1);
     expect(screen.getByTestId('customer-barber-avatar-a-image')).toBeTruthy();
     expect(screen.getByTestId('customer-barber-avatar-c-monogram').props.children).toBe('C');
+    expect(screen.getByTestId('customer-home-brand-carousel')).toBeTruthy();
+    expect(screen.getByTestId('customer-home-brand-message-1')).toBeTruthy();
+    expect(screen.getByTestId('customer-home-brand-message-2')).toBeTruthy();
+    expect(screen.getByTestId('customer-home-brand-message-3')).toBeTruthy();
+    expect(screen.getByTestId('customer-home-brand-message-4')).toBeTruthy();
   });
 
   it('keeps the notification center reachable from Discover', async () => {

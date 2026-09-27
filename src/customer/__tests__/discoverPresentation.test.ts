@@ -2,10 +2,20 @@ import type { BarberDirectoryRow, ServiceRow } from '../../types';
 import {
   buildDiscoverPresentation,
   deriveServiceFilters,
+  getDiscoverBrandMessages,
   filterDiscoverBarbers,
   groupServicesByBarber,
   selectDailySpotlight,
 } from '../discoverPresentation';
+
+describe('getDiscoverBrandMessages', () => {
+  it('returns four German messages for German device locales and English otherwise', () => {
+    expect(getDiscoverBrandMessages('de-DE')).toHaveLength(4);
+    expect(getDiscoverBrandMessages('de-DE')[0]).toBe('Dein Barber kommt zu dir.');
+    expect(getDiscoverBrandMessages('fr-FR')).toHaveLength(4);
+    expect(getDiscoverBrandMessages(undefined)[0]).toBe('Your barber comes to you.');
+  });
+});
 
 function barber(id: string, overrides: Partial<BarberDirectoryRow> = {}): BarberDirectoryRow {
   return {
