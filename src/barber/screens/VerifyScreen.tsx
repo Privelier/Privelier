@@ -36,21 +36,16 @@ import type { VerificationDocType, VerificationRequestRow, VerificationStatus } 
 import { fetchOwnBarberProfile, fetchOwnVerificationRequest } from '../profileData';
 import { submitVerificationDocument, uploadVerificationDocument } from '../verificationData';
 
-const STATUS_COPY: Record<VerificationStatus, { word: string; line: string; icon: keyof typeof Feather.glyphMap }> = {
-  pending: {
-    word: 'Pending',
-    line: 'Our team reviews manually — no automated checks.',
-    icon: 'clock',
+const STATUS_COPY: Record<'de' | 'en', Record<VerificationStatus, { word: string; line: string; icon: keyof typeof Feather.glyphMap }>> = {
+  de: {
+    pending: { word: 'In Prüfung', line: 'Unser Team prüft deine Unterlagen persönlich.', icon: 'clock' },
+    approved: { word: 'Verifiziert', line: 'Dein Profil ist für Kunden als verifiziert sichtbar.', icon: 'shield' },
+    rejected: { word: 'Abgelehnt', line: 'Bitte kontaktiere unseren Support.', icon: 'x-circle' },
   },
-  approved: {
-    word: 'Approved',
-    line: 'You appear as verified across Privelier.',
-    icon: 'shield',
-  },
-  rejected: {
-    word: 'Declined',
-    line: 'We could not verify your documents — please contact us.',
-    icon: 'x-circle',
+  en: {
+    pending: { word: 'Pending', line: 'Our team reviews your documents in person.', icon: 'clock' },
+    approved: { word: 'Approved', line: 'Your profile appears as verified to customers.', icon: 'shield' },
+    rejected: { word: 'Declined', line: 'Please contact our support team.', icon: 'x-circle' },
   },
 };
 
@@ -108,7 +103,10 @@ export default function VerifyScreen() {
   const handleUpload = useCallback(
     async (docType: VerificationDocType) => {
       if (!userId) {
-        Alert.alert('One moment', 'Your profile is still loading — try again shortly.');
+        Alert.alert(
+          language === 'de' ? 'Einen Moment' : 'One moment',
+          language === 'de' ? 'Dein Profil wird noch geladen. Versuch es gleich noch einmal.' : 'Your profile is still loading. Try again shortly.'
+        );
         return;
       }
       // Belt-and-suspenders: the rows are already disabled while a doc uploads.
@@ -116,9 +114,12 @@ export default function VerifyScreen() {
 
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
-        Alert.alert('Photo access needed', 'Allow photo access in Settings to upload your documents.', [
-          { text: 'Not now', style: 'cancel' },
-          { text: 'Open Settings', onPress: () => void Linking.openSettings() },
+        Alert.alert(
+          language === 'de' ? 'Zugriff auf Fotos nötig' : 'Photo access needed',
+          language === 'de' ? 'Erlaube den Fotozugriff in den Einstellungen, um deine Unterlagen hochzuladen.' : 'Allow photo access in Settings to upload your documents.',
+          [
+          { text: language === 'de' ? 'Später' : 'Not now', style: 'cancel' },
+          { text: language === 'de' ? 'Einstellungen öffnen' : 'Open Settings', onPress: () => void Linking.openSettings() },
         ]);
         return;
       }
@@ -137,12 +138,12 @@ export default function VerifyScreen() {
         // never refetches (no fabricated "uploaded" state).
         const uploaded = await uploadVerificationDocument(userId, docType, asset.uri, asset.mimeType);
         if (uploaded.status !== 'ok') {
-          Alert.alert('Upload failed', uploaded.message);
+          Alert.alert(language === 'de' ? 'Upload fehlgeschlagen' : 'Upload failed', uploaded.message);
           return;
         }
         const submitted = await submitVerificationDocument(userId, docType, uploaded.path);
         if (submitted.status !== 'ok') {
-          Alert.alert('Upload failed', submitted.message);
+          Alert.alert(language === 'de' ? 'Upload fehlgeschlagen' : 'Upload failed', submitted.message);
           return;
         }
         await load();
@@ -150,7 +151,7 @@ export default function VerifyScreen() {
         setUploadingDoc(null);
       }
     },
-    [userId, uploadingDoc, load]
+    [userId, uploadingDoc, load, language]
   );
 
   const statusColor =
@@ -161,10 +162,10 @@ export default function VerifyScreen() {
         : colors.accentText;
   const hasAnyDocument = Boolean(request?.id_image_url || request?.license_image_url);
   const statusCopy = status === 'pending' && !hasAnyDocument
-    ? { word: 'Documents needed', line: 'Upload both documents to enter manual review.', icon: 'upload' as const }
+    ? { word: language === 'de' ? 'Unterlagen fehlen' : 'Documents needed', line: language === 'de' ? 'Lade beide Dokumente für die manuelle Prüfung hoch.' : 'Upload both documents to enter manual review.', icon: 'upload' as const }
     : status === 'approved'
       ? { word: language === 'de' ? 'Verifiziert' : 'Verified', line: formatVerifiedSince(request?.reviewed_at, language), icon: 'shield' as const }
-      : status ? STATUS_COPY[status] : null;
+      : status ? STATUS_COPY[language][status] : null;
 
   const applyRedeemCode = () => {
     setRedeemFeedback(
@@ -188,10 +189,10 @@ export default function VerifyScreen() {
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-          Verification
+          {language === 'de' ? 'Verifizierung' : 'Verification'}
         </Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-          A quiet, manual review by our team.
+          {language === 'de' ? 'Unser Team prüft deine Unterlagen persönlich.' : 'A quiet, manual review by our team.'}
         </Text>
 
         {loading ? (
@@ -204,7 +205,7 @@ export default function VerifyScreen() {
         ) : error ? (
           <Notice testID="barber-verify-error" message={error} style={styles.noticeMargins}>
             <Pressable onPress={() => void load()} accessibilityRole="button" testID="barber-verify-retry" style={styles.noticeAction}>
-              <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}>Try again</Text>
+              <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}>{language === 'de' ? 'Erneut versuchen' : 'Try again'}</Text>
             </Pressable>
           </Notice>
         ) : status && statusCopy ? (
@@ -228,7 +229,8 @@ export default function VerifyScreen() {
               <>
                 <View style={styles.docs}>
                   <DocRow
-                    label="Government-issued ID"
+                    label={language === 'de' ? 'Amtlicher Lichtbildausweis' : 'Government-issued ID'}
+                    language={language}
                     uploaded={Boolean(request?.id_image_url)}
                     uploading={uploadingDoc === 'id'}
                     disabled={uploadingDoc !== null}
@@ -236,7 +238,8 @@ export default function VerifyScreen() {
                     testID="barber-verify-doc-id"
                   />
                   <DocRow
-                    label="Barber licence"
+                    label={language === 'de' ? 'Barber-Lizenz' : 'Barber licence'}
+                    language={language}
                     uploaded={Boolean(request?.license_image_url)}
                     uploading={uploadingDoc === 'license'}
                     disabled={uploadingDoc !== null}
@@ -246,21 +249,22 @@ export default function VerifyScreen() {
                 </View>
 
                 <Text style={[styles.footnote, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                  Documents are stored privately. No automated scanning, no biometrics — a human on
-                  our team reviews them.
+                  {language === 'de'
+                    ? 'Deine Unterlagen werden privat gespeichert und von unserem Team persönlich geprüft. Es gibt keine automatische Erkennung und keine biometrische Verarbeitung.'
+                    : 'Documents are stored privately and reviewed by our team. There is no automated scanning or biometric processing.'}
                 </Text>
               </>
             ) : null}
             {status === 'rejected' ? (
               <Pressable onPress={() => void Linking.openURL('mailto:privelier@outlook.com?subject=Verification%20help')} accessibilityRole="link" testID="barber-verify-contact" style={styles.contactAction}>
-                <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}>Contact verification support</Text>
+                <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}>{language === 'de' ? 'Verifizierungssupport kontaktieren' : 'Contact verification support'}</Text>
               </Pressable>
             ) : null}
 
             <View style={styles.membership} testID="barber-membership">
               <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{language === 'de' ? 'Privelier Mitgliedschaft' : 'Privelier membership'}</Text>
               <GlassSurface style={styles.membershipCard} testID="barber-membership-card">
-                <Text style={[styles.membershipEyebrow, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>{language === 'de' ? 'MONATLICHE MITGLIEDSCHAFT' : 'MONTHLY MEMBERSHIP'}</Text>
+                <Text style={[styles.membershipEyebrow, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>{language === 'de' ? 'Monatliche Mitgliedschaft' : 'Monthly membership'}</Text>
                 <View style={styles.priceRow}>
                   <Text style={[styles.price, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
                     {formatEuroPrice(35, language)}
@@ -277,14 +281,14 @@ export default function VerifyScreen() {
                     placeholderTextColor={colors.textSecondary}
                     autoCapitalize="characters"
                     autoCorrect={false}
-                    accessibilityLabel="Membership redeem code"
+                    accessibilityLabel={language === 'de' ? 'Mitgliedschaftscode' : 'Membership redeem code'}
                     testID="barber-membership-code"
                     style={[styles.codeInput, { color: colors.textPrimary, borderColor: colors.border, fontFamily: fonts.body }]}
                   />
                   <Pressable
                     onPress={applyRedeemCode}
                     accessibilityRole="button"
-                    accessibilityLabel="Check redeem code"
+                    accessibilityLabel={language === 'de' ? 'Code prüfen' : 'Check redeem code'}
                     testID="barber-membership-code-apply"
                     style={({ pressed }) => [styles.codeButton, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? pressOpacity.soft : 1 }]}
                   >
@@ -302,7 +306,7 @@ export default function VerifyScreen() {
                   onPress={continueToPayment}
                   disabled={!paymentMethod}
                   accessibilityRole="button"
-                  accessibilityLabel="Continue with selected payment method"
+                  accessibilityLabel={language === 'de' ? `Mit ${paymentMethod === 'apple' ? 'Apple Pay' : 'Google Pay'} fortfahren` : `Continue with ${paymentMethod === 'apple' ? 'Apple Pay' : 'Google Pay'}`}
                   accessibilityState={{ disabled: !paymentMethod }}
                   testID="barber-membership-continue"
                   style={({ pressed }) => [styles.continueButton, { backgroundColor: paymentMethod ? colors.accent : colors.border, opacity: pressed ? pressOpacity.soft : 1 }]}
@@ -352,6 +356,7 @@ function formatEuroPrice(amount: number, language: 'de' | 'en'): string {
 
 function DocRow({
   label,
+  language,
   uploaded,
   uploading,
   disabled,
@@ -359,6 +364,7 @@ function DocRow({
   testID,
 }: {
   label: string;
+  language: 'de' | 'en';
   uploaded: boolean;
   uploading: boolean;
   disabled: boolean;
@@ -374,7 +380,7 @@ function DocRow({
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={`${label}. ${uploaded ? language === 'de' ? 'Hochgeladen' : 'Uploaded' : language === 'de' ? 'Noch nicht hochgeladen' : 'Not uploaded'}. ${uploading ? language === 'de' ? 'Wird hochgeladen' : 'Uploading' : language === 'de' ? 'Zum Hochladen antippen' : 'Tap to upload'}`}
       accessibilityState={{ disabled, busy: uploading }}
       testID={testID}
       style={({ pressed }) => [
@@ -396,7 +402,7 @@ function DocRow({
         <View style={styles.docStateRow}>
           {uploaded ? <Feather name="check" size={12} color={colors.successText} /> : null}
           <Text style={[styles.docState, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-            {uploaded ? 'Uploaded' : 'Not uploaded'}
+            {uploaded ? language === 'de' ? 'Hochgeladen' : 'Uploaded' : language === 'de' ? 'Nicht hochgeladen' : 'Not uploaded'}
           </Text>
         </View>
       </View>
@@ -404,7 +410,7 @@ function DocRow({
         <View style={styles.docAction} testID={`${testID}-uploading`}>
           <ActivityIndicator size="small" color={colors.accent} />
           <Text style={[styles.docActionText, { color: colors.accentText, fontFamily: fonts.body }]}>
-            Uploading…
+            {language === 'de' ? 'Wird hochgeladen…' : 'Uploading…'}
           </Text>
         </View>
       ) : (
@@ -415,7 +421,7 @@ function DocRow({
         <View style={styles.docAction}>
           <Feather name="upload" size={14} color={colors.textSecondary} />
           <Text style={[styles.docActionText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-            {uploaded ? 'Replace' : 'Upload'}
+            {uploaded ? language === 'de' ? 'Ersetzen' : 'Replace' : language === 'de' ? 'Hochladen' : 'Upload'}
           </Text>
         </View>
       )}

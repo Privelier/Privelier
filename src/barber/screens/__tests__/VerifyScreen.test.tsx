@@ -23,6 +23,7 @@ import VerifyScreen from '../VerifyScreen';
 import { fetchOwnProfile } from '../../../auth/authService';
 import { fetchOwnBarberProfile, fetchOwnVerificationRequest } from '../../profileData';
 import { submitVerificationDocument, uploadVerificationDocument } from '../../verificationData';
+import { getAppLanguage } from '../../../shared/locale';
 
 jest.mock('expo-image-picker', () => ({
   requestMediaLibraryPermissionsAsync: jest.fn(),
@@ -76,6 +77,7 @@ jest.mock('../../verificationData', () => ({
   uploadVerificationDocument: jest.fn(),
   submitVerificationDocument: jest.fn(),
 }));
+jest.mock('../../../shared/locale', () => ({ getAppLanguage: jest.fn(() => 'en') }));
 
 // react-native-safe-area-context is not in the jest transform allow-list;
 // mock its wrappers to a transparent passthrough (the screen's own inner Views
@@ -96,6 +98,7 @@ const mockFetchBarberProfile = fetchOwnBarberProfile as jest.Mock;
 const mockFetchRequest = fetchOwnVerificationRequest as jest.Mock;
 const mockUpload = uploadVerificationDocument as jest.Mock;
 const mockSubmit = submitVerificationDocument as jest.Mock;
+const mockGetAppLanguage = getAppLanguage as jest.MockedFunction<typeof getAppLanguage>;
 
 /** A never-uploaded verification_requests row (both columns still null). */
 const EMPTY_REQUEST = {
@@ -112,6 +115,7 @@ let alertSpy: jest.SpyInstance;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockGetAppLanguage.mockReturnValue('en');
   alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 
   // Default happy load: a signed-in barber, pending status, no docs yet.
@@ -153,6 +157,21 @@ describe('VerifyScreen', () => {
     expect(screen.getByTestId('barber-verify-doc-id')).toBeTruthy();
     expect(screen.getByTestId('barber-verify-doc-license')).toBeTruthy();
     expect(screen.getByTestId('barber-verify-status')).toBeTruthy();
+  });
+
+  it('localizes verification status, document actions, and membership controls in German', async () => {
+    mockGetAppLanguage.mockReturnValue('de');
+    await renderLoaded();
+
+    expect(screen.getByText('Verifizierung')).toBeTruthy();
+    expect(screen.getByText('Unterlagen fehlen')).toBeTruthy();
+    expect(screen.getByText('Amtlicher Lichtbildausweis')).toBeTruthy();
+    expect(screen.getAllByText('Nicht hochgeladen')).toHaveLength(2);
+    expect(screen.getByTestId('barber-membership-code').props.accessibilityLabel).toBe('Mitgliedschaftscode');
+
+    await fireEvent.changeText(screen.getByTestId('barber-membership-code'), 'WILLKOMMEN');
+    await fireEvent.press(screen.getByTestId('barber-membership-code-apply'));
+    expect(screen.getByTestId('barber-membership-code-feedback').props.children).toMatch(/Es wurde kein Rabatt angewendet/);
   });
 
   it('collapses document controls after approval and shows the real review date', async () => {
