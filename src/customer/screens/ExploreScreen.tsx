@@ -12,13 +12,10 @@
  * read failed is HIDDEN rather than silently filtering everyone out — a
  * failed availability read must not render as "no one is available today".
  *
- * Map view (map-integration follow-up, 2026-07-15): three-way branch under
- * one customer-explore-map-area wrapper — (a) native module absent (the
- * pre-Mapbox dev client): calm "arrives with the next app update" state;
- * (b) native present but zero pins: honest map-empty state (no pointless
- * globe, and never a fake pin — D4); (c) the real ExploreMapView, lazily
- * require()d because @rnmapbox/maps THROWS at import when native is absent.
- * Pins derive from the FILTERED list, so chips govern map and list alike.
+ * Map view: the native SDK provides the interactive view in development
+ * builds; Expo Go uses a cached Mapbox Static Images preview from safe display
+ * coordinates. Empty and failed states stay explicit, and chips govern both
+ * map and list alike.
  *
  * Mount-load pattern mirrors DiscoverScreen (deferred plain useEffect —
  * component-testable, same set-state-in-effect rationale).
@@ -35,6 +32,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -42,11 +40,12 @@ import { fetchOwnProfile } from '../../auth/authService';
 import { useTheme } from '../../theme/useTheme';
 import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
+import { GlassSurface } from '../../shared/components/GlassSurface';
 import type { AvailabilityRow, BarberDirectoryRow, ServiceRow } from '../../types';
 import { listBarbersByCity, listServicesForBarberIds } from '../discoveryData';
 import { listAvailabilityForBarberIds } from '../availabilityData';
 import { applyExploreFilter, toMapPin, type ExploreFilterKey } from '../exploreData';
-import { hasMapboxPublicToken, isMapNativeAvailable } from '../mapRuntime';
+import { buildStaticMapUrl, hasMapboxPublicToken, isMapNativeAvailable } from '../mapRuntime';
 import { getAppLanguage } from '../../shared/locale';
 import BarberCard from '../components/BarberCard';
 import type ExploreMapViewType from '../components/ExploreMapView';
@@ -61,7 +60,7 @@ type Props = CompositeScreenProps<
 type ViewMode = 'list' | 'map';
 
 export default function ExploreScreen({ navigation }: Props) {
-  const { colors, fonts } = useTheme();
+  const { colors, fonts, isDark } = useTheme();
   const isGerman = getAppLanguage() === 'de';
   const chipLabels: Record<ExploreFilterKey, string> = isGerman
     ? { all: 'Alle', today: 'Heute verfügbar', under100: 'Unter 100 €', verified: 'Verifiziert' }
@@ -76,6 +75,7 @@ export default function ExploreScreen({ navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<ExploreFilterKey>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [failedStaticMapUrl, setFailedStaticMapUrl] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -190,6 +190,11 @@ export default function ExploreScreen({ navigation }: Props) {
   // lazily, and only when the native module reports present.
   const mapAvailable = useMemo(() => isMapNativeAvailable(), []);
   const mapTokenAvailable = hasMapboxPublicToken();
+  const staticMapUrl = useMemo(
+    () => buildStaticMapUrl(pins, isDark),
+    [pins, isDark]
+  );
+  const staticMapFailed = staticMapUrl !== null && failedStaticMapUrl === staticMapUrl;
   const ExploreMapView = useMemo<typeof ExploreMapViewType | null>(() => {
     if (!mapAvailable) return null;
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -197,7 +202,7 @@ export default function ExploreScreen({ navigation }: Props) {
       .default;
   }, [mapAvailable]);
 
-  const mapFallback = ExploreMapView === null
+  const baseMapFallback = ExploreMapView === null
     ? {
         testID: 'customer-explore-map-soon',
         icon: 'map' as const,
@@ -227,6 +232,28 @@ export default function ExploreScreen({ navigation }: Props) {
               : isGerman ? 'Keine Barber passen zu diesem Filter.' : 'No barbers match this filter.',
           }
         : null;
+
+  const mapFallback = baseMapFallback?.testID === 'customer-explore-map-soon'
+    ? {
+        ...baseMapFallback,
+        title: !mapTokenAvailable
+          ? isGerman ? 'Mapbox ist nicht eingerichtet' : 'Mapbox is not configured'
+          : pins.length === 0
+            ? isGerman ? 'Noch keine Barber auf der Karte' : 'No barbers on the map yet'
+            : isGerman ? 'Mapbox Kartenvorschau' : 'Mapbox map preview',
+        message: !mapTokenAvailable
+          ? isGerman ? 'Diese Version enthält noch keinen Mapbox-Schlüssel. Du kannst stattdessen die Liste nutzen.' : 'Mapbox is not configured in this build. You can use the list instead.'
+          : pins.length === 0
+            ? filtered.length > 0
+              ? isGerman ? 'Barber erscheinen hier, sobald ihr Standort hinterlegt ist. Nutze bis dahin die Liste.' : 'Barbers appear here once they add a location. Use the list meanwhile.'
+              : isGerman ? 'Keine Barber passen zu diesem Filter.' : 'No barbers match this filter.'
+            : staticMapFailed
+          ? isGerman ? 'Die Karte konnte nicht geladen werden. Versuch es erneut oder öffne die Liste.' : 'The map could not load. Try again or switch to the list.'
+          : staticMapUrl
+            ? isGerman ? 'Die Vorschau zeigt Barber in deiner Umgebung. Zum Verschieben und Zoomen nutze die Privelier Testversion.' : 'This preview shows barbers nearby. Use the Privelier development build to pan and zoom.'
+            : isGerman ? 'Die Kartenvorschau ist nicht verfügbar. Du kannst stattdessen die Liste nutzen.' : 'The map preview is unavailable. You can use the list instead.',
+      }
+    : baseMapFallback;
 
   const selectChip = useCallback((key: ExploreFilterKey) => {
     setFilter((prev) => (prev === key && key !== 'all' ? 'all' : key));
@@ -329,7 +356,20 @@ export default function ExploreScreen({ navigation }: Props) {
       ) : viewMode === 'map' ? (
         <View style={styles.mapArea} testID="customer-explore-map-area">
           {mapFallback ? (
-            <View style={styles.mapSoon} testID={mapFallback.testID}>
+            <View style={styles.mapFallbackArea} testID={mapFallback.testID}>
+              {staticMapUrl && !staticMapFailed ? (
+                <Image
+                  key={staticMapUrl}
+                  source={{ uri: staticMapUrl }}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                  accessibilityLabel={isGerman ? `Mapbox Karte mit ${pins.length} Barber-Standorten` : `Mapbox map with ${pins.length} barber locations`}
+                  testID="customer-explore-static-map"
+                  onError={() => setFailedStaticMapUrl(staticMapUrl)}
+                  style={styles.staticMapImage}
+                />
+              ) : null}
+              <GlassSurface style={styles.mapSoon} testID="customer-explore-map-preview-card">
               <Feather name={mapFallback.icon} size={22} color={colors.textSecondary} />
               <Text style={[styles.mapSoonTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
                 {mapFallback.title}
@@ -337,6 +377,23 @@ export default function ExploreScreen({ navigation }: Props) {
               <Text style={[styles.mapSoonBlurb, { color: colors.textSecondary, fontFamily: fonts.body }]}>
                 {mapFallback.message}
               </Text>
+              {staticMapFailed ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={isGerman ? 'Karte erneut laden' : 'Retry map'}
+                  testID="customer-explore-map-retry"
+                  onPress={() => setFailedStaticMapUrl(null)}
+                  style={({ pressed }) => [
+                    styles.mapListAction,
+                    { borderColor: colors.border },
+                    pressed ? { opacity: pressOpacity.soft } : null,
+                  ]}
+                >
+                  <Text style={[styles.mapListActionText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
+                    {isGerman ? 'Erneut laden' : 'Retry map'}
+                  </Text>
+                </Pressable>
+              ) : null}
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={listActionLabel}
@@ -352,6 +409,7 @@ export default function ExploreScreen({ navigation }: Props) {
                   {isGerman ? 'Zur Liste' : 'Show list'}
                 </Text>
               </Pressable>
+              </GlassSurface>
             </View>
           ) : ExploreMapView ? (
             <ExploreMapView
@@ -434,12 +492,15 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 14, textAlign: 'center', marginTop: 48, paddingHorizontal: 24 },
 
   mapArea: { flex: 1, marginTop: 16 },
+  mapFallbackArea: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
+  staticMapImage: { ...StyleSheet.absoluteFill },
   mapSoon: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 40,
-    paddingBottom: 96,
+    width: '100%',
+    maxWidth: 420,
+    paddingHorizontal: 24,
+    paddingVertical: 24,
     gap: 10,
   },
   mapSoonTitle: { fontSize: 18, textAlign: 'center' },
