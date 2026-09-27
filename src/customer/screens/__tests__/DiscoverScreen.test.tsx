@@ -3,8 +3,10 @@ import type { BarberDirectoryRow, ServiceRow, UsersRow } from '../../../types';
 import { fetchOwnProfile } from '../../../auth/authService';
 import { listBarbersByCity, listServicesForBarberIds } from '../../discoveryData';
 import DiscoverScreen from '../DiscoverScreen';
+import { getAppLanguage } from '../../../shared/locale';
 
 jest.mock('../../../auth/authService', () => ({ fetchOwnProfile: jest.fn() }));
+jest.mock('../../../shared/locale', () => ({ getAppLanguage: jest.fn(() => 'en') }));
 jest.mock('../../../shared/components/NotificationBell', () => {
   const React = jest.requireActual('react');
   const { Pressable } = jest.requireActual('react-native');
@@ -61,6 +63,7 @@ jest.mock('react-native-safe-area-context', () => {
 const mockFetchOwnProfile = fetchOwnProfile as jest.Mock;
 const mockListBarbers = listBarbersByCity as jest.Mock;
 const mockListServices = listServicesForBarberIds as jest.Mock;
+const mockGetAppLanguage = getAppLanguage as jest.MockedFunction<typeof getAppLanguage>;
 
 const profile: UsersRow = {
   id: 'customer-1',
@@ -121,6 +124,7 @@ const services: ServiceRow[] = [
 describe('DiscoverScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGetAppLanguage.mockReturnValue('en');
   });
 
   async function renderDiscovery() {
@@ -153,6 +157,16 @@ describe('DiscoverScreen', () => {
     expect(screen.getByTestId('customer-home-brand-message-2')).toBeTruthy();
     expect(screen.getByTestId('customer-home-brand-message-3')).toBeTruthy();
     expect(screen.getByTestId('customer-home-brand-message-4')).toBeTruthy();
+  });
+
+  it('localizes featured barber cards and describes missing ratings without implying the barber is new', async () => {
+    mockGetAppLanguage.mockReturnValue('de');
+    await renderDiscovery();
+
+    const unratedCard = screen.getByTestId('customer-home-barber-c');
+    expect(unratedCard.props.accessibilityLabel).toContain('Noch keine Bewertungen');
+    expect(screen.getAllByText('Noch keine Bewertungen').length).toBeGreaterThan(0);
+    expect(unratedCard.props.accessibilityLabel).toContain('Verifizierter Barber');
   });
 
   it('keeps the notification center reachable from Discover', async () => {

@@ -18,8 +18,10 @@ import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/useTheme';
 import { numericText } from '../../theme/typography';
 import { pressOpacity } from '../../theme/motion';
-import { HAIRLINE, radius } from '../../theme/spacing';
+import { radius } from '../../theme/spacing';
 import { Avatar } from '../../shared/components/Avatar';
+import { GlassSurface } from '../../shared/components/GlassSurface';
+import { getAppLanguage } from '../../shared/locale';
 import type { BarberDirectoryRow, ServiceRow } from '../../types';
 import { formatMoney } from '../format';
 
@@ -56,7 +58,7 @@ function CardImage({ barber, aspectRatio }: { barber: BarberDirectoryRow; aspect
   );
 }
 
-function RatingLine({ rating, size }: { rating: number; size: number }) {
+function RatingLine({ rating, size, language }: { rating: number; size: number; language: 'de' | 'en' }) {
   const { colors, fonts } = useTheme();
   if (rating > 0) {
     return (
@@ -71,15 +73,16 @@ function RatingLine({ rating, size }: { rating: number; size: number }) {
   return (
     <Text
       style={[{ fontSize: size + 1, color: colors.textSecondary, fontFamily: fonts.body }]}
-      accessibilityLabel="No ratings yet"
+      accessibilityLabel={language === 'de' ? 'Noch keine Bewertungen' : 'No reviews yet'}
     >
-      New
+      {language === 'de' ? 'Noch keine Bewertungen' : 'No reviews yet'}
     </Text>
   );
 }
 
 export default function BarberCard({ barber, services, variant = 'wide', featured = false, onPress }: Props) {
   const { colors, fonts } = useTheme();
+  const language = getAppLanguage();
   const from = startingPrice(services);
   const specialties = services
     .slice(0, 2)
@@ -88,9 +91,11 @@ export default function BarberCard({ barber, services, variant = 'wide', feature
   const cardLabel = [
     barber.name,
     barber.city,
-    barber.rating > 0 ? `rated ${barber.rating.toFixed(1)} out of 5` : 'no ratings yet',
-    from !== null ? `services from ${formatMoney(from)}` : null,
-    'verified barber',
+    barber.rating > 0
+      ? language === 'de' ? `Bewertung ${barber.rating.toFixed(1)} von 5` : `rated ${barber.rating.toFixed(1)} out of 5`
+      : language === 'de' ? 'Noch keine Bewertungen' : 'No reviews yet',
+    from !== null ? language === 'de' ? `Leistungen ab ${formatMoney(from)}` : `services from ${formatMoney(from)}` : null,
+    language === 'de' ? 'Verifizierter Barber' : 'Verified barber',
   ].filter(Boolean).join(', ');
 
   if (variant === 'compact') {
@@ -101,43 +106,44 @@ export default function BarberCard({ barber, services, variant = 'wide', feature
         accessibilityLabel={cardLabel}
         accessibilityHint="Opens the barber profile"
         testID={`customer-home-barber-${barber.id}`}
-      style={({ pressed }) => [styles.compact, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? pressOpacity.soft : 1 }]}
+      style={({ pressed }) => [styles.compactPressable, { opacity: pressed ? pressOpacity.soft : 1 }]}
       >
-        <View pointerEvents="none" style={[styles.surfaceHighlight, { backgroundColor: colors.border }]} />
-        <CardImage barber={barber} aspectRatio={4 / 5} />
-        <View style={styles.compactMetaRow}>
-          <View style={styles.compactMetaLeft}>
-            <View style={styles.nameRow}>
-              <Text
-                numberOfLines={1}
-                style={[styles.compactName, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}
-              >
-                {barber.name}
-              </Text>
-              <MaterialCommunityIcons name="check-decagram" size={14} color={colors.accent} />
-            </View>
-            <View style={styles.locationRow}>
-              <Feather name="map-pin" size={11} color={colors.textSecondary} />
-              <Text
-                numberOfLines={1}
-                style={[styles.compactLocation, { color: colors.textSecondary, fontFamily: fonts.body }]}
-              >
-                {barber.city ?? 'City not set'}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.compactMetaRight}>
-            <RatingLine rating={barber.rating} size={11} />
-            {from !== null ? (
-              <Text style={[styles.compactPrice, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                from{' '}
-                <Text style={[numericText, { color: colors.textPrimary }]}>
-                  {formatMoney(from)}
+        <GlassSurface style={styles.compact}>
+          <CardImage barber={barber} aspectRatio={4 / 5} />
+          <View style={styles.compactMetaRow}>
+            <View style={styles.compactMetaLeft}>
+              <View style={styles.nameRow}>
+                <Text
+                  numberOfLines={1}
+                  style={[styles.compactName, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}
+                >
+                  {barber.name}
                 </Text>
-              </Text>
-            ) : null}
+                <MaterialCommunityIcons name="check-decagram" size={14} color={colors.accent} />
+              </View>
+              {barber.city ? <View style={styles.locationRow}>
+                <Feather name="map-pin" size={11} color={colors.textSecondary} />
+                <Text
+                  numberOfLines={1}
+                  style={[styles.compactLocation, { color: colors.textSecondary, fontFamily: fonts.body }]}
+                >
+                  {barber.city}
+                </Text>
+              </View> : null}
+            </View>
+            <View style={styles.compactMetaRight}>
+              <RatingLine rating={barber.rating} size={11} language={language} />
+              {from !== null ? (
+                <Text style={[styles.compactPrice, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                  {language === 'de' ? 'ab' : 'from'}{' '}
+                  <Text style={[numericText, { color: colors.textPrimary }]}>
+                    {formatMoney(from)}
+                  </Text>
+                </Text>
+              ) : null}
+            </View>
           </View>
-        </View>
+        </GlassSurface>
       </Pressable>
     );
   }
@@ -149,56 +155,57 @@ export default function BarberCard({ barber, services, variant = 'wide', feature
       accessibilityLabel={cardLabel}
       accessibilityHint="Opens the barber profile"
       testID={`customer-home-barber-${barber.id}`}
-      style={({ pressed }) => [styles.wide, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? pressOpacity.soft : 1 }]}
+      style={({ pressed }) => [styles.widePressable, { opacity: pressed ? pressOpacity.soft : 1 }]}
     >
-      <View pointerEvents="none" style={[styles.surfaceHighlight, { backgroundColor: colors.border }]} />
-      <CardImage barber={barber} aspectRatio={16 / 10} />
-      <View style={styles.wideMetaRow}>
-        <View style={styles.wideMetaLeft}>
-          {featured ? (
-            <Text style={[styles.editorsPick, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
-              Featured barber
-            </Text>
-          ) : null}
-          <View style={styles.nameRow}>
+      <GlassSurface style={styles.wide}>
+        <CardImage barber={barber} aspectRatio={16 / 10} />
+        <View style={styles.wideMetaRow}>
+          <View style={styles.wideMetaLeft}>
+            {featured ? (
+              <Text style={[styles.editorsPick, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
+                {language === 'de' ? 'Privelier Auswahl' : 'Featured barber'}
+              </Text>
+            ) : null}
+            <View style={styles.nameRow}>
+              <Text
+                numberOfLines={1}
+                style={[styles.wideName, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}
+              >
+                {barber.name}
+              </Text>
+              <MaterialCommunityIcons name="check-decagram" size={16} color={colors.accent} />
+            </View>
             <Text
               numberOfLines={1}
-              style={[styles.wideName, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}
+              style={[styles.wideMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}
             >
-              {barber.name}
+              {[barber.city, specialties].filter(Boolean).join(' · ') || (language === 'de' ? 'Noch keine Leistungen' : 'No services listed')}
             </Text>
-            <MaterialCommunityIcons name="check-decagram" size={16} color={colors.accent} />
           </View>
-          <Text
-            numberOfLines={1}
-            style={[styles.wideMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}
-          >
-            {[barber.city, specialties].filter(Boolean).join(' · ') || 'City not set'}
-          </Text>
-        </View>
-        <View style={styles.wideMetaRight}>
-          <RatingLine rating={barber.rating} size={13} />
-          {from !== null ? (
-            <Text style={[styles.widePrice, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-              from{' '}
-              <Text style={[numericText, { color: colors.textPrimary }]}>
-                {formatMoney(from)}
+          <View style={styles.wideMetaRight}>
+            <RatingLine rating={barber.rating} size={13} language={language} />
+            {from !== null ? (
+              <Text style={[styles.widePrice, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                {language === 'de' ? 'ab' : 'from'}{' '}
+                <Text style={[numericText, { color: colors.textPrimary }]}>
+                  {formatMoney(from)}
+                </Text>
               </Text>
-            </Text>
-          ) : null}
+            ) : null}
+          </View>
         </View>
-      </View>
+      </GlassSurface>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   image: { width: '100%', borderRadius: 0 },
-  surfaceHighlight: { position: 'absolute', top: 0, left: 0, right: 0, height: HAIRLINE, zIndex: 1 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4, justifyContent: 'flex-end' },
 
-  compact: { width: 256, position: 'relative', overflow: 'hidden', borderWidth: HAIRLINE, borderRadius: radius.lg },
+  compactPressable: { alignSelf: 'flex-start' },
+  compact: { width: 256 },
   compactMetaRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8, marginTop: 12, paddingHorizontal: 12, paddingBottom: 14 },
   compactMetaLeft: { flexShrink: 1, minWidth: 0 },
   compactMetaRight: { alignItems: 'flex-end' },
@@ -207,7 +214,8 @@ const styles = StyleSheet.create({
   compactLocation: { fontSize: 12 },
   compactPrice: { fontSize: 12, marginTop: 3 },
 
-  wide: { position: 'relative', overflow: 'hidden', borderWidth: HAIRLINE, borderRadius: radius.xl },
+  widePressable: { width: '100%' },
+  wide: { width: '100%', borderRadius: radius.xl },
   wideMetaRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginTop: 12, paddingHorizontal: 16, paddingBottom: 16 },
   wideMetaLeft: { flexShrink: 1, minWidth: 0 },
   wideMetaRight: { alignItems: 'flex-end' },
