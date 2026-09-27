@@ -16,10 +16,12 @@
  * next to their TextInput.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import 'react-native-get-random-values';
 
 /** A not-yet-confirmed send — local text only, never a fabricated row. */
 export interface PendingSend {
   key: number;
+  id: string;
   text: string;
   failed: boolean;
   /**
@@ -41,7 +43,7 @@ export type SendOutcome<TRow> =
 
 export interface UseSendQueueArgs<TRow> {
   /** Performs the actual write; resolves ok with the authoritative row. */
-  send: (text: string) => Promise<SendOutcome<TRow>>;
+  send: (text: string, messageId: string) => Promise<SendOutcome<TRow>>;
   /** Called with the authoritative row on success — merge it into the list. */
   onSent: (row: TRow) => void;
 }
@@ -53,6 +55,15 @@ export interface SendQueue {
   submit: (rawText: string) => void;
   /** Re-fire a failed entry. Synchronously no-ops while that key is in flight. */
   retry: (key: number) => void;
+}
+
+function createMessageId(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
 export function useSendQueue<TRow>({ send, onSent }: UseSendQueueArgs<TRow>): SendQueue {
@@ -75,10 +86,10 @@ export function useSendQueue<TRow>({ send, onSent }: UseSendQueueArgs<TRow>): Se
     pendingRef.current = pending;
   }, [pending]);
 
-  const runSend = useCallback(async (key: number, text: string) => {
+  const runSend = useCallback(async (key: number, id: string, text: string) => {
     if (inFlightRef.current.has(key)) return; // synchronous double-fire guard
     inFlightRef.current.add(key);
-    const result = await sendRef.current(text);
+    const result = await sendRef.current(text, id);
     inFlightRef.current.delete(key);
     if (result.status === 'ok') {
       setPending((prev) => prev.filter((p) => p.key !== key));
@@ -97,8 +108,9 @@ export function useSendQueue<TRow>({ send, onSent }: UseSendQueueArgs<TRow>): Se
       const text = rawText.trim();
       if (text.length === 0) return;
       const key = nextKeyRef.current++;
-      setPending((prev) => [...prev, { key, text, failed: false }]);
-      void runSend(key, text);
+      const id = createMessageId();
+      setPending((prev) => [...prev, { key, id, text, failed: false }]);
+      void runSend(key, id, text);
     },
     [runSend]
   );
@@ -113,7 +125,7 @@ export function useSendQueue<TRow>({ send, onSent }: UseSendQueueArgs<TRow>): Se
       setPending((prev) =>
         prev.map((p) => (p.key === key ? { ...p, failed: false, failureMessage: undefined } : p))
       );
-      void runSend(key, entry.text);
+      void runSend(key, entry.id, entry.text);
     },
     [runSend]
   );

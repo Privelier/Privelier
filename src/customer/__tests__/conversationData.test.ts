@@ -28,6 +28,7 @@ interface ChainableBuilder {
   limit: jest.Mock;
   insert: jest.Mock;
   single: jest.Mock;
+  maybeSingle: jest.Mock;
   then: (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) => Promise<unknown>;
 }
 
@@ -40,6 +41,7 @@ function chainable(result: unknown) {
     limit: jest.fn(() => obj),
     insert: jest.fn(() => obj),
     single: jest.fn(() => Promise.resolve(result)),
+    maybeSingle: jest.fn(() => Promise.resolve(result)),
     then: (resolve, reject) => Promise.resolve(result).then(resolve, reject),
   };
   return obj;
@@ -183,9 +185,10 @@ describe('sendMessage', () => {
     const builder = chainable({ data: created, error: null });
     mockFrom.mockReturnValueOnce(builder);
 
-    const result = await sendMessage('r1', '  Hello there  ');
+    const result = await sendMessage('r1', '  Hello there  ', 'm9');
 
     expect(builder.insert).toHaveBeenCalledWith({
+      id: 'm9',
       chat_id: 'r1',
       sender_id: 'me',
       message: 'Hello there',
@@ -194,7 +197,7 @@ describe('sendMessage', () => {
   });
 
   it('rejects an empty/whitespace message as invalid_input without touching the network', async () => {
-    const result = await sendMessage('r1', '   ');
+    const result = await sendMessage('r1', '   ', 'm9');
 
     expect(result).toMatchObject({ status: 'error', code: 'invalid_input' });
     expect(mockGetSession).not.toHaveBeenCalled();
@@ -204,7 +207,7 @@ describe('sendMessage', () => {
   it('returns forbidden when there is no local session, without inserting', async () => {
     mockGetSession.mockResolvedValueOnce({ data: { session: null }, error: null });
 
-    const result = await sendMessage('r1', 'hi');
+    const result = await sendMessage('r1', 'hi', 'm9');
 
     expect(result).toMatchObject({ status: 'error', code: 'forbidden' });
     expect(mockFrom).not.toHaveBeenCalled();
@@ -215,7 +218,22 @@ describe('sendMessage', () => {
     const builder = chainable({ data: null, error: { code: '42501', message: 'denied' } });
     mockFrom.mockReturnValueOnce(builder);
 
-    const result = await sendMessage('r1', 'hi');
+    const result = await sendMessage('r1', 'hi', 'm9');
     expect(result).toMatchObject({ status: 'error', code: 'forbidden' });
+  });
+
+  it('treats a matching existing row as success when the original insert response was lost', async () => {
+    mockGetSession.mockResolvedValueOnce({ data: { session: { user: { id: 'me' } } }, error: null });
+    const existing = { id: 'm9', chat_id: 'r1', sender_id: 'me', message: 'Hello there', created_at: 't' };
+    const insertBuilder = chainable({ data: null, error: { code: '23505', message: 'duplicate key' } });
+    const lookupBuilder = chainable({ data: existing, error: null });
+    mockFrom.mockReturnValueOnce(insertBuilder).mockReturnValueOnce(lookupBuilder);
+
+    const result = await sendMessage('r1', 'Hello there', 'm9');
+
+    expect(lookupBuilder.eq).toHaveBeenNthCalledWith(1, 'id', 'm9');
+    expect(lookupBuilder.eq).toHaveBeenNthCalledWith(2, 'chat_id', 'r1');
+    expect(lookupBuilder.eq).toHaveBeenNthCalledWith(3, 'sender_id', 'me');
+    expect(result).toEqual({ status: 'ok', message: existing });
   });
 });

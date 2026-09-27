@@ -18,7 +18,7 @@ interface FakeRow {
 function controllableSend() {
   const resolvers: ((outcome: SendOutcome<FakeRow>) => void)[] = [];
   const send = jest.fn(
-    (_text: string) =>
+    (_text: string, _messageId: string) =>
       new Promise<SendOutcome<FakeRow>>((resolve) => {
         resolvers.push(resolve);
       })
@@ -42,8 +42,10 @@ describe('submit', () => {
       result.current.submit('  Hello  ');
     });
 
-    expect(send).toHaveBeenCalledWith('Hello');
-    expect(result.current.pending).toEqual([{ key: 1, text: 'Hello', failed: false }]);
+    const messageId = result.current.pending[0].id;
+    expect(messageId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(send).toHaveBeenCalledWith('Hello', messageId);
+    expect(result.current.pending).toEqual([{ key: 1, id: messageId, text: 'Hello', failed: false }]);
 
     const row = { id: 'm1', message: 'Hello' };
     await act(async () => {
@@ -65,7 +67,9 @@ describe('submit', () => {
       resolvers[0]({ status: 'failed' });
     });
 
-    expect(result.current.pending).toEqual([{ key: 1, text: 'hi', failed: true }]);
+    expect(result.current.pending).toEqual([
+      { key: 1, id: expect.any(String), text: 'hi', failed: true },
+    ]);
   });
 
   /**
@@ -85,8 +89,9 @@ describe('submit', () => {
       resolvers[0]({ status: 'failed', message: 'That message is too long.' });
     });
 
+    const messageId = result.current.pending[0].id;
     expect(result.current.pending).toEqual([
-      { key: 1, text: 'hi', failed: true, failureMessage: 'That message is too long.' },
+      { key: 1, id: messageId, text: 'hi', failed: true, failureMessage: 'That message is too long.' },
     ]);
 
     // Retrying restarts the attempt: a stale reason under a live "Sending…"
@@ -95,15 +100,16 @@ describe('submit', () => {
       result.current.retry(1);
     });
     expect(result.current.pending).toEqual([
-      { key: 1, text: 'hi', failed: false, failureMessage: undefined },
+      { key: 1, id: messageId, text: 'hi', failed: false, failureMessage: undefined },
     ]);
+    expect(send).toHaveBeenLastCalledWith('hi', messageId);
 
     // A reasonless failure still just fails — no fabricated explanation.
     await act(async () => {
       resolvers[1]({ status: 'failed' });
     });
     expect(result.current.pending).toEqual([
-      { key: 1, text: 'hi', failed: true, failureMessage: undefined },
+      { key: 1, id: messageId, text: 'hi', failed: true, failureMessage: undefined },
     ]);
   });
 
@@ -131,6 +137,7 @@ describe('submit', () => {
 
     expect(send).toHaveBeenCalledTimes(2);
     expect(result.current.pending.map((p) => p.key)).toEqual([1, 2]);
+    expect(send.mock.calls[0][1]).not.toBe(send.mock.calls[1][1]);
 
     // Resolving out of order removes the right entries.
     await act(async () => {
@@ -167,7 +174,11 @@ describe('retry — the M1 synchronous guard', () => {
     });
 
     expect(send).toHaveBeenCalledTimes(2); // 1 original + 1 retry, NOT 3
-    expect(result.current.pending).toEqual([{ key: 1, text: 'hi', failed: false }]);
+    const messageId = result.current.pending[0].id;
+    expect(send).toHaveBeenLastCalledWith('hi', messageId);
+    expect(result.current.pending).toEqual([
+      { key: 1, id: messageId, text: 'hi', failed: false },
+    ]);
 
     await act(async () => {
       resolvers[1]({ status: 'ok', row: { id: 'm1', message: 'hi' } });

@@ -36,6 +36,7 @@ interface ChainableBuilder {
   limit: jest.Mock;
   insert: jest.Mock;
   single: jest.Mock;
+  maybeSingle: jest.Mock;
   then: (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) => Promise<unknown>;
 }
 
@@ -48,6 +49,7 @@ function chainable(result: unknown) {
     limit: jest.fn(() => obj),
     insert: jest.fn(() => obj),
     single: jest.fn(() => Promise.resolve(result)),
+    maybeSingle: jest.fn(() => Promise.resolve(result)),
     then: (resolve, reject) => Promise.resolve(result).then(resolve, reject),
   };
   return obj;
@@ -102,9 +104,10 @@ describe('fetchConversation / sendMessage', () => {
     const builder = chainable({ data: created, error: null });
     mockFrom.mockReturnValueOnce(builder);
 
-    const result = await sendMessage('r1', ' On my way ');
+    const result = await sendMessage('r1', ' On my way ', 'm1');
 
     expect(builder.insert).toHaveBeenCalledWith({
+      id: 'm1',
       chat_id: 'r1',
       sender_id: 'barber-1',
       message: 'On my way',
@@ -113,9 +116,26 @@ describe('fetchConversation / sendMessage', () => {
   });
 
   it('rejects an empty message as invalid_input without touching the network', async () => {
-    const result = await sendMessage('r1', '');
+    const result = await sendMessage('r1', '', 'm1');
     expect(result).toMatchObject({ status: 'error', code: 'invalid_input' });
     expect(mockFrom).not.toHaveBeenCalled();
+  });
+
+  it('treats a matching existing row as success when the original insert response was lost', async () => {
+    mockGetSession.mockResolvedValueOnce({
+      data: { session: { user: { id: 'barber-1' } } }, error: null,
+    });
+    const existing = { id: 'm1', chat_id: 'r1', sender_id: 'barber-1', message: 'On my way', created_at: 't' };
+    const insertBuilder = chainable({ data: null, error: { code: '23505', message: 'duplicate key' } });
+    const lookupBuilder = chainable({ data: existing, error: null });
+    mockFrom.mockReturnValueOnce(insertBuilder).mockReturnValueOnce(lookupBuilder);
+
+    const result = await sendMessage('r1', 'On my way', 'm1');
+
+    expect(lookupBuilder.eq).toHaveBeenNthCalledWith(1, 'id', 'm1');
+    expect(lookupBuilder.eq).toHaveBeenNthCalledWith(2, 'chat_id', 'r1');
+    expect(lookupBuilder.eq).toHaveBeenNthCalledWith(3, 'sender_id', 'barber-1');
+    expect(result).toEqual({ status: 'ok', message: existing });
   });
 });
 

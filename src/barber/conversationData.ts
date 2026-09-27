@@ -92,7 +92,7 @@ export async function fetchConversationNewerThan(
  * `.select().single()` returns the authoritative row so the caller merges it
  * immediately and the realtime echo no-ops.
  */
-export async function sendMessage(roomId: string, text: string): Promise<SendMessageResult> {
+export async function sendMessage(roomId: string, text: string, messageId: string): Promise<SendMessageResult> {
   const message = text.trim();
   if (message.length === 0) return failure('invalid_input');
 
@@ -102,9 +102,23 @@ export async function sendMessage(roomId: string, text: string): Promise<SendMes
 
   const { data, error } = await supabase
     .from('messages')
-    .insert({ chat_id: roomId, sender_id: senderId, message })
+    .insert({ id: messageId, chat_id: roomId, sender_id: senderId, message })
     .select()
     .single();
+
+  if (error?.code === '23505') {
+    const existing = await supabase
+      .from('messages')
+      .select('*')
+      .eq('id', messageId)
+      .eq('chat_id', roomId)
+      .eq('sender_id', senderId)
+      .maybeSingle();
+    if (existing.error) return mapPostgrestError('sendMessage.retry', existing.error);
+    if (existing.data && existing.data.message === message) {
+      return { status: 'ok', message: existing.data as MessageRow };
+    }
+  }
 
   if (error) return mapPostgrestError('sendMessage', error);
   return { status: 'ok', message: data as MessageRow };

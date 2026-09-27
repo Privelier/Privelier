@@ -258,8 +258,8 @@ function ConversationRoom({ route, navigation }: Props) {
   });
 
   const performSend = useCallback(
-    async (text: string) => {
-      const result = await sendMessage(room.id, text);
+    async (text: string, messageId: string) => {
+      const result = await sendMessage(room.id, text, messageId);
       return result.status === 'ok'
         ? ({ status: 'ok', row: result.message } as const)
         : // Carry the already-mapped copy (never raw server text) to the bubble.
