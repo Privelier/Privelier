@@ -72,6 +72,31 @@ describe('submit', () => {
     ]);
   });
 
+  it('turns a rejected network request into a retryable failure and reuses its id', async () => {
+    const row = { id: 'm1', message: 'hi' };
+    const send = jest
+      .fn()
+      .mockRejectedValueOnce(new Error('network disconnected'))
+      .mockResolvedValueOnce({ status: 'ok' as const, row });
+    const onSent = jest.fn();
+    const { result } = await renderQueue({ send, onSent });
+
+    await act(async () => {
+      result.current.submit('hi');
+    });
+
+    expect(result.current.pending[0]).toMatchObject({ text: 'hi', failed: true });
+    const messageId = result.current.pending[0].id;
+
+    await act(async () => {
+      result.current.retry(result.current.pending[0].key);
+    });
+
+    expect(send.mock.calls[1][1]).toBe(messageId);
+    expect(result.current.pending).toEqual([]);
+    expect(onSent).toHaveBeenCalledWith(row);
+  });
+
   /**
    * Regression guard for the dead end migration 0018 opened: the messages
    * length CHECK could reject a send whose reason was then discarded here, so

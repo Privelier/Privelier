@@ -89,8 +89,17 @@ export function useSendQueue<TRow>({ send, onSent }: UseSendQueueArgs<TRow>): Se
   const runSend = useCallback(async (key: number, id: string, text: string) => {
     if (inFlightRef.current.has(key)) return; // synchronous double-fire guard
     inFlightRef.current.add(key);
-    const result = await sendRef.current(text, id);
-    inFlightRef.current.delete(key);
+    let result: SendOutcome<TRow>;
+    try {
+      result = await sendRef.current(text, id);
+    } catch {
+      // Network failures may reject the request instead of returning a
+      // PostgREST error. Keep the bubble retryable and never leave its guard
+      // locked in the in-flight state.
+      result = { status: 'failed' };
+    } finally {
+      inFlightRef.current.delete(key);
+    }
     if (result.status === 'ok') {
       setPending((prev) => prev.filter((p) => p.key !== key));
       onSentRef.current(result.row);
