@@ -3,6 +3,7 @@ import {
   formatBookingWhen,
   formatMessageTime,
   formatMoney,
+  formatShortDate,
   timeOfDayGreeting,
 } from '../format';
 
@@ -65,5 +66,11 @@ describe('formatMessageTime', () => {
 
   it('unparseable input → empty string, not a crash', () => {
     expect(formatMessageTime('not-a-date', NOW)).toBe('');
+  });
+});
+
+describe('formatShortDate', () => {
+  it('omits unknown legacy dates instead of inventing one', () => {
+    expect(formatShortDate(null)).toBe('');
   });
 });

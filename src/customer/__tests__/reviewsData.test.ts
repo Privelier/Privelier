@@ -143,6 +143,9 @@ describe('fetchReviewsForBarber', () => {
     expect(result.firstNameByReviewId.get('rv-1')).toBe('Ali');
     expect(result.firstNameByReviewId.has('rv-2')).toBe(false); // blank name not stored
     expect(mockRpc).toHaveBeenCalledWith('get_review_authors', { p_review_ids: ['rv-1', 'rv-2'] });
+    const reviewQuery = mockFrom.mock.results[0].value;
+    expect(reviewQuery.eq).toHaveBeenCalledWith('barber_id', 'brb-1');
+    expect(reviewQuery.order).toHaveBeenCalledWith('created_at', { ascending: false, nullsFirst: false });
   });
 
   it('degrades to no names (not a failure) when the author projection errors', async () => {

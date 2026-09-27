@@ -113,7 +113,7 @@ export interface ReviewRow {
   barber_id: string;
   rating: number;
   comment: string | null;
-  created_at: string;
+  created_at: string | null;
 }
 
 /**

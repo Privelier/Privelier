@@ -48,7 +48,8 @@ export function formatBookingWhen(date: string, time: string): string {
  * right-aligned time on inbox rows. Same deterministic short forms as
  * formatBookingWhen; empty string if unparseable.
  */
-export function formatShortDate(iso: string): string {
+export function formatShortDate(iso: string | null): string {
+  if (!iso) return '';
   // A bare YYYY-MM-DD parses as UTC midnight, which getDate() would shift
   // in negative-offset timezones — anchor it to local midnight instead.
   const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T00:00:00` : iso);

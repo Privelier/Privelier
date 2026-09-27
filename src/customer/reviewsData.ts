@@ -49,7 +49,7 @@ export async function fetchReviewsForBarber(barberId: string): Promise<ReviewsFo
     .from('reviews')
     .select('*')
     .eq('barber_id', barberId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false, nullsFirst: false });
 
   if (error) return mapPostgrestError('fetchReviewsForBarber', error);
   const reviews = (data as ReviewRow[]) ?? [];
