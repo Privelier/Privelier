@@ -47,6 +47,7 @@ import { listBarbersByCity, listServicesForBarberIds } from '../discoveryData';
 import { listAvailabilityForBarberIds } from '../availabilityData';
 import { applyExploreFilter, toMapPin, type ExploreFilterKey } from '../exploreData';
 import { hasMapboxPublicToken, isMapNativeAvailable } from '../mapRuntime';
+import { getAppLanguage } from '../../shared/locale';
 import BarberCard from '../components/BarberCard';
 import type ExploreMapViewType from '../components/ExploreMapView';
 import type { CustomerTabParamList } from '../CustomerTabs';
@@ -59,15 +60,13 @@ type Props = CompositeScreenProps<
 
 type ViewMode = 'list' | 'map';
 
-const CHIP_LABELS: Record<ExploreFilterKey, string> = {
-  all: 'All',
-  today: 'Works today',
-  under100: 'Under €100',
-  verified: 'Verified',
-};
-
 export default function ExploreScreen({ navigation }: Props) {
   const { colors, fonts } = useTheme();
+  const isGerman = getAppLanguage() === 'de';
+  const chipLabels: Record<ExploreFilterKey, string> = isGerman
+    ? { all: 'Alle', today: 'Heute verfügbar', under100: 'Unter 100 €', verified: 'Verifiziert' }
+    : { all: 'All', today: 'Works today', under100: 'Under €100', verified: 'Verified' };
+  const listActionLabel = isGerman ? 'Zur Liste wechseln' : 'Switch to list view';
 
   const [city, setCity] = useState<string | null>(null);
   const [barbers, setBarbers] = useState<BarberDirectoryRow[]>([]);
@@ -198,6 +197,37 @@ export default function ExploreScreen({ navigation }: Props) {
       .default;
   }, [mapAvailable]);
 
+  const mapFallback = ExploreMapView === null
+    ? {
+        testID: 'customer-explore-map-soon',
+        icon: 'map' as const,
+        title: isGerman ? 'Nutze die Privelier Testversion für die Karte' : 'Open the Privelier test build to use the map',
+        message: isGerman
+          ? 'Expo Go enthält keine native Karte. Installiere die Privelier Testversion oder wechsle zur Liste.'
+          : 'Expo Go does not include the native map. Install the Privelier development build, or switch to list view.',
+      }
+    : !mapTokenAvailable
+      ? {
+          testID: 'customer-explore-map-not-configured',
+          icon: 'map' as const,
+          title: isGerman ? 'Karte nicht verfügbar' : 'Mapbox is not configured',
+          message: isGerman
+            ? 'Die Karte ist in dieser Version nicht eingerichtet. Du kannst stattdessen die Liste öffnen.'
+            : 'The map is not configured in this build. You can use the list view instead.',
+        }
+      : pins.length === 0
+        ? {
+            testID: 'customer-explore-map-empty',
+            icon: 'map-pin' as const,
+            title: isGerman ? 'Noch keine Barber auf der Karte' : 'No barbers on the map yet',
+            message: filtered.length > 0
+              ? isGerman
+                ? 'Sobald Barber ihren Standort hinterlegen, erscheinen sie hier. Bis dahin kannst du die Liste nutzen.'
+                : 'Barbers appear here once they set their location. Use the list view meanwhile.'
+              : isGerman ? 'Keine Barber passen zu diesem Filter.' : 'No barbers match this filter.',
+          }
+        : null;
+
   const selectChip = useCallback((key: ExploreFilterKey) => {
     setFilter((prev) => (prev === key && key !== 'all' ? 'all' : key));
   }, []);
@@ -211,10 +241,10 @@ export default function ExploreScreen({ navigation }: Props) {
       <View style={styles.header}>
         <View style={styles.headerText}>
           <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-            Explore
+            {isGerman ? 'Entdecken' : 'Explore'}
           </Text>
           <Text style={[styles.subheading, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-            {city ? `Masters around ${city}` : 'Masters around you'}
+            {city ? (isGerman ? `Barber in ${city}` : `Masters around ${city}`) : (isGerman ? 'Barber in deiner Nähe' : 'Masters around you')}
           </Text>
         </View>
 
@@ -228,7 +258,9 @@ export default function ExploreScreen({ navigation }: Props) {
                 onPress={() => setViewMode(mode)}
                 accessibilityRole="button"
                 accessibilityState={{ selected: active }}
-                accessibilityLabel={mode === 'list' ? 'List view' : 'Map view'}
+                accessibilityLabel={mode === 'list'
+                  ? (isGerman ? 'Listenansicht' : 'List view')
+                  : (isGerman ? 'Kartenansicht' : 'Map view')}
                 testID={`customer-explore-toggle-${mode}`}
                 style={({ pressed }) => [
                   styles.toggleButton,
@@ -278,7 +310,7 @@ export default function ExploreScreen({ navigation }: Props) {
                   active ? { color: colors.onAccent } : { color: colors.textSecondary },
                 ]}
               >
-                {CHIP_LABELS[key]}
+                {chipLabels[key]}
               </Text>
             </Pressable>
           );
@@ -296,46 +328,39 @@ export default function ExploreScreen({ navigation }: Props) {
         <RetryNotice testID="customer-explore-error" message={error} onRetry={() => void load()} style={styles.noticeMargins} />
       ) : viewMode === 'map' ? (
         <View style={styles.mapArea} testID="customer-explore-map-area">
-          {ExploreMapView === null ? (
-            // Honest state: the native map module is not in THIS build.
-            // Never a crash, never a fake map.
-            <View style={styles.mapSoon} testID="customer-explore-map-soon">
-              <Feather name="map" size={22} color={colors.textSecondary} />
+          {mapFallback ? (
+            <View style={styles.mapSoon} testID={mapFallback.testID}>
+              <Feather name={mapFallback.icon} size={22} color={colors.textSecondary} />
               <Text style={[styles.mapSoonTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-                Open the Privelier test build to use the map
+                {mapFallback.title}
               </Text>
               <Text style={[styles.mapSoonBlurb, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                Expo Go does not include the native map. Install the Privelier development build, or switch to list view.
+                {mapFallback.message}
               </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={listActionLabel}
+                testID="customer-explore-map-switch-to-list"
+                onPress={() => setViewMode('list')}
+                style={({ pressed }) => [
+                  styles.mapListAction,
+                  { borderColor: colors.border },
+                  pressed ? { opacity: pressOpacity.soft } : null,
+                ]}
+              >
+                <Text style={[styles.mapListActionText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
+                  {isGerman ? 'Zur Liste' : 'Show list'}
+                </Text>
+              </Pressable>
             </View>
-          ) : !mapTokenAvailable ? (
-            <View style={styles.mapSoon} testID="customer-explore-map-not-configured">
-              <Feather name="map" size={22} color={colors.textSecondary} />
-              <Text style={[styles.mapSoonTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>Mapbox is not configured</Text>
-              <Text style={[styles.mapSoonBlurb, { color: colors.textSecondary, fontFamily: fonts.body }]}>Add the public Mapbox token to this build to use the map. You can switch to list view in the meantime.</Text>
-            </View>
-          ) : pins.length === 0 ? (
-            // Honest empty state: no located barbers ⇒ no pins ⇒ no pointless
-            // globe (D4 — a fake/default pin is never an option).
-            <View style={styles.mapSoon} testID="customer-explore-map-empty">
-              <Feather name="map-pin" size={22} color={colors.textSecondary} />
-              <Text style={[styles.mapSoonTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-                No barbers on the map yet
-              </Text>
-              <Text style={[styles.mapSoonBlurb, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                {filtered.length > 0
-                  ? 'Barbers appear here once they set their location. Use the list view meanwhile.'
-                  : 'No barbers match this filter.'}
-              </Text>
-            </View>
-          ) : (
+          ) : ExploreMapView ? (
             <ExploreMapView
               pins={pins}
               barbersById={barbersById}
               servicesByBarber={servicesByBarber}
               onOpenProfile={openProfile}
             />
-          )}
+          ) : null}
         </View>
       ) : filtered.length === 0 ? (
         <Text
@@ -419,6 +444,16 @@ const styles = StyleSheet.create({
   },
   mapSoonTitle: { fontSize: 18, textAlign: 'center' },
   mapSoonBlurb: { fontSize: 13, lineHeight: 19, textAlign: 'center' },
+  mapListAction: {
+    minHeight: 44,
+    paddingHorizontal: 18,
+    marginTop: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapListActionText: { fontSize: 14 },
 
   listContent: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 32, gap: 16 },
   listItem: {},
