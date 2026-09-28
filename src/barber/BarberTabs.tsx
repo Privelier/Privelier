@@ -1,3 +1,6 @@
+import { createRef, useState } from 'react';
+import { View } from 'react-native';
+import { BlurTargetView } from 'expo-blur';
 import { getAppLanguage } from '../shared/locale';
 import { GlassSurface } from '../shared/components/GlassSurface';
 /**
@@ -38,6 +41,7 @@ const TAB_ICONS: Record<keyof BarberTabParamList, keyof typeof Feather.glyphMap>
 export default function BarberTabs() {
   const { colors, fonts } = useTheme();
   const language = getAppLanguage();
+  const [blurTargets] = useState(() => ({ Studio: createRef<View>(), Requests: createRef<View>(), Portfolio: createRef<View>(), Chats: createRef<View>(), Verify: createRef<View>() }));
   const labels = language === 'de' ? { Studio: 'Dashboard', Requests: 'Anfragen', Portfolio: 'Studio', Chats: 'Nachrichten', Verify: 'Verifizierung' } : { Studio: 'Dashboard', Requests: 'Requests', Portfolio: 'Studio', Chats: 'Messages', Verify: 'Verification' };
 
   // Unread thread count for the Chats badge — a real count from real read
@@ -45,6 +49,7 @@ export default function BarberTabs() {
   const { unreadCount } = useUnread();
   return (
     <Tab.Navigator
+      screenLayout={({ children, route }) => <BlurTargetView ref={blurTargets[route.name]} style={{ flex: 1 }}>{children}</BlurTargetView>}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.accentText,
@@ -60,7 +65,7 @@ export default function BarberTabs() {
           elevation: 0,
         },
         tabBarHideOnKeyboard: true,
-        tabBarBackground: () => <GlassSurface variant="navigation" style={{ flex: 1, borderRadius: 22 }} />,
+        tabBarBackground: () => <GlassSurface variant="navigation" blurTarget={blurTargets[route.name]} style={{ flex: 1, borderRadius: 22 }} />,
         tabBarLabel: labels[route.name],
         tabBarLabelStyle: { fontSize: 12, fontFamily: fonts.bodyMedium },
         tabBarIcon: ({ color, focused }) => <BrassTabIcon name={TAB_ICONS[route.name]} color={color} focused={focused} />,

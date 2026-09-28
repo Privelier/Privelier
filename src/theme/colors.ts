@@ -30,18 +30,3 @@ export const darkPalette: Palette = {
   error: '#A8453E',
   errorText: '#CE7A73',
 };
-
-export const lightPalette: Palette = {
-  background: '#F8F4EC',
-  surface: '#FFFFFF',
-  border: '#E6DFD0',
-  textPrimary: '#211D17',
-  textSecondary: '#756D62',
-  accent: '#BFA06B',
-  accentText: '#8A6B3D',
-  onAccent: '#121214',
-  success: '#4F7355',
-  successText: '#4F7355',
-  error: '#A8453E',
-  errorText: '#A8453E',
-};

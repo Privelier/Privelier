@@ -64,6 +64,7 @@ import { useReadReceipt } from '../../shared/useReadReceipt';
 import { useTypingBroadcast } from '../../shared/useTypingBroadcast';
 import { deriveIsRead, deriveReadMarkerId } from '../../shared/readReceipts';
 import { MessageReceipt } from '../../shared/components/MessageReceipt';
+import { GlassSurface } from '../../shared/components/GlassSurface';
 import { useSendQueue, type PendingSend } from '../../shared/useSendQueue';
 import { MAX_MESSAGE_LENGTH, MESSAGE_COUNTER_VISIBLE_AT } from '../../shared/messageLimits';
 import { formatMessageClock } from '../../shared/format';
@@ -333,7 +334,7 @@ function ConversationRoom({ route, navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']} testID="customer-conversation-screen">
-      <View style={styles.header}>
+      <GlassSurface variant="navigation" style={styles.header} testID="customer-conversation-header-glass">
         <BackButton
           onPress={() => navigation.goBack()}
           accessibilityLabel="Back"
@@ -350,7 +351,7 @@ function ConversationRoom({ route, navigation }: Props) {
             </Text>
           ) : null}
         </View>
-      </View>
+      </GlassSurface>
 
       <KeyboardAvoidingView
         style={styles.body}
@@ -430,7 +431,13 @@ function ConversationRoom({ route, navigation }: Props) {
               </View>
             }
             renderItem={({ item }) => {
-              if (item.kind === 'day') return <View style={styles.dayDivider}><Text style={styles.dayLabel}>{item.label}</Text></View>;
+              if (item.kind === 'day') return (
+                <View style={styles.dayDivider}>
+                  <View style={styles.dayRule} />
+                  <View style={styles.dayPill}><Text style={styles.dayLabel}>{item.label}</Text></View>
+                  <View style={styles.dayRule} />
+                </View>
+              );
               if (item.kind === 'pending') {
                 const p = item.pending;
                 return (
@@ -472,12 +479,16 @@ function ConversationRoom({ route, navigation }: Props) {
                   testID={`customer-conversation-message-${m.id}`}
                 >
                   <Text style={styles.bubbleText}>{m.message}</Text>
-                  {item.showTimestamp ? <Text style={styles.bubbleMeta}>{formatMessageClock(m.created_at)}</Text> : null}
-                  {own ? (
-                    <MessageReceipt
-                      state={deriveIsRead(counterpartLastReadAt, m.created_at) ? 'read' : 'sent'}
-                      testID={m.id === readMarkerId ? 'customer-conversation-read-marker' : `customer-conversation-receipt-${m.id}`}
-                    />
+                  {item.showTimestamp || own ? (
+                    <View style={styles.bubbleFooter}>
+                      {item.showTimestamp ? <Text style={styles.bubbleMeta}>{formatMessageClock(m.created_at)}</Text> : null}
+                      {own ? (
+                        <MessageReceipt
+                          state={deriveIsRead(counterpartLastReadAt, m.created_at) ? 'read' : 'sent'}
+                          testID={m.id === readMarkerId ? 'customer-conversation-read-marker' : `customer-conversation-receipt-${m.id}`}
+                        />
+                      ) : null}
+                    </View>
                   ) : null}
                 </View>
               );
@@ -506,7 +517,7 @@ function ConversationRoom({ route, navigation }: Props) {
           </Text>
         ) : null}
 
-        <View style={styles.inputRow}>
+        <GlassSurface variant="navigation" style={styles.inputRow} testID="customer-conversation-composer-glass">
           <TextInput
             value={draft}
             onChangeText={onChangeDraft}
@@ -536,7 +547,7 @@ function ConversationRoom({ route, navigation }: Props) {
           >
             <Text style={styles.sendLabel}>{getAppLanguage() === 'de' ? 'Senden' : 'Send'}</Text>
           </Pressable>
-        </View>
+        </GlassSurface>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -554,8 +565,9 @@ function useStyles(colors: Palette) {
       paddingHorizontal: 24,
       paddingTop: 12,
       paddingBottom: 12,
-      borderBottomWidth: 0.5,
-      borderBottomColor: colors.border,
+      marginHorizontal: 12,
+      marginTop: 8,
+      borderRadius: 22,
     },
     headerText: { flex: 1, minWidth: 0 },
     headerTitle: { fontSize: 18, color: colors.textPrimary, fontFamily: fonts.headingMedium },
@@ -566,7 +578,9 @@ function useStyles(colors: Palette) {
     noticeMargins: { marginTop: 24, marginHorizontal: 24 },
 
     listContent: { paddingHorizontal: 24, paddingVertical: 16, flexGrow: 1 },
-    dayDivider: { alignSelf: 'center', minHeight: 32, justifyContent: 'center', marginVertical: 6, paddingHorizontal: 12, borderRadius: 16, backgroundColor: colors.surface },
+    dayDivider: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 34, marginVertical: 6 },
+    dayRule: { flex: 1, height: 0.5, backgroundColor: 'rgba(191,160,107,0.32)' },
+    dayPill: { borderWidth: 0.5, borderColor: 'rgba(191,160,107,0.24)', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 5, backgroundColor: 'rgba(20,20,22,0.84)' },
     dayLabel: { color: colors.textSecondary, fontSize: 11, fontFamily: fonts.bodyMedium },
     historyControl: { alignItems: 'center', paddingBottom: 16 },
     earlierError: {
@@ -604,11 +618,12 @@ function useStyles(colors: Palette) {
       marginBottom: 10,
       backgroundColor: colors.surface,
     },
-    bubbleTheirs: { alignSelf: 'flex-start', borderColor: colors.border, borderBottomLeftRadius: 5 },
-    bubbleOwn: { alignSelf: 'flex-end', borderColor: colors.border, borderBottomRightRadius: 5 },
+    bubbleTheirs: { alignSelf: 'flex-start', borderColor: colors.border, borderBottomLeftRadius: 5, backgroundColor: 'rgba(245,241,232,0.035)' },
+    bubbleOwn: { alignSelf: 'flex-end', borderColor: 'rgba(191,160,107,0.42)', borderBottomRightRadius: 5, backgroundColor: 'rgba(191,160,107,0.10)' },
     bubbleFailed: { borderColor: colors.error },
     bubbleText: { fontSize: 16, lineHeight: 23, color: colors.textPrimary, fontFamily: fonts.body },
-    bubbleMeta: { fontSize: 12, marginTop: 4, color: colors.textSecondary, fontFamily: fonts.body },
+    bubbleFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6, marginTop: 4 },
+    bubbleMeta: { fontSize: 11, color: colors.textSecondary, fontFamily: fonts.body },
     bubbleMetaFailed: { fontSize: 12, marginTop: 4, color: colors.errorText, fontFamily: fonts.bodyMedium },
     bubbleFailureReason: {
       fontSize: 11,
@@ -637,8 +652,9 @@ function useStyles(colors: Palette) {
       gap: 12,
       paddingHorizontal: 16,
       paddingVertical: 10,
-      borderTopWidth: 0.5,
-      borderTopColor: colors.border,
+      marginHorizontal: 12,
+      marginBottom: 6,
+      borderRadius: 22,
     },
     input: {
       flex: 1,
@@ -650,7 +666,7 @@ function useStyles(colors: Palette) {
       paddingVertical: 10,
       fontSize: 16,
       borderColor: colors.border,
-      backgroundColor: colors.surface,
+      backgroundColor: 'rgba(27,27,30,0.86)',
       color: colors.textPrimary,
       fontFamily: fonts.body,
     },

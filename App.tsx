@@ -19,7 +19,7 @@
  */
 import { useCallback, type ReactElement } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer } from '@react-navigation/native';
+import { DarkTheme, NavigationContainer, type Theme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
@@ -36,11 +36,25 @@ import CustomerNavigator from './src/customer/CustomerNavigator';
 import BarberNavigator from './src/barber/BarberNavigator';
 import { appFonts } from './src/theme/typography';
 import { ToastProvider } from './src/shared/components/ToastProvider';
+import { darkPalette } from './src/theme/colors';
 
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import '@/global.css';
 
 SplashScreen.preventAutoHideAsync();
+
+const navigationTheme: Theme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    primary: darkPalette.accent,
+    background: darkPalette.background,
+    card: darkPalette.surface,
+    text: darkPalette.textPrimary,
+    border: darkPalette.border,
+    notification: darkPalette.accent,
+  },
+};
 
 function renderRoot(shell: AuthShell): ReactElement {
   const { state, retryProvisioning, submitSetupForm, signOutNow, finishPasswordRecovery, dismissPasswordRecovery, dismissAuthLinkError } = shell;
@@ -103,15 +117,15 @@ export default function App() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <GluestackUIProvider mode="system">
-        <SafeAreaProvider onLayout={onLayoutRootView}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: darkPalette.background }}>
+      <GluestackUIProvider mode="dark">
+        <SafeAreaProvider onLayout={onLayoutRootView} style={{ flex: 1, backgroundColor: darkPalette.background }}>
           <BottomSheetModalProvider>
             <ToastProvider>
-              <NavigationContainer>{renderRoot(shell)}</NavigationContainer>
+              <NavigationContainer theme={navigationTheme}>{renderRoot(shell)}</NavigationContainer>
             </ToastProvider>
           </BottomSheetModalProvider>
-          <StatusBar style="auto" />
+          <StatusBar style="light" />
         </SafeAreaProvider>
       </GluestackUIProvider>
     </GestureHandlerRootView>

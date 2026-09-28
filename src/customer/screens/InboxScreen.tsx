@@ -30,6 +30,7 @@ import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
 import { Avatar } from '../../shared/components/Avatar';
 import { ThreadListSkeleton } from '../../shared/components/ThreadListSkeleton';
+import { GlassSurface } from '../../shared/components/GlassSurface';
 import type { InboxThread } from '../types';
 import type { CustomerTabParamList } from '../CustomerTabs';
 import type { CustomerStackParamList } from '../CustomerNavigator';
@@ -96,6 +97,7 @@ export default function InboxScreen({ navigation }: Props) {
         <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: fonts.body }]}>
           Conversations with your barbers.
         </Text>
+        <View style={styles.headerRule} />
       </View>
 
       {loading && threads.length === 0 ? (
@@ -132,24 +134,21 @@ export default function InboxScreen({ navigation }: Props) {
               </Text>
             </View>
           }
-          renderItem={({ item, index }) => {
+          renderItem={({ item }) => {
             const name = item.barber?.name ?? 'Barber';
             const preview =
               item.lastMessage?.message ??
               (item.service ? `About: ${item.service.name}` : 'No messages yet.');
             const unread = unreadRoomIds.has(item.room.id);
             return (
-              <Pressable
-                onPress={() => onOpenThread(item)}
-                accessibilityRole="button"
-                accessibilityLabel={`Open conversation with ${name}`}
-                testID={`customer-inbox-row-${item.room.id}`}
-                style={({ pressed }) => [
-                  styles.row,
-                  index > 0 ? { borderTopWidth: 0.5, borderTopColor: colors.border } : null,
-                  pressed ? { opacity: pressOpacity.soft } : null,
-                ]}
-              >
+              <GlassSurface variant="card" style={styles.rowCard}>
+                <Pressable
+                  onPress={() => onOpenThread(item)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open conversation with ${name}`}
+                  testID={`customer-inbox-row-${item.room.id}`}
+                  style={({ pressed }) => [styles.row, pressed ? { opacity: pressOpacity.soft } : null]}
+                >
                 <Avatar
                   id={item.barber?.id ?? item.room.barber_id}
                   name={item.barber?.name}
@@ -190,7 +189,8 @@ export default function InboxScreen({ navigation }: Props) {
                     accessibilityLabel="Unread messages"
                   />
                 ) : null}
-              </Pressable>
+                </Pressable>
+              </GlassSurface>
             );
           }}
         />
@@ -202,23 +202,25 @@ export default function InboxScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { paddingHorizontal: 24, marginTop: 24 },
+  header: { paddingHorizontal: 24, marginTop: 24, marginBottom: 8 },
   heading: { fontSize: 30 },
   subtitle: { fontSize: 14, marginTop: 4 },
+  headerRule: { width: 44, height: 1, marginTop: 16, backgroundColor: 'rgba(191,160,107,0.66)' },
 
   noticeMargins: { marginTop: 24, marginHorizontal: 24 },
 
-  listContent: { paddingTop: 16, paddingBottom: 32 },
+  listContent: { paddingTop: 6, paddingBottom: 32 },
   empty: { alignItems: 'center', paddingVertical: 40, paddingHorizontal: 24 },
   emptyText: { fontSize: 15 },
   emptyHint: { fontSize: 14, marginTop: 6 },
 
+  rowCard: { marginHorizontal: 16, marginVertical: 5, borderRadius: 20 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   rowInfo: { flex: 1, minWidth: 0 },
   rowName: { fontSize: 16 },

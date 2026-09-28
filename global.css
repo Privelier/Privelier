@@ -3,27 +3,23 @@
 @import "tailwindcss/utilities.css";
 @import "nativewind/theme";
 
-/* ─── Theme: design tokens (light / dark) ─────────────────────────
-   1. :root              — light defaults (all platforms)
-   2. @media dark :root  — dark defaults; nativewind maps this to
-                           Appearance.getColorScheme() on native.
-   3. :root.dark / :root.light — higher specificity for web class toggle. */
+/* Dark-only Privelier theme tokens for native and web. */
 @layer theme {
   :root {
     --primary: 191 160 107;
     --primary-foreground: 18 18 20;
-    --card: 255 255 255;
-    --secondary: 248 244 236;
-    --secondary-foreground: 33 29 23;
-    --background: 248 244 236;
-    --popover: 255 255 255;
-    --popover-foreground: 33 29 23;
-    --muted: 248 244 236;
-    --muted-foreground: 117 109 98;
+    --card: 27 27 30;
+    --secondary: 27 27 30;
+    --secondary-foreground: 245 241 232;
+    --background: 18 18 20;
+    --popover: 27 27 30;
+    --popover-foreground: 245 241 232;
+    --muted: 27 27 30;
+    --muted-foreground: 154 150 140;
     --destructive: 168 69 62;
-    --foreground: 33 29 23;
-    --border: 230 223 208;
-    --input: 230 223 208;
+    --foreground: 245 241 232;
+    --border: 42 42 46;
+    --input: 42 42 46;
     --ring: 191 160 107;
     --accent: 191 160 107;
     --accent-foreground: 18 18 20;
@@ -71,25 +67,6 @@
     --ring: 191 160 107;
   }
 
-  :root.light {
-    --primary: 191 160 107;
-    --primary-foreground: 18 18 20;
-    --card: 255 255 255;
-    --secondary: 248 244 236;
-    --secondary-foreground: 33 29 23;
-    --background: 248 244 236;
-    --popover: 255 255 255;
-    --popover-foreground: 33 29 23;
-    --muted: 248 244 236;
-    --muted-foreground: 117 109 98;
-    --destructive: 168 69 62;
-    --foreground: 33 29 23;
-    --border: 230 223 208;
-    --input: 230 223 208;
-    --ring: 191 160 107;
-    --accent: 191 160 107;
-    --accent-foreground: 18 18 20;
-  }
 }
 
 @theme inline {

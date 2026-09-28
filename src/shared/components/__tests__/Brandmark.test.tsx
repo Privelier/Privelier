@@ -1,14 +1,6 @@
 import { render, screen } from '@testing-library/react-native';
 import Brandmark from '../Brandmark';
 
-jest.mock('../../../theme/useTheme', () => ({
-  useTheme: () => ({
-    isDark: true,
-    colors: jest.requireActual('../../../theme/colors').darkPalette,
-    fonts: {},
-  }),
-}));
-
 describe('Brandmark', () => {
   it('renders the supplied wordmark for every supported lockup', async () => {
     await render(<Brandmark />);

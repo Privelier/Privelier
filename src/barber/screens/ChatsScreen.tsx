@@ -22,11 +22,12 @@ import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../../theme/useTheme';
 import { formatBookingWhen, formatShortDate } from '../../shared/format';
-import { HAIRLINE, space } from '../../theme/spacing';
+import { space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
 import { Avatar } from '../../shared/components/Avatar';
 import { ThreadListSkeleton } from '../../shared/components/ThreadListSkeleton';
+import { GlassSurface } from '../../shared/components/GlassSurface';
 import type { InboxThread } from '../../shared/threads';
 import type { BarberTabParamList } from '../BarberTabs';
 import type { BarberStackParamList } from '../BarberNavigator';
@@ -84,9 +85,10 @@ export default function ChatsScreen({ navigation }: Props) {
       edges={['top', 'left', 'right']}
       testID="barber-chats-screen"
     >
-      <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-        Chats
-      </Text>
+      <View style={styles.header}>
+        <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>Chats</Text>
+        <View style={styles.headerRule} />
+      </View>
 
       {loading && threads.length === 0 ? (
         <ThreadListSkeleton testID="barber-chats-loading" />
@@ -122,23 +124,20 @@ export default function ChatsScreen({ navigation }: Props) {
               </Text>
             </View>
           }
-          renderItem={({ item, index }) => {
+          renderItem={({ item }) => {
             const name = item.customer?.name ?? 'Customer';
             const service = item.service?.name ?? 'Booking';
             const preview = item.lastMessage?.message ?? 'No messages yet.';
             const unread = unreadRoomIds.has(item.room.id);
             return (
-              <Pressable
-                onPress={() => onOpenThread(item)}
-                accessibilityRole="button"
-                accessibilityLabel={`Open conversation with ${name}`}
-                testID={`barber-chats-row-${item.room.id}`}
-                style={({ pressed }) => [
-                  styles.row,
-                  index > 0 ? { borderTopWidth: HAIRLINE, borderTopColor: colors.border } : null,
-                  pressed ? { opacity: pressOpacity.soft } : null,
-                ]}
-              >
+              <GlassSurface variant="card" style={styles.rowCard}>
+                <Pressable
+                  onPress={() => onOpenThread(item)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open conversation with ${name}`}
+                  testID={`barber-chats-row-${item.room.id}`}
+                  style={({ pressed }) => [styles.row, pressed ? { opacity: pressOpacity.soft } : null]}
+                >
                 <Avatar
                   id={item.customer?.id ?? item.room.customer_id}
                   name={item.customer?.name}
@@ -179,7 +178,8 @@ export default function ChatsScreen({ navigation }: Props) {
                     accessibilityLabel="Unread messages"
                   />
                 ) : null}
-              </Pressable>
+                </Pressable>
+              </GlassSurface>
             );
           }}
         />
@@ -191,21 +191,24 @@ export default function ChatsScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  heading: { fontSize: 30, marginTop: space.xl, paddingHorizontal: space.xl },
+  header: { marginTop: space.xl, marginBottom: 8, paddingHorizontal: space.xl },
+  heading: { fontSize: 30 },
+  headerRule: { width: 44, height: 1, marginTop: 16, backgroundColor: 'rgba(191,160,107,0.66)' },
 
   noticeMargins: { marginTop: space.xl, marginHorizontal: space.xl },
 
-  listContent: { paddingTop: space.base, paddingBottom: space['2xl'] },
+  listContent: { paddingTop: 6, paddingBottom: space['2xl'] },
   empty: { alignItems: 'center', paddingVertical: 40, paddingHorizontal: space.xl },
   emptyText: { fontSize: 15 },
   emptyHint: { fontSize: 14, marginTop: 6 },
 
+  rowCard: { marginHorizontal: space.md, marginVertical: 5, borderRadius: 20 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
-    paddingHorizontal: space.xl,
-    paddingVertical: space.base,
+    paddingHorizontal: space.base,
+    paddingVertical: 14,
   },
   avatar: {
     width: 48,

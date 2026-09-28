@@ -1,6 +1,11 @@
 import { render, screen } from '@testing-library/react-native';
-import { StyleSheet } from 'react-native';
+import { AccessibilityInfo, StyleSheet } from 'react-native';
 import { GlassSurface } from '../GlassSurface';
+
+jest.mock('expo-blur', () => {
+  const { View } = jest.requireActual('react-native');
+  return { BlurView: View };
+});
 
 it('renders consistent smoked glass without a moving backdrop blur', async () => {
   await render(<GlassSurface testID="surface" />);
@@ -11,9 +16,8 @@ it('renders consistent smoked glass without a moving backdrop blur', async () =>
   expect(screen.queryByTestId('surface-blur')).toBeNull();
 });
 
-it('keeps navigation glass nearly opaque so tab content cannot tint the bar', async () => {
+it('uses the opaque accessibility fallback for navigation glass before transparency is checked', async () => {
+  jest.spyOn(AccessibilityInfo, 'isReduceTransparencyEnabled').mockResolvedValue(true);
   await render(<GlassSurface variant="navigation" testID="navigation-glass" />);
-  expect(['rgba(13,13,15,0.94)', 'rgba(248,244,236,0.94)']).toContain(
-    StyleSheet.flatten(screen.getByTestId('navigation-glass').props.style).backgroundColor
-  );
+  expect(StyleSheet.flatten(screen.getByTestId('navigation-glass').props.style).backgroundColor).toBe('#1B1B1E');
 });
