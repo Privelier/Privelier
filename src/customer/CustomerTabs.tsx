@@ -1,3 +1,5 @@
+import { getAppLanguage } from '../shared/locale';
+import { GlassSurface } from '../shared/components/GlassSurface';
 /**
  * Customer bottom-tab shell, rebuilt from the prototype's CustomerBottomNav:
  * five tabs (Discover, Explore, Bookings, Inbox, Account), hairline top
@@ -35,6 +37,9 @@ const TAB_ICONS: Record<keyof CustomerTabParamList, keyof typeof Feather.glyphMa
 
 export default function CustomerTabs() {
   const { colors, fonts } = useTheme();
+  const language = getAppLanguage();
+  const labels = language === 'de' ? { Discover: 'Entdecken', Explore: 'Karte', Bookings: 'Termine', Inbox: 'Nachrichten', Account: 'Konto' } : { Discover: 'Discover', Explore: 'Explore', Bookings: 'Bookings', Inbox: 'Messages', Account: 'Account' };
+
   // Unread thread count for the Inbox badge — a real count from real read
   // state (provider in CustomerNavigator), hidden entirely at zero.
   const { unreadCount } = useUnread();
@@ -45,15 +50,22 @@ export default function CustomerTabs() {
         tabBarActiveTintColor: colors.accentText,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
-          backgroundColor: colors.background,
-          borderTopWidth: 0.5,
+          backgroundColor: 'transparent',
+          marginHorizontal: 12,
+          marginBottom: 6,
+          borderRadius: 22,
+          paddingTop: 6,
+          borderTopWidth: 0,
           borderTopColor: colors.border,
           elevation: 0,
         },
-        tabBarLabelStyle: { fontSize: 10, fontFamily: fonts.body },
+        tabBarHideOnKeyboard: true,
+        tabBarBackground: () => <GlassSurface variant="navigation" style={{ flex: 1, borderRadius: 22 }} />,
+        tabBarLabel: labels[route.name],
+        tabBarLabelStyle: { fontSize: 12, fontFamily: fonts.bodyMedium },
         tabBarIcon: ({ color, focused }) => <BrassTabIcon name={TAB_ICONS[route.name]} color={color} focused={focused} />,
         tabBarButton: (props) => <HapticTabButton {...props} />,
-        tabBarAccessibilityLabel: route.name,
+        tabBarAccessibilityLabel: labels[route.name],
         tabBarButtonTestID: `customer-tab-${route.name.toLowerCase()}`,
       })}
     >

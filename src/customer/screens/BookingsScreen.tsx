@@ -43,6 +43,9 @@ import { numericText } from '../../theme/typography';
 import { radius, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
+import { BookingDetails } from '../../shared/components/BookingDetails';
+import { GlassSurface } from '../../shared/components/GlassSurface';
+import { getAppLanguage } from '../../shared/locale';
 import { StatusPill } from '../../shared/components/StatusPill';
 import { Avatar } from '../../shared/components/Avatar';
 import { BookingListSkeleton } from '../../shared/components/BookingListSkeleton';
@@ -77,6 +80,8 @@ function sortDesc(rows: BookingRow[]): BookingRow[] {
 
 export default function BookingsScreen() {
   const { colors, fonts } = useTheme();
+  const de = getAppLanguage() === 'de';
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const { showToast } = useToast();
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
 
@@ -257,6 +262,79 @@ export default function BookingsScreen() {
   const showSkeleton = loading && bookings.length === 0;
   const showError = error !== null && bookings.length === 0;
 
+  const selected = bookings.find((row) => row.id === selectedId);
+  const renderActions = (item: BookingRow) => {
+    const actionable = item.status === 'pending' || item.status === 'accepted';
+    const busy = inFlight[item.id] === true;
+    const cancellationQueued = queued[item.id] === true;
+    return <>
+                {actionable ? (
+                  cancellationQueued ? (
+                    <Text
+                      testID={`customer-bookings-row-undo-window-${item.id}`}
+                      accessibilityLiveRegion="polite"
+                      style={[styles.reviewedText, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}
+                    >
+                      Cancellation pending · Undo below
+                    </Text>
+                  ) : busy ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={colors.accent}
+                      style={styles.cardSpinner}
+                      testID={`customer-bookings-row-busy-${item.id}`}
+                      accessible
+                      accessibilityLabel="Cancelling booking"
+                      accessibilityLiveRegion="polite"
+                    />
+                  ) : (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Cancel booking"
+                      testID={`booking-cancel-${item.id}`}
+                      onPress={() => { setSelectedId(null); setConfirmingBooking(item); }}
+                      style={({ pressed }) => [
+                        styles.cancelButton,
+                        { borderColor: colors.error },
+                        pressed ? styles.cancelPressed : null,
+                      ]}
+                    >
+                      <Text style={[styles.cancelText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
+                        Cancel booking
+                      </Text>
+                    </Pressable>
+                  )
+                ) : item.status === 'completed' ? (
+                  reviewedBookingIds.has(item.id) ? (
+                    <View style={styles.reviewedRow} testID={`customer-bookings-reviewed-${item.id}`}>
+                      <Feather name="check" size={13} color={colors.textSecondary} />
+                      <Text style={[styles.reviewedText, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
+                        Reviewed
+                      </Text>
+                    </View>
+                  ) : (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Leave a review"
+                      testID={`booking-review-${item.id}`}
+                      onPress={() => { setSelectedId(null); leaveReview(item); }}
+                      style={({ pressed }) => [
+                        styles.reviewButton,
+                        { borderColor: colors.accent },
+                        pressed ? styles.reviewPressed : null,
+                      ]}
+                    >
+                      <Text style={[styles.reviewText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
+                        Leave a review
+                      </Text>
+                    </Pressable>
+                  )
+                ) : null}
+
+    {rowErrors[item.id] ? <Text accessibilityRole="alert" style={{ color: colors.errorText, marginTop: 16 }}>{rowErrors[item.id]}</Text> : null}
+    </>;
+  };
+
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -264,7 +342,7 @@ export default function BookingsScreen() {
       testID="customer-bookings-screen"
     >
       <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-        Bookings
+        {de ? 'Deine Termine' : 'Your appointments'}
       </Text>
 
       <View style={[styles.tabStrip, { borderBottomColor: colors.border }]}>
@@ -290,7 +368,7 @@ export default function BookingsScreen() {
                   { color: active ? colors.accentText : colors.textSecondary },
                 ]}
               >
-                {label}
+                {de ? (key === 'upcoming' ? 'Demn\u00e4chst' : 'Vergangene') : label}
               </Text>
             </Pressable>
           );
@@ -331,15 +409,14 @@ export default function BookingsScreen() {
           renderItem={({ item }) => {
             const barber = barbersById.get(item.barber_id);
             const service = servicesById.get(item.service_id);
-            const actionable = item.status === 'pending' || item.status === 'accepted';
-            const busy = inFlight[item.id] === true;
             const cancellationQueued = queued[item.id] === true;
             const rowError = rowErrors[item.id];
             return (
-              <View
-                style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              <GlassSurface
+                style={styles.card}
                 testID={`customer-bookings-row-${item.id}`}
               >
+                <Pressable accessibilityRole="button" accessibilityLabel={`${de ? 'Termindetails' : 'Appointment details'}, ${barber?.name ?? 'Barber'}, ${formatBookingWhen(item.date, item.time)}`} testID={`customer-bookings-open-${item.id}`} onPress={() => setSelectedId(item.id)} style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}>
                 <View style={styles.cardMain}>
                   <Avatar
                     id={barber?.id ?? item.barber_id}
@@ -353,7 +430,7 @@ export default function BookingsScreen() {
                     <View style={styles.cardTitleRow}>
                       <Text
                         numberOfLines={1}
-                        style={[styles.cardName, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}
+                        style={[styles.cardName, { color: colors.textPrimary, fontFamily: fonts.bodySemiBold }]}
                       >
                         {barber?.name ?? 'Barber'}
                       </Text>
@@ -382,70 +459,10 @@ export default function BookingsScreen() {
                 >
                   {item.location}
                 </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 }}><Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium, fontSize: 13 }}>{de ? 'Details ansehen' : 'View details'}</Text><Feather name="arrow-up-right" size={16} color={colors.accentText} /></View>
+                </Pressable>
 
-                {actionable ? (
-                  cancellationQueued ? (
-                    <Text
-                      testID={`customer-bookings-row-undo-window-${item.id}`}
-                      accessibilityLiveRegion="polite"
-                      style={[styles.reviewedText, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}
-                    >
-                      Cancellation pending · Undo below
-                    </Text>
-                  ) : busy ? (
-                    <ActivityIndicator
-                      size="small"
-                      color={colors.accent}
-                      style={styles.cardSpinner}
-                      testID={`customer-bookings-row-busy-${item.id}`}
-                      accessible
-                      accessibilityLabel="Cancelling booking"
-                      accessibilityLiveRegion="polite"
-                    />
-                  ) : (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="Cancel booking"
-                      testID={`booking-cancel-${item.id}`}
-                      onPress={() => setConfirmingBooking(item)}
-                      style={({ pressed }) => [
-                        styles.cancelButton,
-                        { borderColor: colors.error },
-                        pressed ? styles.cancelPressed : null,
-                      ]}
-                    >
-                      <Text style={[styles.cancelText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-                        Cancel booking
-                      </Text>
-                    </Pressable>
-                  )
-                ) : item.status === 'completed' ? (
-                  reviewedBookingIds.has(item.id) ? (
-                    <View style={styles.reviewedRow} testID={`customer-bookings-reviewed-${item.id}`}>
-                      <Feather name="check" size={13} color={colors.textSecondary} />
-                      <Text style={[styles.reviewedText, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-                        Reviewed
-                      </Text>
-                    </View>
-                  ) : (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="Leave a review"
-                      testID={`booking-review-${item.id}`}
-                      onPress={() => leaveReview(item)}
-                      style={({ pressed }) => [
-                        styles.reviewButton,
-                        { borderColor: colors.accent },
-                        pressed ? styles.reviewPressed : null,
-                      ]}
-                    >
-                      <Text style={[styles.reviewText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
-                        Leave a review
-                      </Text>
-                    </Pressable>
-                  )
-                ) : null}
-
+                {cancellationQueued ? <Text testID={`customer-bookings-row-undo-window-${item.id}`} style={[styles.reviewedText, { color: colors.textSecondary, fontFamily: fonts.body }]}>{de ? 'Stornierung vorgemerkt' : 'Cancellation pending'}</Text> : null}
                 {rowError ? (
                   <View
                     style={[styles.rowError, { borderTopColor: colors.border }]}
@@ -457,12 +474,13 @@ export default function BookingsScreen() {
                     </Text>
                   </View>
                 ) : null}
-              </View>
+              </GlassSurface>
             );
           }}
           />
         </>
       )}
+      {selected ? <BookingDetails booking={selected} person={barbersById.get(selected.barber_id)?.name ?? 'Barber'} service={servicesById.get(selected.service_id)?.name ?? (de ? 'Termin' : 'Appointment')} onClose={() => setSelectedId(null)}>{renderActions(selected)}</BookingDetails> : null}
       <ConfirmSheet
         open={confirmingBooking !== null}
         title="Cancel this booking?"
@@ -499,7 +517,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'transparent',
   },
-  tabLabel: { fontSize: 12, letterSpacing: 1.5 },
+  tabLabel: { fontSize: 14, letterSpacing: 0 },
 
   noticeMargins: { marginTop: space.xl, marginHorizontal: space.xl },
   emptyText: { fontSize: 13, textAlign: 'center', paddingVertical: 40 },
@@ -510,9 +528,9 @@ const styles = StyleSheet.create({
   cardInfo: { flex: 1, minWidth: 0 },
   cardTitleRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space.sm },
   cardName: { fontSize: 16, flexShrink: 1 },
-  cardMeta: { fontSize: 12, marginTop: 3 },
+  cardMeta: { fontSize: 14, marginTop: 3 },
   cardPrice: { fontSize: 14 },
-  cardLocation: { fontSize: 12, marginTop: 12 },
+  cardLocation: { fontSize: 14, marginTop: 12 },
 
   cardSpinner: { marginTop: 16, alignSelf: 'flex-start' },
   cancelButton: {

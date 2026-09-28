@@ -13,6 +13,7 @@ import { useCallback, useEffect, useRef, useState, type Ref } from 'react';
 import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { getAppLanguage } from '../../shared/locale';
 import { useTheme } from '../../theme/useTheme';
 import { HAIRLINE, space } from '../../theme/spacing';
 import { PrimaryButton } from '../../shared/components/PrimaryButton';
@@ -24,6 +25,7 @@ import type { CustomerStackParamList } from '../CustomerNavigator';
 type Props = NativeStackScreenProps<CustomerStackParamList, 'BookingLocation'>;
 
 export default function BookingLocationScreen({ route, navigation }: Props) {
+  const de = getAppLanguage() === 'de';
   const { barberId, barberName, service, date, time } = route.params;
   const { colors, fonts } = useTheme();
 
@@ -92,27 +94,27 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
       <KeyboardAvoidingView style={styles.content} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
         <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-          Where should the barber come to?
+          {de ? 'Wohin darf dein Barber kommen?' : 'Where should the barber come to?'}
         </Text>
         <Text style={[styles.subheading, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-          Add the full address so your barber can find you.
+          {de ? 'Gib deine vollständige Adresse an, damit dein Barber dich findet.' : 'Add the full address so your barber can find you.'}
         </Text>
 
         <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-          Street and building
+          {de ? 'Straße und Hausnummer' : 'Street and building'}
         </Text>
         <TextInput
           value={street}
           onChangeText={setStreet}
           onFocus={() => setFocused('street')}
           onBlur={() => { setFocused(null); setTouched((current) => ({ ...current, street: true })); }}
-          placeholder="Street and building number"
+          placeholder={de ? 'Straße und Hausnummer' : 'Street and building number'}
           placeholderTextColor={colors.textSecondary}
           multiline
           returnKeyType="next"
           submitBehavior="submit"
           onSubmitEditing={() => cityRef.current?.focus()}
-          accessibilityLabel="Street and building"
+          accessibilityLabel={de ? 'Straße und Hausnummer' : 'Street and building'}
           selectionColor={colors.accent}
           cursorColor={colors.accent}
           keyboardAppearance={colors.background === '#121214' ? 'dark' : 'light'}
@@ -120,7 +122,7 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
             styles.input,
             {
               color: colors.textPrimary,
-              borderBottomColor: focused === 'street' ? colors.accent : colors.border,
+              backgroundColor: colors.surface, borderColor: focused === 'street' ? colors.accent : colors.border,
               fontFamily: fonts.body,
             },
           ]}
@@ -128,11 +130,11 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
         />
           {streetError ? (
             <Text style={[styles.validation, { color: colors.errorText, fontFamily: fonts.body }]} accessibilityRole="alert" testID="customer-booking-location-street-error">
-              Add the street and building number.
+              {de ? 'Bitte gib Straße und Hausnummer an.' : 'Add the street and building number.'}
             </Text>
           ) : null}
           <AddressField
-            label="City" value={city} onChangeText={setCity} inputRef={cityRef}
+            label={de ? 'Stadt' : 'City'} value={city} onChangeText={setCity} inputRef={cityRef}
             focused={focused === 'city'} onFocus={() => setFocused('city')}
             onBlur={() => { setFocused(null); setTouched((current) => ({ ...current, city: true })); }}
             onSubmitEditing={() => unitRef.current?.focus()} returnKeyType="next"
@@ -140,17 +142,17 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
           />
           {cityError ? (
             <Text style={[styles.validation, { color: colors.errorText, fontFamily: fonts.body }]} accessibilityRole="alert" testID="customer-booking-location-city-error">
-              Add your city.
+              {de ? 'Bitte gib deine Stadt an.' : 'Add your city.'}
             </Text>
           ) : null}
           <AddressField
-            label="Apartment or unit (optional)" value={unit} onChangeText={setUnit} inputRef={unitRef}
+            label={de ? 'Wohnung oder Etage (optional)' : 'Apartment or unit (optional)'} value={unit} onChangeText={setUnit} inputRef={unitRef}
             focused={focused === 'unit'} onFocus={() => setFocused('unit')} onBlur={() => setFocused(null)}
             onSubmitEditing={() => instructionsRef.current?.focus()} returnKeyType="next"
             testID="customer-booking-location-unit"
           />
           <AddressField
-            label="Access instructions (optional)" value={instructions} onChangeText={setInstructions} inputRef={instructionsRef}
+            label={de ? 'Hinweise zum Zugang (optional)' : 'Access instructions (optional)'} value={instructions} onChangeText={setInstructions} inputRef={instructionsRef}
             focused={focused === 'instructions'} onFocus={() => setFocused('instructions')} onBlur={() => setFocused(null)}
             onSubmitEditing={onSubmitLastField} returnKeyType="done"
             testID="customer-booking-location-instructions"
@@ -160,7 +162,7 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
 
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
         <PrimaryButton
-          label="Continue"
+          label={de ? 'Termin prüfen' : 'Continue'}
           onPress={onContinue}
           disabled={!canContinue}
           testID="customer-booking-location-continue"
@@ -197,7 +199,7 @@ function AddressField({ label, value, onChangeText, inputRef, focused, onFocus, 
         accessibilityLabel={label}
         placeholderTextColor={colors.textSecondary}
         selectionColor={colors.accent}
-        style={[styles.singleInput, { color: colors.textPrimary, borderBottomColor: focused ? colors.accent : colors.border, fontFamily: fonts.body }]}
+        style={[styles.singleInput, { color: colors.textPrimary, backgroundColor: colors.surface, borderColor: focused ? colors.accent : colors.border, fontFamily: fonts.body }]}
         testID={testID}
       />
     </View>
@@ -210,18 +212,18 @@ const styles = StyleSheet.create({
   content: { flex: 1 },
   scrollContent: { paddingHorizontal: space.xl, paddingTop: space.base, paddingBottom: space.xl },
   heading: { fontSize: 24 },
-  subheading: { fontSize: 13, marginTop: 6, lineHeight: 19 },
+  subheading: { fontSize: 15, marginTop: 6, lineHeight: 19 },
 
-  label: { fontSize: 12, marginTop: space['2xl'], marginBottom: 6, letterSpacing: 0.2 },
+  label: { fontSize: 14, marginTop: space['2xl'], marginBottom: 6, letterSpacing: 0.2 },
   input: {
-    borderBottomWidth: HAIRLINE,
+    borderWidth: HAIRLINE, borderRadius: 14, paddingHorizontal: 14,
     paddingVertical: space.md,
     fontSize: 16,
     lineHeight: 22,
     minHeight: 88,
     textAlignVertical: 'top',
   },
-  singleInput: { borderBottomWidth: HAIRLINE, paddingVertical: space.md, fontSize: 16, minHeight: 48 },
+  singleInput: { borderWidth: HAIRLINE, borderRadius: 14, paddingHorizontal: 14, paddingVertical: space.md, fontSize: 16, minHeight: 54 },
   validation: { fontSize: 13, lineHeight: 19, marginTop: space.base },
 
   footer: { paddingHorizontal: space.xl, paddingTop: 14, paddingBottom: space.lg, borderTopWidth: HAIRLINE },

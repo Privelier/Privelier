@@ -373,7 +373,8 @@ export default function AvailabilityScreen({ navigation }: Props) {
                       styles.input,
                       {
                         color: colors.textPrimary,
-                        borderBottomColor: underlineColor(!!fieldErrors.date, focusedField === 'date', colors),
+                        backgroundColor: colors.background,
+                    borderColor: underlineColor(!!fieldErrors.date, focusedField === 'date', colors),
                         fontFamily: fonts.body,
                       },
                     ]}
@@ -412,7 +413,8 @@ export default function AvailabilityScreen({ navigation }: Props) {
                       styles.input,
                       {
                         color: colors.textPrimary,
-                        borderBottomColor: underlineColor(!!fieldErrors.startTime, focusedField === 'startTime', colors),
+                        backgroundColor: colors.background,
+                    borderColor: underlineColor(!!fieldErrors.startTime, focusedField === 'startTime', colors),
                         fontFamily: fonts.body,
                       },
                     ]}
@@ -443,7 +445,8 @@ export default function AvailabilityScreen({ navigation }: Props) {
                       styles.input,
                       {
                         color: colors.textPrimary,
-                        borderBottomColor: underlineColor(!!fieldErrors.endTime, focusedField === 'endTime', colors),
+                        backgroundColor: colors.background,
+                    borderColor: underlineColor(!!fieldErrors.endTime, focusedField === 'endTime', colors),
                         fontFamily: fonts.body,
                       },
                     ]}
@@ -555,16 +558,16 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: space.xl, paddingBottom: space['2xl'] },
   form: { borderWidth: HAIRLINE, borderRadius: radius.lg, padding: space.base, marginTop: 20, marginBottom: 28 },
   formTitle: { fontSize: 19, marginBottom: 14 },
-  label: { fontSize: 12, marginBottom: 6, marginTop: 14, letterSpacing: 0.2 },
-  input: { borderBottomWidth: HAIRLINE, paddingVertical: space.md, fontSize: 16 },
+  label: { fontSize: 14, marginBottom: 6, marginTop: 14, letterSpacing: 0 },
+  input: { borderWidth: HAIRLINE, borderRadius: 14, minHeight: 54, paddingHorizontal: 14, paddingVertical: space.md, fontSize: 16 },
   errorText: { fontSize: 13, marginTop: 4 },
   helperText: { fontSize: 13, marginTop: 4 },
   noticeMargins: { marginBottom: space.md },
   segmented: { flexDirection: 'row', borderWidth: HAIRLINE, borderRadius: radius.md, overflow: 'hidden', marginTop: 4 },
-  segment: { flex: 1, paddingVertical: space.md, alignItems: 'center', justifyContent: 'center' },
+  segment: { minHeight: 48, flex: 1, paddingVertical: space.md, alignItems: 'center', justifyContent: 'center' },
   segmentText: { fontSize: 14 },
   dayRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: 12 },
-  dayChip: { borderWidth: HAIRLINE, borderRadius: radius.sm, paddingVertical: space.sm, paddingHorizontal: 10 },
+  dayChip: { minHeight: 44, justifyContent: 'center', borderWidth: HAIRLINE, borderRadius: radius.sm, paddingVertical: space.sm, paddingHorizontal: 10 },
   dayChipText: { fontSize: 13 },
   timeRow: { flexDirection: 'row', gap: 16 },
   timeField: { flex: 1 },

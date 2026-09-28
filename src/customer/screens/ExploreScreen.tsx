@@ -361,7 +361,7 @@ export default function ExploreScreen({ navigation }: Props) {
                 <Image
                   key={staticMapUrl}
                   source={{ uri: staticMapUrl }}
-                  contentFit="cover"
+                  contentFit="contain"
                   cachePolicy="memory-disk"
                   accessibilityLabel={isGerman ? `Mapbox Karte mit ${pins.length} Barber-Standorten` : `Mapbox map with ${pins.length} barber locations`}
                   testID="customer-explore-static-map"
@@ -492,15 +492,15 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 14, textAlign: 'center', marginTop: 48, paddingHorizontal: 24 },
 
   mapArea: { flex: 1, marginTop: 16 },
-  mapFallbackArea: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
-  staticMapImage: { ...StyleSheet.absoluteFill },
+  mapFallbackArea: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16, gap: 12 },
+  staticMapImage: { flex: 1, width: '100%', minHeight: 120 },
   mapSoon: {
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
     maxWidth: 420,
     paddingHorizontal: 24,
-    paddingVertical: 24,
+    paddingVertical: 16,
     gap: 10,
   },
   mapSoonTitle: { fontSize: 18, textAlign: 'center' },

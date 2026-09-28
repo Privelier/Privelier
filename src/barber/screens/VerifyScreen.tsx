@@ -22,7 +22,7 @@
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Feather, FontAwesome5 } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchOwnProfile } from '../../auth/authService';
@@ -266,11 +266,12 @@ export default function VerifyScreen() {
               <GlassSurface style={styles.membershipCard} testID="barber-membership-card">
                 <Text style={[styles.membershipEyebrow, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>{language === 'de' ? 'Monatliche Mitgliedschaft' : 'Monthly membership'}</Text>
                 <View style={styles.priceRow}>
-                  <Text style={[styles.price, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+                  <Text style={[styles.price, { color: colors.textPrimary, fontFamily: fonts.bodySemiBold }]}>
                     {formatEuroPrice(35, language)}
                   </Text>
                   <Text style={[styles.perMonth, { color: colors.textSecondary, fontFamily: fonts.body }]}>{language === 'de' ? 'pro Monat' : 'per month'}</Text>
                 </View>
+                <Text style={[styles.paymentFootnote, { color: colors.textSecondary, fontFamily: fonts.body }]} testID="barber-membership-availability">{language === 'de' ? 'Vorschau · Zahlungen und Codeprüfung sind noch nicht verfügbar. Deine Auswahl löst keine Zahlung aus.' : 'Preview · Payments and code checks are not available yet. Your selection will not start a payment.'}</Text>
                 <View style={[styles.sectionDivider, { backgroundColor: colors.border }]} />
                 <Text style={[styles.sectionLabel, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{language === 'de' ? 'Code einlösen' : 'Redeem a code'}</Text>
                 <View style={styles.redeemRow}>
@@ -306,12 +307,12 @@ export default function VerifyScreen() {
                   onPress={continueToPayment}
                   disabled={!paymentMethod}
                   accessibilityRole="button"
-                  accessibilityLabel={language === 'de' ? `Mit ${paymentMethod === 'apple' ? 'Apple Pay' : 'Google Pay'} fortfahren` : `Continue with ${paymentMethod === 'apple' ? 'Apple Pay' : 'Google Pay'}`}
+                  accessibilityLabel={language === 'de' ? 'Zahlungsstatus ansehen' : 'View payment availability'}
                   accessibilityState={{ disabled: !paymentMethod }}
                   testID="barber-membership-continue"
                   style={({ pressed }) => [styles.continueButton, { backgroundColor: paymentMethod ? colors.accent : colors.border, opacity: pressed ? pressOpacity.soft : 1 }]}
                 >
-                  <Text style={[styles.continueText, { color: paymentMethod ? colors.onAccent : colors.textSecondary, fontFamily: fonts.bodySemiBold }]}>{language === 'de' ? 'Weiter' : 'Continue'}</Text>
+                  <Text style={[styles.continueText, { color: paymentMethod ? colors.onAccent : colors.textSecondary, fontFamily: fonts.bodySemiBold }]}>{language === 'de' ? 'Zahlungsstatus ansehen' : 'View payment availability'}</Text>
                 </Pressable>
                 {paymentFeedback ? <Text accessibilityRole="alert" style={[styles.feedback, { color: colors.textSecondary, fontFamily: fonts.body }]} testID="barber-membership-payment-feedback">{paymentFeedback}</Text> : null}
                 <Text style={[styles.paymentFootnote, { color: colors.textSecondary, fontFamily: fonts.body }]}>{language === 'de' ? 'Apple Pay und Google Pay werden später eingerichtet. Die Auswahl startet keine Zahlung.' : 'Apple Pay and Google Pay setup is coming later. Choosing a method here never starts a payment.'}</Text>
@@ -335,7 +336,7 @@ function PaymentMethodOption({ label, selected, onPress, testID }: { label: stri
       testID={testID}
       style={({ pressed }) => [styles.paymentOption, { borderColor: selected ? colors.accentText : colors.border, backgroundColor: selected ? colors.surface : 'transparent', opacity: pressed ? pressOpacity.soft : 1 }]}
     >
-      <Feather name={label === 'Apple Pay' ? 'smartphone' : 'credit-card'} size={16} color={selected ? colors.accentText : colors.textSecondary} />
+      <FontAwesome5 name={label === 'Apple Pay' ? 'apple-pay' : 'google-pay'} size={30} color={colors.textPrimary} accessible={false} />
       <Text style={[styles.paymentOptionText, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{label}</Text>
       {selected ? <Feather name="check-circle" size={16} color={colors.accentText} /> : null}
     </Pressable>
@@ -433,7 +434,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: space.xl, paddingTop: space.xl, paddingBottom: space['2xl'] },
   heading: { fontSize: 30 },
-  subtitle: { fontSize: 12, marginTop: 4 },
+  subtitle: { fontSize: 14, lineHeight: 21, marginTop: 8 },
 
   spinner: { marginTop: 48, alignSelf: 'center' },
   noticeMargins: { marginTop: space.xl },
@@ -442,7 +443,7 @@ const styles = StyleSheet.create({
   membership: { marginTop: space['2xl'] },
   sectionTitle: { fontSize: 22, lineHeight: 30 },
   membershipCard: { padding: space.lg, marginTop: space.md },
-  membershipEyebrow: { fontSize: 10, letterSpacing: 1.1 },
+  membershipEyebrow: { fontSize: 13, lineHeight: 20 },
   priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm, marginTop: space.sm },
   price: { fontSize: 34, lineHeight: 44, fontVariant: ['tabular-nums'] },
   perMonth: { fontSize: 13 },
@@ -455,11 +456,11 @@ const styles = StyleSheet.create({
   feedback: { fontSize: 12, lineHeight: 18, marginTop: space.sm },
   paymentLabel: { marginTop: space.lg },
   paymentMethods: { gap: space.sm, marginTop: space.sm },
-  paymentOption: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: space.md, borderWidth: HAIRLINE, borderRadius: radius.sm, paddingHorizontal: space.md },
+  paymentOption: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: space.md, borderWidth: HAIRLINE, borderRadius: radius.sm, paddingHorizontal: space.md, paddingVertical: space.sm },
   paymentOptionText: { flex: 1, fontSize: 14 },
   continueButton: { minHeight: 48, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm, marginTop: space.md },
   continueText: { fontSize: 14 },
-  paymentFootnote: { fontSize: 11, lineHeight: 16, marginTop: space.md },
+  paymentFootnote: { fontSize: 13, lineHeight: 20, marginTop: space.md },
 
   statusCard: {
     flexDirection: 'row',
@@ -472,7 +473,7 @@ const styles = StyleSheet.create({
   },
   statusText: { flexShrink: 1, minWidth: 0 },
   statusWord: { fontSize: 18 },
-  statusLine: { fontSize: 12, marginTop: 4 },
+  statusLine: { fontSize: 14, lineHeight: 21, marginTop: 6 },
 
   docs: { marginTop: 32, gap: space.md },
   docRow: {

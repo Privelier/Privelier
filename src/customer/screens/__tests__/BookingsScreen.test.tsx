@@ -4,6 +4,7 @@ import { cancelBookingAsCustomer, fetchOwnBookingsView } from '../../bookingsDat
 import type { ToastOptions } from '../../../shared/components/ToastProvider';
 import { fetchOwnReviewedBookingIds } from '../../reviewsData';
 import BookingsScreen from '../BookingsScreen';
+import { useBookingsRealtime } from '../../../shared/useBookingsRealtime';
 
 jest.mock('@react-navigation/native', () => {
   const React = jest.requireActual('react');
@@ -149,7 +150,10 @@ afterEach(async () => {
 describe('BookingsScreen status presentation', () => {
   it('waits for the undo window before sending cancellation', async () => {
     await render(<BookingsScreen />);
-    await waitFor(() => expect(screen.getByTestId('booking-cancel-booking-1')).toBeTruthy());
+    await waitFor(() => expect(screen.getByTestId('customer-bookings-open-booking-1')).toBeTruthy());
+    expect(screen.queryByTestId('booking-cancel-booking-1')).toBeNull();
+    await fireEvent.press(screen.getByTestId('customer-bookings-open-booking-1'));
+    expect(screen.getByTestId('booking-details')).toBeTruthy();
 
     await act(async () => fireEvent.press(screen.getByTestId('booking-cancel-booking-1')));
     expect(screen.getByTestId('customer-bookings-cancel-sheet-confirm')).toBeTruthy();
@@ -162,6 +166,7 @@ describe('BookingsScreen status presentation', () => {
 
     await act(async () => first.onClose?.('action'));
     expect(mockCancelBooking).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId('customer-bookings-open-booking-1'));
     expect(screen.getByTestId('booking-cancel-booking-1')).toBeTruthy();
 
     await act(async () => fireEvent.press(screen.getByTestId('booking-cancel-booking-1')));
@@ -169,6 +174,20 @@ describe('BookingsScreen status presentation', () => {
     const second = mockShowToast.mock.calls[1][0] as ToastOptions;
     await act(async () => second.onClose?.('timeout'));
     await waitFor(() => expect(mockCancelBooking).toHaveBeenCalledWith('booking-1'));
+  });
+
+  it('keeps open details connected to realtime status changes', async () => {
+    await render(<BookingsScreen />);
+    await waitFor(() => expect(screen.getByTestId('customer-bookings-open-booking-1')).toBeTruthy());
+    await fireEvent.press(screen.getByTestId('customer-bookings-open-booking-1'));
+    expect(screen.getByTestId('booking-details-status').props.accessibilityLabel).toBe('Status: Pending');
+    const options = jest.mocked(useBookingsRealtime).mock.calls.at(-1)![0];
+    await act(async () => options.onChange({ eventType: 'UPDATE', row: { ...BOOKING, status: 'completed' } }));
+    expect(screen.getByTestId('booking-details-status').props.accessibilityLabel).toBe('Status: Completed');
+    expect(screen.queryByTestId('booking-cancel-booking-1')).toBeNull();
+    expect(screen.getByTestId('booking-review-booking-1')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('booking-details-close'));
+    expect(screen.queryByTestId('booking-details')).toBeNull();
   });
 
   it('refreshes in brass while keeping the loaded booking visible', async () => {
@@ -207,6 +226,7 @@ describe('BookingsScreen status presentation', () => {
     expect(screen.getByTestId('customer-bookings-row-booking-1')).toBeTruthy();
     expect(screen.getByTestId('customer-bookings-avatar-booking-1-monogram').props.children).toBe('TM');
     expect(screen.getByTestId('customer-bookings-avatar-booking-1').props.accessible).toBe(false);
+    await fireEvent.press(screen.getByTestId('customer-bookings-open-booking-1'));
     expect(screen.getByTestId('booking-cancel-booking-1')).toBeTruthy();
   });
 });

@@ -21,7 +21,7 @@
  * -service-{id} / -portfolio-placeholder. Services is the default tab, so
  * the flow's service assertions hold without extra taps.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Image,
   Pressable,
@@ -37,6 +37,9 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { PortfolioGrid } from '../../shared/components/PortfolioGrid';
 import { PortfolioTile } from '../../shared/components/PortfolioTile';
 import { StarRating } from '../../shared/components/StarRating';
+import { Avatar } from '../../shared/components/Avatar';
+import { GlassSurface } from '../../shared/components/GlassSurface';
+import { getAppLanguage } from '../../shared/locale';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { BackButton, OVER_IMAGE_BG, OVER_IMAGE_ICON } from '../../shared/components/ScreenBackHeader';
 import { useTheme } from '../../theme/useTheme';
@@ -69,6 +72,9 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
   const { barberId } = route.params;
   const { colors, fonts } = useTheme();
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
+  const servicesY = useRef(0);
+  const german = getAppLanguage() === 'de';
 
   const [barber, setBarber] = useState<BarberDirectoryRow | null>(null);
   const [services, setServices] = useState<ServiceRow[]>([]);
@@ -182,7 +188,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
             style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}
             testID="barber-profile-not-found"
           >
-            This barber is no longer available.
+            {german ? 'Dieser Barber ist nicht mehr verf\u00fcgbar.' : 'This barber is no longer available.'}
           </Text>
         )}
       </SafeAreaView>
@@ -191,6 +197,8 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
 
   if (!barber) return null;
 
+  const canBook = !servicesError && services.length > 0;
+  const fromPrice = canBook ? Math.min(...services.map((service) => service.price)) : null;
   const chips = services.slice(0, 4).map((s) => s.name);
 
   return (
@@ -202,31 +210,31 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
       {/* The hero image bleeds under the status bar; light icons read best
           over photography. The no-image fallback keeps the global "auto". */}
       {barber.profile_image ? <StatusBar style="light" /> : null}
-      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
+      <ScrollView ref={scrollRef} contentContainerStyle={{ paddingBottom: 32 }}>
         {/* Hero — image bleeds under the status bar like the prototype. */}
         <View style={[styles.hero, { backgroundColor: colors.surface }]}>
           {barber.profile_image ? (
             <Image source={{ uri: barber.profile_image }} style={styles.heroImage} resizeMode="cover" />
           ) : (
-            <View style={styles.heroFallback}>
-              <Text style={[styles.heroInitial, { color: colors.textSecondary, fontFamily: fonts.headingMedium }]}>
-                {barber.name.trim().charAt(0).toUpperCase() || '?'}
-              </Text>
+            <View style={[styles.heroFallback, { paddingTop: insets.top + 64 }]}>
+              <View style={[styles.monogramFrame, { borderColor: colors.border }]}>
+                <Avatar id={barber.id} name={barber.name} size={88} testID="barber-profile-monogram" />
+              </View>
             </View>
           )}
-          <View style={[styles.heroTitleBlock, { backgroundColor: HERO_SCRIM }]}>
+          <View style={[styles.heroTitleBlock, { backgroundColor: barber.profile_image ? HERO_SCRIM : colors.surface }]}>
             <View style={styles.nameRow}>
-              <Text numberOfLines={1} style={[styles.heroName, { fontFamily: fonts.headingMedium }]}>
+              <Text style={[styles.heroName, { fontFamily: fonts.headingMedium, color: barber.profile_image ? HERO_TEXT : colors.textPrimary }]}>
                 {barber.name}
               </Text>
               <MaterialCommunityIcons name="check-decagram" size={18} color={colors.accent} />
             </View>
             <View style={styles.heroMetaRow}>
-              <Feather name="map-pin" size={11} color={HERO_TEXT_DIM} />
-              <Text style={[styles.heroMeta, { fontFamily: fonts.body }]}>
-                {[barber.city, barber.country].filter(Boolean).join(', ') || 'Location not set'}
+              <Feather name="map-pin" size={11} color={barber.profile_image ? HERO_TEXT_DIM : colors.textSecondary} />
+              <Text style={[styles.heroMeta, { fontFamily: fonts.body, color: barber.profile_image ? HERO_TEXT_DIM : colors.textSecondary }]}>
+                {[barber.city, barber.country].filter(Boolean).join(', ') || (german ? 'Ort noch nicht angegeben' : 'Location not set')}
               </Text>
-              <Text style={[styles.heroMeta, { fontFamily: fonts.body }]}>·</Text>
+              <Text style={[styles.heroMeta, { fontFamily: fonts.body, color: barber.profile_image ? HERO_TEXT_DIM : colors.textSecondary }]}>·</Text>
               {barber.rating > 0 ? (
                 <View
                   style={styles.heroRating}
@@ -234,17 +242,17 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
                   accessibilityLabel={`Rating ${barber.rating.toFixed(1)} out of 5`}
                 >
                   <Ionicons name="star" size={11} color={colors.accent} />
-                  <Text style={[styles.heroMeta, numericText]}>
+                  <Text style={[styles.heroMeta, numericText, { color: barber.profile_image ? HERO_TEXT_DIM : colors.textSecondary }]}>
                     {barber.rating.toFixed(1)}
                   </Text>
                 </View>
               ) : (
                 <Text
-                  style={[styles.heroMeta, { fontFamily: fonts.body }]}
+                  style={[styles.heroMeta, { fontFamily: fonts.body, color: barber.profile_image ? HERO_TEXT_DIM : colors.textSecondary }]}
                   testID="barber-profile-rating"
                   accessibilityLabel="No ratings yet"
                 >
-                  No ratings yet
+                  {german ? 'Noch keine Bewertungen' : 'No ratings yet'}
                 </Text>
               )}
             </View>
@@ -254,7 +262,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
         {/* Bio + specialty chips (chips are this barber's service names). */}
         <View style={styles.bioBlock}>
           <Text style={[styles.bio, { color: colors.textPrimary, fontFamily: fonts.body }]}>
-            {barber.bio?.trim() || 'This barber has not added a bio yet.'}
+            {barber.bio?.trim() || (german ? 'Dieser Barber hat noch keine Beschreibung hinzugef\u00fcgt.' : 'This barber has not added a bio yet.')}
           </Text>
           {chips.length > 0 ? (
             <View style={styles.chipsRow}>
@@ -270,7 +278,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
         </View>
 
         {/* Tab strip. */}
-        <View style={[styles.tabStrip, { borderBottomColor: colors.border }]}>
+        <View onLayout={(event) => { servicesY.current = event.nativeEvent.layout.y; }} style={[styles.tabStrip, { borderBottomColor: colors.border }]}>
           {TABS.map(({ key, label }) => {
             const active = tab === key;
             return (
@@ -278,6 +286,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
                 key={key}
                 onPress={() => setTab(key)}
                 accessibilityRole="tab"
+                accessibilityLabel={german ? ({ services: 'Leistungen', portfolio: 'Portfolio', reviews: 'Bewertungen' })[key] : label}
                 accessibilityState={{ selected: active }}
                 testID={`barber-profile-tab-${key}`}
                 style={({ pressed }) => [
@@ -293,7 +302,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
                     { color: active ? colors.accentText : colors.textSecondary },
                   ]}
                 >
-                  {label}
+                  {german ? ({ services: 'Leistungen', portfolio: 'Portfolio', reviews: 'Bewertungen' })[key] : label}
                 </Text>
               </Pressable>
             );
@@ -315,7 +324,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
                 style={[styles.stateText, { color: colors.textSecondary, fontFamily: fonts.body }]}
                 testID="barber-profile-services-empty"
               >
-                This barber has not added any services yet.
+                {german ? 'Dieser Barber hat noch keine Leistungen hinzugef\u00fcgt.' : 'This barber has not added any services yet.'}
               </Text>
             ) : (
               services.map((service, index) => (
@@ -335,7 +344,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
                   <Pressable
                     onPress={() => onBook(service)}
                     accessibilityRole="button"
-                    accessibilityLabel={`Book ${service.name}`}
+                    accessibilityLabel={`${german ? 'Buchen' : 'Book'} ${service.name}`}
                     testID={`barber-profile-book-${service.id}`}
                     style={({ pressed }) => [
                       styles.bookButton,
@@ -343,7 +352,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
                     ]}
                   >
                     <Text style={[styles.bookButtonText, { color: colors.onAccent, fontFamily: fonts.bodyMedium }]}>
-                      Book
+                      {german ? 'Buchen' : 'Book'}
                     </Text>
                   </Pressable>
                 </View>
@@ -364,7 +373,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
                     not a call to action on someone else's profile. */}
                 <Feather name="image" size={22} color={colors.border} />
                 <Text style={[styles.portfolioEmptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                  No portfolio to show yet.
+                  {german ? 'Noch keine Portfoliofotos.' : 'No portfolio to show yet.'}
                 </Text>
               </View>
             ) : (
@@ -391,13 +400,13 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
               <Text
                 style={[styles.reviewsRating, styles.reviewsRatingEmpty, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}
               >
-                New
+                {german ? 'Neu' : 'New'}
               </Text>
               {/* A muted 5-outline row so the empty and populated states share a
                   silhouette — reads as "scale awaiting ratings", not "zero". */}
               <StarRating rating={0} size={16} style={styles.reviewsEmptyStars} />
               <Text style={[styles.stateText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                Reviews arrive after the first completed bookings.
+                {german ? 'Bewertungen erscheinen nach den ersten abgeschlossenen Terminen.' : 'Reviews arrive after the first completed bookings.'}
               </Text>
             </View>
           ) : (
@@ -468,6 +477,28 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
         </View>
       </ScrollView>
 
+      {canBook && fromPrice !== null ? (
+        <GlassSurface style={[styles.bookingDock, { paddingBottom: Math.max(insets.bottom, 16) }]} testID="barber-profile-booking-dock">
+          <Text style={[styles.dockPrice, numericText, { color: colors.textPrimary }]}>
+            {german ? 'Ab' : 'From'} {formatMoney(fromPrice)}
+          </Text>
+          <Pressable
+            testID="barber-profile-choose-service"
+            accessibilityRole="button"
+            accessibilityLabel={german ? 'Leistung zum Buchen ausw\u00e4hlen' : 'Choose a service to book'}
+            onPress={() => {
+              setTab('services');
+              scrollRef.current?.scrollTo({ y: servicesY.current, animated: false });
+            }}
+            style={({ pressed }) => [styles.dockButton, { backgroundColor: colors.accent, opacity: pressed ? pressOpacity.firm : 1 }]}
+          >
+            <Text style={[styles.bookButtonText, { fontFamily: fonts.bodyMedium, color: colors.onAccent }]}>
+              {german ? 'Leistung w\u00e4hlen' : 'Choose service'}
+            </Text>
+            <Feather name="arrow-right" size={18} color={colors.onAccent} />
+          </Pressable>
+        </GlassSurface>
+      ) : null}
       {/* Back button floats over the hero, clear of the status bar. */}
       <View style={[styles.backWrap, { top: insets.top + 8 }]}>
         <BackButton onPress={goBack} testID="barber-profile-back" tone="overImage" />
@@ -499,6 +530,9 @@ function BarberProfileSkeleton() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
 
+  bookingDock: { borderRadius: 0, paddingHorizontal: 24, paddingTop: 16, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12 },
+  dockPrice: { fontSize: 17, flexGrow: 1 },
+  dockButton: { minHeight: 48, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 12 },
   plainHeader: { paddingHorizontal: 24, paddingTop: 12 },
   profileSkeleton: { paddingBottom: 32 },
   skeletonHero: { height: 320, width: '100%', borderRadius: 0 },
@@ -514,21 +548,18 @@ const styles = StyleSheet.create({
   noticeText: { fontSize: 14 },
   emptyText: { fontSize: 14, textAlign: 'center', marginTop: 48, paddingHorizontal: 24 },
 
-  hero: { height: 320 },
+  hero: { minHeight: 340 },
   heroImage: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  heroFallback: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  heroInitial: { fontSize: 64 },
+  heroFallback: { alignItems: 'center', paddingBottom: 28 },
+  monogramFrame: { padding: 10, borderRadius: 60, borderWidth: 0.5 },
   heroTitleBlock: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
+    marginTop: 'auto',
     paddingHorizontal: 24,
     paddingVertical: 16,
   },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   heroName: { fontSize: 28, color: HERO_TEXT, flexShrink: 1 },
-  heroMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  heroMetaRow: { flexWrap: 'wrap', flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
   heroMeta: { fontSize: 12, color: HERO_TEXT_DIM },
   heroRating: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 
@@ -546,12 +577,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
   },
   tabButton: {
+    minHeight: 48,
+    justifyContent: 'center',
     paddingBottom: 12,
     marginBottom: -0.5,
     borderBottomWidth: 1,
     borderBottomColor: 'transparent',
   },
-  tabLabel: { fontSize: 12, letterSpacing: 1.5 },
+  tabLabel: { fontSize: 14 },
 
   tabContent: { paddingHorizontal: 24, paddingVertical: 8 },
   stateText: { fontSize: 13, paddingVertical: 16 },
@@ -561,7 +594,7 @@ const styles = StyleSheet.create({
   serviceName: { fontSize: 18 },
   serviceMeta: { fontSize: 12, marginTop: 6 },
   bookButton: { borderRadius: 8, paddingHorizontal: 16, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  bookButtonText: { fontSize: 12 },
+  bookButtonText: { fontSize: 14 },
 
   // lineHeight 44 trims Playfair's leading slack so the big number optically
   // centres against the 16px stars + count in the summary row.

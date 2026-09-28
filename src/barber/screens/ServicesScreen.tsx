@@ -264,7 +264,8 @@ export default function ServicesScreen({ navigation }: Props) {
                   styles.input,
                   {
                     color: colors.textPrimary,
-                    borderBottomColor: underlineColor(!!fieldErrors.name, focusedField === 'name', colors),
+                    backgroundColor: colors.background,
+                    borderColor: underlineColor(!!fieldErrors.name, focusedField === 'name', colors),
                     fontFamily: fonts.body,
                   },
                 ]}
@@ -299,7 +300,8 @@ export default function ServicesScreen({ navigation }: Props) {
                   styles.input,
                   {
                     color: colors.textPrimary,
-                    borderBottomColor: underlineColor(!!fieldErrors.price, focusedField === 'price', colors),
+                    backgroundColor: colors.background,
+                    borderColor: underlineColor(!!fieldErrors.price, focusedField === 'price', colors),
                     fontFamily: fonts.body,
                   },
                 ]}
@@ -330,7 +332,8 @@ export default function ServicesScreen({ navigation }: Props) {
                   styles.input,
                   {
                     color: colors.textPrimary,
-                    borderBottomColor: underlineColor(!!fieldErrors.duration, focusedField === 'duration', colors),
+                    backgroundColor: colors.background,
+                    borderColor: underlineColor(!!fieldErrors.duration, focusedField === 'duration', colors),
                     fontFamily: fonts.body,
                   },
                 ]}
@@ -442,8 +445,8 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: space.xl, paddingBottom: space['2xl'] },
   form: { borderWidth: HAIRLINE, borderRadius: radius.lg, padding: space.base, marginTop: 20, marginBottom: 28 },
   formTitle: { fontSize: 19, marginBottom: 14 },
-  label: { fontSize: 12, marginBottom: 6, marginTop: 14, letterSpacing: 0.2 },
-  input: { borderBottomWidth: HAIRLINE, paddingVertical: space.md, fontSize: 16 },
+  label: { fontSize: 14, marginBottom: 6, marginTop: 14, letterSpacing: 0 },
+  input: { borderWidth: HAIRLINE, borderRadius: 14, minHeight: 54, paddingHorizontal: 14, paddingVertical: space.md, fontSize: 16 },
   errorText: { fontSize: 13, marginTop: 4 },
   helperText: { fontSize: 13, marginTop: 4 },
   noticeMargins: { marginBottom: space.md },

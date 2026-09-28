@@ -5,6 +5,11 @@ appId: com.privelier.app
 ---
 - runFlow: customer-booking-create.yaml
 - tapOn:
+    id: "customer-bookings-open-.*"
+    index: 0
+- assertVisible:
+    id: "booking-details"
+- tapOn:
     id: "booking-cancel-.*"
 - assertVisible: "Cancel this booking?"
 - tapOn:
@@ -15,5 +20,8 @@ appId: com.privelier.app
 - tapOn: "Undo"
 - assertNotVisible:
     id: "customer-bookings-row-undo-window-.*"
+- tapOn:
+    id: "customer-bookings-open-.*"
+    index: 0
 - assertVisible:
     id: "booking-cancel-.*"

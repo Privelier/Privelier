@@ -98,6 +98,12 @@ export default function NotificationCenterScreen({
         ) : !error ? <View style={styles.empty}><Feather name="bell" size={24} color={colors.accent} /><Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}>{isGerman ? 'Du bist auf dem neuesten Stand.' : 'You’re all caught up.'}</Text></View> : null}
         renderItem={({ item }) => {
           const copy = notificationCopy(item, names[item.actor_id] ?? null);
+          const icon = item.event_type === 'message' ? 'message-circle'
+            : item.event_type === 'new_request' ? 'calendar'
+            : item.booking_status === 'accepted' ? 'check-circle'
+            : item.booking_status === 'completed' ? 'check'
+            : item.booking_status === 'cancelled' ? 'x-circle'
+            : item.booking_status === 'rejected' ? 'slash' : 'clock';
           return (
             <Pressable
               onPress={() => { if (!item.read_at) void markRead(item.id); onOpenNotification(item); }}
@@ -107,13 +113,13 @@ export default function NotificationCenterScreen({
               testID={`${role}-notification-${item.id}`}
               style={[styles.row, { borderBottomColor: colors.border }, item.read_at ? null : { backgroundColor: colors.surface }]}
             >
-              <View style={[styles.marker, { backgroundColor: item.read_at ? colors.border : colors.accent }]} />
+              <View style={[styles.eventIcon, { backgroundColor: colors.surface, borderColor: colors.border }]}><Feather name={icon} size={21} color={item.read_at ? colors.textSecondary : colors.accentText} /></View>
               <View style={styles.copy}>
                 <Text style={[styles.rowTitle, { color: colors.textPrimary, fontFamily: fonts.bodySemiBold }]}>{copy.title}</Text>
                 <Text style={[styles.body, { color: colors.textSecondary, fontFamily: fonts.body }]}>{copy.body}</Text>
                 <Text style={[styles.time, { color: colors.textSecondary, fontFamily: fonts.body }]}>{formatMessageTime(item.created_at)}</Text>
               </View>
-              <Feather name={item.event_type === 'message' ? 'message-circle' : 'calendar'} size={17} color={colors.textSecondary} />
+              {!item.read_at ? <View style={[styles.marker, { backgroundColor: colors.accent }]} /> : null}
             </Pressable>
           );
         }}
@@ -138,11 +144,12 @@ const styles = StyleSheet.create({
   skeletonBody: { width: '80%', height: 12 },
   skeletonTime: { width: 52, height: 9 },
   row: { minHeight: 88, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 0.5 },
+  eventIcon: { width: 44, height: 44, borderRadius: 15, borderWidth: 0.5, alignItems: 'center', justifyContent: 'center' },
   marker: { width: 7, height: 7, borderRadius: 4 },
   copy: { flex: 1, gap: 4 },
-  rowTitle: { fontSize: 14 },
-  body: { fontSize: 13, lineHeight: 18 },
-  time: { fontSize: 11, marginTop: 2 },
+  rowTitle: { fontSize: 15 },
+  body: { fontSize: 14, lineHeight: 21 },
+  time: { fontSize: 12, marginTop: 2 },
   empty: { flex: 1, minHeight: 260, alignItems: 'center', justifyContent: 'center', gap: 12 },
   emptyText: { padding: 24, textAlign: 'center', fontSize: 14 },
 });

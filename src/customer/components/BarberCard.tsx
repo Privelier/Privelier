@@ -109,7 +109,7 @@ export default function BarberCard({ barber, services, variant = 'wide', feature
       style={({ pressed }) => [styles.compactPressable, { opacity: pressed ? pressOpacity.soft : 1 }]}
       >
         <GlassSurface style={styles.compact}>
-          <CardImage barber={barber} aspectRatio={4 / 5} />
+          <CardImage barber={barber} aspectRatio={1} />
           <View style={styles.compactMetaRow}>
             <View style={styles.compactMetaLeft}>
               <View style={styles.nameRow}>
@@ -132,7 +132,7 @@ export default function BarberCard({ barber, services, variant = 'wide', feature
               </View> : null}
             </View>
             <View style={styles.compactMetaRight}>
-              <RatingLine rating={barber.rating} size={11} language={language} />
+              <RatingLine rating={barber.rating} size={13} language={language} />
               {from !== null ? (
                 <Text style={[styles.compactPrice, { color: colors.textSecondary, fontFamily: fonts.body }]}>
                   {language === 'de' ? 'ab' : 'from'}{' '}
@@ -206,21 +206,21 @@ const styles = StyleSheet.create({
 
   compactPressable: { alignSelf: 'flex-start' },
   compact: { width: 256 },
-  compactMetaRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8, marginTop: 12, paddingHorizontal: 12, paddingBottom: 14 },
+  compactMetaRow: { flexDirection: 'column', justifyContent: 'space-between', gap: 8, marginTop: 12, paddingHorizontal: 12, paddingBottom: 14 },
   compactMetaLeft: { flexShrink: 1, minWidth: 0 },
-  compactMetaRight: { alignItems: 'flex-end' },
+  compactMetaRight: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   compactName: { fontSize: 17, flexShrink: 1 },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
-  compactLocation: { fontSize: 12 },
-  compactPrice: { fontSize: 12, marginTop: 3 },
+  compactLocation: { fontSize: 14 },
+  compactPrice: { fontSize: 14, marginTop: 3 },
 
   widePressable: { width: '100%' },
   wide: { width: '100%', borderRadius: radius.xl },
   wideMetaRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginTop: 12, paddingHorizontal: 16, paddingBottom: 16 },
   wideMetaLeft: { flexShrink: 1, minWidth: 0 },
   wideMetaRight: { alignItems: 'flex-end' },
-  editorsPick: { fontSize: 10, letterSpacing: 2 },
+  editorsPick: { fontSize: 12 },
   wideName: { fontSize: 21, marginTop: 4, flexShrink: 1 },
-  wideMeta: { fontSize: 12, marginTop: 4 },
-  widePrice: { fontSize: 12, marginTop: 4 },
+  wideMeta: { fontSize: 14, marginTop: 4 },
+  widePrice: { fontSize: 14, marginTop: 4 },
 });

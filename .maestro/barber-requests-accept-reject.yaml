@@ -103,6 +103,11 @@ env:
 # to its optimistic 'Accepted' state immediately and shows a busy spinner on
 # its action row until the server write resolves.
 - tapOn:
+    id: "barber-requests-open-.*"
+    index: 0
+- assertVisible:
+    id: "booking-details"
+- tapOn:
     id: "request-accept-.*"
     index: 0
 
@@ -127,18 +132,25 @@ env:
 # targets is it. Reject is destructive -> a confirmation alert appears
 # (confirmDestructive); its confirm button carries the action label.
 - tapOn:
+    id: "booking-details-close"
+- tapOn:
+    id: "barber-requests-open-.*"
+    index: 0
+- tapOn:
     id: "request-reject-.*"
     index: 0
 - assertVisible:
     text: "Reject this booking?"
 - tapOn:
-    text: "Reject"
+    id: "barber-request-confirm-confirm"
 
 - extendedWaitUntil:
     notVisible:
       id: "barber-requests-row-busy-.*"
     timeout: 15000
 
+- tapOn:
+    id: "barber-requests-history-toggle"
 - assertVisible:
     text: "Rejected"
 - assertNotVisible:

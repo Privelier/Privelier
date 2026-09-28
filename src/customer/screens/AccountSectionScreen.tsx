@@ -72,8 +72,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 24 },
   backRow: { flexDirection: 'row', marginTop: 12 },
   heading: { fontSize: 24, marginTop: 24 },
-  body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 96 },
-  blurb: { fontSize: 14, textAlign: 'center', lineHeight: 21 },
+  body: { paddingTop: 24, paddingBottom: 32 },
+  blurb: { fontSize: 16, lineHeight: 25 },
   contact: { minHeight: 44, justifyContent: 'center', marginTop: 12 },
   contactText: { fontSize: 14 },
 });

@@ -2,6 +2,7 @@ import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-na
 import { useTheme } from '../../theme/useTheme';
 import { HAIRLINE, radius, space } from '../../theme/spacing';
 import type { BookingStatus } from '../../types';
+import { getAppLanguage } from '../locale';
 import { BOOKING_STATUS_LABELS } from '../format';
 
 type StatusTone = 'brass' | 'success' | 'error' | 'muted';
@@ -39,7 +40,7 @@ export function StatusPill({
 }) {
   const { colors, fonts } = useTheme();
   const tone = STATUS_TONES[status];
-  const label = BOOKING_STATUS_LABELS[status];
+  const label = getAppLanguage() === 'de' ? ({ pending: 'Angefragt', accepted: 'Best\u00e4tigt', rejected: 'Abgelehnt', completed: 'Abgeschlossen', cancelled: 'Storniert' } as const)[status] : BOOKING_STATUS_LABELS[status];
   const colorKeys = TONE_COLOR_KEYS[tone];
   const toneColor = colors[colorKeys.fill];
   const textColor = colors[colorKeys.text];
@@ -80,6 +81,6 @@ const styles = StyleSheet.create({
   },
   label: {
     flexShrink: 1,
-    fontSize: 12,
+    fontSize: 13,
   },
 });

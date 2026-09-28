@@ -94,6 +94,9 @@ env:
 # unknown at authoring time). Safe to match by regex because the prerequisites
 # guarantee exactly one completed, not-yet-reviewed booking on screen.
 - tapOn:
+    id: "customer-bookings-open-.*"
+    index: 0
+- tapOn:
     id: "booking-review-.*"
 
 # --- ReviewSubmitScreen ---
@@ -134,6 +137,9 @@ env:
     notVisible:
       id: "customer-bookings-loading"
     timeout: 15000
+- tapOn:
+    id: "customer-bookings-open-.*"
+    index: 0
 - assertVisible:
     id: "customer-bookings-reviewed-.*"
 - assertNotVisible:

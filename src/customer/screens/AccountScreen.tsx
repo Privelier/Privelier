@@ -131,10 +131,10 @@ export default function AccountScreen({ navigation }: Props) {
               Member
             </Text>
           </View>
-          <Feather name="edit-2" size={16} color={colors.textSecondary} />
+          <Feather name="edit-2" size={20} color={colors.textSecondary} />
         </Pressable> : null}
 
-        <View style={styles.settingsList}>
+        <View style={[styles.settingsList, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           {SETTINGS_ROWS.map(({ key, icon }, index) => (
             <Pressable
               key={key}
@@ -150,11 +150,11 @@ export default function AccountScreen({ navigation }: Props) {
             >
               {/* Brass is rationed to the "Member" label only; row icons are muted
                   so the accent reads as a badge, not decoration. */}
-              <Feather name={icon} size={16} color={colors.textSecondary} />
+              <Feather name={icon} size={20} color={colors.textSecondary} />
               <Text style={[styles.settingsLabel, { color: colors.textPrimary, fontFamily: fonts.body }]}>
                 {ACCOUNT_SECTIONS[key].title}
               </Text>
-              <Feather name="chevron-right" size={16} color={colors.textSecondary} />
+              <Feather name="chevron-right" size={20} color={colors.textSecondary} />
             </Pressable>
           ))}
         </View>
@@ -170,7 +170,7 @@ export default function AccountScreen({ navigation }: Props) {
             pressed ? { opacity: pressOpacity.soft } : null,
           ]}
         >
-          <Feather name="log-out" size={16} color={colors.errorText} />
+          <Feather name="log-out" size={20} color={colors.errorText} />
           <Text style={[styles.signOutText, { color: colors.errorText, fontFamily: fonts.body }]}>
             Sign out
           </Text>
@@ -193,14 +193,14 @@ const styles = StyleSheet.create({
   skeletonName: { width: 150, maxWidth: '80%', height: 20 },
   skeletonEmail: { width: 190, maxWidth: '95%', height: 12, marginTop: 8 },
   skeletonMember: { width: 72, height: 10, marginTop: 8 },
-  profileText: { flexShrink: 1, minWidth: 0 },
+  profileText: { flex: 1, minWidth: 0 },
   name: { fontSize: 20 },
-  email: { fontSize: 12, marginTop: 2 },
-  member: { fontSize: 10, letterSpacing: 2, marginTop: 4 },
+  email: { fontSize: 14, marginTop: 2 },
+  member: { fontSize: 13, letterSpacing: 0, marginTop: 4 },
 
-  settingsList: { marginTop: 32 },
+  settingsList: { marginTop: 32, borderRadius: 20, borderWidth: 0.5, paddingHorizontal: 18 },
   settingsRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16 },
-  settingsLabel: { flex: 1, fontSize: 14 },
+  settingsLabel: { flex: 1, fontSize: 16 },
 
   signOutRow: {
     flexDirection: 'row',

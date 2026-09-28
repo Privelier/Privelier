@@ -1,3 +1,4 @@
+import { getAppLanguage } from '../../shared/locale';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
@@ -103,8 +104,8 @@ function EarningsTrend({ data, width, colors }: {
         <Text style={[styles.chartLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>
           {data[0]?.weekStart.slice(5) ?? ''}
         </Text>
-        <Text style={[styles.chartLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>8 weeks</Text>
-        <Text style={[styles.chartLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>Now</Text>
+        <Text style={[styles.chartLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>{getAppLanguage() === 'de' ? '8 Wochen' : '8 weeks'}</Text>
+        <Text style={[styles.chartLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>{getAppLanguage() === 'de' ? 'Jetzt' : 'Now'}</Text>
       </View>
     </View>
   );
@@ -298,19 +299,19 @@ export default function StudioScreen({ navigation }: Props) {
                 return <>
                   <View style={styles.analyticsHeading}>
                     <View>
-                      <Text style={[styles.eyebrow, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>STUDIO PERFORMANCE</Text>
-                      <Text style={[styles.analyticsTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>Your work, in focus</Text>
+                      <Text style={[styles.eyebrow, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Studio-Performance' : 'Studio performance'}</Text>
+                      <Text style={[styles.analyticsTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{getAppLanguage() === 'de' ? 'Deine Arbeit im Fokus' : 'Your work, in focus'}</Text>
                     </View>
                     <Feather name="activity" size={18} color={colors.accentText} />
                   </View>
 
-                  <Text style={[styles.heroLabel, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>Umsatz aus Buchungen · diesen Monat</Text>
+                  <Text style={[styles.heroLabel, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Buchungswert in diesem Monat' : 'Booking value this month'}</Text>
                   <Text style={[styles.heroValue, numericText, { color: colors.textPrimary }]}>{formatMoney(data.bookedValueMonth)}</Text>
-                  <Text style={[styles.heroFootnote, { color: colors.textSecondary, fontFamily: fonts.body }]}>Completed booking prices. No payments are processed in the app.</Text>
+                  <Text style={[styles.heroFootnote, { color: colors.textSecondary, fontFamily: fonts.body }]}>{getAppLanguage() === 'de' ? 'Preise abgeschlossener Termine. In der App werden keine Zahlungen verarbeitet.' : 'Completed booking prices. No payments are processed in the app.'}</Text>
                   <View style={[styles.trendBlock, { borderTopColor: colors.border }]}>
                     <View style={styles.trendHeading}>
-                      <Text style={[styles.trendTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>Booked value</Text>
-                      <Text style={[styles.trendPeriod, { color: colors.textSecondary, fontFamily: fonts.body }]}>8 weeks</Text>
+                      <Text style={[styles.trendTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Buchungswert' : 'Booked value'}</Text>
+                      <Text style={[styles.trendPeriod, { color: colors.textSecondary, fontFamily: fonts.body }]}>{getAppLanguage() === 'de' ? '8 Wochen' : '8 weeks'}</Text>
                     </View>
                     <EarningsTrend data={data.weeklyTrend} width={chartWidth} colors={colors} />
                     {data.completedAllTime === 0 ? (
@@ -343,7 +344,7 @@ export default function StudioScreen({ navigation }: Props) {
 
                   <View style={[styles.appointmentCard, { backgroundColor: colors.background }]}>
                     <View style={styles.appointmentTopline}>
-                      <Text style={[styles.eyebrow, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>NEXT APPOINTMENT</Text>
+                      <Text style={[styles.eyebrow, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'N\u00e4chster Termin' : 'Next appointment'}</Text>
                       <Text style={[styles.upcomingText, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.upcomingCount} in the next 7 days</Text>
                     </View>
                     {next ? <>
@@ -356,7 +357,7 @@ export default function StudioScreen({ navigation }: Props) {
 
                   <View style={styles.insightRow}>
                     <View style={[styles.insightCard, { backgroundColor: colors.background }]}>
-                      <Text style={[styles.eyebrow, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>CLIENT LOVE</Text>
+                      <Text style={[styles.eyebrow, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Kundenstimmen' : 'Client feedback'}</Text>
                       {data.reviewCount > 0 && data.ratingAverage !== null ? <>
                         <Text testID="barber-dashboard-rating" style={[styles.insightValue, numericText, { color: colors.textPrimary }]}>{data.ratingAverage.toFixed(2)} <Text style={{ color: colors.accentText }}>★</Text></Text>
                         <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.reviewCount} {data.reviewCount === 1 ? 'review' : 'reviews'} · {data.repeatCustomerCount} returning clients</Text>
@@ -366,7 +367,7 @@ export default function StudioScreen({ navigation }: Props) {
                       </>}
                     </View>
                     <View style={[styles.insightCard, { backgroundColor: colors.background }]}>
-                      <Text style={[styles.eyebrow, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>BUSIEST DAY</Text>
+                      <Text style={[styles.eyebrow, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Beliebtester Tag' : 'Busiest day'}</Text>
                       {data.busiestWeekday ? <>
                         <Text style={[styles.insightValue, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{data.busiestWeekday.weekday}</Text>
                         <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.busiestWeekday.completedCuts} completed cuts</Text>
@@ -376,8 +377,8 @@ export default function StudioScreen({ navigation }: Props) {
 
                   <View style={[styles.serviceInsight, { borderTopColor: colors.border }]}>
                     <View style={styles.trendHeading}>
-                      <Text style={[styles.trendTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>Top services</Text>
-                      <Text style={[styles.trendPeriod, { color: colors.textSecondary, fontFamily: fonts.body }]}>completed</Text>
+                      <Text style={[styles.trendTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Beliebte Leistungen' : 'Top services'}</Text>
+                      <Text style={[styles.trendPeriod, { color: colors.textSecondary, fontFamily: fonts.body }]}>{getAppLanguage() === 'de' ? 'abgeschlossen' : 'completed'}</Text>
                     </View>
                     {data.topServices.length > 0 ? data.topServices.map((service, index) => (
                       <View key={`${service.name}-${index}`} style={[styles.serviceRank, index > 0 ? { borderTopColor: colors.border, borderTopWidth: 0.5 } : null]}>
@@ -516,20 +517,20 @@ const styles = StyleSheet.create({
   analyticsHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.lg },
   analyticsTitle: { fontSize: 23, lineHeight: 30, marginTop: space.xs },
   heroLabel: { fontSize: 13, lineHeight: 19 },
-  heroValue: { fontSize: 40, lineHeight: 50, marginTop: space.xs },
-  heroFootnote: { fontSize: 11, lineHeight: 16, marginTop: space.xs },
+  heroValue: { fontSize: 40, lineHeight: 50, fontVariant: ['tabular-nums'], marginTop: space.xs },
+  heroFootnote: { fontSize: 13, lineHeight: 20, marginTop: space.xs },
   trendBlock: { marginTop: space.lg, paddingTop: space.md, borderTopWidth: HAIRLINE },
-  trendHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: space.xs },
+  trendHeading: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs, justifyContent: 'space-between', alignItems: 'center', marginBottom: space.xs },
   trendTitle: { fontSize: 14, lineHeight: 20 },
-  trendPeriod: { fontSize: 11, lineHeight: 17 },
+  trendPeriod: { fontSize: 13, lineHeight: 20 },
   chartLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: -space.xs },
-  chartLabel: { fontSize: 10, lineHeight: 15 },
+  chartLabel: { fontSize: 12, lineHeight: 18 },
   emptyHint: { fontSize: 12, lineHeight: 18, marginTop: space.sm },
   metricRow: { flexDirection: 'row', borderTopWidth: HAIRLINE, borderBottomWidth: HAIRLINE, paddingVertical: space.md, marginTop: space.md },
   metric: { flex: 1, minWidth: 0, paddingHorizontal: space.xs },
-  metricLabel: { fontSize: 11, lineHeight: 16 },
-  metricValue: { fontSize: 24, lineHeight: 31, marginTop: space.xs },
-  metricDetail: { fontSize: 10, lineHeight: 15 },
+  metricLabel: { fontSize: 13, lineHeight: 20 },
+  metricValue: { fontSize: 24, lineHeight: 31, fontVariant: ['tabular-nums'], marginTop: space.xs },
+  metricDetail: { fontSize: 12, lineHeight: 18 },
   pendingBanner: { minHeight: 68, flexDirection: 'row', alignItems: 'center', gap: space.md, borderWidth: HAIRLINE, borderRadius: radius.sm, paddingHorizontal: space.md, marginTop: space.md },
   pendingBadge: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: 19 },
   pendingBadgeValue: { fontSize: 18 },
@@ -538,20 +539,20 @@ const styles = StyleSheet.create({
   pendingHint: { fontSize: 12, lineHeight: 18 },
   appointmentCard: { marginTop: space.md, borderRadius: radius.sm, paddingHorizontal: space.md, paddingVertical: space.md },
   appointmentTopline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm },
-  eyebrow: { fontSize: 10, lineHeight: 16, letterSpacing: 0.8 },
+  eyebrow: { fontSize: 12, lineHeight: 18 },
   appointmentName: { fontSize: 19, lineHeight: 26, marginTop: space.md },
   appointmentWhen: { fontSize: 13, lineHeight: 20, marginTop: space.xs },
   emptyText: { fontSize: 13, lineHeight: 20, marginTop: space.md },
-  upcomingText: { fontSize: 11, lineHeight: 16 },
+  upcomingText: { fontSize: 13, lineHeight: 20 },
   insightRow: { flexDirection: 'row', gap: space.sm, marginTop: space.md },
   insightCard: { flex: 1, minHeight: 114, borderRadius: radius.sm, padding: space.md },
   insightValue: { fontSize: 24, lineHeight: 31, marginTop: space.md },
-  insightCaption: { fontSize: 11, lineHeight: 17, marginTop: space.xs },
+  insightCaption: { fontSize: 13, lineHeight: 20, marginTop: space.xs },
   serviceInsight: { marginTop: space.lg, paddingTop: space.md, borderTopWidth: HAIRLINE },
   serviceRank: { minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
   serviceRankNumber: { width: 24, fontSize: 14 },
   serviceRankName: { flex: 1, fontSize: 13 },
-  serviceRankCount: { fontSize: 11 },
+  serviceRankCount: { fontSize: 13 },
   sectionTitle: { fontSize: 19, lineHeight: 26 },
   readiness: { marginTop: space.xl, paddingTop: space.lg, borderTopWidth: HAIRLINE },
   readinessStatus: { fontSize: 13, lineHeight: 20, marginTop: space.xs },

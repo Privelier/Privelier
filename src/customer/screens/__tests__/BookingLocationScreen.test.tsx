@@ -1,7 +1,9 @@
+import { getAppLanguage } from '../../../shared/locale';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { fetchOwnProfile } from '../../../auth/authService';
 import BookingLocationScreen from '../BookingLocationScreen';
 
+jest.mock('../../../shared/locale', () => ({ getAppLanguage: jest.fn(() => 'en') }));
 jest.mock('../../../auth/authService', () => ({ fetchOwnProfile: jest.fn() }));
 jest.mock('../../../shared/components/ScreenBackHeader', () => ({ ScreenBackHeader: () => null }));
 jest.mock('../../components/BookingStepIndicator', () => ({ BookingStepIndicator: () => null }));
@@ -22,6 +24,7 @@ const route = {
 const navigation = { navigate: jest.fn(), goBack: jest.fn() };
 
 beforeEach(() => {
+  jest.mocked(getAppLanguage).mockReturnValue('en');
   navigation.navigate.mockReset();
   jest.mocked(fetchOwnProfile).mockReset().mockResolvedValue({
     status: 'ok',
@@ -72,4 +75,17 @@ it('the last keyboard action reveals missing required fields without navigating'
   expect(screen.getByTestId('customer-booking-location-street-error')).toBeTruthy();
   expect(screen.getByTestId('customer-booking-location-city-error')).toBeTruthy();
   expect(navigation.navigate).not.toHaveBeenCalled();
+});
+
+
+it('uses German labels and validation while preserving the entered address', async () => {
+  jest.mocked(getAppLanguage).mockReturnValue('de');
+  await render(<BookingLocationScreen route={route as never} navigation={navigation as never} />);
+  const street = screen.getByTestId('customer-booking-location-input');
+  expect(street.props.accessibilityLabel).toBe('Stra\u00dfe und Hausnummer');
+  await fireEvent(street, 'blur');
+  expect(screen.getByText('Bitte gib Stra\u00dfe und Hausnummer an.')).toBeTruthy();
+  await fireEvent.changeText(street, 'Hauptstra\u00dfe 12');
+  await fireEvent.press(screen.getByTestId('customer-booking-location-continue'));
+  expect(navigation.navigate).toHaveBeenCalledWith('BookingConfirm', expect.objectContaining({ location: 'Hauptstra\u00dfe 12, Berlin' }));
 });

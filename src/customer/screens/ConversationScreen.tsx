@@ -1,3 +1,4 @@
+import { getAppLanguage } from '../../shared/locale';
 /**
  * Customer conversation screen (build-order step 15-16) — one chat room,
  * reached from an Inbox thread row. Serif header (barber name + service
@@ -509,7 +510,9 @@ function ConversationRoom({ route, navigation }: Props) {
           <TextInput
             value={draft}
             onChangeText={onChangeDraft}
-            placeholder="Write a message"
+            placeholder={getAppLanguage() === 'de' ? 'Nachricht schreiben' : 'Write a message'}
+            accessibilityLabel={getAppLanguage() === 'de' ? 'Nachricht schreiben' : 'Write a message'}
+            selectionColor={colors.accent}
             placeholderTextColor={colors.textSecondary}
             multiline
             // Mirrors the DB constraint so the server bound can never be the
@@ -521,16 +524,17 @@ function ConversationRoom({ route, navigation }: Props) {
           />
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Send message"
+            accessibilityLabel={getAppLanguage() === 'de' ? 'Nachricht senden' : 'Send message'}
             onPress={onSend}
             disabled={!canSend}
+            accessibilityState={{ disabled: !canSend }}
             style={({ pressed }) => [
               styles.sendButton,
               !canSend ? styles.sendButtonDisabled : pressed ? { opacity: pressOpacity.firm } : null,
             ]}
             testID="customer-conversation-send"
           >
-            <Text style={styles.sendLabel}>Send</Text>
+            <Text style={styles.sendLabel}>{getAppLanguage() === 'de' ? 'Senden' : 'Send'}</Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -555,7 +559,7 @@ function useStyles(colors: Palette) {
     },
     headerText: { flex: 1, minWidth: 0 },
     headerTitle: { fontSize: 18, color: colors.textPrimary, fontFamily: fonts.headingMedium },
-    headerSubtitle: { fontSize: 12, marginTop: 2, color: colors.textSecondary, fontFamily: fonts.body },
+    headerSubtitle: { fontSize: 13, marginTop: 2, color: colors.textSecondary, fontFamily: fonts.body },
 
     body: { flex: 1 },
     spinner: { marginTop: 48 },
@@ -592,20 +596,20 @@ function useStyles(colors: Palette) {
     emptyText: { fontSize: 13, color: colors.textSecondary, fontFamily: fonts.body },
 
     bubble: {
-      maxWidth: '80%',
+      maxWidth: '86%',
       borderWidth: 0.5,
-      borderRadius: 10,
+      borderRadius: 18,
       paddingHorizontal: 14,
       paddingVertical: 10,
       marginBottom: 10,
       backgroundColor: colors.surface,
     },
-    bubbleTheirs: { alignSelf: 'flex-start', borderColor: colors.border },
-    bubbleOwn: { alignSelf: 'flex-end', borderColor: colors.accent },
+    bubbleTheirs: { alignSelf: 'flex-start', borderColor: colors.border, borderBottomLeftRadius: 5 },
+    bubbleOwn: { alignSelf: 'flex-end', borderColor: colors.border, borderBottomRightRadius: 5 },
     bubbleFailed: { borderColor: colors.error },
-    bubbleText: { fontSize: 14, lineHeight: 20, color: colors.textPrimary, fontFamily: fonts.body },
-    bubbleMeta: { fontSize: 10, marginTop: 4, color: colors.textSecondary, fontFamily: fonts.body },
-    bubbleMetaFailed: { fontSize: 10, marginTop: 4, color: colors.errorText, fontFamily: fonts.bodyMedium },
+    bubbleText: { fontSize: 16, lineHeight: 23, color: colors.textPrimary, fontFamily: fonts.body },
+    bubbleMeta: { fontSize: 12, marginTop: 4, color: colors.textSecondary, fontFamily: fonts.body },
+    bubbleMetaFailed: { fontSize: 12, marginTop: 4, color: colors.errorText, fontFamily: fonts.bodyMedium },
     bubbleFailureReason: {
       fontSize: 11,
       lineHeight: 15,
@@ -638,20 +642,20 @@ function useStyles(colors: Palette) {
     },
     input: {
       flex: 1,
-      minHeight: 44,
-      maxHeight: 120,
+      minHeight: 48,
+      maxHeight: 144,
       borderWidth: 0.5,
-      borderRadius: 10,
+      borderRadius: 18,
       paddingHorizontal: 14,
       paddingVertical: 10,
-      fontSize: 14,
+      fontSize: 16,
       borderColor: colors.border,
       backgroundColor: colors.surface,
       color: colors.textPrimary,
       fontFamily: fonts.body,
     },
     sendButton: {
-      borderRadius: 8,
+      borderRadius: 24,
       paddingHorizontal: 18,
       minHeight: 44,
       alignItems: 'center',

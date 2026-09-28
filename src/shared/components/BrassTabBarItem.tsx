@@ -42,7 +42,7 @@ export function BrassTabIcon({ name, color, focused }: { name: keyof typeof Feat
 
   return (
     <View style={styles.iconGroup}>
-      <Feather name={name} size={20} color={color} />
+      <Feather name={name} size={22} color={color} />
       <Animated.View
         testID={`tab-indicator-${name}`}
         style={[styles.indicator, { backgroundColor: colors.accent }, indicatorStyle]}

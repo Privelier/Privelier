@@ -39,6 +39,7 @@ jest.mock('@react-navigation/native', () => {
 // resolvable in the jest env; the icon glyph is irrelevant to behaviour.
 jest.mock('@expo/vector-icons', () => ({
   Feather: () => null,
+  FontAwesome5: () => null,
 }));
 
 // useTheme -> theme/typography -> @expo-google-fonts -> expo-font -> expo-asset
@@ -193,6 +194,8 @@ describe('VerifyScreen', () => {
     expect(screen.getByTestId('barber-membership')).toBeTruthy();
     expect(screen.getByText(new Intl.NumberFormat(undefined, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(35))).toBeTruthy();
     expect(screen.getByTestId('barber-membership-continue').props.accessibilityState.disabled).toBe(true);
+    expect(screen.getByTestId('barber-membership-availability').props.children).toMatch(/Payments and code checks are not available yet/);
+    expect(screen.getByTestId('barber-membership-continue').props.accessibilityLabel).toBe('View payment availability');
 
     await fireEvent.changeText(screen.getByTestId('barber-membership-code'), 'WELCOME');
     await fireEvent.press(screen.getByTestId('barber-membership-code-apply'));

@@ -227,7 +227,7 @@ describe('StudioScreen dashboard', () => {
     // Analytics show genuine server aggregates and the next accepted appointment.
     expect(screen.getByText('2')).toBeTruthy();
     expect(screen.getByText('Open requests')).toBeTruthy();
-    expect(screen.getByText('Umsatz aus Buchungen · diesen Monat')).toBeTruthy();
+    expect(screen.getByText('Booking value this month')).toBeTruthy();
     expect(screen.getByText(/No payments are processed/)).toBeTruthy();
     expect(screen.getByText(/Sam/)).toBeTruthy();
     expect(screen.getByText(/14:30/)).toBeTruthy();

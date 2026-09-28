@@ -262,12 +262,9 @@ export default function DiscoverScreen({ navigation }: Props) {
             {brandMessages.map((message, index) => (
               <View key={message} style={[styles.messagePage, { width: viewportWidth }]}>
                 <GlassSurface style={styles.messageCard} testID={`customer-home-brand-message-${index + 1}`}>
-                  <Feather name="star" size={16} color={colors.accentText} />
+                  <Feather name={(['scissors', 'clock', 'home', 'sun'] as const)[index]} size={20} color={colors.accentText} />
                   <Text style={[styles.messageCopy, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
                     {message}
-                  </Text>
-                  <Text style={[styles.messageBrand, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-                    PRIVELIER
                   </Text>
                 </GlassSurface>
               </View>
@@ -459,14 +456,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     borderWidth: 0.5,
-    borderRadius: 8,
+    borderRadius: 16,
     paddingHorizontal: 14,
   },
   messageCarousel: { marginTop: 16 },
   messagePage: { paddingHorizontal: 24 },
-  messageCard: { minHeight: 120, padding: 20, justifyContent: 'space-between' },
-  messageCopy: { fontSize: 19, lineHeight: 27, marginTop: 12 },
-  messageBrand: { fontSize: 9, letterSpacing: 1.4, marginTop: 12 },
+  messageCard: { minHeight: 88, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  messageCopy: { fontSize: 18, lineHeight: 25, flex: 1 },
   messageDots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 10 },
   messageDot: { width: 5, height: 5, borderRadius: 3 },
   searchInput: { flex: 1, minWidth: 0, fontSize: 14, paddingVertical: 10 },
@@ -476,10 +472,10 @@ const styles = StyleSheet.create({
     minHeight: 44,
     justifyContent: 'center',
     borderWidth: 0.5,
-    borderRadius: 8,
+    borderRadius: 16,
     paddingHorizontal: 16,
   },
-  filterText: { fontSize: 12 },
+  filterText: { fontSize: 14 },
   noticeMargins: { marginTop: 32, marginHorizontal: 24 },
   noticeAction: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
   emptyText: {

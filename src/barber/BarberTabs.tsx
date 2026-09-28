@@ -1,3 +1,5 @@
+import { getAppLanguage } from '../shared/locale';
+import { GlassSurface } from '../shared/components/GlassSurface';
 /**
  * Barber bottom-tab shell, rebuilt from the prototype's BarberBottomNav:
  * five tabs (Studio, Requests, Portfolio, Chats, Verify) with the same
@@ -26,15 +28,18 @@ export type BarberTabParamList = {
 const Tab = createBottomTabNavigator<BarberTabParamList>();
 
 const TAB_ICONS: Record<keyof BarberTabParamList, keyof typeof Feather.glyphMap> = {
-  Studio: 'grid',
+  Studio: 'bar-chart-2',
   Requests: 'inbox',
-  Portfolio: 'image',
+  Portfolio: 'sliders',
   Chats: 'message-square',
   Verify: 'shield',
 };
 
 export default function BarberTabs() {
   const { colors, fonts } = useTheme();
+  const language = getAppLanguage();
+  const labels = language === 'de' ? { Studio: 'Dashboard', Requests: 'Anfragen', Portfolio: 'Studio', Chats: 'Nachrichten', Verify: 'Verifizierung' } : { Studio: 'Dashboard', Requests: 'Requests', Portfolio: 'Studio', Chats: 'Messages', Verify: 'Verification' };
+
   // Unread thread count for the Chats badge — a real count from real read
   // state (provider in BarberNavigator), hidden entirely at zero.
   const { unreadCount } = useUnread();
@@ -45,15 +50,22 @@ export default function BarberTabs() {
         tabBarActiveTintColor: colors.accentText,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
-          backgroundColor: colors.background,
-          borderTopWidth: 0.5,
+          backgroundColor: 'transparent',
+          marginHorizontal: 12,
+          marginBottom: 6,
+          borderRadius: 22,
+          paddingTop: 6,
+          borderTopWidth: 0,
           borderTopColor: colors.border,
           elevation: 0,
         },
-        tabBarLabelStyle: { fontSize: 10, fontFamily: fonts.body },
+        tabBarHideOnKeyboard: true,
+        tabBarBackground: () => <GlassSurface variant="navigation" style={{ flex: 1, borderRadius: 22 }} />,
+        tabBarLabel: labels[route.name],
+        tabBarLabelStyle: { fontSize: 12, fontFamily: fonts.bodyMedium },
         tabBarIcon: ({ color, focused }) => <BrassTabIcon name={TAB_ICONS[route.name]} color={color} focused={focused} />,
         tabBarButton: (props) => <HapticTabButton {...props} />,
-        tabBarAccessibilityLabel: route.name,
+        tabBarAccessibilityLabel: labels[route.name],
         tabBarButtonTestID: `barber-tab-${route.name.toLowerCase()}`,
       })}
     >

@@ -1,3 +1,4 @@
+import { getAppLanguage } from './locale';
 /**
  * Small display-formatting helpers shared by the customer and barber UIs.
  * Pure functions, no I/O — unit-tested via customer/__tests__/format.test.ts.
@@ -18,6 +19,7 @@ export const BOOKING_STATUS_LABELS = {
 /** "Good morning" / "Good afternoon" / "Good evening" by local hour. */
 export function timeOfDayGreeting(now: Date = new Date()): string {
   const h = now.getHours();
+  if (getAppLanguage() === 'de') return h < 12 ? 'Guten Morgen' : h < 18 ? 'Guten Tag' : 'Guten Abend';
   if (h < 12) return 'Good morning';
   if (h < 18) return 'Good afternoon';
   return 'Good evening';
@@ -40,6 +42,7 @@ export function formatBookingWhen(date: string, time: string): string {
   const clock = time.slice(0, 5);
   const d = new Date(`${date}T${time}`);
   if (Number.isNaN(d.getTime())) return `${date} · ${clock}`;
+  if (getAppLanguage() === 'de') return `${new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: 'numeric', month: 'short' }).format(d)} \u00b7 ${clock}`;
   return `${WEEKDAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]} · ${clock}`;
 }
 
@@ -54,6 +57,7 @@ export function formatShortDate(iso: string | null): string {
   // in negative-offset timezones — anchor it to local midnight instead.
   const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T00:00:00` : iso);
   if (Number.isNaN(d.getTime())) return '';
+  if (getAppLanguage() === 'de') return new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'short' }).format(d);
   return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }
 
@@ -86,6 +90,11 @@ export function formatChatDay(iso: string, now: Date = new Date()): string {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const date = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const daysAgo = Math.round((today - date) / 86_400_000);
+  if (getAppLanguage() === 'de') {
+    if (daysAgo === 0) return 'Heute';
+    if (daysAgo === 1) return 'Gestern';
+    return new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: 'numeric', month: 'short' }).format(d);
+  }
   if (daysAgo === 0) return 'Today';
   if (daysAgo === 1) return 'Yesterday';
   return `${WEEKDAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`;
@@ -99,5 +108,6 @@ export function formatChatDay(iso: string, now: Date = new Date()): string {
  * explicitly out of scope per CLAUDE.md.)
  */
 export function formatMoney(amount: number): string {
+  if (getAppLanguage() === 'de') return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: Number.isInteger(amount) ? 0 : 2, maximumFractionDigits: 2 }).format(amount);
   return Number.isInteger(amount) ? `€${amount}` : `€${amount.toFixed(2)}`;
 }

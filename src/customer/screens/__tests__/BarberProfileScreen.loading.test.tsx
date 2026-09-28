@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { getBarberProfile, listPortfolioForBarber, listServicesForBarber } from '../../discoveryData';
 import { fetchReviewsForBarber } from '../../reviewsData';
 import BarberProfileScreen from '../BarberProfileScreen';
@@ -47,4 +47,33 @@ it('shows a neutral hero and service layout while the real profile is pending', 
   expect(listServicesForBarber).not.toHaveBeenCalled();
   expect(listPortfolioForBarber).not.toHaveBeenCalled();
   expect(fetchReviewsForBarber).not.toHaveBeenCalled();
+});
+
+
+it('keeps real service selection reachable from portfolio and uses the selected service for booking', async () => {
+  const barber = { id: 'barber-1', name: 'Ada Barber', city: 'Berlin', country: 'DE', rating: 0, profile_image: null, bio: null };
+  const service = { id: 'service-1', barber_id: barber.id, name: 'Haircut', price: 35, duration_minutes: 30 };
+  jest.mocked(getBarberProfile).mockResolvedValue({ status: 'ok', barber } as never);
+  jest.mocked(listServicesForBarber).mockResolvedValue({ status: 'ok', services: [service] } as never);
+  jest.mocked(listPortfolioForBarber).mockResolvedValue({ status: 'ok', images: [] });
+  jest.mocked(fetchReviewsForBarber).mockResolvedValue({ status: 'ok', reviews: [], firstNameByReviewId: new Map() });
+  const navigate = jest.fn();
+  await render(<BarberProfileScreen route={{ params: { barberId: barber.id } } as never} navigation={{ goBack: jest.fn(), navigate } as never} />);
+  expect(await screen.findByTestId('barber-profile-monogram')).toBeTruthy();
+  await fireEvent.press(screen.getByTestId('barber-profile-tab-portfolio'));
+  expect(screen.queryByTestId('barber-profile-service-service-1')).toBeNull();
+  await fireEvent.press(screen.getByTestId('barber-profile-choose-service'));
+  expect(navigate).not.toHaveBeenCalled();
+  await fireEvent.press(screen.getByTestId('barber-profile-book-service-1'));
+  expect(navigate).toHaveBeenCalledWith('BookingDateTime', { barberId: barber.id, barberName: barber.name, service });
+});
+
+it('does not offer a booking or starting price when no services exist', async () => {
+  jest.mocked(getBarberProfile).mockResolvedValue({ status: 'ok', barber: { id: 'barber-1', name: 'Ada', rating: 0 } } as never);
+  jest.mocked(listServicesForBarber).mockResolvedValue({ status: 'ok', services: [] });
+  jest.mocked(listPortfolioForBarber).mockResolvedValue({ status: 'ok', images: [] });
+  jest.mocked(fetchReviewsForBarber).mockResolvedValue({ status: 'ok', reviews: [], firstNameByReviewId: new Map() });
+  await render(<BarberProfileScreen route={{ params: { barberId: 'barber-1' } } as never} navigation={{ goBack: jest.fn() } as never} />);
+  await screen.findByTestId('barber-profile-services-empty');
+  expect(screen.queryByTestId('barber-profile-booking-dock')).toBeNull();
 });

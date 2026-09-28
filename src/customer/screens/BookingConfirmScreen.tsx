@@ -8,7 +8,7 @@
  * (in practice the two always match, since the trigger reads the same row).
  *
  * insertBooking's three-arm result is handled distinctly:
- * - 'ok': brief success state, then the customer stack is reset to
+ * - 'ok': persistent request summary; the user resets the customer stack to
  *   CustomerTabs → Bookings so back-navigation can never return into a
  *   completed booking flow.
  * - 'conflict': the uq_bookings_barber_slot_active index rejected the
@@ -27,6 +27,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { PrimaryButton } from '../../shared/components/PrimaryButton';
 import { Notice } from '../../shared/components/Notice';
 import { ScreenBackHeader } from '../../shared/components/ScreenBackHeader';
+import { getAppLanguage } from '../../shared/locale';
 import { haptics } from '../../shared/haptics';
 import { useTheme } from '../../theme/useTheme';
 import { numericText } from '../../theme/typography';
@@ -45,6 +46,7 @@ type Props = NativeStackScreenProps<CustomerStackParamList, 'BookingConfirm'>;
 export default function BookingConfirmScreen({ route, navigation }: Props) {
   const { barberId, barberName, service, date, time, location } = route.params;
   const { colors, fonts } = useTheme();
+  const de = getAppLanguage() === 'de';
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,22 +95,29 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
         edges={['top', 'left', 'right']}
         testID="customer-booking-confirm-screen"
       >
-        <View style={styles.successWrap} testID="customer-booking-confirm-success">
+        <ScrollView contentContainerStyle={styles.successWrap} testID="customer-booking-confirm-success">
           <View style={[styles.successIconRing, { backgroundColor: colors.surface }]}>
             <Feather name="check-circle" size={36} color={colors.accent} />
           </View>
           <Text style={[styles.successTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-            Booking requested
+            {de ? 'Termin angefragt' : 'Booking requested'}
           </Text>
           <Text style={[styles.successHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-            {`Your request was sent to ${barberName}. The confirmed booking price is ${formatMoney(confirmedPrice)}.`}
+            {de ? `Deine Anfrage wurde an ${barberName} gesendet. Dein Barber muss den Termin noch bestätigen.` : `Your request was sent to ${barberName}. Your barber still needs to accept the appointment.`}
           </Text>
+          <View style={[styles.summary, styles.successSummary, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+            <SummaryRow label="Barber" value={barberName} />
+            <SummaryRow label={de ? 'Leistung' : 'Service'} value={service.name} />
+            <SummaryRow label={de ? 'Termin' : 'When'} value={formatBookingWhen(date, time)} />
+            <SummaryRow label={de ? 'Adresse' : 'Location'} value={location} />
+            <SummaryRow label={de ? 'Preis' : 'Price'} value={formatMoney(confirmedPrice)} last />
+          </View>
           <PrimaryButton
-            label="View bookings"
+            label={de ? 'Meine Buchungen' : 'View bookings'}
             onPress={onViewBookings}
             testID="customer-booking-confirm-view-bookings"
           />
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -128,7 +137,7 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-          Review your request
+          {de ? 'Deine Anfrage prüfen' : 'Review your request'}
         </Text>
 
         {error ? (
@@ -142,12 +151,12 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
               <Pressable
                 onPress={onPickAnotherTime}
                 accessibilityRole="button"
-                accessibilityLabel="Choose another time"
+                accessibilityLabel={de ? 'Andere Uhrzeit wählen' : 'Choose another time'}
                 testID="customer-booking-confirm-pick-another-time"
                 style={({ pressed }) => [styles.noticeLink, pressed ? { opacity: pressOpacity.soft } : null]}
               >
                 <Text style={[styles.noticeLinkText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
-                  Choose another time
+                  {de ? 'Andere Uhrzeit wählen' : 'Choose another time'}
                 </Text>
               </Pressable>
             ) : null}
@@ -156,27 +165,27 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
 
         <View style={[styles.summary, { borderColor: colors.border, backgroundColor: colors.surface }]}>
           <SummaryRow label="Barber" value={barberName} />
-          <SummaryRow label="Service" value={service.name} />
-          <SummaryRow label="When" value={formatBookingWhen(date, time)} />
-          <SummaryRow label="Location" value={location} last />
+          <SummaryRow label={de ? 'Leistung' : 'Service'} value={service.name} />
+          <SummaryRow label={de ? 'Termin' : 'When'} value={formatBookingWhen(date, time)} />
+          <SummaryRow label={de ? 'Adresse' : 'Location'} value={location} last />
         </View>
 
         <View style={[styles.priceRow, { borderTopColor: colors.border }]}>
           <Text style={[styles.priceLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-            Estimated total
+            {de ? 'Servicepreis' : 'Service price'}
           </Text>
           <Text style={[styles.priceValue, numericText, { color: colors.textPrimary }]}>
             {formatMoney(service.price)}
           </Text>
         </View>
         <Text style={[styles.priceHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-          This is a summary, not a final charge — Privelier does not process payments yet.
+          {de ? 'Bezahlung direkt beim Barber. Der Preis wird beim Senden der Anfrage bestätigt.' : 'Pay your barber directly. The price is confirmed when your request is sent.'}
         </Text>
       </ScrollView>
 
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
         <PrimaryButton
-          label="Request booking"
+          label={de ? 'Termin anfragen' : 'Request booking'}
           onPress={onConfirm}
           loading={submitting}
           testID="customer-booking-confirm-submit"
@@ -192,7 +201,6 @@ function SummaryRow({ label, value, last = false }: { label: string; value: stri
     <View style={[styles.summaryRow, last ? null : { borderBottomWidth: 0.5, borderBottomColor: colors.border }]}>
       <Text style={[styles.summaryLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>{label}</Text>
       <Text
-        numberOfLines={2}
         style={[styles.summaryValue, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}
       >
         {value}
@@ -205,16 +213,16 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
 
   scrollContent: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 24 },
-  heading: { fontSize: 24 },
+  heading: { fontSize: 30, lineHeight: 38 },
 
   noticeSpacing: { marginTop: space.lg },
-  noticeLink: { marginTop: space.sm },
+  noticeLink: { marginTop: space.sm, minHeight: 44, justifyContent: 'center' },
   noticeLinkText: { fontSize: 13 },
 
   summary: { borderWidth: 0.5, borderRadius: radius.lg, marginTop: 28 },
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', gap: space.base, padding: 14 },
+  summaryRow: { gap: space.xs, padding: 16 },
   summaryLabel: { fontSize: 13 },
-  summaryValue: { fontSize: 14, flexShrink: 1, textAlign: 'right' },
+  summaryValue: { fontSize: 16, lineHeight: 24 },
 
   priceRow: {
     flexDirection: 'row',
@@ -226,11 +234,12 @@ const styles = StyleSheet.create({
   },
   priceLabel: { fontSize: 13 },
   priceValue: { fontSize: 22 },
-  priceHint: { fontSize: 12, marginTop: 8, lineHeight: 18 },
+  priceHint: { fontSize: 14, marginTop: 8, lineHeight: 21 },
 
   footer: { paddingHorizontal: 24, paddingTop: 14, paddingBottom: 20, borderTopWidth: 0.5 },
 
-  successWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, gap: 12 },
+  successWrap: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 },
+  successSummary: { alignSelf: 'stretch', marginTop: 8 },
   successIconRing: {
     width: 80,
     height: 80,
@@ -238,6 +247,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  successTitle: { fontSize: 22, marginTop: 4 },
+  successTitle: { fontSize: 30, lineHeight: 38, textAlign: 'center', marginTop: 4 },
   successHint: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
 });

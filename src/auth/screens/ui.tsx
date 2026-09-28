@@ -233,10 +233,12 @@ export function FormTextField({
 const fieldStyles = StyleSheet.create({
   field: { marginBottom: 20 },
   labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  label: { fontSize: 12, letterSpacing: 0.2 },
+  label: { fontSize: 14, letterSpacing: 0 },
   optional: { fontSize: 12 },
   inputRow: {
-    minHeight: 52,
+    minHeight: 56,
+    borderRadius: 14,
+    borderWidth: 0.5,
     paddingHorizontal: space.base,
   },
   input: { flex: 1, fontSize: 16, paddingVertical: 10 },

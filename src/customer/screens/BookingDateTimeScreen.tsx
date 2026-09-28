@@ -44,6 +44,7 @@ import { PrimaryButton } from '../../shared/components/PrimaryButton';
 import { ScreenBackHeader } from '../../shared/components/ScreenBackHeader';
 import { Notice } from '../../shared/components/Notice';
 import { Skeleton } from '../../shared/components/Skeleton';
+import { getAppLanguage } from '../../shared/locale';
 import { haptics } from '../../shared/haptics';
 import type { AvailabilityRow } from '../../types';
 import { listBarberAvailability, listBarberBusySlots } from '../availabilityData';
@@ -105,6 +106,7 @@ function formatSelection(date: string, time: string): string {
 export default function BookingDateTimeScreen({ route, navigation }: Props) {
   const { barberId, barberName, service } = route.params;
   const { colors, fonts } = useTheme();
+  const de = getAppLanguage() === 'de';
 
   const [dates] = useState<string[]>(() => buildLookaheadDates());
   const [slotsByDate, setSlotsByDate] = useState<Map<string, string[]>>(new Map());
@@ -210,10 +212,10 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
 
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-          Choose a date and time
+          {de ? 'Datum und Uhrzeit wählen' : 'Choose a date and time'}
         </Text>
         <Text style={[styles.subheading, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-          {`${service.name} with ${barberName}`}
+          {`${service.name} ${de ? 'bei' : 'with'} ${barberName}`}
         </Text>
 
         {loading && slotsByDate.size === 0 ? (
@@ -234,11 +236,11 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
               testID="customer-booking-datetime-empty"
             >
               {unverifiedDates.size > 0
-                ? 'We could not verify availability. Try again before choosing a time.'
-                : 'No upcoming availability. Check back soon.'}
+                ? de ? 'Verfügbarkeit konnte nicht geprüft werden. Bitte versuche es erneut.' : 'We could not verify availability. Try again before choosing a time.'
+                : de ? 'Aktuell keine freien Termine. Schau bald wieder vorbei.' : 'No upcoming availability. Check back soon.'}
             </Text>
             {unverifiedDates.size > 0 ? (
-              <PrimaryButton label="Try again" onPress={() => void load()} testID="customer-booking-datetime-retry" />
+              <PrimaryButton label={de ? 'Erneut versuchen' : 'Try again'} onPress={() => void load()} testID="customer-booking-datetime-retry" />
             ) : null}
           </View>
         ) : (
@@ -248,10 +250,10 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
                 <RetryAvailability onPress={() => void load()} />
               </Notice>
             ) : null}
-            {loading ? <Text style={[styles.hintText, { color: colors.textSecondary, fontFamily: fonts.body }]} accessibilityLiveRegion="polite">Checking availability…</Text> : null}
+            {loading ? <Text style={[styles.hintText, { color: colors.textSecondary, fontFamily: fonts.body }]} accessibilityLiveRegion="polite">{de ? 'Verfügbarkeit wird geprüft…' : 'Checking availability…'}</Text> : null}
             {unverifiedDates.size > 0 ? (
               <Notice
-                message="Some dates could not be verified and are temporarily unavailable."
+                message={de ? 'Einige Tage konnten nicht geprüft werden und sind vorübergehend nicht verfügbar.' : 'Some dates could not be verified and are temporarily unavailable.'}
                 testID="customer-booking-datetime-partial-error"
                 variant="info"
                 style={styles.noticeSpacing}
@@ -260,7 +262,7 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
               </Notice>
             ) : null}
             <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-              Date
+              {de ? 'Datum' : 'Date'}
             </Text>
             <CalendarDateStrip
               dates={dates}
@@ -271,7 +273,7 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
             />
 
             <Text style={[styles.sectionLabel, styles.timeLabel, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-              Time
+              {de ? 'Uhrzeit' : 'Time'}
             </Text>
             {selection.date ? (
               selectedSlots.length === 0 ? (
@@ -279,13 +281,13 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
                   style={[styles.hintText, { color: colors.textSecondary, fontFamily: fonts.body }]}
                   testID="customer-booking-datetime-no-times"
                 >
-                  No times left on this date.
+                  {de ? 'An diesem Tag sind keine Uhrzeiten mehr frei.' : 'No times left on this date.'}
                 </Text>
               ) : (
                 slotGroups.map((group) => (
                   <View key={group.key} style={styles.timeGroup}>
                     <Text style={[styles.periodLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                      {group.label}
+                      {de ? { morning: 'Vormittag', afternoon: 'Nachmittag', evening: 'Abend' }[group.key] : group.label}
                     </Text>
                     <View style={styles.slotGrid}>
                       {group.slots.map((time) => {
@@ -329,7 +331,7 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
               )
             ) : (
               <Text style={[styles.hintText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                Pick a date to see available times.
+                {de ? 'Wähle einen Tag, um freie Uhrzeiten zu sehen.' : 'Pick a date to see available times.'}
               </Text>
             )}
           </>
@@ -346,7 +348,7 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
           </Text>
         ) : null}
         <PrimaryButton
-          label="Continue"
+          label={de ? 'Adresse angeben' : 'Add your address'}
           onPress={onContinue}
           disabled={!canContinue}
           testID="customer-booking-datetime-continue"
@@ -358,6 +360,7 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
 
 function RetryAvailability({ onPress }: { onPress: () => void }) {
   const { colors, fonts } = useTheme();
+  const de = getAppLanguage() === 'de';
   return (
     <Pressable
       onPress={onPress}
@@ -366,7 +369,7 @@ function RetryAvailability({ onPress }: { onPress: () => void }) {
       testID="customer-booking-datetime-retry-inline"
       style={({ pressed }) => [styles.retryLink, pressed ? { opacity: pressOpacity.soft } : null]}
     >
-      <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}>Try again</Text>
+      <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}>{de ? 'Erneut versuchen' : 'Try again'}</Text>
     </Pressable>
   );
 }
@@ -390,8 +393,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
 
   scrollContent: { paddingHorizontal: space.xl, paddingTop: space.base, paddingBottom: space.xl },
-  heading: { fontSize: 24 },
-  subheading: { fontSize: 13, marginTop: 6 },
+  heading: { fontSize: 30, lineHeight: 38 },
+  subheading: { fontSize: 15, lineHeight: 23, marginTop: 8 },
 
   skeletonWrap: { marginTop: 28 },
   skeletonLabel: { width: 88, height: 13, marginBottom: 16 },
@@ -406,15 +409,15 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 13, lineHeight: 19, textAlign: 'center' },
   hintText: { fontSize: 13, marginTop: space.base },
 
-  sectionLabel: { fontSize: 12, letterSpacing: 0.2, marginTop: 28, marginBottom: 14 },
+  sectionLabel: { fontSize: 14, lineHeight: 21, marginTop: 28, marginBottom: 14 },
   timeLabel: { marginTop: space['2xl'] },
 
   timeGroup: { marginBottom: space.lg },
-  periodLabel: { fontSize: 12, letterSpacing: 0.3, marginBottom: 10 },
+  periodLabel: { fontSize: 14, lineHeight: 21, marginBottom: 10 },
 
   slotGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  slotChip: { borderRadius: radius.lg, paddingHorizontal: 18, paddingVertical: space.md, minWidth: 72, alignItems: 'center' },
-  slotText: { fontSize: 14 },
+  slotChip: { borderRadius: radius.lg, paddingHorizontal: 18, paddingVertical: space.md, minWidth: 80, minHeight: 48, justifyContent: 'center', alignItems: 'center' },
+  slotText: { fontSize: 16, fontVariant: ['tabular-nums'] },
 
   footer: { paddingHorizontal: space.xl, paddingTop: 14, paddingBottom: space.lg, borderTopWidth: 0.5 },
   summary: { fontSize: 13, textAlign: 'center', marginBottom: space.md },

@@ -204,14 +204,14 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { paddingHorizontal: 24, marginTop: 24 },
   heading: { fontSize: 30 },
-  subtitle: { fontSize: 12, marginTop: 4 },
+  subtitle: { fontSize: 14, marginTop: 4 },
 
   noticeMargins: { marginTop: 24, marginHorizontal: 24 },
 
   listContent: { paddingTop: 16, paddingBottom: 32 },
   empty: { alignItems: 'center', paddingVertical: 40, paddingHorizontal: 24 },
-  emptyText: { fontSize: 13 },
-  emptyHint: { fontSize: 12, marginTop: 6 },
+  emptyText: { fontSize: 15 },
+  emptyHint: { fontSize: 14, marginTop: 6 },
 
   row: {
     flexDirection: 'row',
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   },
   rowInfo: { flex: 1, minWidth: 0 },
   rowName: { fontSize: 16 },
-  rowPreview: { fontSize: 12, marginTop: 3 },
-  rowDate: { fontSize: 10 },
+  rowPreview: { fontSize: 14, lineHeight: 20, marginTop: 5 },
+  rowDate: { fontSize: 12 },
   unreadDot: { width: 8, height: 8, borderRadius: 4 },
 });

@@ -251,11 +251,14 @@ export default function PortfolioScreen({ navigation }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel={`${action.title}. ${action.summary}`}
                 testID={action.testID}
-                style={({ pressed }) => [styles.managementAction, { borderColor: colors.border, backgroundColor: colors.surface, opacity: pressed ? pressOpacity.soft : 1 }]}
+                style={({ pressed }) => [styles.managementAction, { borderColor: colors.border, opacity: pressed ? pressOpacity.soft : 1 }]}
               >
-                <Feather name={action.icon} size={17} color={colors.accentText} />
-                <Text style={[styles.managementTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{action.title}</Text>
-                <Text style={[styles.managementSummary, { color: colors.textSecondary, fontFamily: fonts.body }]}>{action.summary}</Text>
+                <View style={[styles.managementIcon, { backgroundColor: colors.surface }]}><Feather name={action.icon} size={21} color={colors.accentText} /></View>
+                <View style={styles.managementCopy}>
+                  <Text style={[styles.managementTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{action.title}</Text>
+                  <Text style={[styles.managementSummary, { color: colors.textSecondary, fontFamily: fonts.body }]}>{action.summary}</Text>
+                </View>
+                <Feather name="chevron-right" size={18} color={colors.textSecondary} />
               </Pressable>
             ))}
           </View>
@@ -312,7 +315,7 @@ export default function PortfolioScreen({ navigation }: Props) {
                 <Pressable
                   onPress={() => void onAdd()}
                   accessibilityRole="button"
-                  accessibilityLabel="Add portfolio image"
+                  accessibilityLabel={language === 'de' ? 'Portfoliobild hinzufügen' : 'Add portfolio image'}
                   testID="barber-portfolio-add"
                   style={({ pressed }) => [
                     portfolioTileStyle,
@@ -322,7 +325,7 @@ export default function PortfolioScreen({ navigation }: Props) {
                 >
                   <Feather name="plus" size={20} color={colors.accentText} />
                   <Text style={[styles.addLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                    Add image
+                    {language === 'de' ? 'Bild hinzufügen' : 'Add image'}
                   </Text>
                 </Pressable>
               ) : null}
@@ -348,7 +351,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: space.xl, paddingTop: space.xl, paddingBottom: space['2xl'] },
   heading: { fontSize: 30 },
-  subtitle: { fontSize: 12, marginTop: 4 },
+  subtitle: { fontSize: 14, lineHeight: 21, marginTop: 6 },
 
   spinner: { marginTop: 48 },
   noticeMargins: { marginTop: space.xl },
@@ -356,10 +359,12 @@ const styles = StyleSheet.create({
   gridSpacing: { marginTop: space.xl },
   managementSurface: { marginTop: space.xl, padding: space.base },
   sectionTitle: { fontSize: 20, lineHeight: 27 },
-  managementGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.md },
-  managementAction: { width: '48%', minHeight: 92, borderWidth: HAIRLINE, borderRadius: 10, padding: space.md },
-  managementTitle: { fontSize: 14, lineHeight: 20, marginTop: space.sm },
-  managementSummary: { fontSize: 11, lineHeight: 15, marginTop: 2 },
+  managementGrid: { marginTop: space.md },
+  managementAction: { minHeight: 80, flexDirection: 'row', alignItems: 'center', gap: space.md, borderBottomWidth: HAIRLINE, paddingVertical: space.md },
+  managementIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  managementCopy: { flex: 1 },
+  managementTitle: { fontSize: 16, lineHeight: 23 },
+  managementSummary: { fontSize: 13, lineHeight: 20, marginTop: 3 },
   workHeading: { fontSize: 21, lineHeight: 28, marginTop: space['2xl'] },
   uploadingImage: { width: '100%', height: '100%' },
   uploadingScrim: {
@@ -377,6 +382,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: space.sm,
   },
-  addLabel: { fontSize: 12 },
+  addLabel: { fontSize: 14, textAlign: 'center' },
   emptyHint: { fontSize: 12, marginTop: 16 },
 });

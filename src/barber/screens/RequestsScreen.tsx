@@ -40,7 +40,7 @@
  *   even a snapshot that raced past the write converges to the correct status.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, RefreshControl, SectionList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, SectionList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../../lib/supabase';
@@ -50,6 +50,8 @@ import { HAIRLINE, radius, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
 import { StatusPill } from '../../shared/components/StatusPill';
+import { BookingDetails } from '../../shared/components/BookingDetails';
+import { ConfirmSheet } from '../../shared/components/ConfirmSheet';
 import { GlassSurface } from '../../shared/components/GlassSurface';
 import { Avatar } from '../../shared/components/Avatar';
 import { BookingListSkeleton } from '../../shared/components/BookingListSkeleton';
@@ -78,13 +80,6 @@ import { getAppLanguage } from '../../shared/locale';
  * a cancel + destructive option). Accept / Mark complete are not destructive
  * and stay one-tap.
  */
-function confirmDestructive(title: string, confirmLabel: string, onConfirm: () => void) {
-  Alert.alert(title, 'This cannot be undone.', [
-    { text: 'Keep', style: 'cancel' },
-    { text: confirmLabel, style: 'destructive', onPress: onConfirm },
-  ]);
-}
-
 /** Requests read soonest-first: sort by (date, time) ascending. */
 function sortAsc(rows: BookingRow[]): BookingRow[] {
   return [...rows].sort((a, b) => {
@@ -121,6 +116,12 @@ export default function RequestsScreen() {
   const { colors } = useTheme();
   const styles = useStyles(colors);
   const language = getAppLanguage();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<{ title: string; label: string; action: () => void } | null>(null);
+  const confirmDestructive = (title: string, label: string, action: () => void) => {
+    setSelectedId(null);
+    setConfirmation({ title, label, action });
+  };
 
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [servicesById, setServicesById] = useState<Map<string, ServiceRow>>(new Map());
@@ -256,6 +257,72 @@ export default function RequestsScreen() {
   const showSkeleton = loading && bookings.length === 0;
   const showError = error !== null && bookings.length === 0;
 
+  const selected = bookings.find((row) => row.id === selectedId);
+  const renderActions = (item: BookingRow) => {
+    const busy = inFlight[item.id] === true;
+    return <>
+                {item.status === 'pending' || item.status === 'accepted' ? (
+                  <View style={styles.actions} testID={`barber-requests-actions-${item.id}`}>
+                    {busy ? (
+                      <ActivityIndicator
+                        size="small"
+                        color={colors.accent}
+                        style={styles.actionSpinner}
+                        testID={`barber-requests-row-busy-${item.id}`}
+                        accessible
+                        accessibilityLabel="Updating booking"
+                        accessibilityLiveRegion="polite"
+                      />
+                    ) : item.status === 'pending' ? (
+                      <>
+                        <ActionButton
+                          styles={styles}
+                          variant="secondary"
+                          label="Reject"
+                          testID={`request-reject-${item.id}`}
+                          onPress={() =>
+                            confirmDestructive('Reject this booking?', 'Reject', () =>
+                              runTransition(item, 'rejected', rejectBooking)
+                            )
+                          }
+                        />
+                        <ActionButton
+                          styles={styles}
+                          variant="primary"
+                          label="Accept"
+                          testID={`request-accept-${item.id}`}
+                          onPress={() => runTransition(item, 'accepted', acceptBooking)}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <ActionButton
+                          styles={styles}
+                          variant="secondary"
+                          label="Cancel"
+                          testID={`request-cancel-${item.id}`}
+                          onPress={() =>
+                            confirmDestructive('Cancel this booking?', 'Cancel booking', () =>
+                              runTransition(item, 'cancelled', cancelBookingAsBarber)
+                            )
+                          }
+                        />
+                        <ActionButton
+                          styles={styles}
+                          variant="success"
+                          label="Mark complete"
+                          testID={`request-complete-${item.id}`}
+                          onPress={() => runTransition(item, 'completed', completeBooking)}
+                        />
+                      </>
+                    )}
+                  </View>
+                ) : null}
+
+    {rowErrors[item.id] ? <Text accessibilityRole="alert" style={{ color: colors.errorText, marginTop: 16 }}>{rowErrors[item.id]}</Text> : null}
+    </>;
+  };
+
   return (
     <SafeAreaView
       style={styles.container}
@@ -263,7 +330,7 @@ export default function RequestsScreen() {
       testID="barber-requests-screen"
     >
       <View style={styles.header}>
-        <Text style={styles.heading}>Requests</Text>
+        <Text style={styles.heading}>{language === 'de' ? 'Deine Anfragen' : 'Your requests'}</Text>
         <Text style={styles.subtitle}>Booking requests from your clients.</Text>
       </View>
 
@@ -324,13 +391,13 @@ export default function RequestsScreen() {
             if (section.key === 'history' && !historyExpanded) return null;
             const service = servicesById.get(item.service_id);
             const counterpart = counterpartsById.get(item.id);
-            const busy = inFlight[item.id] === true;
             const rowError = rowErrors[item.id];
             // Lead with the customer's name when known; fall back to service.
             const title = counterpart?.name ?? service?.name ?? 'Booking';
             const subline = counterpart ? service?.name ?? 'Service' : formatBookingWhen(item.date, item.time);
             return (
               <GlassSurface style={styles.card} testID={`barber-requests-row-${item.id}`}>
+                <Pressable accessibilityRole="button" accessibilityLabel={`${language === 'de' ? 'Termindetails' : 'Appointment details'}, ${title}, ${formatBookingWhen(item.date, item.time)}`} testID={`barber-requests-open-${item.id}`} onPress={() => setSelectedId(item.id)} style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}>
                 <View style={styles.cardTop}>
                   <Avatar
                     id={counterpart?.id ?? item.customer_id}
@@ -364,64 +431,8 @@ export default function RequestsScreen() {
                   </View>
                 </View>
 
-                {item.status === 'pending' || item.status === 'accepted' ? (
-                  <View style={styles.actions} testID={`barber-requests-actions-${item.id}`}>
-                    {busy ? (
-                      <ActivityIndicator
-                        size="small"
-                        color={colors.accent}
-                        style={styles.actionSpinner}
-                        testID={`barber-requests-row-busy-${item.id}`}
-                        accessible
-                        accessibilityLabel="Updating booking"
-                        accessibilityLiveRegion="polite"
-                      />
-                    ) : item.status === 'pending' ? (
-                      <>
-                        <ActionButton
-                          styles={styles}
-                          variant="secondary"
-                          label="Reject"
-                          testID={`request-reject-${item.id}`}
-                          onPress={() =>
-                            confirmDestructive('Reject this booking?', 'Reject', () =>
-                              runTransition(item, 'rejected', rejectBooking)
-                            )
-                          }
-                        />
-                        <ActionButton
-                          styles={styles}
-                          variant="primary"
-                          label="Accept"
-                          testID={`request-accept-${item.id}`}
-                          onPress={() => runTransition(item, 'accepted', acceptBooking)}
-                        />
-                      </>
-                    ) : (
-                      <>
-                        <ActionButton
-                          styles={styles}
-                          variant="secondary"
-                          label="Cancel"
-                          testID={`request-cancel-${item.id}`}
-                          onPress={() =>
-                            confirmDestructive('Cancel this booking?', 'Cancel booking', () =>
-                              runTransition(item, 'cancelled', cancelBookingAsBarber)
-                            )
-                          }
-                        />
-                        <ActionButton
-                          styles={styles}
-                          variant="success"
-                          label="Mark complete"
-                          testID={`request-complete-${item.id}`}
-                          onPress={() => runTransition(item, 'completed', completeBooking)}
-                        />
-                      </>
-                    )}
-                  </View>
-                ) : null}
-
+                <Text style={{ color: colors.accentText, fontSize: 13, marginTop: 16 }}>{language === 'de' ? 'Details ansehen' : 'View details'}</Text>
+                </Pressable>
                 {rowError ? (
                   <View
                     style={styles.rowError}
@@ -437,6 +448,8 @@ export default function RequestsScreen() {
           />
         </>
       )}
+      {selected ? <BookingDetails booking={selected} person={counterpartsById.get(selected.id)?.name ?? (language === 'de' ? 'Kunde' : 'Customer')} service={servicesById.get(selected.service_id)?.name ?? (language === 'de' ? 'Termin' : 'Appointment')} onClose={() => setSelectedId(null)}>{renderActions(selected)}</BookingDetails> : null}
+      <ConfirmSheet open={confirmation !== null} title={confirmation?.title ?? ''} message={language === 'de' ? 'Diese Aktion kann nicht r\u00fcckg\u00e4ngig gemacht werden.' : 'This cannot be undone.'} confirmLabel={confirmation?.label ?? ''} cancelLabel={language === 'de' ? 'Behalten' : 'Keep'} destructive testID="barber-request-confirm" onClose={() => setConfirmation(null)} onConfirm={() => { const action = confirmation?.action; setConfirmation(null); action?.(); }} />
     </SafeAreaView>
   );
 }
@@ -487,19 +500,19 @@ function useStyles(colors: Palette) {
     container: { flex: 1, backgroundColor: colors.background },
     header: { paddingHorizontal: space.xl, marginTop: space.xl },
     heading: { fontSize: 30, color: colors.textPrimary, fontFamily: fonts.headingMedium },
-    subtitle: { fontSize: 12, marginTop: 4, color: colors.textSecondary, fontFamily: fonts.body },
+    subtitle: { fontSize: 14, marginTop: 4, color: colors.textSecondary, fontFamily: fonts.body },
 
     noticeMargins: { marginTop: space.xl, marginHorizontal: space.xl },
 
     listContent: { paddingHorizontal: space.xl, paddingTop: space.xl, paddingBottom: space['2xl'] },
     sectionHeader: { minHeight: 36, flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.md, marginBottom: space.sm },
     sectionTitle: { color: colors.textPrimary, fontSize: 16, fontFamily: fonts.bodyMedium },
-    sectionCount: { minWidth: 22, color: colors.textSecondary, fontSize: 12, fontFamily: fonts.body, textAlign: 'center' },
+    sectionCount: { minWidth: 22, color: colors.textSecondary, fontSize: 14, fontFamily: fonts.body, textAlign: 'center' },
     historyToggle: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.xl, borderTopWidth: HAIRLINE, borderColor: colors.border },
-    historyAction: { marginLeft: 'auto', color: colors.accentText, fontSize: 12, fontFamily: fonts.bodyMedium },
+    historyAction: { marginLeft: 'auto', color: colors.accentText, fontSize: 14, fontFamily: fonts.bodyMedium },
     empty: { alignItems: 'center', paddingVertical: 40 },
     emptyText: { fontSize: 13, color: colors.textSecondary, fontFamily: fonts.body },
-    emptyHint: { fontSize: 12, marginTop: 6, color: colors.textSecondary, fontFamily: fonts.body },
+    emptyHint: { fontSize: 14, marginTop: 6, color: colors.textSecondary, fontFamily: fonts.body },
 
     card: {
       padding: space.base,
@@ -507,8 +520,8 @@ function useStyles(colors: Palette) {
     },
     cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
     cardInfo: { flex: 1, minWidth: 0 },
-    cardTitle: { fontSize: 18, color: colors.textPrimary, fontFamily: fonts.headingMedium },
-    cardMeta: { fontSize: 12, marginTop: 4, color: colors.textSecondary, fontFamily: fonts.body },
+    cardTitle: { fontSize: 18, color: colors.textPrimary, fontFamily: fonts.bodySemiBold },
+    cardMeta: { fontSize: 14, marginTop: 4, color: colors.textSecondary, fontFamily: fonts.body },
     cardRight: { alignItems: 'flex-end', flexShrink: 1, maxWidth: '45%' },
     cardPrice: { fontSize: 14, color: colors.textPrimary, fontFamily: fonts.body },
     cardStatus: {
@@ -540,6 +553,6 @@ function useStyles(colors: Palette) {
       borderTopColor: colors.border,
       paddingTop: space.md,
     },
-    rowErrorText: { fontSize: 12, color: colors.errorText, fontFamily: fonts.bodyMedium },
+    rowErrorText: { fontSize: 14, color: colors.errorText, fontFamily: fonts.bodyMedium },
   });
 }

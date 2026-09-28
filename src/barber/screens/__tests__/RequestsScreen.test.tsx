@@ -1,8 +1,14 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 import type { BookingRow, ServiceRow } from '../../../types';
-import { fetchOwnRequestsView } from '../../requestsData';
+import { cancelBookingAsBarber, fetchOwnRequestsView } from '../../requestsData';
 import RequestsScreen, { buildRequestSections } from '../RequestsScreen';
+
+jest.mock('../../../shared/components/ConfirmSheet', () => {
+  const React = jest.requireActual('react');
+  const { Pressable } = jest.requireActual('react-native');
+  return { ConfirmSheet: ({ open, onConfirm, testID }: { open: boolean; onConfirm: () => void; testID: string }) => open ? React.createElement(Pressable, { testID: `${testID}-confirm`, onPress: onConfirm }) : null };
+});
 
 jest.mock('@react-navigation/native', () => {
   const React = jest.requireActual('react');
@@ -166,6 +172,19 @@ describe('RequestsScreen status presentation', () => {
     expect(screen.queryByTestId('barber-requests-row-booking-2')).toBeNull();
   });
 
+  it('keeps cancellation in details and requires confirmation before sending', async () => {
+    jest.mocked(cancelBookingAsBarber).mockResolvedValue({ status: 'ok', booking: { ...BOOKING, status: 'cancelled' } });
+    await render(<RequestsScreen />);
+    await waitFor(() => expect(screen.getByTestId('barber-requests-open-booking-2')).toBeTruthy());
+    expect(screen.queryByTestId('request-cancel-booking-2')).toBeNull();
+    await fireEvent.press(screen.getByTestId('barber-requests-open-booking-2'));
+    await fireEvent.press(screen.getByTestId('request-cancel-booking-2'));
+    expect(screen.queryByTestId('booking-details')).toBeNull();
+    expect(cancelBookingAsBarber).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId('barber-request-confirm-confirm'));
+    await waitFor(() => expect(cancelBookingAsBarber).toHaveBeenCalledWith('booking-2'));
+  });
+
   it('renders the booking state through an accessible semantic pill', async () => {
     await render(<RequestsScreen />);
 
@@ -183,6 +202,9 @@ describe('RequestsScreen status presentation', () => {
       height: 44,
       borderRadius: 22,
     });
+    expect(screen.queryByTestId('request-cancel-booking-2')).toBeNull();
+    await fireEvent.press(screen.getByTestId('barber-requests-open-booking-2'));
+    expect(screen.getByTestId('booking-details')).toBeTruthy();
     expect(screen.getByTestId('request-cancel-booking-2')).toBeTruthy();
     expect(screen.getByTestId('request-complete-booking-2')).toBeTruthy();
   });
