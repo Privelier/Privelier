@@ -92,6 +92,8 @@ export function LegalConsentFields({
           accessibilityLabel={`Accept ${termsLabel} and acknowledge privacy policy`}
           accessibilityState={{ checked: termsAccepted, disabled: !role }}
           testID={`${testIDPrefix}-legal-terms`}
+          // 22pt visual box, 44pt touch target.
+          hitSlop={11}
           style={[styles.checkbox, { borderColor: termsError ? colors.error : colors.border }]}
         >
           {termsAccepted ? <Text style={[styles.checkmark, { color: colors.accentText }]}>✓</Text> : null}
@@ -126,6 +128,8 @@ export function LegalConsentFields({
           accessibilityLabel="Confirm that you are at least 18 years old"
           accessibilityState={{ checked: adultConfirmed }}
           testID={`${testIDPrefix}-legal-adult`}
+          // 22pt visual box, 44pt touch target.
+          hitSlop={11}
           style={[styles.checkbox, { borderColor: adultError ? colors.error : colors.border }]}
         >
           {adultConfirmed ? <Text style={[styles.checkmark, { color: colors.accentText }]}>✓</Text> : null}
