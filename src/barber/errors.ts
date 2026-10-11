@@ -7,6 +7,7 @@
  * a code from BarberDataErrorCode and calm, sentence-case copy. Raw
  * PostgREST/Postgres text goes to debug logging only, never to the screen.
  */
+import { getAppLanguage } from '../shared/locale';
 
 /** Closed set of error codes the UI layer is allowed to switch on. */
 export type BarberDataErrorCode =
@@ -40,6 +41,16 @@ export const barberDataErrorCopy: Record<BarberDataErrorCode, string> = {
     'You can have at most 6 portfolio images. Delete one before adding another.',
 };
 
+/** German copy for the same codes (Wave 6). */
+export const barberDataErrorCopyDe: Record<BarberDataErrorCode, string> = {
+  forbidden: 'Das ist nicht erlaubt.',
+  invalid_input: 'Diese Eingabe ist nicht gültig. Prüfe die Werte (auch Tag, Datum und Uhrzeiten) und versuch es erneut.',
+  network: 'Keine Verbindung zum Server. Prüfe deine Verbindung und versuch es erneut.',
+  unknown: 'Bei uns ist etwas schiefgelaufen. Versuch es gleich noch einmal.',
+  transition_rejected: 'Dieser Termin kann so nicht mehr geändert werden. Aktualisiere, um den aktuellen Stand zu sehen.',
+  limit_reached: 'Du kannst höchstens 6 Portfoliobilder haben. Lösche eines, bevor du ein neues hinzufügst.',
+};
+
 const retryableCodes: ReadonlySet<BarberDataErrorCode> = new Set(['network']);
 
 /**
@@ -59,7 +70,7 @@ export function failure(
   return {
     status: 'error',
     code,
-    message: overrides?.[code] ?? barberDataErrorCopy[code],
+    message: overrides?.[code] ?? (getAppLanguage() === 'de' ? barberDataErrorCopyDe : barberDataErrorCopy)[code],
     retryable: retryableCodes.has(code),
   };
 }

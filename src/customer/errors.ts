@@ -7,6 +7,7 @@
  * with a code from CustomerDataErrorCode and calm, sentence-case copy. Raw
  * PostgREST/Postgres text goes to debug logging only, never to the screen.
  */
+import { getAppLanguage } from '../shared/locale';
 
 /** Closed set of error codes the UI layer is allowed to switch on. */
 export type CustomerDataErrorCode =
@@ -43,11 +44,22 @@ export const customerDataErrorCopy: Record<CustomerDataErrorCode, string> = {
 const retryableCodes: ReadonlySet<CustomerDataErrorCode> = new Set(['network']);
 
 /** Build a typed failure for a known code. */
+/** German copy for the same codes (Wave 6). */
+export const customerDataErrorCopyDe: Record<CustomerDataErrorCode, string> = {
+  forbidden: 'Das ist nicht erlaubt.',
+  invalid_input: 'Diese Eingabe ist nicht gültig. Prüfe die Werte und versuch es erneut.',
+  network: 'Keine Verbindung zum Server. Prüfe deine Verbindung und versuch es erneut.',
+  unknown: 'Bei uns ist etwas schiefgelaufen. Versuch es gleich noch einmal.',
+  conflict: 'Diese Uhrzeit wurde gerade von jemand anderem gebucht. Wähle eine andere Uhrzeit.',
+  transition_rejected: 'Dieser Termin kann nicht mehr storniert werden. Aktualisiere, um den aktuellen Stand zu sehen.',
+  already_reviewed: 'Du hast diesen Termin bereits bewertet.',
+};
+
 export function failure(code: CustomerDataErrorCode): CustomerDataFailure {
   return {
     status: 'error',
     code,
-    message: customerDataErrorCopy[code],
+    message: (getAppLanguage() === 'de' ? customerDataErrorCopyDe : customerDataErrorCopy)[code],
     retryable: retryableCodes.has(code),
   };
 }

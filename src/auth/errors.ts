@@ -9,6 +9,7 @@
  * - 23505 (unique violation) is deliberately NOT mapped here — callers treat
  *   it as "the other writer won" and re-fetch (idempotent provisioning).
  */
+import { getAppLanguage } from '../shared/locale';
 import {
   isAuthApiError,
   isAuthRetryableFetchError,
@@ -68,11 +69,26 @@ const retryableCodes: ReadonlySet<AuthErrorCode> = new Set([
 ]);
 
 /** Build a typed failure for a known code. */
+/** German copy for the same codes (Wave 6). */
+export const authErrorCopyDe: Record<AuthErrorCode, string> = {
+  email_in_use: 'Diese E-Mail-Adresse wird bereits verwendet. Melde dich stattdessen an.',
+  weak_password: 'Dieses Passwort ist zu schwach. Wähle ein längeres, weniger übliches.',
+  invalid_email: 'Diese E-Mail-Adresse scheint nicht gültig zu sein. Prüfe sie und versuch es erneut.',
+  rate_limited: 'Zu viele Versuche. Warte einen Moment und versuch es dann erneut.',
+  invalid_credentials: 'E-Mail-Adresse oder Passwort ist falsch.',
+  email_not_confirmed: 'Deine E-Mail-Adresse ist noch nicht bestätigt. Prüfe dein Postfach auf den Bestätigungslink.',
+  provider_unavailable: 'Diese Anmeldeart ist gerade nicht verfügbar. Nutze E-Mail und Passwort oder versuch es später.',
+  development_build_required: 'E-Mail-Links benötigen die Privelier-Entwicklungsversion. Öffne die App dort und versuch es erneut.',
+  network: 'Keine Verbindung zum Server. Prüfe deine Verbindung und versuch es erneut.',
+  provisioning_denied: 'Dein Konto konnte nicht fertig eingerichtet werden. Versuch es erneut oder kontaktiere den Support.',
+  unknown: 'Bei uns ist etwas schiefgelaufen. Versuch es gleich noch einmal.',
+};
+
 export function failure(code: AuthErrorCode): AuthFailure {
   return {
     status: 'error',
     code,
-    message: authErrorCopy[code],
+    message: (getAppLanguage() === 'de' ? authErrorCopyDe : authErrorCopy)[code],
     retryable: retryableCodes.has(code),
   };
 }
