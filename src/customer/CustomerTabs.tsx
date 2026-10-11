@@ -1,4 +1,8 @@
-import { createRef, useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { subscribeToBarberProfileLinks } from '../shared/profileLinks';
+import type { CustomerStackParamList } from './CustomerNavigator';
+import { createRef, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { BlurTargetView } from 'expo-blur';
 import { getAppLanguage } from '../shared/locale';
@@ -42,6 +46,13 @@ const TAB_ICONS: Record<keyof CustomerTabParamList, keyof typeof Feather.glyphMa
 };
 
 export default function CustomerTabs() {
+  // Profile links (privelier://barber/<id>) open over the tabs, including a
+  // link that launched the app before sign-in.
+  const stackNavigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
+  useEffect(
+    () => subscribeToBarberProfileLinks((barberId) => stackNavigation.navigate('BarberProfile', { barberId })),
+    [stackNavigation]
+  );
   const { colors, fonts } = useTheme();
   const language = getAppLanguage();
   const [blurTargets] = useState(() => ({ Discover: createRef<View>(), Explore: createRef<View>(), Bookings: createRef<View>(), Inbox: createRef<View>(), Account: createRef<View>() }));

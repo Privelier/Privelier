@@ -56,6 +56,7 @@ import type { BarberDirectoryRow, BookingRow, ServiceRow } from '../../types';
 import { cancelBookingAsCustomer, fetchOwnBookingsView, isUpcomingBooking } from '../bookingsData';
 import { fetchOwnReviewedBookingIds } from '../reviewsData';
 import { fetchRoomForBooking } from '../inboxData';
+import { AcceptedBookingTools } from '../../shared/components/AcceptedBookingTools';
 import type { CustomerStackParamList } from '../CustomerNavigator';
 import {
   applyBookingChange,
@@ -400,6 +401,11 @@ export default function BookingsScreen() {
         </Text>
       </Pressable>
     ) : null}
+    <AcceptedBookingTools
+      booking={item}
+      calendarTitle={`${servicesById.get(item.service_id)?.name ?? (de ? 'Termin' : 'Appointment')} · ${barbersById.get(item.barber_id)?.name ?? 'Privelier'}`}
+      testIDPrefix={`booking-tools-${item.id}`}
+    />
     {rowErrors[item.id] ? <Text accessibilityRole="alert" style={{ color: colors.errorText, marginTop: 16 }}>{rowErrors[item.id]}</Text> : null}
     </>;
   };

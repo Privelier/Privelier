@@ -4,6 +4,7 @@ import type { BookingRow, ServiceRow } from '../../../types';
 import { cancelBookingAsBarber, fetchOwnRequestsView } from '../../requestsData';
 import RequestsScreen, { buildRequestSections } from '../RequestsScreen';
 
+jest.mock('../../../shared/components/ToastProvider', () => ({ useToast: () => ({ showToast: jest.fn() }) }));
 jest.mock('../../../shared/components/ConfirmSheet', () => {
   const React = jest.requireActual('react');
   const { Pressable } = jest.requireActual('react-native');

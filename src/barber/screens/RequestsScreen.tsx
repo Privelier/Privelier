@@ -53,6 +53,7 @@ import { StatusPill } from '../../shared/components/StatusPill';
 import { BookingDetails } from '../../shared/components/BookingDetails';
 import { ConfirmSheet } from '../../shared/components/ConfirmSheet';
 import { Reveal } from '../../shared/motion';
+import { AcceptedBookingTools } from '../../shared/components/AcceptedBookingTools';
 import { GlassSurface } from '../../shared/components/GlassSurface';
 import { Avatar } from '../../shared/components/Avatar';
 import { BookingListSkeleton } from '../../shared/components/BookingListSkeleton';
@@ -321,6 +322,12 @@ export default function RequestsScreen() {
                 ) : null}
 
     {rowErrors[item.id] ? <Text accessibilityRole="alert" style={{ color: colors.errorText, marginTop: 16 }}>{rowErrors[item.id]}</Text> : null}
+    <AcceptedBookingTools
+      booking={item}
+      calendarTitle={`${servicesById.get(item.service_id)?.name ?? (language === 'de' ? 'Termin' : 'Appointment')} · ${counterpartsById.get(item.id)?.name ?? (language === 'de' ? 'Kunde' : 'Customer')}`}
+      showDirections
+      testIDPrefix={`barber-booking-tools-${item.id}`}
+    />
     </>;
   };
 

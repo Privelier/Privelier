@@ -28,8 +28,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  View,
-} from 'react-native';
+  View, Share } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -43,6 +42,7 @@ import { getAppLanguage } from '../../shared/locale';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { BackButton, OVER_IMAGE_BG, OVER_IMAGE_ICON } from '../../shared/components/ScreenBackHeader';
 import { listFavoriteBarberIds, setFavorite } from '../personalData';
+import { barberProfileLink } from '../../shared/profileLinks';
 import { haptics } from '../../shared/haptics';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { ScrollGlassHeader, useReducedMotionPreference, useScrollGlass } from '../../shared/motion';
@@ -550,6 +550,20 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
       </View>
       <View style={[styles.favoriteWrap, { top: insets.top + 8 }]}>
         <Pressable
+          onPress={() => void Share.share({
+            message: german
+              ? `${barber.name} auf Privelier: ${barberProfileLink(barber.id)}`
+              : `${barber.name} on Privelier: ${barberProfileLink(barber.id)}`,
+          })}
+          accessibilityRole="button"
+          accessibilityLabel={german ? 'Profil teilen' : 'Share profile'}
+          hitSlop={12}
+          testID="barber-profile-share"
+          style={({ pressed }) => [styles.favoriteDisc, { backgroundColor: OVER_IMAGE_BG, opacity: pressed ? pressOpacity.soft : 1 }]}
+        >
+          <Feather name="share" size={16} color={OVER_IMAGE_ICON} />
+        </Pressable>
+        <Pressable
           onPress={() => void toggleFavorite()}
           disabled={favorite === null}
           accessibilityRole="button"
@@ -626,7 +640,7 @@ const styles = StyleSheet.create({
   heroRating: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 
   backWrap: { position: 'absolute', left: 24 },
-  favoriteWrap: { position: 'absolute', right: 24 },
+  favoriteWrap: { position: 'absolute', right: 24, flexDirection: 'row', gap: 12 },
   favoriteDisc: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   bioBlock: { paddingHorizontal: 24, paddingVertical: 24 },
   bio: { fontSize: 14, lineHeight: 22 },
