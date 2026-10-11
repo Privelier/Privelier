@@ -188,9 +188,15 @@ env:
       id: "customer-booking-confirm-success"
     timeout: 10000
 
-# BookingConfirmScreen pauses briefly (SUCCESS_PAUSE_MS) then calls
-# navigation.reset(...) straight to the Bookings tab — wait for that
-# destination directly rather than asserting on the transient success view.
+# The success state keeps the created booking: its request timeline and a
+# "Message barber" action are shown, and "View bookings" resets the stack to
+# the Bookings tab (no automatic redirect).
+- assertVisible:
+    id: "booking-details-timeline"
+- assertVisible:
+    id: "customer-booking-confirm-message"
+- tapOn:
+    id: "customer-booking-confirm-view-bookings"
 - extendedWaitUntil:
     visible:
       id: "customer-bookings-screen"

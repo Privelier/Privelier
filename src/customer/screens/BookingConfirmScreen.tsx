@@ -37,6 +37,10 @@ import { radius, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 import { BookingStepIndicator } from '../components/BookingStepIndicator';
 import { insertBooking } from '../bookingCreateData';
+import { fetchRoomForBooking } from '../inboxData';
+import { StatusTimeline } from '../../shared/components/BookingDetails';
+import { useToast } from '../../shared/components/ToastProvider';
+import type { BookingRow } from '../../types';
 import { formatBookingWhen, formatMoney } from '../format';
 import { customerDataErrorCopy } from '../errors';
 import type { CustomerStackParamList } from '../CustomerNavigator';
@@ -52,7 +56,12 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [confirmedPrice, setConfirmedPrice] = useState<number | null>(null);
+  // The authoritative inserted row: its price snapshot, id and status drive
+  // the success state, so nothing on it is a client-side guess.
+  const [created, setCreated] = useState<BookingRow | null>(null);
+  const [openingChat, setOpeningChat] = useState(false);
+  const openingChatRef = useRef(false);
+  const { showToast } = useToast();
   const [conflict, setConflict] = useState(false);
   // Same-tick double-tap guard: `submitting` only disables the button after
   // the next commit, and a second insert would race the first one.
@@ -70,7 +79,7 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
     setSubmitting(false);
 
     if (result.status === 'ok') {
-      setConfirmedPrice(result.booking.price);
+      setCreated(result.booking);
       void haptics.success();
       return;
     }
@@ -96,6 +105,39 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
     navigation.pop(2);
   }, [navigation]);
 
+  const onMessageBarber = useCallback(async () => {
+    if (!created || openingChatRef.current) return;
+    openingChatRef.current = true;
+    setOpeningChat(true);
+    const result = await fetchRoomForBooking(created.id);
+    openingChatRef.current = false;
+    setOpeningChat(false);
+    if (result.status !== 'ok' || !result.room) {
+      showToast({
+        message: result.status === 'ok'
+          ? de ? 'Der Chat zu diesem Termin ist nicht verfügbar.' : 'The chat for this appointment is not available.'
+          : result.message,
+      });
+      return;
+    }
+    // Replace the finished booking flow with Bookings underneath the chat, so
+    // Back from the conversation can never re-enter the confirm screen.
+    navigation.reset({
+      index: 1,
+      routes: [
+        { name: 'CustomerTabs', params: { screen: 'Bookings' } },
+        {
+          name: 'Conversation',
+          params: {
+            room: result.room,
+            title: barberName,
+            subtitle: [service.name, formatBookingWhen(date, time)].join(' · '),
+          },
+        },
+      ],
+    });
+  }, [created, navigation, showToast, de, barberName, service.name, date, time]);
+
   const onViewBookings = useCallback(() => {
     navigation.reset({
       index: 0,
@@ -103,7 +145,7 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
     });
   }, [navigation]);
 
-  if (confirmedPrice !== null) {
+  if (created !== null) {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: colors.background }]}
@@ -125,8 +167,25 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
             <SummaryRow label={de ? 'Leistung' : 'Service'} value={service.name} />
             <SummaryRow label={de ? 'Termin' : 'When'} value={formatBookingWhen(date, time)} />
             <SummaryRow label={de ? 'Adresse' : 'Location'} value={location} />
-            <SummaryRow label={de ? 'Preis' : 'Price'} value={formatMoney(confirmedPrice)} last />
+            <SummaryRow label={de ? 'Preis' : 'Price'} value={formatMoney(created.price)} last />
           </View>
+          <View style={styles.successTimeline}>
+            <StatusTimeline status={created.status} role="customer" />
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={de ? 'Barber schreiben' : 'Message barber'}
+            accessibilityState={{ busy: openingChat, disabled: openingChat }}
+            disabled={openingChat}
+            onPress={() => void onMessageBarber()}
+            testID="customer-booking-confirm-message"
+            style={({ pressed }) => [styles.secondaryAction, { borderColor: colors.border }, pressed ? { opacity: pressOpacity.soft } : null]}
+          >
+            <Feather name="message-circle" size={16} color={colors.textPrimary} />
+            <Text style={[styles.secondaryActionText, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>
+              {de ? 'Barber schreiben' : 'Message barber'}
+            </Text>
+          </Pressable>
           <PrimaryButton
             label={de ? 'Meine Buchungen' : 'View bookings'}
             onPress={onViewBookings}
@@ -226,6 +285,19 @@ function SummaryRow({ label, value, last = false }: { label: string; value: stri
 }
 
 const styles = StyleSheet.create({
+  successTimeline: { alignSelf: 'stretch', marginBottom: space.lg },
+  secondaryAction: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.sm,
+    minHeight: 52,
+    borderWidth: 0.5,
+    borderRadius: radius.md,
+    marginBottom: space.md,
+  },
+  secondaryActionText: { fontSize: 15 },
   container: { flex: 1 },
 
   scrollContent: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 24 },

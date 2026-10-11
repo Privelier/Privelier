@@ -5,6 +5,10 @@ import { insertBooking } from '../../bookingCreateData';
 import { haptics } from '../../../shared/haptics';
 
 jest.mock('../../bookingCreateData', () => ({ insertBooking: jest.fn() }));
+const mockFetchRoom = jest.fn();
+jest.mock('../../inboxData', () => ({ fetchRoomForBooking: (...args: unknown[]) => mockFetchRoom(...args) }));
+const mockShowToast = jest.fn();
+jest.mock('../../../shared/components/ToastProvider', () => ({ useToast: () => ({ showToast: mockShowToast }) }));
 jest.mock('../../../shared/haptics', () => ({
   haptics: { confirm: jest.fn(), success: jest.fn(), warning: jest.fn() },
 }));
@@ -38,13 +42,18 @@ const route = {
   },
 };
 const navigation = { goBack: jest.fn(), pop: jest.fn(), reset: jest.fn() };
+const CREATED = {
+  id: 'booking-1', customer_id: 'customer-1', barber_id: 'barber-1', service_id: 'service-1',
+  date: '2026-09-28', time: '12:00:00', location: 'Main Street 1', price: 30,
+  duration_minutes: 30, status: 'pending', created_at: '2026-09-01T00:00:00Z',
+};
 
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
 it('confirms on tap and plays success feedback only after a real booking insert', async () => {
-  (insertBooking as jest.Mock).mockResolvedValue({ status: 'ok', booking: { price: 30 } });
+  (insertBooking as jest.Mock).mockResolvedValue({ status: 'ok', booking: CREATED });
   await render(<BookingConfirmScreen route={route as never} navigation={navigation as never} />);
 
   expect(StyleSheet.flatten(screen.getByText('€30').props.style)).toMatchObject({
@@ -109,6 +118,29 @@ it('sends exactly one booking request for two taps in the same tick', async () =
   });
   expect(insertBooking).toHaveBeenCalledTimes(1);
 
-  await act(async () => { resolveInsert({ status: 'ok', booking: { price: 30 } }); });
+  await act(async () => { resolveInsert({ status: 'ok', booking: CREATED }); });
   await waitFor(() => expect(screen.getByTestId('customer-booking-confirm-success')).toBeTruthy());
+});
+
+it('shows the real request timeline and opens the booking chat over Bookings', async () => {
+  (insertBooking as jest.Mock).mockResolvedValue({ status: 'ok', booking: CREATED });
+  const room = { id: 'room-1', booking_id: 'booking-1', customer_id: 'customer-1', barber_id: 'barber-1' };
+  mockFetchRoom.mockResolvedValue({ status: 'ok', room });
+  await render(<BookingConfirmScreen route={route as never} navigation={navigation as never} />);
+
+  await fireEvent.press(screen.getByTestId('customer-booking-confirm-submit'));
+  await waitFor(() => expect(screen.getByTestId('booking-details-timeline')).toBeTruthy());
+  expect(screen.getByTestId('booking-details-timeline').props.accessibilityLabel).toBe(
+    'Requested, done; Accepted, waiting; Completed, not yet'
+  );
+
+  await fireEvent.press(screen.getByTestId('customer-booking-confirm-message'));
+  await waitFor(() => expect(navigation.reset).toHaveBeenCalledWith({
+    index: 1,
+    routes: [
+      { name: 'CustomerTabs', params: { screen: 'Bookings' } },
+      { name: 'Conversation', params: expect.objectContaining({ room, title: 'Ada' }) },
+    ],
+  }));
+  expect(mockFetchRoom).toHaveBeenCalledWith('booking-1');
 });

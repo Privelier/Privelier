@@ -112,7 +112,7 @@ export function timelineSteps(status: BookingRow['status'], role: 'customer' | '
   }
 }
 
-function StatusTimeline({ status, role }: { status: BookingRow['status']; role: 'customer' | 'barber' }) {
+export function StatusTimeline({ status, role }: { status: BookingRow['status']; role: 'customer' | 'barber' }) {
   const { colors, fonts } = useTheme();
   const de = getAppLanguage() === 'de';
   const steps = timelineSteps(status, role, de);
