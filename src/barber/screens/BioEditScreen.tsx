@@ -86,7 +86,7 @@ export default function BioEditScreen({ navigation }: Props) {
       setBarberId(id);
       if (!id) {
         setLoading(false);
-        setLoadError('We could not find your account. Try signing out and back in.');
+        setLoadError(de ? 'Dein Konto wurde nicht gefunden. Melde dich ab und wieder an.' : 'We could not find your account. Try signing out and back in.');
         return;
       }
       const result = await fetchOwnBarberProfile(id);
@@ -103,7 +103,7 @@ export default function BioEditScreen({ navigation }: Props) {
     return () => {
       active = false;
     };
-  }, [loadAttempt]);
+  }, [loadAttempt, de]);
 
   // Dirty only when the trimmed text differs from what loaded — this both
   // prevents pointless no-op writes and allows clearing (initial "x" -> "" is
@@ -135,11 +135,11 @@ export default function BioEditScreen({ navigation }: Props) {
       savedRef.current = true;
       navigation.goBack();
     } else if (result.status === 'not_found') {
-      setFormError('We could not find your profile. Try signing out and back in.');
+      setFormError(de ? 'Dein Profil wurde nicht gefunden. Melde dich ab und wieder an.' : 'We could not find your profile. Try signing out and back in.');
     } else {
       setFormError(result.message);
     }
-  }, [barberId, text, navigation]);
+  }, [barberId, text, navigation, de]);
 
   return (
     <SafeAreaView
@@ -149,7 +149,7 @@ export default function BioEditScreen({ navigation }: Props) {
       <View style={styles.header}>
         <BackButton onPress={() => navigation.goBack()} testID="barber-bio-back" />
         <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-          Your bio
+          {de ? 'Deine Bio' : 'Your bio'}
         </Text>
       </View>
 
@@ -172,7 +172,7 @@ export default function BioEditScreen({ navigation }: Props) {
             keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           >
             <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-              Tell customers a little about your style and experience. This shows on your profile.
+              {de ? 'Erzähl Kunden etwas über deinen Stil und deine Erfahrung. Das erscheint auf deinem Profil.' : 'Tell customers a little about your style and experience. This shows on your profile.'}
             </Text>
 
             {formError ? (
@@ -194,7 +194,7 @@ export default function BioEditScreen({ navigation }: Props) {
               multiline
               maxLength={MAX_BIO_LENGTH}
               textAlignVertical="top"
-              accessibilityLabel="Your bio"
+              accessibilityLabel={de ? 'Deine Bio' : 'Your bio'}
               selectionColor={colors.accent}
               cursorColor={colors.accent}
               keyboardAppearance={isDark ? 'dark' : 'light'}
@@ -212,10 +212,10 @@ export default function BioEditScreen({ navigation }: Props) {
             <Text
               accessibilityLabel={
                 atLimit
-                  ? "You've reached the 500 character limit"
+                  ? (de ? 'Du hast die Grenze von 500 Zeichen erreicht' : "You've reached the 500 character limit")
                   : nearLimit
-                    ? `${remaining} characters left`
-                    : `${text.length} of ${MAX_BIO_LENGTH} characters used`
+                    ? (de ? `Noch ${remaining} Zeichen` : `${remaining} characters left`)
+                    : (de ? `${text.length} von ${MAX_BIO_LENGTH} Zeichen` : `${text.length} of ${MAX_BIO_LENGTH} characters used`)
               }
               accessibilityLiveRegion={atLimit ? 'polite' : 'none'}
               style={[
@@ -234,13 +234,13 @@ export default function BioEditScreen({ navigation }: Props) {
                 testID="barber-bio-clear-hint"
                 style={[styles.clearHint, { color: colors.textSecondary, fontFamily: fonts.body }]}
               >
-                Saving with an empty bio removes it from your profile.
+                {de ? 'Speicherst du eine leere Bio, wird sie aus deinem Profil entfernt.' : 'Saving with an empty bio removes it from your profile.'}
               </Text>
             ) : null}
 
             <View style={styles.formActions}>
               <PrimaryButton
-                label={clearing ? 'Remove bio' : 'Save bio'}
+                label={clearing ? (de ? 'Bio entfernen' : 'Remove bio') : (de ? 'Bio speichern' : 'Save bio')}
                 icon={clearing ? 'trash-2' : 'check'}
                 onPress={onSave}
                 loading={submitting}

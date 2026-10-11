@@ -52,6 +52,7 @@ const STATUS_COPY: Record<'de' | 'en', Record<VerificationStatus, { word: string
 };
 
 export default function VerifyScreen() {
+  const de = getAppLanguage() === 'de';
   const { colors, fonts } = useTheme();
   const language = getAppLanguage();
   const { showToast } = useToast();
@@ -77,7 +78,7 @@ export default function VerifyScreen() {
       setError(
         profileResult.status === 'error'
           ? profileResult.message
-          : 'Could not load your profile.'
+          : de ? 'Dein Profil konnte nicht geladen werden.' : 'Could not load your profile.'
       );
       return;
     }
@@ -99,7 +100,7 @@ export default function VerifyScreen() {
     }
     setStatus(barberProfileResult.profile?.verification_status ?? null);
     setRequest(requestResult.request);
-  }, []);
+  }, [de]);
 
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 

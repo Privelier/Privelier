@@ -13,6 +13,7 @@
  * Loads on FOCUS (not mount): returning from a conversation must show the
  * fresh last-message preview, and bottom-tab screens stay mounted.
  */
+import { getAppLanguage } from '../../shared/locale';
 import { useCallback, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -40,6 +41,7 @@ type Props = CompositeScreenProps<
 >;
 
 export default function ChatsScreen({ navigation }: Props) {
+  const de = getAppLanguage() === 'de';
   const { colors, fonts } = useTheme();
   // Real per-user read state (provider in BarberNavigator): unread rows
   // render bold with a brass dot; the set updates live via realtime.
@@ -71,12 +73,12 @@ export default function ChatsScreen({ navigation }: Props) {
     (item: InboxThread) => {
       navigation.navigate('Conversation', {
         room: item.room,
-        title: item.customer?.name ?? item.service?.name ?? 'Booking',
+        title: item.customer?.name ?? item.service?.name ?? (de ? 'Termin' : 'Booking'),
         subtitle: [item.service?.name, item.booking ? formatBookingWhen(item.booking.date, item.booking.time) : null].filter(Boolean).join(' · ') || null,
         counterpart: item.customer,
       });
     },
-    [navigation]
+    [navigation, de]
   );
 
   return (
@@ -117,17 +119,17 @@ export default function ChatsScreen({ navigation }: Props) {
                 style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}
                 testID="barber-chats-empty"
               >
-                No conversations yet.
+                {de ? 'Noch keine Gespräche.' : 'No conversations yet.'}
               </Text>
               <Text style={[styles.emptyHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                Chats open once clients book you.
+                {de ? 'Chats starten, sobald Kunden dich buchen.' : 'Chats open once clients book you.'}
               </Text>
             </View>
           }
           renderItem={({ item }) => {
-            const name = item.customer?.name ?? 'Customer';
-            const service = item.service?.name ?? 'Booking';
-            const preview = item.lastMessage?.message ?? 'No messages yet.';
+            const name = item.customer?.name ?? (de ? 'Kunde' : 'Customer');
+            const service = item.service?.name ?? (de ? 'Termin' : 'Booking');
+            const preview = item.lastMessage?.message ?? (de ? 'Noch keine Nachrichten.' : 'No messages yet.');
             const unread = unreadRoomIds.has(item.room.id);
             return (
               <GlassSurface variant="card" style={styles.rowCard}>
@@ -175,7 +177,7 @@ export default function ChatsScreen({ navigation }: Props) {
                     style={[styles.unreadDot, { backgroundColor: colors.accent }]}
                     testID={`barber-chats-unread-${item.room.id}`}
                     accessible
-                    accessibilityLabel="Unread messages"
+                    accessibilityLabel={de ? 'Ungelesene Nachrichten' : 'Unread messages'}
                   />
                 ) : null}
                 </Pressable>

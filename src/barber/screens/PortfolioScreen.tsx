@@ -96,6 +96,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 export default function PortfolioScreen({ navigation }: Props) {
+  const de = getAppLanguage() === 'de';
   const { colors, fonts } = useTheme();
   const language = getAppLanguage();
   const { showToast } = useToast();
@@ -124,7 +125,7 @@ export default function PortfolioScreen({ navigation }: Props) {
       setError(
         profileResult.status === 'error'
           ? profileResult.message
-          : 'Could not load your profile.'
+          : de ? 'Dein Profil konnte nicht geladen werden.' : 'Could not load your profile.'
       );
       return;
     }
@@ -138,7 +139,7 @@ export default function PortfolioScreen({ navigation }: Props) {
     } else {
       setError(result.message);
     }
-  }, []);
+  }, [de]);
 
   useEffect(() => {
     let active = true;
@@ -297,7 +298,7 @@ export default function PortfolioScreen({ navigation }: Props) {
                   style={[portfolioTileStyle, { backgroundColor: colors.surface }]}
                   testID="barber-portfolio-uploading"
                   accessibilityRole="progressbar"
-                  accessibilityLabel="Uploading image"
+                  accessibilityLabel={de ? 'Bild wird hochgeladen' : 'Uploading image'}
                 >
                   {pendingUri ? (
                     <Image source={{ uri: pendingUri }} style={styles.uploadingImage} resizeMode="cover" />

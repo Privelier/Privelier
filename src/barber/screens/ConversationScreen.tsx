@@ -93,6 +93,7 @@ export default function ConversationScreen(props: Props) {
 }
 
 function ConversationRoom({ route, navigation }: Props) {
+  const de = getAppLanguage() === 'de';
   const { room, title, subtitle } = route.params;
   const { colors } = useTheme();
   const styles = useStyles(colors);
@@ -340,7 +341,7 @@ function ConversationRoom({ route, navigation }: Props) {
       <GlassSurface variant="navigation" style={styles.header} testID="barber-conversation-header-glass">
         <BackButton
           onPress={() => navigation.goBack()}
-          accessibilityLabel="Back"
+          accessibilityLabel={de ? 'Zurück' : 'Back'}
           testID="barber-conversation-back"
         />
         <Avatar id={counterpart?.id ?? room.customer_id} name={counterpart?.name ?? headerTitle} imageUrl={counterpart?.profile_image} size={44} accessible={false} testID="barber-conversation-avatar" />
@@ -397,7 +398,7 @@ function ConversationRoom({ route, navigation }: Props) {
                   ) : null}
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="Load earlier messages"
+                    accessibilityLabel={de ? 'Ältere Nachrichten laden' : 'Load earlier messages'}
                     accessibilityState={{ disabled: loadingEarlier, busy: loadingEarlier }}
                     disabled={loadingEarlier}
                     onPress={loadEarlier}
@@ -431,7 +432,7 @@ function ConversationRoom({ route, navigation }: Props) {
               // overrides it and mirrors the text (2026-07-10 fix).
               <View style={styles.empty}>
                 <Text style={styles.emptyText} testID="barber-conversation-empty">
-                  No messages yet. Say hello.
+                  {de ? 'Noch keine Nachrichten. Sag hallo.' : 'No messages yet. Say hello.'}
                 </Text>
               </View>
             }
@@ -450,7 +451,7 @@ function ConversationRoom({ route, navigation }: Props) {
                     disabled={!p.failed}
                     onPress={() => retry(p.key)}
                     accessibilityRole={p.failed ? 'button' : undefined}
-                    accessibilityLabel={p.failed ? 'Retry sending message' : undefined}
+                    accessibilityLabel={p.failed ? (de ? 'Erneut senden' : 'Retry sending message') : undefined}
                     style={[styles.bubble, styles.bubbleOwn, p.failed ? styles.bubbleFailed : null]}
                     testID={
                       p.failed
@@ -460,7 +461,7 @@ function ConversationRoom({ route, navigation }: Props) {
                   >
                     <Text style={styles.bubbleText}>{p.text}</Text>
                     <Text style={p.failed ? styles.bubbleMetaFailed : styles.bubbleMeta}>
-                      {p.failed ? 'Not sent — tap to retry' : 'Sending…'}
+                      {p.failed ? (de ? 'Nicht gesendet · tippen zum Wiederholen' : 'Not sent · tap to retry') : (de ? 'Wird gesendet …' : 'Sending…')}
                     </Text>
                     {p.failed ? <MessageReceipt state="failed" testID={`barber-conversation-failed-receipt-${p.key}`} /> : null}
                     {/* The reason, when the data layer gave one. Without it a
@@ -506,7 +507,7 @@ function ConversationRoom({ route, navigation }: Props) {
         <View style={styles.typingSlot} accessibilityLiveRegion="polite">
           {counterpartTyping ? (
             <Text style={styles.typingText} testID="barber-conversation-typing">
-              Typing…
+              {de ? 'Schreibt …' : 'Typing…'}
             </Text>
           ) : null}
         </View>
