@@ -42,6 +42,18 @@ export const spring = {
 
 export const pressScale = 0.97;
 
+/**
+ * Section reveal: content rises a short distance while fading in on first
+ * mount. Kept small and fast so a screen is usable immediately; the stagger
+ * is capped so a long screen never waits on its lower sections.
+ */
+export const reveal = {
+  duration: 260,
+  offset: 12,
+  stagger: 45,
+  maxStaggerSteps: 5,
+} as const;
+
 /** Existing opacity values stay public for non-animated Pressables. */
 export const pressOpacity = {
   soft: 0.85,

@@ -9,6 +9,7 @@ import { formatBookingWhen, formatMoney } from '../format';
 import { getAppLanguage } from '../locale';
 import { useReducedMotionPreference } from '../motion/useReducedMotionPreference';
 import { GlassSurface } from './GlassSurface';
+import { Reveal } from '../motion/Reveal';
 import { StatusPill } from './StatusPill';
 
 type Props = {
@@ -41,25 +42,29 @@ export function BookingDetails({ booking, role, person, service, onClose, childr
           <StatusPill status={booking.status} testID="booking-details-status" />
           <Text style={[styles.person, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{person}</Text>
           <Text style={[styles.service, { color: colors.textSecondary, fontFamily: fonts.body }]}>{service}</Text>
-          <GlassSurface style={styles.summary}>
-            <View style={styles.row}>
-              <Feather name="calendar" size={20} color={colors.accentText} />
-              <Text style={[styles.value, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{formatBookingWhen(booking.date, booking.time)}</Text>
-            </View>
-            <View style={styles.row}>
-              <Feather name="clock" size={20} color={colors.textSecondary} />
-              <Text style={[styles.value, numericText, { color: colors.textPrimary }]}>{booking.duration_minutes} min</Text>
-            </View>
-            <View style={styles.row}>
-              <Feather name="map-pin" size={20} color={colors.textSecondary} />
-              <Text selectable style={[styles.value, { color: colors.textPrimary, fontFamily: fonts.body }]}>{booking.location}</Text>
-            </View>
-            <View style={[styles.total, { borderColor: colors.border }]}>
-              <Text style={[styles.value, { color: colors.textSecondary, fontFamily: fonts.body }]}>{de ? 'Servicepreis' : 'Service price'}</Text>
-              <Text style={[styles.price, numericText, { color: colors.textPrimary }]}>{formatMoney(booking.price)}</Text>
-            </View>
-          </GlassSurface>
-          <StatusTimeline status={booking.status} role={role} />
+          <Reveal index={0}>
+            <GlassSurface style={styles.summary}>
+              <View style={styles.row}>
+                <Feather name="calendar" size={20} color={colors.accentText} />
+                <Text style={[styles.value, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{formatBookingWhen(booking.date, booking.time)}</Text>
+              </View>
+              <View style={styles.row}>
+                <Feather name="clock" size={20} color={colors.textSecondary} />
+                <Text style={[styles.value, numericText, { color: colors.textPrimary }]}>{booking.duration_minutes} min</Text>
+              </View>
+              <View style={styles.row}>
+                <Feather name="map-pin" size={20} color={colors.textSecondary} />
+                <Text selectable style={[styles.value, { color: colors.textPrimary, fontFamily: fonts.body }]}>{booking.location}</Text>
+              </View>
+              <View style={[styles.total, { borderColor: colors.border }]}>
+                <Text style={[styles.value, { color: colors.textSecondary, fontFamily: fonts.body }]}>{de ? 'Servicepreis' : 'Service price'}</Text>
+                <Text style={[styles.price, numericText, { color: colors.textPrimary }]}>{formatMoney(booking.price)}</Text>
+              </View>
+            </GlassSurface>
+          </Reveal>
+          <Reveal index={1}>
+            <StatusTimeline status={booking.status} role={role} />
+          </Reveal>
           <Text style={[styles.hint, { color: colors.textSecondary, fontFamily: fonts.body }]} testID="booking-details-hint">
             {bookingHint(booking.status, role, de)}
           </Text>

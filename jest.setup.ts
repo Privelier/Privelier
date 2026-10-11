@@ -34,6 +34,9 @@ jest.mock('react-native-reanimated', () => {
     useAnimatedStyle: (updater: () => unknown) => updater(),
     withSpring: (value: number) => value,
     withTiming: (value: number) => value,
+    // Layout-animation builders are chainable no-ops under Jest; the
+    // `entering` prop they produce is ignored by the plain View above.
+    FadeInDown: new Proxy({}, { get: () => function chain() { return new Proxy({}, { get: () => chain }); } }),
   };
 });
 

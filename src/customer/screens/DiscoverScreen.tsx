@@ -30,6 +30,7 @@ import { pressOpacity } from '../../theme/motion';
 import { Notice } from '../../shared/components/Notice';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { getAppLanguage } from '../../shared/locale';
+import { Reveal } from '../../shared/motion';
 import { GlassSurface } from '../../shared/components/GlassSurface';
 import type { BarberDirectoryRow, ServiceRow } from '../../types';
 import { listBarbersByCity, listServicesForBarberIds } from '../discoveryData';
@@ -250,58 +251,62 @@ export default function DiscoverScreen({ navigation }: Props) {
           </View>
         </View>
 
-        <View style={[styles.pad, styles.searchWrap]}>
-          <GlassSurface
-            testID="customer-home-search-surface"
-            style={[
-              styles.searchBox,
-            ]}
-          >
-            <Feather name="search" size={16} color={colors.textSecondary} />
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Search a barber or service"
-              placeholderTextColor={colors.textSecondary}
-              style={[styles.searchInput, { color: colors.textPrimary, fontFamily: fonts.body }]}
-              autoCapitalize="none"
-              autoCorrect={false}
-              accessibilityLabel="Search barbers or services"
-              testID="customer-home-search"
-            />
-          </GlassSurface>
-        </View>
-
-        <View style={styles.messageCarousel} testID="customer-home-brand-carousel">
-          <ScrollView
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            accessibilityLabel={`Privelier inspiration, ${activeBrandMessage + 1} of ${brandMessages.length}`}
-            onMomentumScrollEnd={({ nativeEvent }) =>
-              setActiveBrandMessage(Math.max(0, Math.min(brandMessages.length - 1, Math.round(nativeEvent.contentOffset.x / viewportWidth))))
-            }
-          >
-            {brandMessages.map((message, index) => (
-              <View key={message} style={[styles.messagePage, { width: viewportWidth }]}>
-                <GlassSurface style={styles.messageCard} testID={`customer-home-brand-message-${index + 1}`}>
-                  <Feather name={(['scissors', 'clock', 'home', 'sun'] as const)[index]} size={20} color={colors.accentText} />
-                  <Text style={[styles.messageCopy, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-                    {message}
-                  </Text>
-                </GlassSurface>
-              </View>
-            ))}
-          </ScrollView>
-          <View style={styles.messageDots} accessible accessibilityLabel={`Slide ${activeBrandMessage + 1} of ${brandMessages.length}`}>
-            {brandMessages.map((message, index) => (
-              <View
-                key={message}
-                style={[styles.messageDot, { backgroundColor: index === activeBrandMessage ? colors.accent : colors.border }]}
+        <Reveal index={0}>
+          <View style={[styles.pad, styles.searchWrap]}>
+            <GlassSurface
+              testID="customer-home-search-surface"
+              style={[
+                styles.searchBox,
+              ]}
+            >
+              <Feather name="search" size={16} color={colors.textSecondary} />
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Search a barber or service"
+                placeholderTextColor={colors.textSecondary}
+                style={[styles.searchInput, { color: colors.textPrimary, fontFamily: fonts.body }]}
+                autoCapitalize="none"
+                autoCorrect={false}
+                accessibilityLabel="Search barbers or services"
+                testID="customer-home-search"
               />
-            ))}
+            </GlassSurface>
           </View>
-        </View>
+        </Reveal>
+
+        <Reveal index={1}>
+          <View style={styles.messageCarousel} testID="customer-home-brand-carousel">
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              accessibilityLabel={`Privelier inspiration, ${activeBrandMessage + 1} of ${brandMessages.length}`}
+              onMomentumScrollEnd={({ nativeEvent }) =>
+                setActiveBrandMessage(Math.max(0, Math.min(brandMessages.length - 1, Math.round(nativeEvent.contentOffset.x / viewportWidth))))
+              }
+            >
+              {brandMessages.map((message, index) => (
+                <View key={message} style={[styles.messagePage, { width: viewportWidth }]}>
+                  <GlassSurface style={styles.messageCard} testID={`customer-home-brand-message-${index + 1}`}>
+                    <Feather name={(['scissors', 'clock', 'home', 'sun'] as const)[index]} size={20} color={colors.accentText} />
+                    <Text style={[styles.messageCopy, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+                      {message}
+                    </Text>
+                  </GlassSurface>
+                </View>
+              ))}
+            </ScrollView>
+            <View style={styles.messageDots} accessible accessibilityLabel={`Slide ${activeBrandMessage + 1} of ${brandMessages.length}`}>
+              {brandMessages.map((message, index) => (
+                <View
+                  key={message}
+                  style={[styles.messageDot, { backgroundColor: index === activeBrandMessage ? colors.accent : colors.border }]}
+                />
+              ))}
+            </View>
+          </View>
+        </Reveal>
 
         {serviceFilters.length > 0 ? (
           <ScrollView
@@ -362,38 +367,8 @@ export default function DiscoverScreen({ navigation }: Props) {
         ) : (
           <>
             {spotlight ? (
-              <View style={[styles.pad, styles.section]} testID="customer-home-spotlight">
-                <Text
-                  accessibilityRole="header"
-                  style={[
-                    styles.sectionTitle,
-                    { color: colors.textPrimary, fontFamily: fonts.headingMedium },
-                  ]}
-                >
-                  {de ? 'Ein Barber zum Kennenlernen' : 'A barber to meet'}
-                </Text>
-                {/* The lead card rotates daily by a stable order; it is not a
-                    ranking or an editorial endorsement, and says so. */}
-                <Text
-                  style={[styles.spotlightNote, { color: colors.textSecondary, fontFamily: fonts.body }]}
-                  testID="customer-home-spotlight-note"
-                >
-                  {de ? 'Wechselt täglich · keine Rangliste' : 'Rotates daily · not a ranking'}
-                </Text>
-                <View style={styles.spotlightCard}>
-                  <BarberCard
-                    barber={spotlight}
-                    services={servicesByBarber.get(spotlight.id) ?? []}
-                    variant="wide"
-                    onPress={() => openProfile(spotlight.id)}
-                  />
-                </View>
-              </View>
-            ) : null}
-
-            {presentation.directory.length > 0 ? (
-              <View style={styles.section} testID="customer-home-directory">
-                <View style={[styles.pad, styles.sectionHeader]}>
+              <Reveal index={2}>
+                <View style={[styles.pad, styles.section]} testID="customer-home-spotlight">
                   <Text
                     accessibilityRole="header"
                     style={[
@@ -401,37 +376,71 @@ export default function DiscoverScreen({ navigation }: Props) {
                       { color: colors.textPrimary, fontFamily: fonts.headingMedium },
                     ]}
                   >
-                    {`Verified barbers in ${cityName ?? 'your city'}`}
+                    {de ? 'Ein Barber zum Kennenlernen' : 'A barber to meet'}
                   </Text>
+                  {/* The lead card rotates daily by a stable order; it is not a
+                      ranking or an editorial endorsement, and says so. */}
                   <Text
-                    style={[
-                      styles.sectionMeta,
-                      { color: colors.textSecondary, fontFamily: fonts.body },
-                    ]}
+                    style={[styles.spotlightNote, { color: colors.textSecondary, fontFamily: fonts.body }]}
+                    testID="customer-home-spotlight-note"
                   >
-                    {`${presentation.directory.length} ${
-                      presentation.directory.length === 1 ? 'barber' : 'barbers'
-                    }`}
+                    {de ? 'Wechselt täglich · keine Rangliste' : 'Rotates daily · not a ranking'}
                   </Text>
-                </View>
-                <FlatList
-                  horizontal
-                  style={styles.directory}
-                  data={presentation.directory}
-                  keyExtractor={(item) => item.id}
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.directoryContent}
-                  accessibilityLabel={`Verified barbers in ${cityName ?? 'your city'}`}
-                  renderItem={({ item }) => (
+                  <View style={styles.spotlightCard}>
                     <BarberCard
-                      barber={item}
-                      services={servicesByBarber.get(item.id) ?? []}
-                      variant="compact"
-                      onPress={() => openProfile(item.id)}
+                      barber={spotlight}
+                      services={servicesByBarber.get(spotlight.id) ?? []}
+                      variant="wide"
+                      onPress={() => openProfile(spotlight.id)}
                     />
-                  )}
-                />
-              </View>
+                  </View>
+                </View>
+              </Reveal>
+            ) : null}
+
+            {presentation.directory.length > 0 ? (
+              <Reveal index={3}>
+                <View style={styles.section} testID="customer-home-directory">
+                  <View style={[styles.pad, styles.sectionHeader]}>
+                    <Text
+                      accessibilityRole="header"
+                      style={[
+                        styles.sectionTitle,
+                        { color: colors.textPrimary, fontFamily: fonts.headingMedium },
+                      ]}
+                    >
+                      {`Verified barbers in ${cityName ?? 'your city'}`}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.sectionMeta,
+                        { color: colors.textSecondary, fontFamily: fonts.body },
+                      ]}
+                    >
+                      {`${presentation.directory.length} ${
+                        presentation.directory.length === 1 ? 'barber' : 'barbers'
+                      }`}
+                    </Text>
+                  </View>
+                  <FlatList
+                    horizontal
+                    style={styles.directory}
+                    data={presentation.directory}
+                    keyExtractor={(item) => item.id}
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.directoryContent}
+                    accessibilityLabel={`Verified barbers in ${cityName ?? 'your city'}`}
+                    renderItem={({ item }) => (
+                      <BarberCard
+                        barber={item}
+                        services={servicesByBarber.get(item.id) ?? []}
+                        variant="compact"
+                        onPress={() => openProfile(item.id)}
+                      />
+                    )}
+                  />
+                </View>
+              </Reveal>
             ) : null}
           </>
         )}

@@ -40,6 +40,7 @@ import { insertBooking } from '../bookingCreateData';
 import { fetchRoomForBooking } from '../inboxData';
 import { StatusTimeline } from '../../shared/components/BookingDetails';
 import { useToast } from '../../shared/components/ToastProvider';
+import { Reveal } from '../../shared/motion';
 import type { BookingRow } from '../../types';
 import { formatBookingWhen, formatMoney } from '../format';
 import { customerDataErrorCopy } from '../errors';
@@ -153,25 +154,31 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
         testID="customer-booking-confirm-screen"
       >
         <ScrollView contentContainerStyle={styles.successWrap} testID="customer-booking-confirm-success">
-          <View style={[styles.successIconRing, { backgroundColor: colors.surface }]}>
-            <Feather name="check-circle" size={36} color={colors.accent} />
-          </View>
+          <Reveal index={0}>
+            <View style={[styles.successIconRing, { backgroundColor: colors.surface }]}>
+              <Feather name="check-circle" size={36} color={colors.accent} />
+            </View>
+          </Reveal>
           <Text style={[styles.successTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
             {de ? 'Termin angefragt' : 'Booking requested'}
           </Text>
           <Text style={[styles.successHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>
             {de ? `Deine Anfrage wurde an ${barberName} gesendet. Dein Barber muss den Termin noch bestätigen.` : `Your request was sent to ${barberName}. Your barber still needs to accept the appointment.`}
           </Text>
-          <View style={[styles.summary, styles.successSummary, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-            <SummaryRow label="Barber" value={barberName} />
-            <SummaryRow label={de ? 'Leistung' : 'Service'} value={service.name} />
-            <SummaryRow label={de ? 'Termin' : 'When'} value={formatBookingWhen(date, time)} />
-            <SummaryRow label={de ? 'Adresse' : 'Location'} value={location} />
-            <SummaryRow label={de ? 'Preis' : 'Price'} value={formatMoney(created.price)} last />
-          </View>
-          <View style={styles.successTimeline}>
-            <StatusTimeline status={created.status} role="customer" />
-          </View>
+          <Reveal index={2}>
+            <View style={[styles.summary, styles.successSummary, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+              <SummaryRow label="Barber" value={barberName} />
+              <SummaryRow label={de ? 'Leistung' : 'Service'} value={service.name} />
+              <SummaryRow label={de ? 'Termin' : 'When'} value={formatBookingWhen(date, time)} />
+              <SummaryRow label={de ? 'Adresse' : 'Location'} value={location} />
+              <SummaryRow label={de ? 'Preis' : 'Price'} value={formatMoney(created.price)} last />
+            </View>
+          </Reveal>
+          <Reveal index={3}>
+            <View style={styles.successTimeline}>
+              <StatusTimeline status={created.status} role="customer" />
+            </View>
+          </Reveal>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={de ? 'Barber schreiben' : 'Message barber'}

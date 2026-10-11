@@ -17,6 +17,7 @@ import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { GlassSurface } from '../../shared/components/GlassSurface';
+import { Reveal } from '../../shared/motion';
 import type { VerificationStatus } from '../../types';
 import { fetchDashboardView } from '../dashboardData';
 import { firstName, formatBookingWhen, formatMoney, timeOfDayGreeting } from '../../shared/format';
@@ -265,140 +266,144 @@ export default function StudioScreen({ navigation }: Props) {
           <RetryNotice testID="barber-dashboard-error" message={error} onRetry={retryDashboard} style={styles.noticeMargins} />
         ) : view ? (
           <>
-            <View testID="barber-dashboard-verification" style={styles.verification}>
-              {view.profile.status === 'ok' ? (
-                <Pressable
-                  onPress={() => navigation.navigate('Verify')}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${verificationText} View verification.`}
-                  style={({ pressed }) => [styles.verificationLink, { opacity: pressed ? pressOpacity.soft : 1 }]}
-                >
-                  <Feather
-                    name={verification === 'approved' ? 'check-circle' : verification === 'rejected' ? 'alert-circle' : 'clock'}
-                    size={16}
-                    color={verification === 'rejected' ? colors.errorText : verification === 'approved' ? colors.accentText : colors.textSecondary}
-                  />
-                  <Text style={[styles.verificationText, {
-                    color: verification === 'rejected' ? colors.errorText : colors.textSecondary,
-                    fontFamily: fonts.body,
-                  }]}>
-                    {verificationText}
-                  </Text>
-                  <Feather name="chevron-right" size={16} color={colors.textSecondary} />
-                </Pressable>
-              ) : (
-                <SectionUnavailable label="Verification status" testID="barber-dashboard-verification-unavailable" onRetry={retryDashboard} retrying={retrying} />
-              )}
-            </View>
-
-            <GlassSurface testID="barber-dashboard-analytics" style={styles.analyticsCard}>
-              {view.analytics.status === 'ok' ? (() => {
-                const data = view.analytics.data;
-                const chartWidth = Math.max(180, windowWidth - 104);
-                const next = data.nextAppointment;
-                return <>
-                  <View style={styles.analyticsHeading}>
-                    <View>
-                      <Text style={[styles.eyebrow, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Studio-Performance' : 'Studio performance'}</Text>
-                      <Text style={[styles.analyticsTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{getAppLanguage() === 'de' ? 'Deine Arbeit im Fokus' : 'Your work, in focus'}</Text>
-                    </View>
-                    <Feather name="activity" size={18} color={colors.accentText} />
-                  </View>
-
-                  <Text style={[styles.heroLabel, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Buchungswert in diesem Monat' : 'Booking value this month'}</Text>
-                  <Text style={[styles.heroValue, numericText, { color: colors.textPrimary }]}>{formatMoney(data.bookedValueMonth)}</Text>
-                  <Text style={[styles.heroFootnote, { color: colors.textSecondary, fontFamily: fonts.body }]}>{getAppLanguage() === 'de' ? 'Preise abgeschlossener Termine. In der App werden keine Zahlungen verarbeitet.' : 'Completed booking prices. No payments are processed in the app.'}</Text>
-                  <View style={[styles.trendBlock, { borderTopColor: colors.border }]}>
-                    <View style={styles.trendHeading}>
-                      <Text style={[styles.trendTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Buchungswert' : 'Booked value'}</Text>
-                      <Text style={[styles.trendPeriod, { color: colors.textSecondary, fontFamily: fonts.body }]}>{getAppLanguage() === 'de' ? '8 Wochen' : '8 weeks'}</Text>
-                    </View>
-                    <EarningsTrend data={data.weeklyTrend} width={chartWidth} colors={colors} />
-                    {data.completedAllTime === 0 ? (
-                      <Text style={[styles.emptyHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>Your first completed booking will start this trend.</Text>
-                    ) : null}
-                  </View>
-
-                  <View style={[styles.metricRow, { borderTopColor: colors.border, borderBottomColor: colors.border }]}>
-                    <Metric label="This week" value={`${data.completedWeek}`} detail="completed cuts" colors={colors} />
-                    <Metric label="This month" value={`${data.completedMonth}`} detail="completed cuts" colors={colors} />
-                    <Metric label="All time" value={`${data.completedAllTime}`} detail="completed cuts" colors={colors} />
-                  </View>
-
+            <Reveal index={0}>
+              <View testID="barber-dashboard-verification" style={styles.verification}>
+                {view.profile.status === 'ok' ? (
                   <Pressable
-                    onPress={() => navigation.navigate('Requests')}
+                    onPress={() => navigation.navigate('Verify')}
                     accessibilityRole="button"
-                    accessibilityLabel={`${data.pendingCount} pending requests. View requests.`}
-                    testID="barber-dashboard-overview"
-                    style={({ pressed }) => [styles.pendingBanner, { borderColor: colors.border, opacity: pressed ? pressOpacity.soft : 1 }]}
+                    accessibilityLabel={`${verificationText} View verification.`}
+                    style={({ pressed }) => [styles.verificationLink, { opacity: pressed ? pressOpacity.soft : 1 }]}
                   >
-                    <View style={[styles.pendingBadge, { backgroundColor: data.pendingCount > 0 ? colors.accent : colors.background }]}>
-                      <Text style={[styles.pendingBadgeValue, numericText, { color: data.pendingCount > 0 ? colors.onAccent : colors.textSecondary }]}>{data.pendingCount}</Text>
-                    </View>
-                    <View style={styles.pendingCopy}>
-                      <Text style={[styles.pendingTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{data.pendingCount === 1 ? 'Open request' : 'Open requests'}</Text>
-                      <Text style={[styles.pendingHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.pendingCount > 0 ? 'Waiting for your reply' : 'You’re all caught up'}</Text>
-                    </View>
-                    <Feather name="arrow-up-right" size={17} color={colors.textSecondary} />
+                    <Feather
+                      name={verification === 'approved' ? 'check-circle' : verification === 'rejected' ? 'alert-circle' : 'clock'}
+                      size={16}
+                      color={verification === 'rejected' ? colors.errorText : verification === 'approved' ? colors.accentText : colors.textSecondary}
+                    />
+                    <Text style={[styles.verificationText, {
+                      color: verification === 'rejected' ? colors.errorText : colors.textSecondary,
+                      fontFamily: fonts.body,
+                    }]}>
+                      {verificationText}
+                    </Text>
+                    <Feather name="chevron-right" size={16} color={colors.textSecondary} />
                   </Pressable>
+                ) : (
+                  <SectionUnavailable label="Verification status" testID="barber-dashboard-verification-unavailable" onRetry={retryDashboard} retrying={retrying} />
+                )}
+              </View>
+            </Reveal>
 
-                  <View style={[styles.appointmentCard, { backgroundColor: colors.background }]}>
-                    <View style={styles.appointmentTopline}>
-                      <Text style={[styles.eyebrow, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'N\u00e4chster Termin' : 'Next appointment'}</Text>
-                      <Text style={[styles.upcomingText, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.upcomingCount} in the next 7 days</Text>
-                    </View>
-                    {next ? <>
-                      <Text style={[styles.appointmentName, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{next.customerName ?? next.serviceName ?? 'Confirmed appointment'}</Text>
-                      <Text style={[styles.appointmentWhen, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                        {formatBookingWhen(next.date, next.time)}{next.customerName && next.serviceName ? ` · ${next.serviceName}` : ''}
-                      </Text>
-                    </> : <Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}>Nothing scheduled yet.</Text>}
-                  </View>
-
-                  <View style={styles.insightRow}>
-                    <View style={[styles.insightCard, { backgroundColor: colors.background }]}>
-                      <Text style={[styles.eyebrow, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Kundenstimmen' : 'Client feedback'}</Text>
-                      {data.reviewCount > 0 && data.ratingAverage !== null ? <>
-                        <Text testID="barber-dashboard-rating" style={[styles.insightValue, numericText, { color: colors.textPrimary }]}>{data.ratingAverage.toFixed(2)} <Text style={{ color: colors.accentText }}>★</Text></Text>
-                        <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.reviewCount} {data.reviewCount === 1 ? 'review' : 'reviews'} · {data.repeatCustomerCount} returning clients</Text>
-                      </> : <>
-                        <Text style={[styles.insightValue, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>—</Text>
-                        <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.repeatCustomerCount} returning clients · no reviews yet</Text>
-                      </>}
-                    </View>
-                    <View style={[styles.insightCard, { backgroundColor: colors.background }]}>
-                      <Text style={[styles.eyebrow, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Beliebtester Tag' : 'Busiest day'}</Text>
-                      {data.busiestWeekday ? <>
-                        <Text style={[styles.insightValue, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{data.busiestWeekday.weekday}</Text>
-                        <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.busiestWeekday.completedCuts} completed cuts</Text>
-                      </> : <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>Will appear after your first completed booking.</Text>}
-                    </View>
-                  </View>
-
-                  <View style={[styles.serviceInsight, { borderTopColor: colors.border }]}>
-                    <View style={styles.trendHeading}>
-                      <Text style={[styles.trendTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Beliebte Leistungen' : 'Top services'}</Text>
-                      <Text style={[styles.trendPeriod, { color: colors.textSecondary, fontFamily: fonts.body }]}>{getAppLanguage() === 'de' ? 'abgeschlossen' : 'completed'}</Text>
-                    </View>
-                    {data.topServices.length > 0 ? data.topServices.map((service, index) => (
-                      <View key={`${service.name}-${index}`} style={[styles.serviceRank, index > 0 ? { borderTopColor: colors.border, borderTopWidth: 0.5 } : null]}>
-                        <Text style={[styles.serviceRankNumber, numericText, { color: colors.accentText }]}>{String(index + 1).padStart(2, '0')}</Text>
-                        <Text numberOfLines={1} style={[styles.serviceRankName, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{service.name}</Text>
-                        <Text style={[styles.serviceRankCount, numericText, { color: colors.textSecondary }]}>{service.completedCuts} · {formatMoney(service.bookedValue)}</Text>
+            <Reveal index={1}>
+              <GlassSurface testID="barber-dashboard-analytics" style={styles.analyticsCard}>
+                {view.analytics.status === 'ok' ? (() => {
+                  const data = view.analytics.data;
+                  const chartWidth = Math.max(180, windowWidth - 104);
+                  const next = data.nextAppointment;
+                  return <>
+                    <View style={styles.analyticsHeading}>
+                      <View>
+                        <Text style={[styles.eyebrow, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Studio-Performance' : 'Studio performance'}</Text>
+                        <Text style={[styles.analyticsTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{getAppLanguage() === 'de' ? 'Deine Arbeit im Fokus' : 'Your work, in focus'}</Text>
                       </View>
-                    )) : <Text style={[styles.emptyHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>Your best-performing services will appear here.</Text>}
-                  </View>
-                </>;
-              })() : (
-                <>
-                  <View style={styles.analyticsHeading}>
-                    <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>Studio performance</Text>
-                    <Feather name="activity" size={18} color={colors.accentText} />
-                  </View>
-                  <SectionUnavailable label="Studio analytics" testID="barber-dashboard-overview-unavailable" onRetry={retryDashboard} retrying={retrying} />
-                </>
-              )}
-            </GlassSurface>
+                      <Feather name="activity" size={18} color={colors.accentText} />
+                    </View>
+
+                    <Text style={[styles.heroLabel, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Buchungswert in diesem Monat' : 'Booking value this month'}</Text>
+                    <Text style={[styles.heroValue, numericText, { color: colors.textPrimary }]}>{formatMoney(data.bookedValueMonth)}</Text>
+                    <Text style={[styles.heroFootnote, { color: colors.textSecondary, fontFamily: fonts.body }]}>{getAppLanguage() === 'de' ? 'Preise abgeschlossener Termine. In der App werden keine Zahlungen verarbeitet.' : 'Completed booking prices. No payments are processed in the app.'}</Text>
+                    <View style={[styles.trendBlock, { borderTopColor: colors.border }]}>
+                      <View style={styles.trendHeading}>
+                        <Text style={[styles.trendTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Buchungswert' : 'Booked value'}</Text>
+                        <Text style={[styles.trendPeriod, { color: colors.textSecondary, fontFamily: fonts.body }]}>{getAppLanguage() === 'de' ? '8 Wochen' : '8 weeks'}</Text>
+                      </View>
+                      <EarningsTrend data={data.weeklyTrend} width={chartWidth} colors={colors} />
+                      {data.completedAllTime === 0 ? (
+                        <Text style={[styles.emptyHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>Your first completed booking will start this trend.</Text>
+                      ) : null}
+                    </View>
+
+                    <View style={[styles.metricRow, { borderTopColor: colors.border, borderBottomColor: colors.border }]}>
+                      <Metric label="This week" value={`${data.completedWeek}`} detail="completed cuts" colors={colors} />
+                      <Metric label="This month" value={`${data.completedMonth}`} detail="completed cuts" colors={colors} />
+                      <Metric label="All time" value={`${data.completedAllTime}`} detail="completed cuts" colors={colors} />
+                    </View>
+
+                    <Pressable
+                      onPress={() => navigation.navigate('Requests')}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${data.pendingCount} pending requests. View requests.`}
+                      testID="barber-dashboard-overview"
+                      style={({ pressed }) => [styles.pendingBanner, { borderColor: colors.border, opacity: pressed ? pressOpacity.soft : 1 }]}
+                    >
+                      <View style={[styles.pendingBadge, { backgroundColor: data.pendingCount > 0 ? colors.accent : colors.background }]}>
+                        <Text style={[styles.pendingBadgeValue, numericText, { color: data.pendingCount > 0 ? colors.onAccent : colors.textSecondary }]}>{data.pendingCount}</Text>
+                      </View>
+                      <View style={styles.pendingCopy}>
+                        <Text style={[styles.pendingTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{data.pendingCount === 1 ? 'Open request' : 'Open requests'}</Text>
+                        <Text style={[styles.pendingHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.pendingCount > 0 ? 'Waiting for your reply' : 'You’re all caught up'}</Text>
+                      </View>
+                      <Feather name="arrow-up-right" size={17} color={colors.textSecondary} />
+                    </Pressable>
+
+                    <View style={[styles.appointmentCard, { backgroundColor: colors.background }]}>
+                      <View style={styles.appointmentTopline}>
+                        <Text style={[styles.eyebrow, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'N\u00e4chster Termin' : 'Next appointment'}</Text>
+                        <Text style={[styles.upcomingText, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.upcomingCount} in the next 7 days</Text>
+                      </View>
+                      {next ? <>
+                        <Text style={[styles.appointmentName, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{next.customerName ?? next.serviceName ?? 'Confirmed appointment'}</Text>
+                        <Text style={[styles.appointmentWhen, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                          {formatBookingWhen(next.date, next.time)}{next.customerName && next.serviceName ? ` · ${next.serviceName}` : ''}
+                        </Text>
+                      </> : <Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}>Nothing scheduled yet.</Text>}
+                    </View>
+
+                    <View style={styles.insightRow}>
+                      <View style={[styles.insightCard, { backgroundColor: colors.background }]}>
+                        <Text style={[styles.eyebrow, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Kundenstimmen' : 'Client feedback'}</Text>
+                        {data.reviewCount > 0 && data.ratingAverage !== null ? <>
+                          <Text testID="barber-dashboard-rating" style={[styles.insightValue, numericText, { color: colors.textPrimary }]}>{data.ratingAverage.toFixed(2)} <Text style={{ color: colors.accentText }}>★</Text></Text>
+                          <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.reviewCount} {data.reviewCount === 1 ? 'review' : 'reviews'} · {data.repeatCustomerCount} returning clients</Text>
+                        </> : <>
+                          <Text style={[styles.insightValue, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>—</Text>
+                          <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.repeatCustomerCount} returning clients · no reviews yet</Text>
+                        </>}
+                      </View>
+                      <View style={[styles.insightCard, { backgroundColor: colors.background }]}>
+                        <Text style={[styles.eyebrow, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Beliebtester Tag' : 'Busiest day'}</Text>
+                        {data.busiestWeekday ? <>
+                          <Text style={[styles.insightValue, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{data.busiestWeekday.weekday}</Text>
+                          <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.busiestWeekday.completedCuts} completed cuts</Text>
+                        </> : <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>Will appear after your first completed booking.</Text>}
+                      </View>
+                    </View>
+
+                    <View style={[styles.serviceInsight, { borderTopColor: colors.border }]}>
+                      <View style={styles.trendHeading}>
+                        <Text style={[styles.trendTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Beliebte Leistungen' : 'Top services'}</Text>
+                        <Text style={[styles.trendPeriod, { color: colors.textSecondary, fontFamily: fonts.body }]}>{getAppLanguage() === 'de' ? 'abgeschlossen' : 'completed'}</Text>
+                      </View>
+                      {data.topServices.length > 0 ? data.topServices.map((service, index) => (
+                        <View key={`${service.name}-${index}`} style={[styles.serviceRank, index > 0 ? { borderTopColor: colors.border, borderTopWidth: 0.5 } : null]}>
+                          <Text style={[styles.serviceRankNumber, numericText, { color: colors.accentText }]}>{String(index + 1).padStart(2, '0')}</Text>
+                          <Text numberOfLines={1} style={[styles.serviceRankName, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{service.name}</Text>
+                          <Text style={[styles.serviceRankCount, numericText, { color: colors.textSecondary }]}>{service.completedCuts} · {formatMoney(service.bookedValue)}</Text>
+                        </View>
+                      )) : <Text style={[styles.emptyHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>Your best-performing services will appear here.</Text>}
+                    </View>
+                  </>;
+                })() : (
+                  <>
+                    <View style={styles.analyticsHeading}>
+                      <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>Studio performance</Text>
+                      <Feather name="activity" size={18} color={colors.accentText} />
+                    </View>
+                    <SectionUnavailable label="Studio analytics" testID="barber-dashboard-overview-unavailable" onRetry={retryDashboard} retrying={retrying} />
+                  </>
+                )}
+              </GlassSurface>
+            </Reveal>
 
             {view.readiness.isLive === true ? null : <View testID="barber-dashboard-readiness" style={[styles.readiness, { borderTopColor: colors.border }]}>
               <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
