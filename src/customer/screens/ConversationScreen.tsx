@@ -67,6 +67,7 @@ import { deriveIsRead, deriveReadMarkerId } from '../../shared/readReceipts';
 import { MessageReceipt } from '../../shared/components/MessageReceipt';
 import { GlassSurface } from '../../shared/components/GlassSurface';
 import { SafetyMenu } from '../../shared/components/SafetyMenu';
+import { MessageText } from '../../shared/components/MessageText';
 import { useSendQueue, type PendingSend } from '../../shared/useSendQueue';
 import { MAX_MESSAGE_LENGTH, MESSAGE_COUNTER_VISIBLE_AT } from '../../shared/messageLimits';
 import { formatMessageClock } from '../../shared/format';
@@ -484,7 +485,7 @@ function ConversationRoom({ route, navigation }: Props) {
                   style={[styles.bubble, own ? styles.bubbleOwn : styles.bubbleTheirs]}
                   testID={`customer-conversation-message-${m.id}`}
                 >
-                  <Text style={styles.bubbleText}>{m.message}</Text>
+                  <MessageText text={m.message} style={styles.bubbleText} linkColor={colors.accentText} testID={`customer-conversation-text-${m.id}`} />
                   {item.showTimestamp || own ? (
                     <View style={styles.bubbleFooter}>
                       {item.showTimestamp ? <Text style={styles.bubbleMeta}>{formatMessageClock(m.created_at)}</Text> : null}

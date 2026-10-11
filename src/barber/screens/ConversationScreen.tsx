@@ -19,6 +19,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -56,6 +57,7 @@ import { deriveIsRead, deriveReadMarkerId } from '../../shared/readReceipts';
 import { MessageReceipt } from '../../shared/components/MessageReceipt';
 import { GlassSurface } from '../../shared/components/GlassSurface';
 import { SafetyMenu } from '../../shared/components/SafetyMenu';
+import { MessageText } from '../../shared/components/MessageText';
 import { useSendQueue, type PendingSend } from '../../shared/useSendQueue';
 import { MAX_MESSAGE_LENGTH, MESSAGE_COUNTER_VISIBLE_AT } from '../../shared/messageLimits';
 import { formatMessageClock } from '../../shared/format';
@@ -112,6 +114,9 @@ function ConversationRoom({ route, navigation }: Props) {
   const refreshQueuedRef = useRef(false);
 
   const [draft, setDraft] = useState('');
+  const quickReplies = getAppLanguage() === 'de'
+    ? ['Ich bin unterwegs.', 'Ich verspäte mich um etwa 10 Minuten.', 'Ich bin da.', 'Danke, bis bald.']
+    : ["I'm on my way.", 'Running about 10 minutes late.', "I've arrived.", 'Thank you, see you soon.'];
   // Synchronous mirror of the draft: a same-tick double-fire of Send reads
   // '' from here and no-ops (review finding M1) — setDraft('') alone only
   // lands after the next commit.
@@ -478,7 +483,7 @@ function ConversationRoom({ route, navigation }: Props) {
                   style={[styles.bubble, own ? styles.bubbleOwn : styles.bubbleTheirs]}
                   testID={`barber-conversation-message-${m.id}`}
                 >
-                  <Text style={styles.bubbleText}>{m.message}</Text>
+                  <MessageText text={m.message} style={styles.bubbleText} linkColor={colors.accentText} testID={`barber-conversation-text-${m.id}`} />
                   {item.showTimestamp || own ? (
                     <View style={styles.bubbleFooter}>
                       {item.showTimestamp ? <Text style={styles.bubbleMeta}>{formatMessageClock(m.created_at)}</Text> : null}
@@ -515,6 +520,30 @@ function ConversationRoom({ route, navigation }: Props) {
           >
             {draft.length} / {MAX_MESSAGE_LENGTH}
           </Text>
+        ) : null}
+
+        {draft.length === 0 ? (
+          // Quick replies fill the composer; the barber still decides to send.
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.quickRow}
+            testID="barber-conversation-quick-replies"
+          >
+            {quickReplies.map((reply, index) => (
+              <Pressable
+                key={reply}
+                onPress={() => onChangeDraft(reply)}
+                accessibilityRole="button"
+                accessibilityLabel={reply}
+                testID={`barber-conversation-quick-reply-${index}`}
+                style={({ pressed }) => [styles.quickChip, { opacity: pressed ? 0.85 : 1 }]}
+              >
+                <Text style={styles.quickText}>{reply}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
         ) : null}
 
         <GlassSurface variant="navigation" style={styles.inputRow} testID="barber-conversation-composer-glass">
@@ -645,6 +674,9 @@ function useStyles(colors: Palette) {
     typingSlot: { height: 18, justifyContent: 'center', paddingHorizontal: space.xl },
     typingText: { fontSize: 11, color: colors.textSecondary, fontFamily: fonts.body },
 
+    quickRow: { gap: 8, paddingHorizontal: 16, paddingBottom: 8 },
+    quickChip: { minHeight: 36, justifyContent: 'center', borderWidth: 0.5, borderColor: colors.border, borderRadius: 999, paddingHorizontal: 14, backgroundColor: 'rgba(245,241,232,0.035)' },
+    quickText: { fontSize: 13, color: colors.textPrimary, fontFamily: fonts.body },
     inputRow: {
       flexDirection: 'row',
       alignItems: 'flex-end',

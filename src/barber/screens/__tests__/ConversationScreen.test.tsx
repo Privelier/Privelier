@@ -1,9 +1,11 @@
-import { act, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import ConversationScreen from '../ConversationScreen';
 import { fetchConversation } from '../../conversationData';
 import { useReadReceipt } from '../../../shared/useReadReceipt';
 import { useSendQueue } from '../../../shared/useSendQueue';
 
+jest.mock('../../../shared/components/ToastProvider', () => ({ useToast: () => ({ showToast: jest.fn() }) }));
+jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn() }));
 jest.mock('../../../shared/components/SafetyMenu', () => ({ SafetyMenu: () => null }));
 jest.mock('@react-navigation/native', () => {
   const React = jest.requireActual('react');
@@ -244,5 +246,20 @@ describe('Barber message receipts', () => {
     await render(<ConversationScreen route={route} navigation={navigation} />);
 
     expect(screen.getByTestId('barber-conversation-failed-receipt-1').props.accessibilityLabel).toBe('Not sent, tap to retry');
+  });
+});
+
+describe('Barber quick replies', () => {
+  it('fills the composer without sending, and hides once there is a draft', async () => {
+    const submit = jest.fn();
+    mockUseSendQueue.mockReturnValue({ pending: [], submit, retry: jest.fn() });
+    mockFetchConversation.mockResolvedValue({ status: 'ok', messages: [], hasEarlier: false, earliestCursor: null });
+    await render(<ConversationScreen route={route} navigation={navigation} />);
+    await waitFor(() => expect(screen.getByTestId('barber-conversation-quick-replies')).toBeTruthy());
+
+    await fireEvent.press(screen.getByTestId('barber-conversation-quick-reply-0'));
+    expect(screen.getByTestId('barber-conversation-input').props.value).toMatch(/on my way|unterwegs/i);
+    expect(submit).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('barber-conversation-quick-replies')).toBeNull();
   });
 });
