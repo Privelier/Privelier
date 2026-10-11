@@ -29,6 +29,10 @@ export interface UsersRow {
   country: string | null;
   profile_image: string | null;
   created_at: string;
+  /** Server-owned consent record (migration 0033); written only by
+   * accept_current_legal_consent(). Absent on rows read before 0033. */
+  accepted_terms_version?: string | null;
+  accepted_privacy_version?: string | null;
 }
 
 /**

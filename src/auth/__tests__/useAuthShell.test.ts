@@ -7,7 +7,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import type { Session } from '@supabase/supabase-js';
 import type { UsersRow } from '../../types';
 import { supabase } from '../../../lib/supabase';
-import { ensureProfile, ensureProfileFromForm, signOut } from '../authService';
+import { acceptCurrentLegalConsent, ensureProfile, ensureProfileFromForm, signOut, syncLegalConsent } from '../authService';
 import { useAuthShell } from '../useAuthShell';
 
 type AuthChangeCallback = (event: string, session: Session | null) => void;
@@ -29,6 +29,8 @@ const mockGetSession = supabase.auth.getSession as jest.Mock;
 const mockOnAuthStateChange = supabase.auth.onAuthStateChange as jest.Mock;
 const mockEnsureProfile = ensureProfile as jest.Mock;
 const mockEnsureProfileFromForm = ensureProfileFromForm as jest.Mock;
+const mockSyncLegalConsent = syncLegalConsent as jest.Mock;
+const mockAcceptConsent = acceptCurrentLegalConsent as jest.Mock;
 const mockSignOut = signOut as jest.Mock;
 
 let authChangeCallback: AuthChangeCallback = () => {};
@@ -72,6 +74,8 @@ async function renderShell() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // Default: the signed-in account's consent is already current.
+  mockSyncLegalConsent.mockResolvedValue('current');
   authChangeCallback = () => {};
   mockOnAuthStateChange.mockImplementation((callback: AuthChangeCallback) => {
     authChangeCallback = callback;
@@ -289,5 +293,49 @@ describe('submitSetupForm', () => {
     });
 
     expect(result.current.state).toEqual({ phase: 'authenticated', profile });
+  });
+});
+
+describe('legal consent gate (migration 0033)', () => {
+  it('holds a ready profile at the consent gate until current terms are accepted', async () => {
+    primeInitialSession(makeSession('user-1'));
+    const profile = makeProfile();
+    mockEnsureProfile.mockResolvedValue({ status: 'ready', profile });
+    mockSyncLegalConsent.mockResolvedValue('required');
+    mockAcceptConsent.mockResolvedValue({ status: 'ok' });
+
+    const { result } = await renderShell();
+    await waitFor(() => expect(result.current.state.phase).toBe('legal_consent'));
+    expect(result.current.state).toEqual({ phase: 'legal_consent', profile, view: { kind: 'required' } });
+
+    let failure: string | null = 'unset';
+    await act(async () => { failure = await result.current.acceptLegalConsent(true); });
+    expect(failure).toBeNull();
+    expect(mockAcceptConsent).toHaveBeenCalledWith(true);
+    expect(result.current.state).toEqual({ phase: 'authenticated', profile });
+  });
+
+  it('passes signup consent from user metadata so it can be recorded, never assumed otherwise', async () => {
+    const session = makeSession('user-1');
+    (session.user as { user_metadata: Record<string, unknown> }).user_metadata = { legal_consent: true };
+    primeInitialSession(session);
+    mockEnsureProfile.mockResolvedValue({ status: 'ready', profile: makeProfile() });
+
+    const { result } = await renderShell();
+    await waitFor(() => expect(result.current.state.phase).toBe('authenticated'));
+    expect(mockSyncLegalConsent).toHaveBeenCalledWith(expect.any(String), true);
+  });
+
+  it('keeps the role navigators unmounted when the consent check fails, with a retry', async () => {
+    primeInitialSession(makeSession('user-1'));
+    mockEnsureProfile.mockResolvedValue({ status: 'ready', profile: makeProfile() });
+    mockSyncLegalConsent.mockResolvedValueOnce({ status: 'error', code: 'network', message: 'Offline.', retryable: true });
+
+    const { result } = await renderShell();
+    await waitFor(() => expect(result.current.state).toMatchObject({ phase: 'legal_consent', view: { kind: 'failure', message: 'Offline.' } }));
+
+    await act(async () => { result.current.retryLegalConsent(); });
+    await waitFor(() => expect(result.current.state.phase).toBe('authenticated'));
+    expect(mockSyncLegalConsent).toHaveBeenCalledTimes(2);
   });
 });

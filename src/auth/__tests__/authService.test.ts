@@ -16,6 +16,7 @@ import {
   signUpBarber,
   signUpCustomer,
   updatePassword,
+  syncLegalConsent,
 } from '../authService';
 import type { SetupFormFields } from '../types';
 
@@ -35,6 +36,7 @@ jest.mock('../../../lib/supabase', () => ({
       getSession: jest.fn(),
     },
     from: jest.fn(),
+    rpc: jest.fn(),
   },
 }));
 
@@ -176,6 +178,8 @@ describe('signUpCustomer / signUpBarber', () => {
           country: 'Portugal',
           phone: undefined,
           bio: undefined,
+          // Signup is only submittable with both consent boxes ticked.
+          legal_consent: true,
         },
       },
     });
@@ -760,5 +764,34 @@ describe('ensureProfileFromForm', () => {
     okSession(null);
     const result = await ensureProfileFromForm(validFields);
     expect(result).toEqual({ status: 'signed_out' });
+  });
+});
+
+describe('syncLegalConsent', () => {
+  const VERSIONS = { data: { privacy_version: 'p-2', customer_terms_version: 'c-2', barber_terms_version: 'b-2' }, error: null };
+  const mockRpc = supabase.rpc as jest.Mock;
+
+  it('is current when the recorded versions match the role current versions', async () => {
+    queueFrom(chainable(VERSIONS), chainable({ data: { role: 'barber', accepted_terms_version: 'b-2', accepted_privacy_version: 'p-2' }, error: null }));
+    await expect(syncLegalConsent('u-1', false)).resolves.toBe('current');
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
+  it('records signup/setup consent that was never stored', async () => {
+    queueFrom(chainable(VERSIONS), chainable({ data: { role: 'customer', accepted_terms_version: null, accepted_privacy_version: null }, error: null }));
+    mockRpc.mockResolvedValueOnce({ error: null });
+    await expect(syncLegalConsent('u-1', true)).resolves.toBe('current');
+    expect(mockRpc).toHaveBeenCalledWith('accept_current_legal_consent', { p_confirmed_adult: true });
+  });
+
+  it('requires fresh acceptance after a version bump, even with an old signup hint', async () => {
+    queueFrom(chainable(VERSIONS), chainable({ data: { role: 'customer', accepted_terms_version: 'c-1', accepted_privacy_version: 'p-1' }, error: null }));
+    await expect(syncLegalConsent('u-1', true)).resolves.toBe('required');
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
+  it('requires acceptance from an account with no consent and no hint', async () => {
+    queueFrom(chainable(VERSIONS), chainable({ data: { role: 'customer', accepted_terms_version: null, accepted_privacy_version: null }, error: null }));
+    await expect(syncLegalConsent('u-1', false)).resolves.toBe('required');
   });
 });

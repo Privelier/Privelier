@@ -31,6 +31,8 @@ import FinishSetupScreen from './src/auth/screens/FinishSetupScreen';
 import ProvisioningScreen from './src/auth/screens/ProvisioningScreen';
 import ResetPasswordScreen from './src/auth/screens/ResetPasswordScreen';
 import AuthLinkErrorScreen from './src/auth/screens/AuthLinkErrorScreen';
+import LegalConsentGateScreen from './src/auth/screens/LegalConsentGateScreen';
+import { WithLegalStack } from './src/legal/WithLegalStack';
 import { useAuthShell, type AuthShell } from './src/auth/useAuthShell';
 import CustomerNavigator from './src/customer/CustomerNavigator';
 import BarberNavigator from './src/barber/BarberNavigator';
@@ -58,7 +60,7 @@ const navigationTheme: Theme = {
 };
 
 function renderRoot(shell: AuthShell): ReactElement {
-  const { state, retryProvisioning, submitSetupForm, signOutNow, finishPasswordRecovery, dismissPasswordRecovery, dismissAuthLinkError } = shell;
+  const { state, retryProvisioning, submitSetupForm, signOutNow, finishPasswordRecovery, dismissPasswordRecovery, dismissAuthLinkError, acceptLegalConsent, retryLegalConsent } = shell;
   switch (state.phase) {
     case 'restoring':
     case 'unauthenticated':
@@ -68,11 +70,13 @@ function renderRoot(shell: AuthShell): ReactElement {
     case 'provisioning':
       if (state.view.kind === 'setup_form') {
         return (
-          <FinishSetupScreen
-            prefill={state.view.prefill}
-            onSubmit={submitSetupForm}
-            onSignOut={signOutNow}
-          />
+          <WithLegalStack>
+            <FinishSetupScreen
+              prefill={state.view.prefill}
+              onSubmit={submitSetupForm}
+              onSignOut={signOutNow}
+            />
+          </WithLegalStack>
         );
       }
       return (
@@ -84,6 +88,18 @@ function renderRoot(shell: AuthShell): ReactElement {
       );
     case 'password_recovery':
       return <ResetPasswordScreen view={state.view} onComplete={finishPasswordRecovery} onDismiss={dismissPasswordRecovery} />;
+    case 'legal_consent':
+      return (
+        <WithLegalStack>
+          <LegalConsentGateScreen
+            view={state.view}
+            role={state.profile.role}
+            onAccept={acceptLegalConsent}
+            onRetry={retryLegalConsent}
+            onSignOut={signOutNow}
+          />
+        </WithLegalStack>
+      );
     case 'auth_link_error':
       return <AuthLinkErrorScreen view={state.view} onDismiss={dismissAuthLinkError} />;
     case 'authenticated':

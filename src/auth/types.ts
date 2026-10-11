@@ -74,6 +74,8 @@ export interface ProfilePrefill {
 /** Fields the setup form submits when metadata was missing or invalid. */
 export interface SetupFormFields {
   role: Role;
+  /** The user ticked the terms/privacy and 18+ boxes on this form. */
+  legalConsent?: boolean;
   name: string;
   city: string;
   country?: string;

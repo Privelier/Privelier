@@ -65,6 +65,7 @@ export default function FinishSetupScreen({ prefill, onSubmit, onSignOut }: Prop
 
     setSubmitting(true);
     const result = await onSubmit({
+      legalConsent: true,
       role,
       name: name.trim(),
       city: city.trim(),

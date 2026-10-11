@@ -87,6 +87,10 @@ async function signUp(
         country: normalizedMetadata.country,
         phone: normalizedMetadata.phone,
         bio: normalizedMetadata.bio,
+        // Signup is only submittable with both consent boxes ticked; this
+        // records that statement until the profile exists and the server
+        // RPC can store it (see syncLegalConsent).
+        legal_consent: true,
       },
     },
   });
@@ -434,6 +438,55 @@ async function provisionForSession(
   }
 
   return { status: 'ready', profile };
+}
+
+// ---------------------------------------------------------------------------
+// Legal consent (migration 0033)
+// ---------------------------------------------------------------------------
+
+/**
+ * Compare the user's server-recorded consent with the current legal
+ * versions. A user who consented in this app's signup or setup form but has
+ * never had it recorded (the form ran before a session existed) is recorded
+ * now; anyone else who is behind the current versions must accept again.
+ * Run by the auth shell after provisioning returns a ready profile.
+ */
+export async function syncLegalConsent(
+  userId: string,
+  consentHint: boolean
+): Promise<'current' | 'required' | AuthFailure> {
+  const [versions, own] = await Promise.all([
+    supabase.from('legal_current_versions').select('*').maybeSingle(),
+    supabase
+      .from('users')
+      .select('role, accepted_terms_version, accepted_privacy_version')
+      .eq('id', userId)
+      .maybeSingle(),
+  ]);
+  if (versions.error) return mapPostgrestError('legalConsent.versions', versions.error);
+  if (own.error) return mapPostgrestError('legalConsent.own', own.error);
+  if (!versions.data || !own.data) return 'current'; // nothing configured to accept
+
+  const v = versions.data as { privacy_version: string; customer_terms_version: string; barber_terms_version: string };
+  const row = own.data as { role: Role | 'admin'; accepted_terms_version: string | null; accepted_privacy_version: string | null };
+  const terms = row.role === 'barber' ? v.barber_terms_version : v.customer_terms_version;
+  if (row.accepted_terms_version === terms && row.accepted_privacy_version === v.privacy_version) return 'current';
+
+  const neverRecorded = row.accepted_terms_version === null && row.accepted_privacy_version === null;
+  if (consentHint && neverRecorded) {
+    const recorded = await acceptCurrentLegalConsent(true);
+    return recorded.status === 'ok' ? 'current' : recorded;
+  }
+  return 'required';
+}
+
+/** Record acceptance of the current terms + privacy notice (server-stamped). */
+export async function acceptCurrentLegalConsent(
+  confirmedAdult: boolean
+): Promise<{ status: 'ok' } | AuthFailure> {
+  const { error } = await supabase.rpc('accept_current_legal_consent', { p_confirmed_adult: confirmedAdult });
+  if (error) return mapPostgrestError('acceptCurrentLegalConsent', error);
+  return { status: 'ok' };
 }
 
 /**

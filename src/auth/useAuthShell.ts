@@ -16,11 +16,12 @@
  * - Routing authority is public.users.role from ensureProfile's returned
  *   profile — never user_metadata, never which auth screen was used.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as Linking from 'expo-linking';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabase';
-import { ensureProfile, ensureProfileFromForm, signOut } from './authService';
+import { acceptCurrentLegalConsent, ensureProfile, ensureProfileFromForm, signOut, syncLegalConsent } from './authService';
+import type { LegalConsentView } from './screens/LegalConsentGateScreen';
 import { applyAuthCallbackUrl, isPasswordRecoveryUrl } from './deepLink';
 import type { AuthFailure } from './errors';
 import type { EnsureProfileResult, ProfilePrefill, SetupFormFields } from './types';
@@ -38,6 +39,7 @@ export type AuthShellState =
   | { phase: 'provisioning'; view: ProvisioningView }
   | { phase: 'password_recovery'; view: 'opening' | 'ready' | 'expired' | 'error' }
   | { phase: 'auth_link_error'; view: 'expired' | 'error' }
+  | { phase: 'legal_consent'; profile: UsersRow; view: LegalConsentView }
   | { phase: 'authenticated'; profile: UsersRow };
 
 export interface AuthShell {
@@ -51,6 +53,9 @@ export interface AuthShell {
   finishPasswordRecovery: () => void;
   dismissPasswordRecovery: () => void;
   dismissAuthLinkError: () => void;
+  /** Record acceptance of the current legal versions; resolves to an error message or null. */
+  acceptLegalConsent: (confirmedAdult: boolean) => Promise<string | null>;
+  retryLegalConsent: () => void;
 }
 
 export function useAuthShell(): AuthShell {
@@ -61,6 +66,12 @@ export function useAuthShell(): AuthShell {
   const [attempt, setAttempt] = useState(0);
   const [passwordRecovery, setPasswordRecovery] = useState<'opening' | 'ready' | 'expired' | 'error' | null>(null);
   const [authLinkError, setAuthLinkError] = useState<'expired' | 'error' | null>(null);
+  // Consent is checked once per signed-in profile, after provisioning.
+  // 'current' is the only state that lets the role navigators mount.
+  const [consent, setConsent] = useState<LegalConsentView | { kind: 'current' }>({ kind: 'checking' });
+  const [consentAttempt, setConsentAttempt] = useState(0);
+  // The finish-setup form's own consent boxes, for a profile created there.
+  const formConsentRef = useRef(false);
 
   // Single top-level subscription + initial session restore (encrypted
   // SecureStore-backed storage inside the supabase client).
@@ -79,6 +90,8 @@ export function useAuthShell(): AuthShell {
         case 'SIGNED_OUT':
           setSession(null);
           setProfile(null);
+          setConsent({ kind: 'checking' });
+          formConsentRef.current = false;
           setView({ kind: 'loading' });
           setRestoring(false);
           break;
@@ -182,6 +195,7 @@ export function useAuthShell(): AuthShell {
 
   const submitSetupForm = useCallback(
     async (fields: SetupFormFields): Promise<EnsureProfileResult> => {
+      formConsentRef.current = fields.legalConsent === true;
       const result = await ensureProfileFromForm(fields);
       // Success and signed-out flip the phase; failures stay inline in the
       // form (the form renders result.message itself), so the user never
@@ -199,6 +213,38 @@ export function useAuthShell(): AuthShell {
     void signOut();
   }, []);
 
+  // LEGAL CONSENT: once a profile is ready, compare its recorded consent with
+  // the current versions (and record signup/setup consent not yet stored).
+  const metadataConsent = session?.user.user_metadata?.legal_consent === true;
+  const profileId = profile?.id ?? null;
+  useEffect(() => {
+    if (profileId === null || consent.kind !== 'checking') return;
+    let cancelled = false;
+    syncLegalConsent(profileId, formConsentRef.current || metadataConsent).then((result) => {
+      if (cancelled) return;
+      if (result === 'current') setConsent({ kind: 'current' });
+      else if (result === 'required') setConsent({ kind: 'required' });
+      else setConsent({ kind: 'failure', message: result.message });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [profileId, consent.kind, consentAttempt, metadataConsent]);
+
+  const acceptLegalConsent = useCallback(async (confirmedAdult: boolean) => {
+    const result = await acceptCurrentLegalConsent(confirmedAdult);
+    if (result.status === 'ok') {
+      setConsent({ kind: 'current' });
+      return null;
+    }
+    return result.message;
+  }, []);
+
+  const retryLegalConsent = useCallback(() => {
+    setConsent({ kind: 'checking' });
+    setConsentAttempt((current) => current + 1);
+  }, []);
+
   const finishPasswordRecovery = useCallback(() => setPasswordRecovery(null), []);
   const dismissPasswordRecovery = useCallback(() => {
     setPasswordRecovery(null);
@@ -214,9 +260,13 @@ export function useAuthShell(): AuthShell {
     if (passwordRecovery) return { phase: 'password_recovery', view: passwordRecovery };
     if (authLinkError) return { phase: 'auth_link_error', view: authLinkError };
     if (session === null) return { phase: 'unauthenticated' };
-    if (profile !== null) return { phase: 'authenticated', profile };
+    if (profile !== null) {
+      return consent.kind === 'current'
+        ? { phase: 'authenticated', profile }
+        : { phase: 'legal_consent', profile, view: consent };
+    }
     return { phase: 'provisioning', view };
-  }, [restoring, session, profile, view, passwordRecovery, authLinkError]);
+  }, [restoring, session, profile, view, passwordRecovery, authLinkError, consent]);
 
-  return { state, retryProvisioning, submitSetupForm, signOutNow, finishPasswordRecovery, dismissPasswordRecovery, dismissAuthLinkError };
+  return { state, retryProvisioning, submitSetupForm, signOutNow, finishPasswordRecovery, dismissPasswordRecovery, dismissAuthLinkError, acceptLegalConsent, retryLegalConsent };
 }
