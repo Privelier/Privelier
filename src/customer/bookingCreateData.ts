@@ -20,9 +20,10 @@
  * be spoofed and would simply be rejected by RLS, which is a worse UX than
  * catching "no session" before ever hitting the network).
  *
- * The uq_bookings_barber_slot_active partial unique index (migration 0009)
- * is the authoritative double-booking guard: a Postgres 23505 here means a
- * different customer just took this exact barber/date/time slot, and must
+ * Double-booking is guarded by validate_booking_slot (migrations 0024/0025,
+ * duration-aware overlap under an advisory lock) and the older
+ * uq_bookings_barber_slot_active index (migration 0009). Either rejection
+ * means a different customer just took an overlapping slot, and must
  * surface as a real, user-facing conflict — NOT the "23505-as-idempotent-
  * success" pattern used for auth provisioning retries (see
  * src/auth/authService.ts), which applies only when the same actor's own
@@ -32,6 +33,30 @@ import { supabase } from '../../lib/supabase';
 import type { BookingRow } from '../types';
 import { UNIQUE_VIOLATION, failure, logCustomerDataError, mapPostgrestError } from './errors';
 import type { InsertBookingResult } from './types';
+
+/** Postgres raise_exception — validate_booking_slot (migrations 0024/0025). */
+const RAISE_EXCEPTION = 'P0001';
+
+/**
+ * validate_booking_slot serializes same-barber/day writes with an advisory
+ * lock, so a lost race now surfaces as its overlap RAISE (P0001) before the
+ * unique index can fire. Its other two RAISEs mean the chosen slot went stale
+ * (time passed, or the barber changed availability). The trigger has no
+ * custom SQLSTATEs yet, so the message text is the only discriminator; an
+ * unrecognized P0001 still falls through to the generic mapper.
+ */
+function classifySlotRejection(error: {
+  code?: string | null;
+  message?: string | null;
+}): 'conflict' | 'slot_unavailable' | null {
+  if (error.code !== RAISE_EXCEPTION) return null;
+  const message = (error.message ?? '').toLowerCase();
+  if (message.includes('overlaps an existing active booking')) return 'conflict';
+  if (message.includes('must be in the future') || message.includes('outside the barber')) {
+    return 'slot_unavailable';
+  }
+  return null;
+}
 
 export async function insertBooking(input: {
   barberId: string;
@@ -66,6 +91,11 @@ export async function insertBooking(input: {
 
   if (error) {
     if (error.code === UNIQUE_VIOLATION) return { status: 'conflict' };
+    const slotOutcome = classifySlotRejection(error);
+    if (slotOutcome) {
+      logCustomerDataError('insertBooking.slot', error);
+      return { status: slotOutcome };
+    }
     return mapPostgrestError('insertBooking', error);
   }
   return { status: 'ok', booking: data as BookingRow };

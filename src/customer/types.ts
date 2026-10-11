@@ -102,6 +102,7 @@ export type ListBusySlotsResult =
 export type InsertBookingResult =
   | { status: 'ok'; booking: BookingRow }
   | { status: 'conflict' }
+  | { status: 'slot_unavailable' }
   | CustomerDataFailure;
 
 // ---------------------------------------------------------------------------

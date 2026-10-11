@@ -146,6 +146,34 @@ describe('insertBooking', () => {
     });
   });
 
+  describe('validate_booking_slot rejections (P0001, migrations 0024/0025)', () => {
+    async function insertRejectedWith(message: string) {
+      mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'customer-1' } }, error: null });
+      mockFrom.mockReturnValueOnce(chainable({ data: null, error: { code: 'P0001', message } }));
+      return insertBooking(VALID_INPUT);
+    }
+
+    it('maps the overlap rejection of a lost slot race to conflict, never transition_rejected', async () => {
+      const result = await insertRejectedWith('Booking overlaps an existing active booking');
+      expect(result).toEqual({ status: 'conflict' });
+    });
+
+    it('maps a slot that has since passed to slot_unavailable', async () => {
+      const result = await insertRejectedWith('Booking date and time must be in the future');
+      expect(result).toEqual({ status: 'slot_unavailable' });
+    });
+
+    it("maps a slot outside the barber's current availability to slot_unavailable", async () => {
+      const result = await insertRejectedWith("Booking time is outside the barber's active availability");
+      expect(result).toEqual({ status: 'slot_unavailable' });
+    });
+
+    it('leaves an unrecognized P0001 to the generic mapper', async () => {
+      const result = await insertRejectedWith('stamp_booking_price_from_service: service s-1 does not belong to barber b-1');
+      expect(result.status).toBe('error');
+    });
+  });
+
   describe('empty/missing-session handling', () => {
     it('returns invalid_input without ever calling getUser when location is empty', async () => {
       const result = await insertBooking({ ...VALID_INPUT, location: '   ' });

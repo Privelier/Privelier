@@ -11,15 +11,17 @@
  * - 'ok': persistent request summary; the user resets the customer stack to
  *   CustomerTabs → Bookings so back-navigation can never return into a
  *   completed booking flow.
- * - 'conflict': the uq_bookings_barber_slot_active index rejected the
- *   insert — a different customer just took this exact slot. Shown inline
+ * - 'conflict' / 'slot_unavailable': the slot is gone — another customer
+ *   took an overlapping time (validate_booking_slot's overlap check or the
+ *   uq_bookings_barber_slot_active index), or the time passed / the barber
+ *   changed availability while the customer was on this screen. Shown inline
  *   (never silently retried), with an explicit "choose another time" action
  *   that pops back to BookingDateTimeScreen; that screen's useFocusEffect
  *   re-fetches busy slots on regaining focus, so the dead slot cannot be
  *   retried blindly.
  * - a generic CustomerDataFailure: its own `.message` is shown inline.
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -52,13 +54,19 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [confirmedPrice, setConfirmedPrice] = useState<number | null>(null);
   const [conflict, setConflict] = useState(false);
+  // Same-tick double-tap guard: `submitting` only disables the button after
+  // the next commit, and a second insert would race the first one.
+  const submittingRef = useRef(false);
 
   const onConfirm = useCallback(async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     void haptics.confirm();
     setSubmitting(true);
     setError(null);
     setConflict(false);
     const result = await insertBooking({ barberId, serviceId: service.id, date, time, location });
+    submittingRef.current = false;
     setSubmitting(false);
 
     if (result.status === 'ok') {
@@ -67,12 +75,19 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
       return;
     }
     if (result.status === 'conflict') {
+      void haptics.warning();
       setConflict(true);
-      setError(customerDataErrorCopy.conflict);
+      setError(de ? 'Diese Uhrzeit wurde gerade von jemand anderem gebucht. Wähle eine andere Uhrzeit.' : customerDataErrorCopy.conflict);
+      return;
+    }
+    if (result.status === 'slot_unavailable') {
+      void haptics.warning();
+      setConflict(true);
+      setError(de ? 'Diese Uhrzeit ist nicht mehr verfügbar. Wähle eine andere Uhrzeit.' : 'That time is no longer available. Pick another time.');
       return;
     }
     setError(result.message);
-  }, [barberId, service.id, date, time, location]);
+  }, [barberId, service.id, date, time, location, de]);
 
   const onPickAnotherTime = useCallback(() => {
     // Pops exactly Confirm + Location, landing back on the existing
@@ -188,6 +203,7 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
           label={de ? 'Termin anfragen' : 'Request booking'}
           onPress={onConfirm}
           loading={submitting}
+          disabled={conflict}
           testID="customer-booking-confirm-submit"
         />
       </View>

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 import BookingConfirmScreen from '../BookingConfirmScreen';
 import { insertBooking } from '../../bookingCreateData';
@@ -6,15 +6,19 @@ import { haptics } from '../../../shared/haptics';
 
 jest.mock('../../bookingCreateData', () => ({ insertBooking: jest.fn() }));
 jest.mock('../../../shared/haptics', () => ({
-  haptics: { confirm: jest.fn(), success: jest.fn() },
+  haptics: { confirm: jest.fn(), success: jest.fn(), warning: jest.fn() },
 }));
 jest.mock('@expo/vector-icons', () => ({ Feather: () => null }));
 jest.mock('../../../shared/components/PrimaryButton', () => {
   const React = jest.requireActual('react');
   const { Pressable, Text } = jest.requireActual('react-native');
   return {
-    PrimaryButton: ({ label, onPress, testID }: { label: string; onPress: () => void; testID: string }) =>
-      React.createElement(Pressable, { testID, onPress }, React.createElement(Text, null, label)),
+    PrimaryButton: ({ label, onPress, testID, disabled }: { label: string; onPress: () => void; testID: string; disabled?: boolean }) =>
+      React.createElement(
+        Pressable,
+        { testID, onPress, disabled, accessibilityState: { disabled: !!disabled } },
+        React.createElement(Text, null, label)
+      ),
   };
 });
 jest.mock('../../../shared/components/ScreenBackHeader', () => ({ ScreenBackHeader: () => null }));
@@ -66,4 +70,45 @@ it('does not play success feedback when the slot conflicts', async () => {
   await waitFor(() => expect(screen.getByTestId('customer-booking-confirm-error')).toBeTruthy());
   expect(haptics.confirm).toHaveBeenCalledTimes(1);
   expect(haptics.success).not.toHaveBeenCalled();
+});
+
+it('offers another time instead of cancellation copy when a slot race is lost', async () => {
+  (insertBooking as jest.Mock).mockResolvedValue({ status: 'conflict' });
+  await render(<BookingConfirmScreen route={route as never} navigation={navigation as never} />);
+
+  await fireEvent.press(screen.getByTestId('customer-booking-confirm-submit'));
+  await waitFor(() => expect(screen.getByTestId('customer-booking-confirm-pick-another-time')).toBeTruthy());
+  expect(screen.queryByText(/can no longer be cancelled/)).toBeNull();
+  expect(screen.getByText('That time was just booked by someone else. Pick another time.')).toBeTruthy();
+  expect(haptics.warning).toHaveBeenCalledTimes(1);
+  expect(screen.getByTestId('customer-booking-confirm-submit').props.accessibilityState).toMatchObject({ disabled: true });
+
+  await fireEvent.press(screen.getByTestId('customer-booking-confirm-pick-another-time'));
+  expect(navigation.pop).toHaveBeenCalledWith(2);
+});
+
+it('explains a stale slot and routes back to time selection', async () => {
+  (insertBooking as jest.Mock).mockResolvedValue({ status: 'slot_unavailable' });
+  await render(<BookingConfirmScreen route={route as never} navigation={navigation as never} />);
+
+  await fireEvent.press(screen.getByTestId('customer-booking-confirm-submit'));
+  await waitFor(() => expect(screen.getByText('That time is no longer available. Pick another time.')).toBeTruthy());
+  expect(screen.getByTestId('customer-booking-confirm-pick-another-time')).toBeTruthy();
+  expect(haptics.success).not.toHaveBeenCalled();
+});
+
+it('sends exactly one booking request for two taps in the same tick', async () => {
+  let resolveInsert: (value: unknown) => void = () => {};
+  (insertBooking as jest.Mock).mockReturnValue(new Promise((resolve) => { resolveInsert = resolve; }));
+  await render(<BookingConfirmScreen route={route as never} navigation={navigation as never} />);
+
+  const submit = screen.getByTestId('customer-booking-confirm-submit');
+  await act(async () => {
+    fireEvent.press(submit);
+    fireEvent.press(submit);
+  });
+  expect(insertBooking).toHaveBeenCalledTimes(1);
+
+  await act(async () => { resolveInsert({ status: 'ok', booking: { price: 30 } }); });
+  await waitFor(() => expect(screen.getByTestId('customer-booking-confirm-success')).toBeTruthy());
 });
