@@ -16,7 +16,7 @@
  */
 import type { AvailabilityRow, BarberDirectoryRow, ServiceRow } from '../types';
 
-export type ExploreFilterKey = 'all' | 'today' | 'under100';
+export type ExploreFilterKey = 'all' | 'today' | 'under100' | 'saved';
 
 /** "Under €100" chip threshold (founder-specified label; strict less-than). */
 export const UNDER_PRICE_THRESHOLD = 100;
@@ -91,6 +91,8 @@ export interface ExploreFilterContext {
   servicesByBarber: Map<string, ServiceRow[]>;
   windowsByBarber: Map<string, AvailabilityRow[]>;
   now: Date;
+  /** The customer's saved barbers (migration 0045); empty when unknown. */
+  favoriteIds?: ReadonlySet<string>;
 }
 
 /**
@@ -108,6 +110,8 @@ export function applyExploreFilter(
       return barbers;
     case 'today':
       return barbers.filter((b) => windowCoversToday(ctx.windowsByBarber.get(b.id) ?? [], ctx.now));
+    case 'saved':
+      return barbers.filter((b) => ctx.favoriteIds?.has(b.id) ?? false);
     case 'under100':
       return barbers.filter((b) => {
         const min = fromPrice(ctx.servicesByBarber.get(b.id) ?? []);

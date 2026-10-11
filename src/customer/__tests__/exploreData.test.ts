@@ -120,6 +120,11 @@ describe('applyExploreFilter', () => {
     expect(UNDER_PRICE_THRESHOLD).toBe(100);
   });
 
+
+  it('keeps only the customer saved barbers, and nobody when favorites are unknown', () => {
+    expect(applyExploreFilter(barbers, 'saved', { ...ctx, favoriteIds: new Set(['b']) }).map((x) => x.id)).toEqual(['b']);
+    expect(applyExploreFilter(barbers, 'saved', { ...ctx, favoriteIds: undefined })).toEqual([]);
+  });
 });
 
 describe('toMapPin (the D4 honesty rule)', () => {

@@ -5,6 +5,16 @@ import BookingLocationScreen from '../BookingLocationScreen';
 
 jest.mock('../../../shared/locale', () => ({ getAppLanguage: jest.fn(() => 'en') }));
 jest.mock('../../../auth/authService', () => ({ fetchOwnProfile: jest.fn() }));
+const mockShowToast = jest.fn();
+jest.mock('../../../shared/components/ToastProvider', () => ({ useToast: () => ({ showToast: mockShowToast }) }));
+jest.mock('@expo/vector-icons', () => ({ Feather: () => null }));
+jest.mock('../../../shared/haptics', () => ({ haptics: { selection: jest.fn() } }));
+const mockListSaved = jest.fn();
+const mockSaveAddress = jest.fn();
+jest.mock('../../personalData', () => ({
+  listSavedAddresses: (...args: unknown[]) => mockListSaved(...args),
+  saveAddress: (...args: unknown[]) => mockSaveAddress(...args),
+}));
 jest.mock('../../../shared/components/ScreenBackHeader', () => ({ ScreenBackHeader: () => null }));
 jest.mock('../../components/BookingStepIndicator', () => ({ BookingStepIndicator: () => null }));
 jest.mock('../../../theme/useTheme', () => ({
@@ -24,6 +34,8 @@ const route = {
 const navigation = { navigate: jest.fn(), goBack: jest.fn() };
 
 beforeEach(() => {
+  mockListSaved.mockReset().mockResolvedValue({ status: 'ok', addresses: [] });
+  mockSaveAddress.mockReset().mockResolvedValue({ status: 'ok' });
   jest.mocked(getAppLanguage).mockReturnValue('en');
   navigation.navigate.mockReset();
   jest.mocked(fetchOwnProfile).mockReset().mockResolvedValue({
@@ -88,4 +100,22 @@ it('uses German labels and validation while preserving the entered address', asy
   await fireEvent.changeText(street, 'Hauptstra\u00dfe 12');
   await fireEvent.press(screen.getByTestId('customer-booking-location-continue'));
   expect(navigation.navigate).toHaveBeenCalledWith('BookingConfirm', expect.objectContaining({ location: 'Hauptstra\u00dfe 12, Berlin' }));
+});
+
+it('books straight to review from a saved address in one tap', async () => {
+  mockListSaved.mockResolvedValue({ status: 'ok', addresses: [{ id: 'a-1', label: 'Home', address: 'Main Street 12, Berlin' }] });
+  await render(<BookingLocationScreen route={route as never} navigation={navigation as never} />);
+  await waitFor(() => expect(screen.getByTestId('customer-booking-location-saved-a-1')).toBeTruthy());
+  await fireEvent.press(screen.getByTestId('customer-booking-location-saved-a-1'));
+  expect(navigation.navigate).toHaveBeenCalledWith('BookingConfirm', expect.objectContaining({ location: 'Main Street 12, Berlin' }));
+});
+
+it('saves a new address only when asked, without blocking the booking', async () => {
+  await render(<BookingLocationScreen route={route as never} navigation={navigation as never} />);
+  await waitFor(() => expect(screen.getByTestId('customer-booking-location-city').props.value).toBe('Berlin'));
+  await fireEvent.changeText(screen.getByTestId('customer-booking-location-input'), 'Main Street 12');
+  await fireEvent.press(screen.getByTestId('customer-booking-location-save-toggle'));
+  await fireEvent.press(screen.getByTestId('customer-booking-location-continue'));
+  expect(navigation.navigate).toHaveBeenCalledWith('BookingConfirm', expect.objectContaining({ location: 'Main Street 12, Berlin' }));
+  expect(mockSaveAddress).toHaveBeenCalledWith('Main Street 12', 'Main Street 12, Berlin');
 });

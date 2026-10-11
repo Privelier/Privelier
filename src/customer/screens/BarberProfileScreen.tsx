@@ -42,6 +42,8 @@ import { GlassSurface } from '../../shared/components/GlassSurface';
 import { getAppLanguage } from '../../shared/locale';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { BackButton, OVER_IMAGE_BG, OVER_IMAGE_ICON } from '../../shared/components/ScreenBackHeader';
+import { listFavoriteBarberIds, setFavorite } from '../personalData';
+import { haptics } from '../../shared/haptics';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { ScrollGlassHeader, useReducedMotionPreference, useScrollGlass } from '../../shared/motion';
 import { useTheme } from '../../theme/useTheme';
@@ -80,6 +82,26 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
   const servicesY = useRef(0);
   const german = getAppLanguage() === 'de';
   const { scrollY, onScroll } = useScrollGlass();
+  // Saved-barber state: null until known, so the heart never shows a guess.
+  const [favorite, setFavoriteState] = useState<boolean | null>(null);
+  const favoriteBusyRef = useRef(false);
+  useEffect(() => {
+    let active = true;
+    void listFavoriteBarberIds().then((result) => {
+      if (active && result.status === 'ok') setFavoriteState(result.ids.has(barberId));
+    });
+    return () => { active = false; };
+  }, [barberId]);
+  const toggleFavorite = useCallback(async () => {
+    if (favorite === null || favoriteBusyRef.current) return;
+    favoriteBusyRef.current = true;
+    const next = !favorite;
+    setFavoriteState(next); // optimistic; reverted below if the write fails
+    void haptics.selection();
+    const result = await setFavorite(barberId, next);
+    favoriteBusyRef.current = false;
+    if (result.status !== 'ok') setFavoriteState(!next);
+  }, [favorite, barberId]);
   const reduceMotion = useReducedMotionPreference();
   // Parallax hero, computed on the UI thread from the shared scroll offset:
   // the photo drifts at 40% of scroll speed inside the clipped hero and, on
@@ -526,6 +548,22 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
       <View style={[styles.backWrap, { top: insets.top + 8 }]}>
         <BackButton onPress={goBack} testID="barber-profile-back" tone="overImage" />
       </View>
+      <View style={[styles.favoriteWrap, { top: insets.top + 8 }]}>
+        <Pressable
+          onPress={() => void toggleFavorite()}
+          disabled={favorite === null}
+          accessibilityRole="button"
+          accessibilityLabel={favorite
+            ? german ? 'Aus gespeicherten Barbern entfernen' : 'Remove from saved barbers'
+            : german ? 'Barber speichern' : 'Save barber'}
+          accessibilityState={{ selected: favorite === true, disabled: favorite === null }}
+          hitSlop={12}
+          testID="barber-profile-favorite"
+          style={({ pressed }) => [styles.favoriteDisc, { backgroundColor: OVER_IMAGE_BG, opacity: pressed ? pressOpacity.soft : 1 }]}
+        >
+          <Ionicons name={favorite ? 'heart' : 'heart-outline'} size={17} color={favorite ? colors.accent : OVER_IMAGE_ICON} />
+        </Pressable>
+      </View>
     </SafeAreaView>
   );
 }
@@ -588,6 +626,8 @@ const styles = StyleSheet.create({
   heroRating: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 
   backWrap: { position: 'absolute', left: 24 },
+  favoriteWrap: { position: 'absolute', right: 24 },
+  favoriteDisc: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   bioBlock: { paddingHorizontal: 24, paddingVertical: 24 },
   bio: { fontSize: 14, lineHeight: 22 },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16 },

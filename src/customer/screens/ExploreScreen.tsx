@@ -48,6 +48,7 @@ import { applyExploreFilter, toMapPin, type ExploreFilterKey } from '../exploreD
 import { buildStaticMapUrl, hasMapboxPublicToken, isMapNativeAvailable } from '../mapRuntime';
 import { getAppLanguage } from '../../shared/locale';
 import BarberCard from '../components/BarberCard';
+import { listFavoriteBarberIds } from '../personalData';
 import type ExploreMapViewType from '../components/ExploreMapView';
 import type { CustomerTabParamList } from '../CustomerTabs';
 import type { CustomerStackParamList } from '../CustomerNavigator';
@@ -65,8 +66,8 @@ export default function ExploreScreen({ navigation }: Props) {
   const chipLabels: Record<ExploreFilterKey, string> = isGerman
     // "Today" only means working hours cover today; busy slots are not
     // checked, so the label must not promise a free appointment.
-    ? { all: 'Alle', today: 'Arbeitszeit heute', under100: 'Unter 100 €' }
-    : { all: 'All', today: 'Hours today', under100: 'Under €100' };
+    ? { all: 'Alle', saved: 'Gespeichert', today: 'Arbeitszeit heute', under100: 'Unter 100 €' }
+    : { all: 'All', saved: 'Saved', today: 'Hours today', under100: 'Under €100' };
   const listActionLabel = isGerman ? 'Zur Liste wechseln' : 'Switch to list view';
 
   const [city, setCity] = useState<string | null>(null);
@@ -117,6 +118,17 @@ export default function ExploreScreen({ navigation }: Props) {
     setLoading(false);
   }, []);
 
+  // Saved barbers change on the profile screen, so re-read them (one small
+  // query) whenever Explore regains focus. null = unknown -> chip hidden.
+  const [favoriteIds, setFavoriteIds] = useState<Set<string> | null>(null);
+  useEffect(() => {
+    const refresh = () => {
+      void listFavoriteBarberIds().then((result) => setFavoriteIds(result.status === 'ok' ? result.ids : null));
+    };
+    refresh();
+    return navigation.addListener('focus', refresh);
+  }, [navigation]);
+
   useEffect(() => {
     let active = true;
     // Deferred via .then() (not called directly) — same
@@ -153,10 +165,11 @@ export default function ExploreScreen({ navigation }: Props) {
   // nothing beyond the directory row itself.
   const availableChips = useMemo(() => {
     const chips: ExploreFilterKey[] = ['all'];
+    if (favoriteIds !== null && favoriteIds.size > 0) chips.push('saved');
     if (windows !== null) chips.push('today');
     if (services !== null) chips.push('under100');
     return chips;
-  }, [services, windows]);
+  }, [services, windows, favoriteIds]);
 
   const filtered = useMemo(
     () =>
@@ -164,8 +177,9 @@ export default function ExploreScreen({ navigation }: Props) {
         servicesByBarber,
         windowsByBarber,
         now: new Date(),
+        favoriteIds: favoriteIds ?? undefined,
       }),
-    [barbers, filter, servicesByBarber, windowsByBarber]
+    [barbers, filter, servicesByBarber, windowsByBarber, favoriteIds]
   );
 
   const openProfile = useCallback(

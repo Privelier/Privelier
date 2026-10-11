@@ -10,7 +10,7 @@
  * sufficient on its own.
  */
 import { useCallback, useEffect, useRef, useState, type Ref } from 'react';
-import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getAppLanguage } from '../../shared/locale';
@@ -20,6 +20,10 @@ import { PrimaryButton } from '../../shared/components/PrimaryButton';
 import { ScreenBackHeader } from '../../shared/components/ScreenBackHeader';
 import { BookingStepIndicator } from '../components/BookingStepIndicator';
 import { fetchOwnProfile } from '../../auth/authService';
+import { Feather } from '@expo/vector-icons';
+import { haptics } from '../../shared/haptics';
+import { useToast } from '../../shared/components/ToastProvider';
+import { listSavedAddresses, saveAddress, type SavedAddress } from '../personalData';
 import type { CustomerStackParamList } from '../CustomerNavigator';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'BookingLocation'>;
@@ -38,6 +42,20 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
   const cityRef = useRef<TextInput>(null);
   const unitRef = useRef<TextInput>(null);
   const instructionsRef = useRef<TextInput>(null);
+  const { showToast } = useToast();
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [saveForLater, setSaveForLater] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    // Best-effort: saved addresses only add a shortcut, never block the form.
+    void listSavedAddresses().then((result) => {
+      if (active && result.status === 'ok') setSavedAddresses(result.addresses);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -61,8 +79,25 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
   const cityError = touched.city && trimmedCity.length < 2;
   const location = [trimmedStreet, unit.trim(), trimmedCity, instructions.trim()].filter(Boolean).join(', ');
 
+  const goToConfirm = useCallback((chosenLocation: string) => {
+    navigation.navigate('BookingConfirm', { barberId, barberName, service, date, time, location: chosenLocation });
+  }, [navigation, barberId, barberName, service, date, time]);
+
+  const onUseSaved = useCallback((saved: SavedAddress) => {
+    void haptics.selection();
+    goToConfirm(saved.address);
+  }, [goToConfirm]);
+
   const onContinue = useCallback(() => {
     if (!canContinue) return;
+    if (saveForLater && !savedAddresses.some((saved) => saved.address === location)) {
+      // Saving is a convenience: it never delays or blocks the booking.
+      void saveAddress(trimmedStreet.slice(0, 40), location).then((result) => {
+        if (result.status === 'limit_reached') {
+          showToast({ message: de ? 'Du hast bereits 10 Adressen gespeichert.' : 'You already have 10 saved addresses.' });
+        }
+      });
+    }
     navigation.navigate('BookingConfirm', {
       barberId,
       barberName,
@@ -71,7 +106,7 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
       time,
       location,
     });
-  }, [navigation, barberId, barberName, service, date, time, location, canContinue]);
+  }, [navigation, barberId, barberName, service, date, time, location, canContinue, saveForLater, savedAddresses, trimmedStreet, showToast, de]);
 
   const onSubmitLastField = useCallback(() => {
     Keyboard.dismiss();
@@ -99,6 +134,31 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
         <Text style={[styles.subheading, { color: colors.textSecondary, fontFamily: fonts.body }]}>
           {de ? 'Gib deine vollständige Adresse an, damit dein Barber dich findet.' : 'Add the full address so your barber can find you.'}
         </Text>
+
+        {savedAddresses.length > 0 ? (
+          <View style={styles.savedBlock} testID="customer-booking-location-saved">
+            <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
+              {de ? 'Gespeicherte Adressen' : 'Saved addresses'}
+            </Text>
+            {savedAddresses.map((saved) => (
+              <Pressable
+                key={saved.id}
+                onPress={() => onUseSaved(saved)}
+                accessibilityRole="button"
+                accessibilityLabel={`${de ? 'Adresse verwenden' : 'Use address'}: ${saved.address}`}
+                testID={`customer-booking-location-saved-${saved.id}`}
+                style={({ pressed }) => [styles.savedRow, { borderColor: colors.border, backgroundColor: colors.surface, opacity: pressed ? 0.85 : 1 }]}
+              >
+                <Feather name="map-pin" size={16} color={colors.accentText} />
+                <Text numberOfLines={2} style={[styles.savedText, { color: colors.textPrimary, fontFamily: fonts.body }]}>{saved.address}</Text>
+                <Feather name="chevron-right" size={18} color={colors.textSecondary} />
+              </Pressable>
+            ))}
+            <Text style={[styles.orNew, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+              {de ? 'Oder gib eine neue Adresse ein:' : 'Or enter a new address:'}
+            </Text>
+          </View>
+        ) : null}
 
         <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
           {de ? 'Straße und Hausnummer' : 'Street and building'}
@@ -161,6 +221,21 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
       </KeyboardAvoidingView>
 
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
+        <Pressable
+          onPress={() => setSaveForLater((current) => !current)}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: saveForLater }}
+          accessibilityLabel={de ? 'Adresse für später speichern' : 'Save this address for later'}
+          testID="customer-booking-location-save-toggle"
+          style={styles.saveToggle}
+        >
+          <View style={[styles.saveBox, { borderColor: saveForLater ? colors.accent : colors.border, backgroundColor: saveForLater ? colors.accent : 'transparent' }]}>
+            {saveForLater ? <Feather name="check" size={14} color={colors.onAccent} /> : null}
+          </View>
+          <Text style={[styles.saveText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+            {de ? 'Adresse für später speichern' : 'Save this address for later'}
+          </Text>
+        </Pressable>
         <PrimaryButton
           label={de ? 'Termin prüfen' : 'Continue'}
           onPress={onContinue}
@@ -208,6 +283,13 @@ function AddressField({ label, value, onChangeText, inputRef, focused, onFocus, 
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  savedBlock: { marginBottom: space.base, gap: space.sm },
+  savedRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 56, borderWidth: HAIRLINE, borderRadius: 12, paddingHorizontal: space.base },
+  savedText: { flex: 1, fontSize: 15, lineHeight: 21 },
+  orNew: { fontSize: 13, marginTop: space.sm },
+  saveToggle: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 44, marginBottom: space.sm },
+  saveBox: { width: 22, height: 22, borderRadius: 5, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  saveText: { fontSize: 14 },
 
   content: { flex: 1 },
   scrollContent: { paddingHorizontal: space.xl, paddingTop: space.base, paddingBottom: space.xl },

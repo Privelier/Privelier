@@ -5,6 +5,10 @@ import { listAvailabilityForBarberIds } from '../../availabilityData';
 import { listBarbersByCity, listServicesForBarberIds } from '../../discoveryData';
 import { getAppLanguage } from '../../../shared/locale';
 
+jest.mock('../../personalData', () => ({
+  listFavoriteBarberIds: jest.fn(() => Promise.resolve({ status: 'ok', ids: new Set() })),
+  setFavorite: jest.fn(() => Promise.resolve({ status: 'ok' })),
+}));
 jest.mock('../../../auth/authService', () => ({ fetchOwnProfile: jest.fn() }));
 jest.mock('../../availabilityData', () => ({ listAvailabilityForBarberIds: jest.fn() }));
 jest.mock('../../discoveryData', () => ({ listBarbersByCity: jest.fn(), listServicesForBarberIds: jest.fn() }));
@@ -53,7 +57,7 @@ describe('ExploreScreen map fallback', () => {
   async function renderExplore() {
     let view!: ReturnType<typeof render>;
     await act(async () => {
-      view = render(<ExploreScreen navigation={{ navigate: jest.fn() } as never} route={{} as never} />);
+      view = render(<ExploreScreen navigation={{ navigate: jest.fn(), addListener: jest.fn(() => jest.fn()) } as never} route={{} as never} />);
       await Promise.resolve();
       await Promise.resolve();
       await Promise.resolve();

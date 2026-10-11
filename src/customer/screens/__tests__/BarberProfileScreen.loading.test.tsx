@@ -3,6 +3,10 @@ import { getBarberProfile, listPortfolioForBarber, listServicesForBarber } from 
 import { fetchReviewsForBarber } from '../../reviewsData';
 import BarberProfileScreen from '../BarberProfileScreen';
 
+jest.mock('../../personalData', () => ({
+  listFavoriteBarberIds: jest.fn(() => Promise.resolve({ status: 'ok', ids: new Set() })),
+  setFavorite: jest.fn(() => Promise.resolve({ status: 'ok' })),
+}));
 jest.mock('../../discoveryData', () => ({
   getBarberProfile: jest.fn(),
   listPortfolioForBarber: jest.fn(),
