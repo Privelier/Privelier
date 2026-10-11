@@ -13,7 +13,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../theme/useTheme';
 import { useUnread } from './UnreadContext';
-import { BrassTabIcon, HapticTabButton } from '../shared/components/BrassTabBarItem';
+import { BrassTabIcon, HapticTabButton, SlidingTabIndicator } from '../shared/components/BrassTabBarItem';
 import DiscoverScreen from './screens/DiscoverScreen';
 import AccountScreen from './screens/AccountScreen';
 import BookingsScreen from './screens/BookingsScreen';
@@ -29,6 +29,9 @@ export type CustomerTabParamList = {
 };
 
 const Tab = createBottomTabNavigator<CustomerTabParamList>();
+
+/** Tab order, matching the Tab.Screen order below; drives the sliding indicator. */
+const TAB_ORDER: string[] = ['Discover', 'Explore', 'Bookings', 'Inbox', 'Account'];
 
 const TAB_ICONS: Record<keyof CustomerTabParamList, keyof typeof Feather.glyphMap> = {
   Discover: 'compass',
@@ -65,7 +68,11 @@ export default function CustomerTabs() {
           elevation: 0,
         },
         tabBarHideOnKeyboard: true,
-        tabBarBackground: () => <GlassSurface variant="navigation" blurTarget={blurTargets[route.name]} style={{ flex: 1, borderRadius: 22 }} />,
+        tabBarBackground: () => (
+          <GlassSurface variant="navigation" blurTarget={blurTargets[route.name]} style={{ flex: 1, borderRadius: 22 }}>
+            <SlidingTabIndicator index={TAB_ORDER.indexOf(route.name)} count={TAB_ORDER.length} />
+          </GlassSurface>
+        ),
         tabBarLabel: labels[route.name],
         tabBarLabelStyle: { fontSize: 12, fontFamily: fonts.bodyMedium },
         tabBarIcon: ({ color, focused }) => <BrassTabIcon name={TAB_ICONS[route.name]} color={color} focused={focused} />,

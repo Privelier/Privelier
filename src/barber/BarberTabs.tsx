@@ -13,7 +13,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../theme/useTheme';
 import { useUnread } from './UnreadContext';
-import { BrassTabIcon, HapticTabButton } from '../shared/components/BrassTabBarItem';
+import { BrassTabIcon, HapticTabButton, SlidingTabIndicator } from '../shared/components/BrassTabBarItem';
 import StudioScreen from './screens/StudioScreen';
 import RequestsScreen from './screens/RequestsScreen';
 import PortfolioScreen from './screens/PortfolioScreen';
@@ -29,6 +29,9 @@ export type BarberTabParamList = {
 };
 
 const Tab = createBottomTabNavigator<BarberTabParamList>();
+
+/** Tab order, matching the Tab.Screen order below; drives the sliding indicator. */
+const TAB_ORDER: string[] = ['Studio', 'Requests', 'Portfolio', 'Chats', 'Verify'];
 
 const TAB_ICONS: Record<keyof BarberTabParamList, keyof typeof Feather.glyphMap> = {
   Studio: 'bar-chart-2',
@@ -65,7 +68,11 @@ export default function BarberTabs() {
           elevation: 0,
         },
         tabBarHideOnKeyboard: true,
-        tabBarBackground: () => <GlassSurface variant="navigation" blurTarget={blurTargets[route.name]} style={{ flex: 1, borderRadius: 22 }} />,
+        tabBarBackground: () => (
+          <GlassSurface variant="navigation" blurTarget={blurTargets[route.name]} style={{ flex: 1, borderRadius: 22 }}>
+            <SlidingTabIndicator index={TAB_ORDER.indexOf(route.name)} count={TAB_ORDER.length} />
+          </GlassSurface>
+        ),
         tabBarLabel: labels[route.name],
         tabBarLabelStyle: { fontSize: 12, fontFamily: fonts.bodyMedium },
         tabBarIcon: ({ color, focused }) => <BrassTabIcon name={TAB_ICONS[route.name]} color={color} focused={focused} />,
