@@ -618,7 +618,7 @@ function useStyles(colors: Palette) {
     },
     bubbleTheirs: { alignSelf: 'flex-start', borderColor: colors.border, borderBottomLeftRadius: 5, backgroundColor: 'rgba(245,241,232,0.035)' },
     bubbleOwn: { alignSelf: 'flex-end', borderColor: 'rgba(191,160,107,0.42)', borderBottomRightRadius: 5, backgroundColor: 'rgba(191,160,107,0.10)' },
-    bubbleFailed: { borderColor: colors.error },
+    bubbleFailed: { borderColor: colors.errorText },
     bubbleText: { fontSize: 16, lineHeight: 23, color: colors.textPrimary, fontFamily: fonts.body },
     bubbleFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6, marginTop: 4 },
     bubbleMeta: { fontSize: 11, color: colors.textSecondary, fontFamily: fonts.body },

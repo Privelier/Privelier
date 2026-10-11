@@ -25,7 +25,10 @@ export const darkPalette: Palette = {
   success: '#51785C',
   // Text variants: the authoritative success/error hues fail WCAG AA as body
   // text on the dark surfaces, so text gets lightened tints of the same hues;
-  // fills and borders keep the brand values.
+  // tinted fills keep the brand values. A border or line that marks an error
+  // state (inputs, checkboxes, destructive outlines, failed bubbles, error
+  // notices) uses `errorText`: the brand `error` is only 2.9:1 on `surface`,
+  // under the WCAG 1.4.11 3:1 floor for UI boundaries; `errorText` is 5.5:1.
   successText: '#7FA98B',
   error: '#A8453E',
   errorText: '#CE7A73',

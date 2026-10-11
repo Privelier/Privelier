@@ -328,7 +328,7 @@ export default function BookingsScreen() {
                       onPress={() => { setSelectedId(null); setConfirmingBooking(item); }}
                       style={({ pressed }) => [
                         styles.cancelButton,
-                        { borderColor: colors.error },
+                        { borderColor: colors.errorText },
                         pressed ? styles.cancelPressed : null,
                       ]}
                     >

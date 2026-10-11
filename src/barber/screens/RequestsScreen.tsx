@@ -545,7 +545,7 @@ function useStyles(colors: Palette) {
     actionPressed: { opacity: pressOpacity.firm },
     actionPrimary: { backgroundColor: colors.accent },
     actionPrimaryText: { fontSize: 14, color: colors.onAccent, fontFamily: fonts.bodySemiBold },
-    actionSecondary: { borderWidth: HAIRLINE, borderColor: colors.error },
+    actionSecondary: { borderWidth: HAIRLINE, borderColor: colors.errorText },
     actionSecondaryText: { fontSize: 14, color: colors.errorText, fontFamily: fonts.bodyMedium },
     actionSuccess: { borderWidth: HAIRLINE, borderColor: colors.success },
     actionSuccessText: { fontSize: 14, color: colors.successText, fontFamily: fonts.bodyMedium },

@@ -173,7 +173,7 @@ export function FormTextField({
           fieldStyles.inputRow,
           {
             backgroundColor: colors.surface,
-            borderColor: error ? colors.error : focused ? colors.accent : colors.border,
+            borderColor: error ? colors.errorText : focused ? colors.accent : colors.border,
           },
         ]}
         isDisabled={false}
