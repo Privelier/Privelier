@@ -1,4 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { stackScreenOptions } from '../shared/navigation/stackScreenOptions';
+import { useReducedMotionPreference } from '../shared/motion/useReducedMotionPreference';
 import type { NavigatorScreenParams } from '@react-navigation/native';
 import { RoleExitProvider } from '../RoleContext';
 import type { ChatRoomRow } from '../types';
@@ -30,13 +32,14 @@ export type BarberStackParamList = {
 const Stack = createNativeStackNavigator<BarberStackParamList>();
 
 export default function BarberNavigator({ onExit }: { onExit: () => void }) {
+  const reduceMotion = useReducedMotionPreference();
   return (
     <RoleExitProvider value={onExit}>
       {/* One unread-state instance for the whole barber app: the Chats tab
           badge, the bold thread rows, and the conversation screen's
           mark-as-read all read the same source of truth. */}
       <UnreadProvider>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Navigator screenOptions={stackScreenOptions(reduceMotion)}>
           <Stack.Screen name="BarberTabs" component={BarberTabs} />
           <Stack.Screen name="Services" component={ServicesScreen} />
           <Stack.Screen name="Availability" component={AvailabilityScreen} />
