@@ -45,6 +45,7 @@ import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
 import { BookingDetails } from '../../shared/components/BookingDetails';
 import { GlassSurface } from '../../shared/components/GlassSurface';
+import { Reveal } from '../../shared/motion';
 import { getAppLanguage } from '../../shared/locale';
 import { StatusPill } from '../../shared/components/StatusPill';
 import { Avatar } from '../../shared/components/Avatar';
@@ -474,75 +475,77 @@ export default function BookingsScreen() {
                 : 'No past appointments yet.'}
             </Text>
           }
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const barber = barbersById.get(item.barber_id);
             const service = servicesById.get(item.service_id);
             const cancellationQueued = queued[item.id] === true;
             const rowError = rowErrors[item.id];
             return (
-              <GlassSurface
-                style={styles.card}
-                testID={`customer-bookings-row-${item.id}`}
-              >
-                <Pressable accessibilityRole="button" accessibilityLabel={`${de ? 'Termindetails' : 'Appointment details'}, ${barber?.name ?? 'Barber'}, ${formatBookingWhen(item.date, item.time)}`} testID={`customer-bookings-open-${item.id}`} onPress={() => setSelectedId(item.id)} style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}>
-                <View style={styles.cardMain}>
-                  <Avatar
-                    id={barber?.id ?? item.barber_id}
-                    name={barber?.name}
-                    imageUrl={barber?.profile_image}
-                    size={56}
-                    accessible={false}
-                    testID={`customer-bookings-avatar-${item.id}`}
-                  />
-                  <View style={styles.cardInfo}>
-                    <View style={styles.cardTitleRow}>
+              <Reveal index={Math.min(index, 5)}>
+                <GlassSurface
+                  style={styles.card}
+                  testID={`customer-bookings-row-${item.id}`}
+                >
+                  <Pressable accessibilityRole="button" accessibilityLabel={`${de ? 'Termindetails' : 'Appointment details'}, ${barber?.name ?? 'Barber'}, ${formatBookingWhen(item.date, item.time)}`} testID={`customer-bookings-open-${item.id}`} onPress={() => setSelectedId(item.id)} style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}>
+                  <View style={styles.cardMain}>
+                    <Avatar
+                      id={barber?.id ?? item.barber_id}
+                      name={barber?.name}
+                      imageUrl={barber?.profile_image}
+                      size={56}
+                      accessible={false}
+                      testID={`customer-bookings-avatar-${item.id}`}
+                    />
+                    <View style={styles.cardInfo}>
+                      <View style={styles.cardTitleRow}>
+                        <Text
+                          numberOfLines={1}
+                          style={[styles.cardName, { color: colors.textPrimary, fontFamily: fonts.bodySemiBold }]}
+                        >
+                          {barber?.name ?? 'Barber'}
+                        </Text>
+                        <StatusPill
+                          status={item.status}
+                          testID={`customer-bookings-status-${item.id}`}
+                        />
+                      </View>
                       <Text
                         numberOfLines={1}
-                        style={[styles.cardName, { color: colors.textPrimary, fontFamily: fonts.bodySemiBold }]}
+                        style={[styles.cardMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}
                       >
-                        {barber?.name ?? 'Barber'}
+                        {service?.name ?? 'Service'}
                       </Text>
-                      <StatusPill
-                        status={item.status}
-                        testID={`customer-bookings-status-${item.id}`}
-                      />
+                      <Text style={[styles.cardMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                        {formatBookingWhen(item.date, item.time)}
+                      </Text>
                     </View>
-                    <Text
-                      numberOfLines={1}
-                      style={[styles.cardMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}
-                    >
-                      {service?.name ?? 'Service'}
-                    </Text>
-                    <Text style={[styles.cardMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                      {formatBookingWhen(item.date, item.time)}
+                    <Text style={[styles.cardPrice, numericText, { color: colors.textPrimary }]}>
+                      {formatMoney(item.price)}
                     </Text>
                   </View>
-                  <Text style={[styles.cardPrice, numericText, { color: colors.textPrimary }]}>
-                    {formatMoney(item.price)}
-                  </Text>
-                </View>
-                <Text
-                  numberOfLines={1}
-                  style={[styles.cardLocation, { color: colors.textSecondary, fontFamily: fonts.body }]}
-                >
-                  {item.location}
-                </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 }}><Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium, fontSize: 13 }}>{de ? 'Details ansehen' : 'View details'}</Text><Feather name="arrow-up-right" size={16} color={colors.accentText} /></View>
-                </Pressable>
-
-                {cancellationQueued ? <Text testID={`customer-bookings-row-undo-window-${item.id}`} style={[styles.reviewedText, { color: colors.textSecondary, fontFamily: fonts.body }]}>{de ? 'Stornierung vorgemerkt' : 'Cancellation pending'}</Text> : null}
-                {rowError ? (
-                  <View
-                    style={[styles.rowError, { borderTopColor: colors.border }]}
-                    accessibilityRole="alert"
-                    testID={`customer-bookings-row-error-${item.id}`}
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.cardLocation, { color: colors.textSecondary, fontFamily: fonts.body }]}
                   >
-                    <Text style={[styles.rowErrorText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-                      {rowError}
-                    </Text>
-                  </View>
-                ) : null}
-              </GlassSurface>
+                    {item.location}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 }}><Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium, fontSize: 13 }}>{de ? 'Details ansehen' : 'View details'}</Text><Feather name="arrow-up-right" size={16} color={colors.accentText} /></View>
+                  </Pressable>
+
+                  {cancellationQueued ? <Text testID={`customer-bookings-row-undo-window-${item.id}`} style={[styles.reviewedText, { color: colors.textSecondary, fontFamily: fonts.body }]}>{de ? 'Stornierung vorgemerkt' : 'Cancellation pending'}</Text> : null}
+                  {rowError ? (
+                    <View
+                      style={[styles.rowError, { borderTopColor: colors.border }]}
+                      accessibilityRole="alert"
+                      testID={`customer-bookings-row-error-${item.id}`}
+                    >
+                      <Text style={[styles.rowErrorText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
+                        {rowError}
+                      </Text>
+                    </View>
+                  ) : null}
+                </GlassSurface>
+              </Reveal>
             );
           }}
           />

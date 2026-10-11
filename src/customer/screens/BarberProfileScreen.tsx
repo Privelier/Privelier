@@ -42,6 +42,8 @@ import { GlassSurface } from '../../shared/components/GlassSurface';
 import { getAppLanguage } from '../../shared/locale';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { BackButton, OVER_IMAGE_BG, OVER_IMAGE_ICON } from '../../shared/components/ScreenBackHeader';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import { ScrollGlassHeader, useReducedMotionPreference, useScrollGlass } from '../../shared/motion';
 import { useTheme } from '../../theme/useTheme';
 import { numericText } from '../../theme/typography';
 import { pressOpacity } from '../../theme/motion';
@@ -66,15 +68,33 @@ const TABS: { key: TabKey; label: string }[] = [
 // (renamed on import — see that file for why this is the one shared source).
 const HERO_TEXT = OVER_IMAGE_ICON;
 const HERO_TEXT_DIM = 'rgba(245,241,232,0.72)';
+/** Reference height for the pull-down stretch (the hero's min height). */
+const HERO_PARALLAX_HEIGHT = 340;
 const HERO_SCRIM = OVER_IMAGE_BG;
 
 export default function BarberProfileScreen({ route, navigation }: Props) {
   const { barberId } = route.params;
   const { colors, fonts } = useTheme();
   const insets = useSafeAreaInsets();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<Animated.ScrollView>(null);
   const servicesY = useRef(0);
   const german = getAppLanguage() === 'de';
+  const { scrollY, onScroll } = useScrollGlass();
+  const reduceMotion = useReducedMotionPreference();
+  // Parallax hero, computed on the UI thread from the shared scroll offset:
+  // the photo drifts at 40% of scroll speed inside the clipped hero and, on
+  // an iOS pull-down, scales up slightly. Reduce Motion keeps the image
+  // fixed to the content.
+  const heroParallax = useAnimatedStyle(() => {
+    if (reduceMotion) return { transform: [{ translateY: 0 }, { scale: 1 }] };
+    const y = scrollY.value;
+    return {
+      transform: [
+        { translateY: y > 0 ? y * 0.4 : 0 },
+        { scale: y < 0 ? 1 + -y / HERO_PARALLAX_HEIGHT : 1 },
+      ],
+    };
+  });
 
   const [barber, setBarber] = useState<BarberDirectoryRow | null>(null);
   const [services, setServices] = useState<ServiceRow[]>([]);
@@ -210,11 +230,13 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
       {/* The hero image bleeds under the status bar; light icons read best
           over photography. The no-image fallback keeps the global "auto". */}
       {barber.profile_image ? <StatusBar style="light" /> : null}
-      <ScrollView ref={scrollRef} contentContainerStyle={{ paddingBottom: 32 }}>
+      <Animated.ScrollView onScroll={onScroll} scrollEventThrottle={16} ref={scrollRef} contentContainerStyle={{ paddingBottom: 32 }}>
         {/* Hero — image bleeds under the status bar like the prototype. */}
         <View style={[styles.hero, { backgroundColor: colors.surface }]}>
           {barber.profile_image ? (
-            <Image source={{ uri: barber.profile_image }} style={styles.heroImage} resizeMode="cover" />
+            <Animated.View style={[styles.heroImage, heroParallax]} testID="barber-profile-hero-parallax">
+              <Image source={{ uri: barber.profile_image }} style={styles.heroImageFill} resizeMode="cover" />
+            </Animated.View>
           ) : (
             <View style={[styles.heroFallback, { paddingTop: insets.top + 64 }]}>
               <View style={[styles.monogramFrame, { borderColor: colors.border }]}>
@@ -475,7 +497,8 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
             </View>
           )}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
+      <ScrollGlassHeader title={barber.name} scrollY={scrollY} start={280} testID="barber-profile-glass-header" />
 
       {canBook && fromPrice !== null ? (
         <GlassSurface style={[styles.bookingDock, { paddingBottom: Math.max(insets.bottom, 16) }]} testID="barber-profile-booking-dock">
@@ -548,8 +571,9 @@ const styles = StyleSheet.create({
   noticeText: { fontSize: 14 },
   emptyText: { fontSize: 14, textAlign: 'center', marginTop: 48, paddingHorizontal: 24 },
 
-  hero: { minHeight: 340 },
+  hero: { minHeight: 340, overflow: 'hidden' },
   heroImage: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  heroImageFill: { width: '100%', height: '100%' },
   heroFallback: { alignItems: 'center', paddingBottom: 28 },
   monogramFrame: { padding: 10, borderRadius: 60, borderWidth: 0.5 },
   heroTitleBlock: {

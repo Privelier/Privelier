@@ -19,7 +19,7 @@
  * flow).
  */
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import type { CompositeScreenProps } from '@react-navigation/native';
@@ -39,6 +39,8 @@ import { Avatar } from '../../shared/components/Avatar';
 import { NotificationBell } from '../../shared/components/NotificationBell';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { LegalLinks } from '../../legal/LegalComponents';
+import Animated from 'react-native-reanimated';
+import { Reveal, ScrollGlassHeader, useScrollGlass } from '../../shared/motion';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<CustomerTabParamList, 'Account'>,
@@ -52,6 +54,7 @@ const SETTINGS_ROWS: { key: AccountSectionKey; icon: keyof typeof Feather.glyphM
 
 export default function AccountScreen({ navigation }: Props) {
   const { colors, fonts } = useTheme();
+  const { scrollY, onScroll } = useScrollGlass();
   const onSignOut = useExitRole();
   const [profile, setProfile] = useState<UsersRow | null>(null);
   const [loading, setLoading] = useState(true);
@@ -74,7 +77,7 @@ export default function AccountScreen({ navigation }: Props) {
       edges={['top', 'left', 'right']}
       testID="customer-account-screen"
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <Animated.ScrollView onScroll={onScroll} scrollEventThrottle={16} contentContainerStyle={styles.scrollContent}>
         <View style={styles.headingRow}>
           <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>Account</Text>
           <NotificationBell onPress={() => navigation.navigate('NotificationCenter')} testID="customer-account-notifications" />
@@ -97,67 +100,71 @@ export default function AccountScreen({ navigation }: Props) {
               <Skeleton style={styles.skeletonMember} />
             </View>
           </View>
-        ) : profile ? <Pressable
-          onPress={() => navigation.navigate('EditProfile')}
-          accessibilityRole="button"
-          accessibilityLabel="Edit profile"
-          testID="customer-account-edit-profile"
-          style={({ pressed }) => [styles.profileRow, pressed ? { opacity: pressOpacity.soft } : null]}
-        >
-          <Avatar
-            id={profile.id}
-            name={profile.name}
-            imageUrl={profile.profile_image}
-            size={64}
-            accessible={false}
-            testID="customer-account-avatar"
-          />
-          <View style={styles.profileText}>
-            <Text
-              numberOfLines={1}
-              style={[styles.name, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}
-            >
-              {profile.name}
-            </Text>
-            {profile.email ? (
+        ) : profile ? <Reveal index={0}>
+          <Pressable
+            onPress={() => navigation.navigate('EditProfile')}
+            accessibilityRole="button"
+            accessibilityLabel="Edit profile"
+            testID="customer-account-edit-profile"
+            style={({ pressed }) => [styles.profileRow, pressed ? { opacity: pressOpacity.soft } : null]}
+          >
+            <Avatar
+              id={profile.id}
+              name={profile.name}
+              imageUrl={profile.profile_image}
+              size={64}
+              accessible={false}
+              testID="customer-account-avatar"
+            />
+            <View style={styles.profileText}>
               <Text
                 numberOfLines={1}
-                style={[styles.email, { color: colors.textSecondary, fontFamily: fonts.body }]}
+                style={[styles.name, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}
               >
-                {profile.email}
+                {profile.name}
               </Text>
-            ) : null}
-            <Text style={[styles.member, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
-              Member
-            </Text>
-          </View>
-          <Feather name="edit-2" size={20} color={colors.textSecondary} />
-        </Pressable> : null}
+              {profile.email ? (
+                <Text
+                  numberOfLines={1}
+                  style={[styles.email, { color: colors.textSecondary, fontFamily: fonts.body }]}
+                >
+                  {profile.email}
+                </Text>
+              ) : null}
+              <Text style={[styles.member, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
+                Member
+              </Text>
+            </View>
+            <Feather name="edit-2" size={20} color={colors.textSecondary} />
+          </Pressable>
+        </Reveal> : null}
 
-        <View style={[styles.settingsList, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          {SETTINGS_ROWS.map(({ key, icon }, index) => (
-            <Pressable
-              key={key}
-              onPress={() => navigation.navigate('AccountSection', { section: key })}
-              accessibilityRole="button"
-              accessibilityLabel={ACCOUNT_SECTIONS[key].title}
-              testID={`customer-account-row-${key}`}
-              style={({ pressed }) => [
-                styles.settingsRow,
-                index > 0 ? { borderTopWidth: 0.5, borderTopColor: colors.border } : null,
-                pressed ? { opacity: pressOpacity.soft } : null,
-              ]}
-            >
-              {/* Brass is rationed to the "Member" label only; row icons are muted
-                  so the accent reads as a badge, not decoration. */}
-              <Feather name={icon} size={20} color={colors.textSecondary} />
-              <Text style={[styles.settingsLabel, { color: colors.textPrimary, fontFamily: fonts.body }]}>
-                {ACCOUNT_SECTIONS[key].title}
-              </Text>
-              <Feather name="chevron-right" size={20} color={colors.textSecondary} />
-            </Pressable>
-          ))}
-        </View>
+        <Reveal index={1}>
+          <View style={[styles.settingsList, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            {SETTINGS_ROWS.map(({ key, icon }, index) => (
+              <Pressable
+                key={key}
+                onPress={() => navigation.navigate('AccountSection', { section: key })}
+                accessibilityRole="button"
+                accessibilityLabel={ACCOUNT_SECTIONS[key].title}
+                testID={`customer-account-row-${key}`}
+                style={({ pressed }) => [
+                  styles.settingsRow,
+                  index > 0 ? { borderTopWidth: 0.5, borderTopColor: colors.border } : null,
+                  pressed ? { opacity: pressOpacity.soft } : null,
+                ]}
+              >
+                {/* Brass is rationed to the "Member" label only; row icons are muted
+                    so the accent reads as a badge, not decoration. */}
+                <Feather name={icon} size={20} color={colors.textSecondary} />
+                <Text style={[styles.settingsLabel, { color: colors.textPrimary, fontFamily: fonts.body }]}>
+                  {ACCOUNT_SECTIONS[key].title}
+                </Text>
+                <Feather name="chevron-right" size={20} color={colors.textSecondary} />
+              </Pressable>
+            ))}
+          </View>
+        </Reveal>
 
         <Pressable
           onPress={onSignOut}
@@ -176,7 +183,8 @@ export default function AccountScreen({ navigation }: Props) {
           </Text>
         </Pressable>
         <LegalLinks includeAll testIDPrefix="customer-account-legal" />
-      </ScrollView>
+      </Animated.ScrollView>
+      <ScrollGlassHeader title={'Account'} scrollY={scrollY} start={48} testID="customer-account-glass-header" />
     </SafeAreaView>
   );
 }

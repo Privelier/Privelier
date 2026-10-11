@@ -52,6 +52,7 @@ import { RetryNotice } from '../../shared/components/RetryNotice';
 import { StatusPill } from '../../shared/components/StatusPill';
 import { BookingDetails } from '../../shared/components/BookingDetails';
 import { ConfirmSheet } from '../../shared/components/ConfirmSheet';
+import { Reveal } from '../../shared/motion';
 import { GlassSurface } from '../../shared/components/GlassSurface';
 import { Avatar } from '../../shared/components/Avatar';
 import { BookingListSkeleton } from '../../shared/components/BookingListSkeleton';
@@ -387,7 +388,7 @@ export default function RequestsScreen() {
               </Text>
             </View>
           ) : null}
-          renderItem={({ item, section }) => {
+          renderItem={({ item, index, section }) => {
             if (section.key === 'history' && !historyExpanded) return null;
             const service = servicesById.get(item.service_id);
             const counterpart = counterpartsById.get(item.id);
@@ -396,53 +397,55 @@ export default function RequestsScreen() {
             const title = counterpart?.name ?? service?.name ?? 'Booking';
             const subline = counterpart ? service?.name ?? 'Service' : formatBookingWhen(item.date, item.time);
             return (
-              <GlassSurface style={styles.card} testID={`barber-requests-row-${item.id}`}>
-                <Pressable accessibilityRole="button" accessibilityLabel={`${language === 'de' ? 'Termindetails' : 'Appointment details'}, ${title}, ${formatBookingWhen(item.date, item.time)}`} testID={`barber-requests-open-${item.id}`} onPress={() => setSelectedId(item.id)} style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}>
-                <View style={styles.cardTop}>
-                  <Avatar
-                    id={counterpart?.id ?? item.customer_id}
-                    name={counterpart?.name}
-                    imageUrl={counterpart?.profile_image}
-                    size={44}
-                    accessible={false}
-                    testID={`barber-requests-avatar-${item.id}`}
-                  />
-                  <View style={styles.cardInfo}>
-                    <Text numberOfLines={1} style={styles.cardTitle}>
-                      {title}
-                    </Text>
-                    <Text numberOfLines={1} style={styles.cardMeta}>
-                      {subline}
-                    </Text>
-                    {counterpart ? (
-                      <Text style={styles.cardMeta}>{formatBookingWhen(item.date, item.time)}</Text>
-                    ) : null}
-                    <Text numberOfLines={1} style={styles.cardMeta}>
-                      {item.location}
-                    </Text>
-                  </View>
-                  <View style={styles.cardRight}>
-                    <Text style={[styles.cardPrice, numericText]}>{formatMoney(item.price)}</Text>
-                    <StatusPill
-                      status={item.status}
-                      testID={`barber-requests-status-${item.id}`}
-                      style={styles.cardStatus}
+              <Reveal index={Math.min(index, 5)}>
+                <GlassSurface style={styles.card} testID={`barber-requests-row-${item.id}`}>
+                  <Pressable accessibilityRole="button" accessibilityLabel={`${language === 'de' ? 'Termindetails' : 'Appointment details'}, ${title}, ${formatBookingWhen(item.date, item.time)}`} testID={`barber-requests-open-${item.id}`} onPress={() => setSelectedId(item.id)} style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}>
+                  <View style={styles.cardTop}>
+                    <Avatar
+                      id={counterpart?.id ?? item.customer_id}
+                      name={counterpart?.name}
+                      imageUrl={counterpart?.profile_image}
+                      size={44}
+                      accessible={false}
+                      testID={`barber-requests-avatar-${item.id}`}
                     />
+                    <View style={styles.cardInfo}>
+                      <Text numberOfLines={1} style={styles.cardTitle}>
+                        {title}
+                      </Text>
+                      <Text numberOfLines={1} style={styles.cardMeta}>
+                        {subline}
+                      </Text>
+                      {counterpart ? (
+                        <Text style={styles.cardMeta}>{formatBookingWhen(item.date, item.time)}</Text>
+                      ) : null}
+                      <Text numberOfLines={1} style={styles.cardMeta}>
+                        {item.location}
+                      </Text>
+                    </View>
+                    <View style={styles.cardRight}>
+                      <Text style={[styles.cardPrice, numericText]}>{formatMoney(item.price)}</Text>
+                      <StatusPill
+                        status={item.status}
+                        testID={`barber-requests-status-${item.id}`}
+                        style={styles.cardStatus}
+                      />
+                    </View>
                   </View>
-                </View>
 
-                <Text style={{ color: colors.accentText, fontSize: 13, marginTop: 16 }}>{language === 'de' ? 'Details ansehen' : 'View details'}</Text>
-                </Pressable>
-                {rowError ? (
-                  <View
-                    style={styles.rowError}
-                    accessibilityRole="alert"
-                    testID={`barber-requests-row-error-${item.id}`}
-                  >
-                    <Text style={styles.rowErrorText}>{rowError}</Text>
-                  </View>
-                ) : null}
-              </GlassSurface>
+                  <Text style={{ color: colors.accentText, fontSize: 13, marginTop: 16 }}>{language === 'de' ? 'Details ansehen' : 'View details'}</Text>
+                  </Pressable>
+                  {rowError ? (
+                    <View
+                      style={styles.rowError}
+                      accessibilityRole="alert"
+                      testID={`barber-requests-row-error-${item.id}`}
+                    >
+                      <Text style={styles.rowErrorText}>{rowError}</Text>
+                    </View>
+                  ) : null}
+                </GlassSurface>
+              </Reveal>
             );
           }}
           />
