@@ -54,6 +54,7 @@ import { HAIRLINE, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
 import { GlassSurface } from '../../shared/components/GlassSurface';
+import { PortfolioGridSkeleton } from '../../shared/components/ScreenSkeletons';
 import { ConfirmSheet } from '../../shared/components/ConfirmSheet';
 import { useToast } from '../../shared/components/ToastProvider';
 import { getAppLanguage } from '../../shared/locale';
@@ -270,11 +271,10 @@ export default function PortfolioScreen({ navigation }: Props) {
         </Text>
 
         {loading ? (
-          <ActivityIndicator
-            size="small"
-            color={colors.accent}
-            style={styles.spinner}
+          <PortfolioGridSkeleton
             testID="barber-portfolio-loading"
+            label={language === 'de' ? 'Portfolio wird geladen' : 'Loading your portfolio'}
+            style={styles.gridSpacing}
           />
         ) : error ? (
           <RetryNotice testID="barber-portfolio-error" message={error} onRetry={() => void load()} style={styles.noticeMargins} />
@@ -362,8 +362,6 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: space.xl, paddingTop: space.xl, paddingBottom: space['2xl'] },
   heading: { fontSize: 30 },
   subtitle: { fontSize: 14, lineHeight: 21, marginTop: 6 },
-
-  spinner: { marginTop: 48 },
   noticeMargins: { marginTop: space.xl },
 
   gridSpacing: { marginTop: space.xl },

@@ -302,6 +302,28 @@ describe('BioEditScreen', () => {
     expect(screen.queryByTestId('barber-bio-save')).toBeNull();
   });
 
+  it('recovers from a load failure through its retry action', async () => {
+    mockFetchProfile
+      .mockResolvedValueOnce({
+        status: 'error',
+        code: 'network',
+        message: 'We could not load your profile. Check your connection and try again.',
+        retryable: true,
+      })
+      .mockResolvedValueOnce(PROFILE('Ten years of sharp fades.'));
+
+    await renderScreen();
+    await flushMount();
+    expect(screen.getByTestId('barber-bio-load-error')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('barber-bio-load-error-retry'));
+    await flushMount();
+
+    expect(screen.queryByTestId('barber-bio-load-error')).toBeNull();
+    expect(screen.getByTestId('barber-bio-input').props.value).toBe('Ten years of sharp fades.');
+    expect(mockFetchProfile).toHaveBeenCalledTimes(2);
+  });
+
   it('emphasises the character counter only in the last 50 characters', async () => {
     mockFetchProfile.mockResolvedValue(PROFILE(null));
 

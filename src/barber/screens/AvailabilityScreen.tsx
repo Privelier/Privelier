@@ -17,7 +17,6 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Pressable,
   StyleSheet,
@@ -35,6 +34,7 @@ import { PrimaryButton } from '../../shared/components/PrimaryButton';
 import { BackButton } from '../../shared/components/ScreenBackHeader';
 import { Notice } from '../../shared/components/Notice';
 import { ConfirmSheet } from '../../shared/components/ConfirmSheet';
+import { RowListSkeleton } from '../../shared/components/ScreenSkeletons';
 import { useToast } from '../../shared/components/ToastProvider';
 import { getAppLanguage } from '../../shared/locale';
 import type { Palette } from '../../theme/colors';
@@ -499,7 +499,9 @@ export default function AvailabilityScreen({ navigation }: Props) {
               <Text style={[styles.listTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
                 Your availability
               </Text>
-              {listLoading ? <ActivityIndicator size="small" color={colors.accent} /> : null}
+              {listLoading ? (
+                <RowListSkeleton testID="barber-availability-loading" label={de ? 'Verfügbarkeit wird geladen' : 'Loading your availability'} />
+              ) : null}
               {listError ? (
                 <Text style={[styles.errorText, { color: colors.errorText, fontFamily: fonts.body }]}>
                   {listError}

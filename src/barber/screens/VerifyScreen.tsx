@@ -32,6 +32,7 @@ import { pressOpacity } from '../../theme/motion';
 import { Notice } from '../../shared/components/Notice';
 import { useToast } from '../../shared/components/ToastProvider';
 import { GlassSurface } from '../../shared/components/GlassSurface';
+import { StatusCardSkeleton } from '../../shared/components/ScreenSkeletons';
 import { getAppLanguage } from '../../shared/locale';
 import type { VerificationDocType, VerificationRequestRow, VerificationStatus } from '../../types';
 import { fetchOwnBarberProfile, fetchOwnVerificationRequest } from '../profileData';
@@ -194,11 +195,10 @@ export default function VerifyScreen() {
         </Text>
 
         {loading ? (
-          <ActivityIndicator
-            size="small"
-            color={colors.accent}
-            style={styles.spinner}
+          <StatusCardSkeleton
             testID="barber-verify-loading"
+            label={language === 'de' ? 'Verifizierung wird geladen' : 'Loading your verification'}
+            style={styles.noticeMargins}
           />
         ) : error ? (
           <Notice testID="barber-verify-error" message={error} style={styles.noticeMargins}>
@@ -433,8 +433,6 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: space.xl, paddingTop: space.xl, paddingBottom: space['2xl'] },
   heading: { fontSize: 30 },
   subtitle: { fontSize: 14, lineHeight: 21, marginTop: 8 },
-
-  spinner: { marginTop: 48, alignSelf: 'center' },
   noticeMargins: { marginTop: space.xl },
   noticeAction: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
   contactAction: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start', marginTop: space.sm },

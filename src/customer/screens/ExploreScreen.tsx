@@ -22,7 +22,6 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Pressable,
   ScrollView,
@@ -40,6 +39,7 @@ import { fetchOwnProfile } from '../../auth/authService';
 import { useTheme } from '../../theme/useTheme';
 import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
+import { CardListSkeleton } from '../../shared/components/ScreenSkeletons';
 import { GlassSurface } from '../../shared/components/GlassSurface';
 import type { AvailabilityRow, BarberDirectoryRow, ServiceRow } from '../../types';
 import { listBarbersByCity, listServicesForBarberIds } from '../discoveryData';
@@ -345,11 +345,9 @@ export default function ExploreScreen({ navigation }: Props) {
       </ScrollView>
 
       {loading ? (
-        <ActivityIndicator
-          size="small"
-          color={colors.accent}
-          style={styles.spinner}
+        <CardListSkeleton
           testID="customer-explore-loading"
+          label={getAppLanguage() === 'de' ? 'Barber werden geladen' : 'Loading barbers'}
         />
       ) : error ? (
         <RetryNotice testID="customer-explore-error" message={error} onRetry={() => void load()} style={styles.noticeMargins} />
@@ -486,8 +484,6 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   chipText: { fontSize: 12 },
-
-  spinner: { marginTop: 48 },
   noticeMargins: { marginTop: 32, marginHorizontal: 24 },
   emptyText: { fontSize: 14, textAlign: 'center', marginTop: 48, paddingHorizontal: 24 },
 

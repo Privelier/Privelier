@@ -48,6 +48,7 @@ import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../theme/useTheme';
 import { pressOpacity } from '../../theme/motion';
 import { Notice } from '../../shared/components/Notice';
+import { ConversationSkeleton } from '../../shared/components/ScreenSkeletons';
 import { BackButton } from '../../shared/components/ScreenBackHeader';
 import type { Palette } from '../../theme/colors';
 import type { MessageRow } from '../../types';
@@ -358,11 +359,9 @@ function ConversationRoom({ route, navigation }: Props) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {showSpinner ? (
-          <ActivityIndicator
-            size="small"
-            color={colors.accent}
-            style={styles.spinner}
+          <ConversationSkeleton
             testID="customer-conversation-loading"
+            label={getAppLanguage() === 'de' ? 'Nachrichten werden geladen' : 'Loading messages'}
           />
         ) : showError ? (
           <Notice testID="customer-conversation-error" message={error ?? ''} style={styles.noticeMargins} />
@@ -574,7 +573,6 @@ function useStyles(colors: Palette) {
     headerSubtitle: { fontSize: 13, marginTop: 2, color: colors.textSecondary, fontFamily: fonts.body },
 
     body: { flex: 1 },
-    spinner: { marginTop: 48 },
     noticeMargins: { marginTop: 24, marginHorizontal: 24 },
 
     listContent: { paddingHorizontal: 24, paddingVertical: 16, flexGrow: 1 },

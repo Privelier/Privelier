@@ -16,7 +16,6 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Pressable,
   StyleSheet,
@@ -35,6 +34,7 @@ import { PrimaryButton } from '../../shared/components/PrimaryButton';
 import { BackButton } from '../../shared/components/ScreenBackHeader';
 import { Notice } from '../../shared/components/Notice';
 import { ConfirmSheet } from '../../shared/components/ConfirmSheet';
+import { RowListSkeleton } from '../../shared/components/ScreenSkeletons';
 import { useToast } from '../../shared/components/ToastProvider';
 import { getAppLanguage } from '../../shared/locale';
 import { formatMoney } from '../../shared/format';
@@ -379,7 +379,9 @@ export default function ServicesScreen({ navigation }: Props) {
               <Text style={[styles.listTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
                 Your services
               </Text>
-              {listLoading ? <ActivityIndicator size="small" color={colors.accent} /> : null}
+              {listLoading ? (
+                <RowListSkeleton testID="barber-services-loading" label={de ? 'Leistungen werden geladen' : 'Loading your services'} />
+              ) : null}
               {listError ? (
                 <Text style={[styles.errorText, { color: colors.errorText, fontFamily: fonts.body }]}>
                   {listError}

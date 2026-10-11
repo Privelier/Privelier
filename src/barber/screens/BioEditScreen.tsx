@@ -20,7 +20,6 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -37,6 +36,8 @@ import { HAIRLINE, radius, space } from '../../theme/spacing';
 import { PrimaryButton } from '../../shared/components/PrimaryButton';
 import { BackButton } from '../../shared/components/ScreenBackHeader';
 import { Notice } from '../../shared/components/Notice';
+import { RetryNotice } from '../../shared/components/RetryNotice';
+import { FormSkeleton } from '../../shared/components/ScreenSkeletons';
 import { ConfirmSheet } from '../../shared/components/ConfirmSheet';
 import { getAppLanguage } from '../../shared/locale';
 import { useDiscardGuard } from '../../shared/useDiscardGuard';
@@ -69,6 +70,12 @@ export default function BioEditScreen({ navigation }: Props) {
   // an abandon by the discard guard below (`dirty` is still true at that point —
   // initialBio is never rewritten).
   const savedRef = useRef(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const retryLoad = useCallback(() => {
+    setLoadError(null);
+    setLoading(true);
+    setLoadAttempt((n) => n + 1);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -96,7 +103,7 @@ export default function BioEditScreen({ navigation }: Props) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [loadAttempt]);
 
   // Dirty only when the trimmed text differs from what loaded — this both
   // prevents pointless no-op writes and allows clearing (initial "x" -> "" is
@@ -147,14 +154,13 @@ export default function BioEditScreen({ navigation }: Props) {
       </View>
 
       {loading ? (
-        <ActivityIndicator
-          size="small"
-          color={colors.accent}
-          style={styles.spinner}
+        <FormSkeleton
           testID="barber-bio-loading"
+          label={de ? 'Bio wird geladen' : 'Loading your bio'}
+          multiline={true}
         />
       ) : loadError ? (
-        <Notice testID="barber-bio-load-error" message={loadError} style={styles.noticeMargins} />
+        <RetryNotice testID="barber-bio-load-error" message={loadError} onRetry={retryLoad} style={styles.noticeMargins} />
       ) : (
         <KeyboardAvoidingView
           style={styles.flex}
@@ -265,7 +271,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   header: { paddingHorizontal: space.xl, paddingTop: space.md },
   heading: { fontSize: 24, marginTop: 16 },
-  spinner: { marginTop: 48 },
   noticeMargins: { marginHorizontal: space.xl, marginTop: space.lg },
   // For a notice rendered INSIDE the already-padded ScrollView body.
   noticeInline: { marginHorizontal: 0, marginTop: 0, marginBottom: 18 },

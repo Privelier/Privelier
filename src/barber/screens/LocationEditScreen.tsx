@@ -41,6 +41,8 @@ import { pressOpacity } from '../../theme/motion';
 import { PrimaryButton } from '../../shared/components/PrimaryButton';
 import { BackButton } from '../../shared/components/ScreenBackHeader';
 import { Notice } from '../../shared/components/Notice';
+import { RetryNotice } from '../../shared/components/RetryNotice';
+import { FormSkeleton } from '../../shared/components/ScreenSkeletons';
 import { ConfirmSheet } from '../../shared/components/ConfirmSheet';
 import { getAppLanguage } from '../../shared/locale';
 import { useDiscardGuard } from '../../shared/useDiscardGuard';
@@ -80,6 +82,12 @@ export default function LocationEditScreen({ navigation }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [focused, setFocused] = useState(false);
   const savedRef = useRef(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const retryLoad = useCallback(() => {
+    setLoadError(null);
+    setLoading(true);
+    setLoadAttempt((n) => n + 1);
+  }, []);
 
   // Mount fetch (plain useEffect — leaf editor, bio-edit C6 precedent).
   useEffect(() => {
@@ -116,7 +124,7 @@ export default function LocationEditScreen({ navigation }: Props) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [loadAttempt]);
 
   // Debounced geocode-as-you-type, driven entirely from the change handler
   // (no setState-in-effect): each keystroke cancels the pending timer, and a
@@ -233,14 +241,13 @@ export default function LocationEditScreen({ navigation }: Props) {
       </View>
 
       {loading ? (
-        <ActivityIndicator
-          size="small"
-          color={colors.accent}
-          style={styles.spinner}
+        <FormSkeleton
           testID="barber-location-loading"
+          label={de ? 'Standort wird geladen' : 'Loading your location'}
+          multiline={false}
         />
       ) : loadError ? (
-        <Notice testID="barber-location-load-error" message={loadError} style={styles.noticeMargins} />
+        <RetryNotice testID="barber-location-load-error" message={loadError} onRetry={retryLoad} style={styles.noticeMargins} />
       ) : (
         <KeyboardAvoidingView
           style={styles.flex}
@@ -391,7 +398,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   header: { paddingHorizontal: space.xl, paddingTop: space.md },
   heading: { fontSize: 24, marginTop: 16 },
-  spinner: { marginTop: 48 },
   noticeMargins: { marginHorizontal: space.xl, marginTop: space.lg },
   noticeInline: { marginHorizontal: 0, marginTop: 0, marginBottom: 18 },
   body: { paddingHorizontal: space.xl, paddingTop: space.lg, paddingBottom: space['2xl'] },

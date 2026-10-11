@@ -32,6 +32,7 @@ import { useTheme } from '../../theme/useTheme';
 import { HAIRLINE, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 import { Notice } from '../../shared/components/Notice';
+import { ConversationSkeleton } from '../../shared/components/ScreenSkeletons';
 import { BackButton } from '../../shared/components/ScreenBackHeader';
 import type { Palette } from '../../theme/colors';
 import type { MessageRow } from '../../types';
@@ -354,11 +355,9 @@ function ConversationRoom({ route, navigation }: Props) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {showSpinner ? (
-          <ActivityIndicator
-            size="small"
-            color={colors.accent}
-            style={styles.spinner}
+          <ConversationSkeleton
             testID="barber-conversation-loading"
+            label={getAppLanguage() === 'de' ? 'Nachrichten werden geladen' : 'Loading messages'}
           />
         ) : showError ? (
           <Notice testID="barber-conversation-error" message={error ?? ''} style={styles.noticeMargins} />
@@ -568,7 +567,6 @@ function useStyles(colors: Palette) {
     headerSubtitle: { fontSize: 13, marginTop: 2, color: colors.textSecondary, fontFamily: fonts.body },
 
     body: { flex: 1 },
-    spinner: { marginTop: 48 },
     noticeMargins: { marginTop: space.xl, marginHorizontal: space.xl },
 
     listContent: { paddingHorizontal: space.xl, paddingVertical: space.base, flexGrow: 1 },
