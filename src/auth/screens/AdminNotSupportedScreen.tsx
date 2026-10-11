@@ -14,7 +14,7 @@ export default function AdminNotSupportedScreen({ onSignOut }: { onSignOut: () =
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: 'transparent' }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       testID="admin-screen"
     >
       <View style={styles.center}>

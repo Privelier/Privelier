@@ -246,7 +246,7 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: 'transparent' }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top', 'left', 'right']}
       testID="customer-booking-datetime-screen"
     >

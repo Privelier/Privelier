@@ -12,7 +12,7 @@
  * Password: at least 8 characters enforced client-side (Supabase's default
  * server minimum is 6 — deliberate premium-product decision, see validation.ts).
  */
-import { getAppLanguage } from '../../shared/locale';
+import { defaultCountry, getAppLanguage } from '../../shared/locale';
 import { useCallback, useRef, useState } from 'react';
 import { StyleSheet, Text, View, type TextInput } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -51,7 +51,7 @@ export default function SignupScreen({ navigation, route }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [city, setCity] = useState('');
-  const [country, setCountry] = useState('');
+  const [country, setCountry] = useState(defaultCountry);
   const [phone, setPhone] = useState('');
   const [bio, setBio] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});

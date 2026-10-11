@@ -9,7 +9,6 @@ import { formatBookingWhen, formatMoney } from '../format';
 import { getAppLanguage } from '../locale';
 import { useReducedMotionPreference } from '../motion/useReducedMotionPreference';
 import { GlassSurface } from './GlassSurface';
-import { AmbientBackdrop } from './AmbientBackdrop';
 import { Reveal } from '../motion/Reveal';
 import { StatusPill } from './StatusPill';
 
@@ -31,8 +30,6 @@ export function BookingDetails({ booking, role, person, service, onClose, childr
   return (
     <Modal visible onRequestClose={onClose} presentationStyle="pageSheet" animationType={reduceMotion ? 'fade' : 'slide'}>
       <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
-        {/* A modal is its own native window, outside the navigators. */}
-        <AmbientBackdrop />
         <View style={styles.header}>
           <Text accessibilityRole="header" style={[styles.title, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
             {de ? 'Dein Termin' : 'Appointment'}

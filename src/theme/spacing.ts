@@ -15,6 +15,9 @@
  * is deliberately no `shadow`/`elevation` token here — adding one would violate
  * the flat brand. Separation comes from `border` (hairline) + `surface` vs
  * `background`.
+ *
+ * Exception (2026-10-11): glass components carry their own sheen gradient and
+ * inset light edge (see shared/components/GlassSurface.tsx). Screens stay flat.
  */
 
 /** 4-based spacing scale. Use `space.md` etc., never a bare number. */

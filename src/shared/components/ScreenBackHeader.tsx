@@ -16,6 +16,7 @@ import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../theme/useTheme';
 import { space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
+import { useGlassStyle } from './GlassSurface';
 
 // Theme-INDEPENDENT: a disc (or any overlay) over a photo hero must read the
 // same in both modes. Exported so any screen with its own hero — currently
@@ -42,7 +43,10 @@ export function BackButton({
   accessibilityLabel?: string;
 }) {
   const { colors } = useTheme();
-  const bg = tone === 'overImage' ? OVER_IMAGE_BG : colors.surface;
+  // On a screen the disc is a small glass pane; over a photo it keeps the
+  // fixed scrim so it reads the same on any image.
+  const glassStyle = useGlassStyle('neutral');
+  const surface = tone === 'overImage' ? { backgroundColor: OVER_IMAGE_BG } : glassStyle;
   const iconColor = tone === 'overImage' ? OVER_IMAGE_ICON : colors.textPrimary;
   return (
     <Pressable
@@ -54,7 +58,8 @@ export function BackButton({
       testID={testID}
       style={({ pressed }) => [
         styles.disc,
-        { backgroundColor: bg, opacity: pressed && !disabled ? pressOpacity.soft : 1 },
+        surface,
+        { opacity: pressed && !disabled ? pressOpacity.soft : 1 },
       ]}
     >
       <Feather name="arrow-left" size={16} color={iconColor} />
@@ -101,7 +106,7 @@ export function ScreenBackHeader({
 }
 
 const styles = StyleSheet.create({
-  disc: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  disc: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

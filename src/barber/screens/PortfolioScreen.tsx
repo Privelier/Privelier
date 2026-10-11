@@ -68,6 +68,7 @@ import {
 } from '../portfolioData';
 import type { BarberTabParamList } from '../BarberTabs';
 import type { BarberStackParamList } from '../BarberNavigator';
+import { useTabBarClearance } from '../../shared/navigation/tabBarClearance';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<BarberTabParamList, 'Portfolio'>,
@@ -96,6 +97,8 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 export default function PortfolioScreen({ navigation }: Props) {
+  // Scroll the last row clear of the floating glass tab bar.
+  const tabClearance = useTabBarClearance(32);
   const de = getAppLanguage() === 'de';
   const { colors, fonts } = useTheme();
   const language = getAppLanguage();
@@ -230,11 +233,11 @@ export default function PortfolioScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: 'transparent' }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top', 'left', 'right']}
       testID="barber-portfolio-screen"
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: tabClearance }]}>
         <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
           Studio
         </Text>

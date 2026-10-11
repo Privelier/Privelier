@@ -7,7 +7,8 @@ import { View } from 'react-native';
 import { BlurTargetView } from 'expo-blur';
 import { getAppLanguage } from '../shared/locale';
 import { GlassSurface } from '../shared/components/GlassSurface';
-import { AmbientBackdrop } from '../shared/components/AmbientBackdrop';
+import { TAB_BAR_FLOAT_GAP } from '../shared/navigation/tabBarClearance';
+import { TabBarClearanceBridge } from '../shared/navigation/TabBarClearanceBridge';
 /**
  * Customer bottom-tab shell, rebuilt from the prototype's CustomerBottomNav:
  * five tabs (Discover, Explore, Bookings, Inbox, Account), hairline top
@@ -65,22 +66,28 @@ export default function CustomerTabs() {
   return (
     <Tab.Navigator
       screenLayout={({ children, route }) => (
-        <BlurTargetView ref={blurTargets[route.name]} style={{ flex: 1 }}>
-          <AmbientBackdrop />
-          {children}
+        // The blur target is the screen itself: the floating glass bar frosts
+        // the content scrolling beneath it.
+        <BlurTargetView ref={blurTargets[route.name]} style={{ flex: 1, backgroundColor: colors.background }}>
+          <TabBarClearanceBridge>{children}</TabBarClearanceBridge>
         </BlurTargetView>
       )}
       screenOptions={({ route }) => ({
         headerShown: false,
-        // Screens are transparent; the backdrop above paints beneath them.
-        sceneStyle: { backgroundColor: 'transparent' },
+        sceneStyle: { backgroundColor: colors.background },
         tabBarActiveTintColor: colors.accentText,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
+          // Floats over the screen (scroll content clears it with
+          // useTabBarClearance), so the glass has content to frost.
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
           backgroundColor: 'transparent',
           marginHorizontal: 12,
-          marginBottom: 6,
-          borderRadius: 22,
+          marginBottom: TAB_BAR_FLOAT_GAP,
+          borderRadius: 24,
           paddingTop: 6,
           borderTopWidth: 0,
           borderTopColor: colors.border,
@@ -88,7 +95,7 @@ export default function CustomerTabs() {
         },
         tabBarHideOnKeyboard: true,
         tabBarBackground: () => (
-          <GlassSurface variant="navigation" blurTarget={blurTargets[route.name]} style={{ flex: 1, borderRadius: 22 }}>
+          <GlassSurface variant="navigation" blurTarget={blurTargets[route.name]} style={{ flex: 1, borderRadius: 24 }}>
             <SlidingTabIndicator index={TAB_ORDER.indexOf(route.name)} count={TAB_ORDER.length} />
           </GlassSurface>
         ),

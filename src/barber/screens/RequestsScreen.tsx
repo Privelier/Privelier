@@ -75,6 +75,8 @@ import {
 import { useBookingsRealtime } from '../../shared/useBookingsRealtime';
 import { formatBookingWhen, formatMoney } from '../../shared/format';
 import { getAppLanguage } from '../../shared/locale';
+import { EmptyState } from '../../shared/components/EmptyState';
+import { useTabBarClearance } from '../../shared/navigation/tabBarClearance';
 
 /**
  * Confirm an irreversible transition before running it, matching the
@@ -117,6 +119,8 @@ export function buildRequestSections(bookings: BookingRow[], today: string, lang
 }
 
 export default function RequestsScreen() {
+  // Scroll the last row clear of the floating glass tab bar.
+  const tabClearance = useTabBarClearance(32);
   const { colors } = useTheme();
   const styles = useStyles(colors);
   const language = getAppLanguage();
@@ -386,16 +390,14 @@ export default function RequestsScreen() {
               colors={[colors.accent]}
             />
           }
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: tabClearance }]}
           ListEmptyComponent={bookings.length === 0 ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyText} testID="barber-requests-empty">
-                {isDe() ? 'Noch keine Terminanfragen.' : 'No booking requests yet.'}
-              </Text>
-              <Text style={styles.emptyHint}>
-                {isDe() ? 'Anfragen erscheinen hier, sobald ein Kunde dich bucht.' : 'Requests appear here the moment a client books you.'}
-              </Text>
-            </View>
+            <EmptyState
+              icon="inbox"
+              testID="barber-requests-empty"
+              title={isDe() ? 'Noch keine Terminanfragen.' : 'No booking requests yet.'}
+              body={isDe() ? 'Anfragen erscheinen hier, sobald ein Kunde dich bucht.' : 'Requests appear here the moment a client books you.'}
+            />
           ) : null}
           renderItem={({ item, index, section }) => {
             if (section.key === 'history' && !historyExpanded) return null;
@@ -509,7 +511,7 @@ function ActionButton({
 function useStyles(colors: Palette) {
   const { fonts } = useTheme();
   return StyleSheet.create({
-    container: { flex: 1, backgroundColor: 'transparent' },
+    container: { flex: 1, backgroundColor: colors.background },
     header: { paddingHorizontal: space.xl, marginTop: space.xl },
     heading: { fontSize: 30, color: colors.textPrimary, fontFamily: fonts.headingMedium },
     subtitle: { fontSize: 14, marginTop: 4, color: colors.textSecondary, fontFamily: fonts.body },

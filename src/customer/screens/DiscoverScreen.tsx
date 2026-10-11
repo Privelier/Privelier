@@ -26,7 +26,6 @@ import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { fetchOwnProfile } from '../../auth/authService';
 import { useTheme } from '../../theme/useTheme';
-import { pressOpacity } from '../../theme/motion';
 import { Notice } from '../../shared/components/Notice';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { getAppLanguage } from '../../shared/locale';
@@ -46,6 +45,8 @@ import BarberCard from '../components/BarberCard';
 import { NotificationBell } from '../../shared/components/NotificationBell';
 import type { CustomerTabParamList } from '../CustomerTabs';
 import type { CustomerStackParamList } from '../CustomerNavigator';
+import { GlassChip } from '../../shared/components/GlassChip';
+import { useTabBarClearance } from '../../shared/navigation/tabBarClearance';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<CustomerTabParamList, 'Discover'>,
@@ -53,6 +54,8 @@ type Props = CompositeScreenProps<
 >;
 
 export default function DiscoverScreen({ navigation }: Props) {
+  // Scroll the last row clear of the floating glass tab bar.
+  const tabClearance = useTabBarClearance(40);
   const { colors, fonts } = useTheme();
   const { scrollY, onScroll } = useScrollGlass();
   const de = getAppLanguage() === 'de';
@@ -203,7 +206,7 @@ export default function DiscoverScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: 'transparent' }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top', 'left', 'right']}
       testID="customer-home-screen"
     >
@@ -211,7 +214,7 @@ export default function DiscoverScreen({ navigation }: Props) {
         onScroll={onScroll}
         scrollEventThrottle={16}
         testID="customer-home-scroll"
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: tabClearance }]}
         keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
@@ -323,32 +326,13 @@ export default function DiscoverScreen({ navigation }: Props) {
             {serviceFilters.map((service) => {
               const selected = activeService?.toLowerCase() === service.toLowerCase();
               return (
-                <Pressable
+                <GlassChip
                   key={service}
+                  label={service}
+                  selected={selected}
                   onPress={() => setActiveService(selected ? null : service)}
-                  accessibilityRole="button"
                   accessibilityLabel={`Filter by ${service}`}
-                  accessibilityState={{ selected }}
-                  style={({ pressed }) => [
-                    styles.filter,
-                    selected
-                      ? { backgroundColor: colors.accent, borderColor: colors.accent }
-                      : { borderColor: colors.border },
-                    pressed ? { opacity: pressOpacity.soft } : null,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.filterText,
-                      { fontFamily: fonts.body },
-                      selected
-                        ? { color: colors.onAccent }
-                        : { color: colors.textSecondary },
-                    ]}
-                  >
-                    {service}
-                  </Text>
-                </Pressable>
+                />
               );
             })}
           </ScrollView>
@@ -513,14 +497,6 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, minWidth: 0, fontSize: 14, paddingVertical: 10 },
   filtersScroll: { marginTop: 16, flexGrow: 0 },
   filtersRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 24, paddingBottom: 2 },
-  filter: {
-    minHeight: 44,
-    justifyContent: 'center',
-    borderWidth: 0.5,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-  },
-  filterText: { fontSize: 14 },
   noticeMargins: { marginTop: 32, marginHorizontal: 24 },
   noticeAction: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
   emptyText: {

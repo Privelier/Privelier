@@ -39,7 +39,6 @@ import BarberNavigator from './src/barber/BarberNavigator';
 import { appFonts } from './src/theme/typography';
 import { ToastProvider } from './src/shared/components/ToastProvider';
 import { OfflineBanner } from './src/shared/components/OfflineBanner';
-import { AmbientBackdrop } from './src/shared/components/AmbientBackdrop';
 import { darkPalette } from './src/theme/colors';
 
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
@@ -52,7 +51,7 @@ const navigationTheme: Theme = {
   colors: {
     ...DarkTheme.colors,
     primary: darkPalette.accent,
-    background: 'transparent',
+    background: darkPalette.background,
     card: darkPalette.surface,
     text: darkPalette.textPrimary,
     border: darkPalette.border,
@@ -136,9 +135,6 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: darkPalette.background }}>
-      {/* Root-phase screens (provisioning, consent, admin notice) render
-          outside any navigator; they get the same ambient backdrop. */}
-      <AmbientBackdrop />
       <GluestackUIProvider mode="dark">
         <SafeAreaProvider onLayout={onLayoutRootView} style={{ flex: 1, backgroundColor: darkPalette.background }}>
           <BottomSheetModalProvider>

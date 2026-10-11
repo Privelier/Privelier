@@ -39,6 +39,8 @@ import { fetchOwnInboxView } from '../inboxData';
 import { formatShortDate } from '../format';
 import { useUnread } from '../UnreadContext';
 import { formatBookingWhen } from '../../shared/format';
+import { EmptyState } from '../../shared/components/EmptyState';
+import { useTabBarClearance } from '../../shared/navigation/tabBarClearance';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<CustomerTabParamList, 'Inbox'>,
@@ -46,6 +48,8 @@ type Props = CompositeScreenProps<
 >;
 
 export default function InboxScreen({ navigation }: Props) {
+  // Scroll the last row clear of the floating glass tab bar.
+  const tabClearance = useTabBarClearance(32);
   const de = getAppLanguage() === 'de';
   const { colors, fonts } = useTheme();
   // Real per-user read state (provider in CustomerNavigator): unread rows
@@ -88,7 +92,7 @@ export default function InboxScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: 'transparent' }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top', 'left', 'right']}
       testID="customer-inbox-screen"
     >
@@ -122,19 +126,14 @@ export default function InboxScreen({ navigation }: Props) {
               colors={[colors.accent]}
             />
           }
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: tabClearance }]}
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text
-                style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}
-                testID="customer-inbox-empty"
-              >
-                {de ? 'Noch keine Nachrichten.' : 'No messages yet.'}
-              </Text>
-              <Text style={[styles.emptyHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                {de ? 'Gespräche beginnen, sobald du einen Barber buchst.' : 'Conversations start once you book a barber.'}
-              </Text>
-            </View>
+            <EmptyState
+              icon="message-circle"
+              testID="customer-inbox-empty"
+              title={de ? 'Noch keine Nachrichten.' : 'No messages yet.'}
+              body={de ? 'Gespräche beginnen, sobald du einen Barber buchst.' : 'Conversations start once you book a barber.'}
+            />
           }
           renderItem={({ item }) => {
             const name = item.barber?.name ?? 'Barber';

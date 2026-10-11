@@ -34,6 +34,8 @@ import type { BarberTabParamList } from '../BarberTabs';
 import type { BarberStackParamList } from '../BarberNavigator';
 import { fetchOwnChatsView } from '../chatsData';
 import { useUnread } from '../UnreadContext';
+import { EmptyState } from '../../shared/components/EmptyState';
+import { useTabBarClearance } from '../../shared/navigation/tabBarClearance';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<BarberTabParamList, 'Chats'>,
@@ -41,6 +43,8 @@ type Props = CompositeScreenProps<
 >;
 
 export default function ChatsScreen({ navigation }: Props) {
+  // Scroll the last row clear of the floating glass tab bar.
+  const tabClearance = useTabBarClearance(32);
   const de = getAppLanguage() === 'de';
   const { colors, fonts } = useTheme();
   // Real per-user read state (provider in BarberNavigator): unread rows
@@ -83,7 +87,7 @@ export default function ChatsScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: 'transparent' }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top', 'left', 'right']}
       testID="barber-chats-screen"
     >
@@ -112,19 +116,14 @@ export default function ChatsScreen({ navigation }: Props) {
               colors={[colors.accent]}
             />
           }
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: tabClearance }]}
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text
-                style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}
-                testID="barber-chats-empty"
-              >
-                {de ? 'Noch keine Gespräche.' : 'No conversations yet.'}
-              </Text>
-              <Text style={[styles.emptyHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                {de ? 'Chats starten, sobald Kunden dich buchen.' : 'Chats open once clients book you.'}
-              </Text>
-            </View>
+            <EmptyState
+              icon="message-circle"
+              testID="barber-chats-empty"
+              title={de ? 'Noch keine Gespräche.' : 'No conversations yet.'}
+              body={de ? 'Chats starten, sobald Kunden dich buchen.' : 'Chats open once clients book you.'}
+            />
           }
           renderItem={({ item }) => {
             const name = item.customer?.name ?? (de ? 'Kunde' : 'Customer');

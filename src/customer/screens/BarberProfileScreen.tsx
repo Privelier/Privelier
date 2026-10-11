@@ -220,7 +220,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
   if (loading || error || notFound) {
     return (
       <SafeAreaView
-        style={[styles.container, { backgroundColor: 'transparent' }]}
+        style={[styles.container, { backgroundColor: colors.background }]}
         edges={['top', 'left', 'right']}
         testID="barber-profile-screen"
       >
@@ -259,7 +259,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: 'transparent' }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       edges={['left', 'right']}
       testID="barber-profile-screen"
     >

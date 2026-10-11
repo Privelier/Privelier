@@ -73,7 +73,7 @@ export default function NotificationCenterScreen({
   }, [load]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: 'transparent' }]} edges={['top', 'left', 'right']} testID={`${role}-notification-center`}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']} testID={`${role}-notification-center`}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <BackButton onPress={onBack} accessibilityLabel={isGerman ? 'Zurück' : 'Back'} testID={`${role}-notifications-back`} />
         <View style={styles.headerCopy}>

@@ -51,7 +51,7 @@ export default function BarberSettingsScreen({ navigation }: Props) {
   ];
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: 'transparent' }]} edges={['top', 'left', 'right', 'bottom']} testID="barber-settings-screen">
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right', 'bottom']} testID="barber-settings-screen">
       <ScreenBackHeader onPress={() => navigation.goBack()} backTestID="barber-settings-back" />
       <ScrollView contentContainerStyle={styles.content}>
         <Text accessibilityRole="header" style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>

@@ -52,6 +52,8 @@ import { listFavoriteBarberIds } from '../personalData';
 import type ExploreMapViewType from '../components/ExploreMapView';
 import type { CustomerTabParamList } from '../CustomerTabs';
 import type { CustomerStackParamList } from '../CustomerNavigator';
+import { GlassChip } from '../../shared/components/GlassChip';
+import { useTabBarClearance } from '../../shared/navigation/tabBarClearance';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<CustomerTabParamList, 'Explore'>,
@@ -61,6 +63,8 @@ type Props = CompositeScreenProps<
 type ViewMode = 'list' | 'map';
 
 export default function ExploreScreen({ navigation }: Props) {
+  // Scroll the last row clear of the floating glass tab bar.
+  const tabClearance = useTabBarClearance(32);
   const { colors, fonts, isDark } = useTheme();
   const isGerman = getAppLanguage() === 'de';
   const chipLabels: Record<ExploreFilterKey, string> = isGerman
@@ -276,7 +280,7 @@ export default function ExploreScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: 'transparent' }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top', 'left', 'right']}
       testID="customer-explore-screen"
     >
@@ -330,31 +334,14 @@ export default function ExploreScreen({ navigation }: Props) {
         {availableChips.map((key) => {
           const active = filter === key;
           return (
-            <Pressable
+            <GlassChip
               key={key}
+              size="compact"
+              label={chipLabels[key]}
+              selected={active}
               onPress={() => selectChip(key)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
               testID={`customer-explore-chip-${key}`}
-              hitSlop={8}
-              style={({ pressed }) => [
-                styles.chip,
-                active
-                  ? { backgroundColor: colors.accent, borderColor: colors.accent }
-                  : { borderColor: colors.border },
-                pressed ? { opacity: pressOpacity.soft } : null,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.chipText,
-                  { fontFamily: fonts.body },
-                  active ? { color: colors.onAccent } : { color: colors.textSecondary },
-                ]}
-              >
-                {chipLabels[key]}
-              </Text>
-            </Pressable>
+            />
           );
         })}
       </ScrollView>
@@ -446,7 +433,7 @@ export default function ExploreScreen({ navigation }: Props) {
         <FlatList
           data={filtered}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: tabClearance }]}
           renderItem={({ item }) => (
             <View style={styles.listItem} testID={`customer-explore-barber-${item.id}`}>
               <BarberCard
@@ -492,12 +479,6 @@ const styles = StyleSheet.create({
 
   chipsScroll: { marginTop: 18, flexGrow: 0 },
   chipsRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 24, paddingBottom: 2 },
-  chip: {
-    borderWidth: 0.5,
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 7, minHeight: 36, justifyContent: 'center' },
-  chipText: { fontSize: 12 },
   noticeMargins: { marginTop: 32, marginHorizontal: 24 },
   emptyText: { fontSize: 14, textAlign: 'center', marginTop: 48, paddingHorizontal: 24 },
 

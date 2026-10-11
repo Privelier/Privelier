@@ -24,7 +24,7 @@ export default function ProvisioningScreen({ view, onRetry, onSignOut }: Props) 
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: 'transparent' }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       testID="provisioning-screen"
     >
       {view.kind === 'loading' ? (

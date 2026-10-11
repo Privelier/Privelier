@@ -9,7 +9,7 @@
  * city (required), country/phone optional, bio optional and shown only when
  * role = barber.
  */
-import { getAppLanguage } from '../../shared/locale';
+import { defaultCountry, getAppLanguage } from '../../shared/locale';
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Role } from '../../types';
@@ -44,7 +44,7 @@ export default function FinishSetupScreen({ prefill, onSubmit, onSignOut }: Prop
   const [role, setRole] = useState<Role | null>(prefill.role ?? null);
   const [name, setName] = useState(prefill.name ?? '');
   const [city, setCity] = useState(prefill.city ?? '');
-  const [country, setCountry] = useState(prefill.country ?? '');
+  const [country, setCountry] = useState(() => prefill.country?.trim() || defaultCountry());
   const [phone, setPhone] = useState(prefill.phone ?? '');
   const [bio, setBio] = useState(prefill.bio ?? '');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});

@@ -27,6 +27,7 @@ import type { BarberTabParamList } from '../BarberTabs';
 import type { BarberStackParamList } from '../BarberNavigator';
 import { LegalLinks } from '../../legal/LegalComponents';
 import { NotificationBell } from '../../shared/components/NotificationBell';
+import { useTabBarClearance } from '../../shared/navigation/tabBarClearance';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<BarberTabParamList, 'Studio'>,
@@ -170,6 +171,8 @@ function SectionUnavailable({
 }
 
 export default function StudioScreen({ navigation }: Props) {
+  // Scroll the last row clear of the floating glass tab bar.
+  const tabClearance = useTabBarClearance(32);
   const { colors, fonts } = useTheme();
   const { scrollY, onScroll } = useScrollGlass();
   const { width: windowWidth } = useWindowDimensions();
@@ -230,13 +233,13 @@ export default function StudioScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: 'transparent' }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top', 'left', 'right']}
       testID="barber-dashboard-screen"
     >
       <Animated.ScrollView
         onScroll={onScroll}
-        scrollEventThrottle={16} contentContainerStyle={styles.scrollContent}>
+        scrollEventThrottle={16} contentContainerStyle={[styles.scrollContent, { paddingBottom: tabClearance }]}>
         <View style={styles.headerRow}>
           <View style={styles.headerText}>
             {loading && !view ? (

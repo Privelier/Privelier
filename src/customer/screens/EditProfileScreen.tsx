@@ -7,7 +7,7 @@ import { FormTextField } from '../../auth/screens/ui';
 import { Notice } from '../../shared/components/Notice';
 import { PrimaryButton } from '../../shared/components/PrimaryButton';
 import { ScreenBackHeader } from '../../shared/components/ScreenBackHeader';
-import { getAppLanguage } from '../../shared/locale';
+import { defaultCountry, getAppLanguage } from '../../shared/locale';
 import { useTheme } from '../../theme/useTheme';
 import { space } from '../../theme/spacing';
 import { updateOwnProfile } from '../profileData';
@@ -46,7 +46,7 @@ export default function EditProfileScreen({ navigation }: Props) {
     }
     setName(result.profile.name);
     setCity(result.profile.city ?? '');
-    setCountry(result.profile.country ?? '');
+    setCountry(result.profile.country?.trim() || defaultCountry());
   }, [de]);
 
   useEffect(() => { Promise.resolve().then(() => void load()); }, [load]);
@@ -67,7 +67,7 @@ export default function EditProfileScreen({ navigation }: Props) {
   const invalid = name.trim().length < 2 || city.trim().length < 2;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: 'transparent' }]} edges={['top', 'left', 'right', 'bottom']} testID="customer-edit-profile-screen">
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right', 'bottom']} testID="customer-edit-profile-screen">
       <ScreenBackHeader onPress={() => navigation.goBack()} backTestID="customer-edit-profile-back" backDisabled={saving} />
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">

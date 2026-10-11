@@ -55,7 +55,9 @@ import { useReadReceipt } from '../../shared/useReadReceipt';
 import { useTypingBroadcast } from '../../shared/useTypingBroadcast';
 import { deriveIsRead, deriveReadMarkerId } from '../../shared/readReceipts';
 import { MessageReceipt } from '../../shared/components/MessageReceipt';
-import { GlassSurface } from '../../shared/components/GlassSurface';
+import { GlassSurface, glass, useGlassStyle } from '../../shared/components/GlassSurface';
+import { JumpToLatestButton, JUMP_TO_LATEST_THRESHOLD } from '../../shared/components/JumpToLatestButton';
+import { Feather } from '@expo/vector-icons';
 import { SafetyMenu } from '../../shared/components/SafetyMenu';
 import { MessageText } from '../../shared/components/MessageText';
 import { useSendQueue, type PendingSend } from '../../shared/useSendQueue';
@@ -97,6 +99,13 @@ function ConversationRoom({ route, navigation }: Props) {
   const { room, title, subtitle } = route.params;
   const { colors } = useTheme();
   const styles = useStyles(colors);
+  // Glass bubbles: yours in brass glass, theirs in neutral glass, a failed
+  // send in danger glass. One shared Reduce Transparency fallback.
+  const ownGlass = useGlassStyle('brass');
+  const theirGlass = useGlassStyle('neutral');
+  const failedGlass = useGlassStyle('danger');
+  const listRef = useRef<FlatList<ListItem>>(null);
+  const [awayFromLatest, setAwayFromLatest] = useState(false);
 
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -376,8 +385,15 @@ function ConversationRoom({ route, navigation }: Props) {
           <Notice testID="barber-conversation-error" message={error ?? ''} style={styles.noticeMargins} />
         ) : (
           <FlatList
+            ref={listRef}
             inverted
             testID="barber-conversation-list"
+            onScroll={(event) => {
+              // Inverted: offset 0 is the newest message.
+              const away = event.nativeEvent.contentOffset.y > JUMP_TO_LATEST_THRESHOLD;
+              if (away !== awayFromLatest) setAwayFromLatest(away);
+            }}
+            scrollEventThrottle={64}
             data={listData}
             keyExtractor={(item) =>
               item.kind === 'pending' ? `pending-${item.pending.key}` : item.kind === 'day' ? item.key : item.message.id
@@ -440,7 +456,7 @@ function ConversationRoom({ route, navigation }: Props) {
               if (item.kind === 'day') return (
                 <View style={styles.dayDivider}>
                   <View style={styles.dayRule} />
-                  <View style={styles.dayPill}><Text style={styles.dayLabel}>{item.label}</Text></View>
+                  <View style={[styles.dayPill, theirGlass]}><Text style={styles.dayLabel}>{item.label}</Text></View>
                   <View style={styles.dayRule} />
                 </View>
               );
@@ -452,7 +468,7 @@ function ConversationRoom({ route, navigation }: Props) {
                     onPress={() => retry(p.key)}
                     accessibilityRole={p.failed ? 'button' : undefined}
                     accessibilityLabel={p.failed ? (de ? 'Erneut senden' : 'Retry sending message') : undefined}
-                    style={[styles.bubble, styles.bubbleOwn, p.failed ? styles.bubbleFailed : null]}
+                    style={[styles.bubble, styles.bubbleOwn, p.failed ? failedGlass : [ownGlass, styles.bubblePending]]}
                     testID={
                       p.failed
                         ? `barber-conversation-failed-${p.key}`
@@ -481,7 +497,7 @@ function ConversationRoom({ route, navigation }: Props) {
               const own = m.sender_id === myId;
               return (
                 <View
-                  style={[styles.bubble, own ? styles.bubbleOwn : styles.bubbleTheirs]}
+                  style={[styles.bubble, own ? styles.bubbleOwn : styles.bubbleTheirs, own ? ownGlass : theirGlass]}
                   testID={`barber-conversation-message-${m.id}`}
                 >
                   <MessageText text={m.message} style={styles.bubbleText} linkColor={colors.accentText} testID={`barber-conversation-text-${m.id}`} />
@@ -501,6 +517,13 @@ function ConversationRoom({ route, navigation }: Props) {
             }}
           />
         )}
+
+        <JumpToLatestButton
+          visible={awayFromLatest && !showSpinner && !showError}
+          onPress={() => listRef.current?.scrollToOffset({ offset: 0, animated: true })}
+          label={de ? 'Zur neuesten Nachricht' : 'Jump to latest message'}
+          testID="barber-conversation-jump-latest"
+        />
 
         {/* Fixed-height slot: the indicator appears/disappears without any
             layout shift (typing state is ephemeral and frequent). */}
@@ -539,7 +562,7 @@ function ConversationRoom({ route, navigation }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel={reply}
                 testID={`barber-conversation-quick-reply-${index}`}
-                style={({ pressed }) => [styles.quickChip, { opacity: pressed ? 0.85 : 1 }]}
+                style={({ pressed }) => [styles.quickChip, theirGlass, { opacity: pressed ? 0.85 : 1 }]}
               >
                 <Text style={styles.quickText}>{reply}</Text>
               </Pressable>
@@ -575,7 +598,7 @@ function ConversationRoom({ route, navigation }: Props) {
             ]}
             testID="barber-conversation-send"
           >
-            <Text style={styles.sendLabel}>{getAppLanguage() === 'de' ? 'Senden' : 'Send'}</Text>
+            <Feather name="arrow-up" size={20} color={colors.onAccent} />
           </Pressable>
         </GlassSurface>
       </KeyboardAvoidingView>
@@ -586,7 +609,7 @@ function ConversationRoom({ route, navigation }: Props) {
 function useStyles(colors: Palette) {
   const { fonts } = useTheme();
   return StyleSheet.create({
-    container: { flex: 1, backgroundColor: 'transparent' },
+    container: { flex: 1, backgroundColor: colors.background },
 
     header: {
       flexDirection: 'row',
@@ -609,7 +632,7 @@ function useStyles(colors: Palette) {
     listContent: { paddingHorizontal: space.xl, paddingVertical: space.base, flexGrow: 1 },
     dayDivider: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 34, marginVertical: 6 },
     dayRule: { flex: 1, height: 0.5, backgroundColor: 'rgba(191,160,107,0.32)' },
-    dayPill: { borderWidth: 0.5, borderColor: 'rgba(191,160,107,0.24)', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 5, backgroundColor: 'rgba(20,20,22,0.84)' },
+    dayPill: { borderRadius: 16, paddingHorizontal: 12, paddingVertical: 5, overflow: 'hidden' },
     dayLabel: { color: colors.textSecondary, fontSize: 11, fontFamily: fonts.bodyMedium },
     historyControl: { alignItems: 'center', paddingBottom: space.base },
     earlierError: {
@@ -645,11 +668,12 @@ function useStyles(colors: Palette) {
       paddingHorizontal: 14,
       paddingVertical: space.md,
       marginBottom: space.md,
-      backgroundColor: colors.surface,
+      overflow: 'hidden',
     },
-    bubbleTheirs: { alignSelf: 'flex-start', borderColor: colors.border, borderBottomLeftRadius: 5, backgroundColor: 'rgba(245,241,232,0.035)' },
-    bubbleOwn: { alignSelf: 'flex-end', borderColor: 'rgba(191,160,107,0.42)', borderBottomRightRadius: 5, backgroundColor: 'rgba(191,160,107,0.10)' },
-    bubbleFailed: { borderColor: colors.error },
+    bubbleTheirs: { alignSelf: 'flex-start', borderBottomLeftRadius: 5 },
+    bubbleOwn: { alignSelf: 'flex-end', borderBottomRightRadius: 5 },
+    // Not yet confirmed by the server: a touch quieter than a delivered bubble.
+    bubblePending: { opacity: 0.78 },
     bubbleText: { fontSize: 16, lineHeight: 23, color: colors.textPrimary, fontFamily: fonts.body },
     bubbleFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6, marginTop: 4 },
     bubbleMeta: { fontSize: 11, color: colors.textSecondary, fontFamily: fonts.body },
@@ -676,7 +700,7 @@ function useStyles(colors: Palette) {
     typingText: { fontSize: 11, color: colors.textSecondary, fontFamily: fonts.body },
 
     quickRow: { gap: 8, paddingHorizontal: 16, paddingBottom: 8 },
-    quickChip: { minHeight: 36, justifyContent: 'center', borderWidth: 0.5, borderColor: colors.border, borderRadius: 999, paddingHorizontal: 14, backgroundColor: 'rgba(245,241,232,0.035)' },
+    quickChip: { minHeight: 36, justifyContent: 'center', borderRadius: 999, paddingHorizontal: 14, overflow: 'hidden' },
     quickText: { fontSize: 13, color: colors.textPrimary, fontFamily: fonts.body },
     inputRow: {
       flexDirection: 'row',
@@ -693,24 +717,27 @@ function useStyles(colors: Palette) {
       minHeight: 48,
       maxHeight: 144,
       borderWidth: HAIRLINE,
-      borderRadius: 18,
-      paddingHorizontal: 14,
+      borderRadius: 22,
+      paddingHorizontal: space.base,
       paddingVertical: space.md,
       fontSize: 16,
-      borderColor: colors.border,
-      backgroundColor: 'rgba(27,27,30,0.86)',
+      // A recessed well inside the glass composer.
+      borderColor: glass.edge,
+      backgroundColor: 'rgba(8,8,10,0.42)',
       color: colors.textPrimary,
       fontFamily: fonts.body,
     },
+    // Round brass send disc with a lit top edge, aligned to the input's last line.
     sendButton: {
+      width: 48,
+      height: 48,
       borderRadius: 24,
-      paddingHorizontal: 18,
-      minHeight: 44,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.accent,
+      experimental_backgroundImage: 'linear-gradient(160deg, rgba(255,240,210,0.38) 0%, rgba(255,240,210,0) 55%)',
+      boxShadow: 'inset 0 1px 0 rgba(255,248,232,0.45), 0 6px 16px rgba(191,160,107,0.22)',
     },
-    sendButtonDisabled: { opacity: 0.6 },
-    sendLabel: { fontSize: 14, color: colors.onAccent, fontFamily: fonts.bodySemiBold },
+    sendButtonDisabled: { opacity: 0.45 },
   });
 }

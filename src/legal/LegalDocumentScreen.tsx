@@ -24,7 +24,7 @@ export default function LegalDocumentScreen({ route, navigation }: Props) {
   const title = lines[2] ?? 'Rechtliche Informationen';
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: 'transparent' }]} edges={['top', 'left', 'right']} testID="legal-document-screen">
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']} testID="legal-document-screen">
       <View style={styles.header}>
         <Pressable
           onPress={navigation.goBack}

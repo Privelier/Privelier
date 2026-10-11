@@ -265,7 +265,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: 'transparent' }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       testID="barber-availability-screen"
     >
       <View style={styles.header}>

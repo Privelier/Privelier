@@ -43,6 +43,7 @@ import { LegalLinks } from '../../legal/LegalComponents';
 import { DeleteAccountAction } from '../../shared/components/DeleteAccountAction';
 import Animated from 'react-native-reanimated';
 import { Reveal, ScrollGlassHeader, useScrollGlass } from '../../shared/motion';
+import { useTabBarClearance } from '../../shared/navigation/tabBarClearance';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<CustomerTabParamList, 'Account'>,
@@ -55,6 +56,8 @@ const SETTINGS_ROWS: { key: AccountSectionKey; icon: keyof typeof Feather.glyphM
 ];
 
 export default function AccountScreen({ navigation }: Props) {
+  // Scroll the last row clear of the floating glass tab bar.
+  const tabClearance = useTabBarClearance(32);
   const de = getAppLanguage() === 'de';
   const { colors, fonts } = useTheme();
   const { scrollY, onScroll } = useScrollGlass();
@@ -76,11 +79,11 @@ export default function AccountScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: 'transparent' }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top', 'left', 'right']}
       testID="customer-account-screen"
     >
-      <Animated.ScrollView onScroll={onScroll} scrollEventThrottle={16} contentContainerStyle={styles.scrollContent}>
+      <Animated.ScrollView onScroll={onScroll} scrollEventThrottle={16} contentContainerStyle={[styles.scrollContent, { paddingBottom: tabClearance }]}>
         <View style={styles.headingRow}>
           <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{de ? 'Konto' : 'Account'}</Text>
           <NotificationBell onPress={() => navigation.navigate('NotificationCenter')} testID="customer-account-notifications" />

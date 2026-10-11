@@ -16,7 +16,7 @@ export default function RoleSelectScreen({ onSelectRole }: Props) {
   const { colors, fonts } = useTheme();
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: 'transparent' }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         {/* The app's threshold — the one screen that most earns the full
             lockup. Replaces the previous bare Playfair "Privelier" text (which

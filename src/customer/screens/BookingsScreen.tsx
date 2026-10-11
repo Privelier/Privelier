@@ -65,6 +65,9 @@ import {
 } from '../../shared/bookingRealtime';
 import { useBookingsRealtime } from '../../shared/useBookingsRealtime';
 import { formatBookingWhen, formatMoney } from '../format';
+import { GlassSegmentedControl } from '../../shared/components/GlassSegmentedControl';
+import { EmptyState } from '../../shared/components/EmptyState';
+import { useTabBarClearance } from '../../shared/navigation/tabBarClearance';
 
 type TabKey = 'upcoming' | 'past';
 const TABS: { key: TabKey; label: string }[] = [
@@ -82,6 +85,8 @@ function sortDesc(rows: BookingRow[]): BookingRow[] {
 }
 
 export default function BookingsScreen() {
+  // Scroll the last row clear of the floating glass tab bar.
+  const tabClearance = useTabBarClearance(32);
   const { colors, fonts } = useTheme();
   const de = getAppLanguage() === 'de';
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -412,7 +417,7 @@ export default function BookingsScreen() {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: 'transparent' }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top', 'left', 'right']}
       testID="customer-bookings-screen"
     >
@@ -420,35 +425,16 @@ export default function BookingsScreen() {
         {de ? 'Deine Termine' : 'Your appointments'}
       </Text>
 
-      <View style={[styles.tabStrip, { borderBottomColor: colors.border }]}>
-        {TABS.map(({ key, label }) => {
-          const active = tab === key;
-          return (
-            <Pressable
-              key={key}
-              onPress={() => setTab(key)}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: active }}
-              testID={`customer-bookings-tab-${key}`}
-              style={({ pressed }) => [
-                styles.tabButton,
-                active ? { borderBottomColor: colors.accent } : null,
-                pressed ? { opacity: pressOpacity.soft } : null,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.tabLabel,
-                  { fontFamily: fonts.bodyMedium },
-                  { color: active ? colors.accentText : colors.textSecondary },
-                ]}
-              >
-                {de ? (key === 'upcoming' ? 'Demn\u00e4chst' : 'Vergangene') : label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <GlassSegmentedControl
+        style={styles.tabStrip}
+        value={tab}
+        onChange={setTab}
+        segments={TABS.map(({ key, label }) => ({
+          key,
+          label: de ? (key === 'upcoming' ? 'Demn\u00e4chst' : 'Vergangene') : label,
+          testID: `customer-bookings-tab-${key}`,
+        }))}
+      />
 
       {showSkeleton ? (
         <BookingListSkeleton testID="customer-bookings-loading" avatarSize={56} />
@@ -470,16 +456,23 @@ export default function BookingsScreen() {
               colors={[colors.accent]}
             />
           }
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: tabClearance }]}
           ListEmptyComponent={
-            <Text
-              style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}
+            <EmptyState
+              icon={tab === 'upcoming' ? 'calendar' : 'clock'}
               testID="customer-bookings-empty"
-            >
-              {tab === 'upcoming'
+              title={tab === 'upcoming'
                 ? (de ? 'Noch keine anstehenden Termine.' : 'No upcoming appointments yet.')
                 : (de ? 'Noch keine vergangenen Termine.' : 'No past appointments yet.')}
-            </Text>
+              body={tab === 'upcoming'
+                ? (de ? 'Wähle einen Barber und eine Zeit – er kommt zu dir.' : 'Pick a barber and a time, and they come to you.')
+                : (de ? 'Abgeschlossene Termine erscheinen hier.' : 'Finished appointments appear here.')}
+              action={tab === 'upcoming' ? {
+                label: de ? 'Barber finden' : 'Find a barber',
+                onPress: () => navigation.navigate('CustomerTabs', { screen: 'Discover' }),
+                testID: 'customer-bookings-empty-discover',
+              } : undefined}
+            />
           }
           renderItem={({ item, index }) => {
             const barber = barbersById.get(item.barber_id);
@@ -591,21 +584,7 @@ const styles = StyleSheet.create({
   },
   container: { flex: 1 },
   heading: { fontSize: 30, marginTop: 24, paddingHorizontal: 24 },
-  tabStrip: {
-    flexDirection: 'row',
-    gap: 24,
-    paddingHorizontal: 24,
-    marginTop: 24,
-    borderBottomWidth: 0.5,
-  },
-  tabButton: {
-    paddingTop: space.md,
-    paddingBottom: space.md,
-    marginBottom: -0.5,
-    borderBottomWidth: 1,
-    borderBottomColor: 'transparent',
-  },
-  tabLabel: { fontSize: 14, letterSpacing: 0 },
+  tabStrip: { marginHorizontal: space.xl, marginTop: space.lg },
 
   noticeMargins: { marginTop: space.xl, marginHorizontal: space.xl },
   emptyText: { fontSize: 13, textAlign: 'center', paddingVertical: 40 },

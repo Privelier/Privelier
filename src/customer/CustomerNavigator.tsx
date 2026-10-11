@@ -1,6 +1,5 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { stackScreenOptions } from '../shared/navigation/stackScreenOptions';
-import { BackdropLayout } from '../shared/components/AmbientBackdrop';
 import { useReducedMotionPreference } from '../shared/motion/useReducedMotionPreference';
 import type { NavigatorScreenParams } from '@react-navigation/native';
 import { RoleExitProvider } from '../RoleContext';
@@ -76,13 +75,7 @@ export default function CustomerNavigator({ onExit }: { onExit: () => void }) {
           badge, the bold thread rows, and the conversation screen's
           mark-as-read all read the same source of truth. */}
       <UnreadProvider>
-        <Stack.Navigator
-          screenOptions={stackScreenOptions(reduceMotion)}
-          screenLayout={({ children, route }) =>
-            // Tab hosts draw their own backdrop inside the tab bar's blur target.
-            route.name === 'CustomerTabs' ? children : <BackdropLayout>{children}</BackdropLayout>
-          }
-        >
+        <Stack.Navigator screenOptions={stackScreenOptions(reduceMotion)}>
           <Stack.Screen name="CustomerTabs" component={CustomerTabs} />
           <Stack.Screen name="BarberProfile" component={BarberProfileScreen} />
           <Stack.Screen name="AccountSection" component={AccountSectionScreen} />

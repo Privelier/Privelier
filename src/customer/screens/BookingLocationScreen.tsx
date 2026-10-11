@@ -116,7 +116,7 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: 'transparent' }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top', 'left', 'right', 'bottom']}
       testID="customer-booking-location-screen"
     >

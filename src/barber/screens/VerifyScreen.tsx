@@ -37,6 +37,7 @@ import { getAppLanguage } from '../../shared/locale';
 import type { VerificationDocType, VerificationRequestRow, VerificationStatus } from '../../types';
 import { fetchOwnBarberProfile, fetchOwnVerificationRequest } from '../profileData';
 import { submitVerificationDocument, uploadVerificationDocument } from '../verificationData';
+import { useTabBarClearance } from '../../shared/navigation/tabBarClearance';
 
 const STATUS_COPY: Record<'de' | 'en', Record<VerificationStatus, { word: string; line: string; icon: keyof typeof Feather.glyphMap }>> = {
   de: {
@@ -52,6 +53,8 @@ const STATUS_COPY: Record<'de' | 'en', Record<VerificationStatus, { word: string
 };
 
 export default function VerifyScreen() {
+  // Scroll the last row clear of the floating glass tab bar.
+  const tabClearance = useTabBarClearance(32);
   const de = getAppLanguage() === 'de';
   const { colors, fonts } = useTheme();
   const language = getAppLanguage();
@@ -183,11 +186,11 @@ export default function VerifyScreen() {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: 'transparent' }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top', 'left', 'right']}
       testID="barber-verify-screen"
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: tabClearance }]}>
         <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
           {language === 'de' ? 'Verifizierung' : 'Verification'}
         </Text>
