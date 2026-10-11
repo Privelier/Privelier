@@ -23,6 +23,7 @@
  * Maestro contract: customer-review-submit-screen / -back / -stars /
  * -stars-star-{1..5} / -comment / -submit / -error / -success.
  */
+import { getAppLanguage } from '../../shared/locale';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -56,6 +57,7 @@ const MAX_COMMENT_LENGTH = 500;
 const SUCCESS_PAUSE_MS = 700;
 
 export default function ReviewSubmitScreen({ route, navigation }: Props) {
+  const de = getAppLanguage() === 'de';
   const { bookingId, barberId, barberName, serviceName } = route.params;
   const { colors, fonts, isDark } = useTheme();
 
@@ -112,10 +114,10 @@ export default function ReviewSubmitScreen({ route, navigation }: Props) {
             <Feather name="check-circle" size={36} color={colors.accent} />
           </View>
           <Text style={[styles.successTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-            Review posted
+            {de ? 'Bewertung veröffentlicht' : 'Review posted'}
           </Text>
           <Text style={[styles.successHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-            {`Thanks for reviewing ${barberName}.`}
+            {de ? `Danke für deine Bewertung von ${barberName}.` : `Thanks for reviewing ${barberName}.`}
           </Text>
         </View>
       </SafeAreaView>
@@ -140,10 +142,10 @@ export default function ReviewSubmitScreen({ route, navigation }: Props) {
       >
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-            Leave a review
+            {de ? 'Bewertung schreiben' : 'Leave a review'}
           </Text>
           <Text style={[styles.subheading, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-            {`How was ${serviceName} with ${barberName}?`}
+            {de ? `Wie war ${serviceName} bei ${barberName}?` : `How was ${serviceName} with ${barberName}?`}
           </Text>
 
           {error ? (
@@ -156,7 +158,7 @@ export default function ReviewSubmitScreen({ route, navigation }: Props) {
           ) : null}
 
           <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-            Your rating
+            {de ? 'Deine Bewertung' : 'Your rating'}
           </Text>
           <StarRatingInput
             value={rating}
@@ -166,12 +168,12 @@ export default function ReviewSubmitScreen({ route, navigation }: Props) {
           />
           {rating === 0 ? (
             <Text style={[styles.hint, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-              Tap a star to rate — required to post.
+              {de ? 'Tippe auf einen Stern, um zu bewerten. Ohne Sterne kein Absenden.' : 'Tap a star to rate. A rating is required to post.'}
             </Text>
           ) : null}
 
           <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-            Comment (optional)
+            {de ? 'Kommentar (optional)' : 'Comment (optional)'}
           </Text>
           <TextInput
             value={comment}
@@ -179,7 +181,7 @@ export default function ReviewSubmitScreen({ route, navigation }: Props) {
             editable={!submitting}
             multiline
             maxLength={MAX_COMMENT_LENGTH}
-            placeholder="Share a little about your experience"
+            placeholder={de ? 'Erzähl kurz von deiner Erfahrung' : 'Share a little about your experience'}
             placeholderTextColor={colors.textSecondary}
             selectionColor={colors.accent}
             cursorColor={colors.accent}
@@ -199,7 +201,7 @@ export default function ReviewSubmitScreen({ route, navigation }: Props) {
 
         <View style={[styles.footer, { borderTopColor: colors.border }]}>
           <PrimaryButton
-            label="Post review"
+            label={de ? 'Bewertung senden' : 'Post review'}
             onPress={onSubmit}
             loading={submitting}
             disabled={rating === 0}

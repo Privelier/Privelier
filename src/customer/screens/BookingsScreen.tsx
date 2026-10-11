@@ -213,21 +213,21 @@ export default function BookingsScreen() {
       setBookings((prev) => applyBookingChangeSorted(prev, { eventType: 'UPDATE', row }, sortDesc));
       const message =
         result.status === 'not_found'
-          ? 'That booking could no longer be found. Refresh to see its current status.'
+          ? (de ? 'Dieser Termin wurde nicht mehr gefunden. Aktualisiere, um den aktuellen Stand zu sehen.' : 'That booking could no longer be found. Refresh to see its current status.')
           : result.message;
       setRowErrors((p) => ({ ...p, [row.id]: message }));
       void load();
     }
-  }, [load]);
+  }, [load, de]);
 
   const queueCancellation = useCallback((row: BookingRow) => {
     if (queuedRef.current.has(row.id) || inFlightRef.current.has(row.id)) return;
     queuedRef.current.add(row.id);
     setQueued((previous) => ({ ...previous, [row.id]: true }));
     showToast({
-      message: 'Booking cancellation pending',
+      message: de ? 'Stornierung vorgemerkt' : 'Booking cancellation pending',
       durationMs: 5000,
-      action: { label: 'Undo', onPress: () => {} },
+      action: { label: de ? 'Rückgängig' : 'Undo', onPress: () => {} },
       onClose: (reason) => {
         queuedRef.current.delete(row.id);
         setQueued((previous) => {
@@ -238,7 +238,7 @@ export default function BookingsScreen() {
         if (reason !== 'action') void cancelBooking(row);
       },
     });
-  }, [cancelBooking, showToast]);
+  }, [cancelBooking, showToast, de]);
 
   const leaveReview = useCallback(
     (row: BookingRow) => {
@@ -309,7 +309,7 @@ export default function BookingsScreen() {
                       accessibilityLiveRegion="polite"
                       style={[styles.reviewedText, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}
                     >
-                      Cancellation pending · Undo below
+                      {de ? 'Stornierung vorgemerkt · unten rückgängig machen' : 'Cancellation pending · Undo below'}
                     </Text>
                   ) : busy ? (
                     <ActivityIndicator
@@ -318,13 +318,13 @@ export default function BookingsScreen() {
                       style={styles.cardSpinner}
                       testID={`customer-bookings-row-busy-${item.id}`}
                       accessible
-                      accessibilityLabel="Cancelling booking"
+                      accessibilityLabel={de ? 'Termin wird storniert' : 'Cancelling booking'}
                       accessibilityLiveRegion="polite"
                     />
                   ) : (
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel="Cancel booking"
+                      accessibilityLabel={de ? 'Termin stornieren' : 'Cancel booking'}
                       testID={`booking-cancel-${item.id}`}
                       onPress={() => { setSelectedId(null); setConfirmingBooking(item); }}
                       style={({ pressed }) => [
@@ -334,7 +334,7 @@ export default function BookingsScreen() {
                       ]}
                     >
                       <Text style={[styles.cancelText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-                        Cancel booking
+                        {de ? 'Termin stornieren' : 'Cancel booking'}
                       </Text>
                     </Pressable>
                   )
@@ -343,13 +343,13 @@ export default function BookingsScreen() {
                     <View style={styles.reviewedRow} testID={`customer-bookings-reviewed-${item.id}`}>
                       <Feather name="check" size={13} color={colors.textSecondary} />
                       <Text style={[styles.reviewedText, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-                        Reviewed
+                        {de ? 'Bewertet' : 'Reviewed'}
                       </Text>
                     </View>
                   ) : (
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel="Leave a review"
+                      accessibilityLabel={de ? 'Bewertung schreiben' : 'Leave a review'}
                       testID={`booking-review-${item.id}`}
                       onPress={() => { setSelectedId(null); leaveReview(item); }}
                       style={({ pressed }) => [
@@ -359,7 +359,7 @@ export default function BookingsScreen() {
                       ]}
                     >
                       <Text style={[styles.reviewText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
-                        Leave a review
+                        {de ? 'Bewertung schreiben' : 'Leave a review'}
                       </Text>
                     </Pressable>
                   )
@@ -477,8 +477,8 @@ export default function BookingsScreen() {
               testID="customer-bookings-empty"
             >
               {tab === 'upcoming'
-                ? 'No upcoming appointments yet.'
-                : 'No past appointments yet.'}
+                ? (de ? 'Noch keine anstehenden Termine.' : 'No upcoming appointments yet.')
+                : (de ? 'Noch keine vergangenen Termine.' : 'No past appointments yet.')}
             </Text>
           }
           renderItem={({ item, index }) => {
@@ -519,7 +519,7 @@ export default function BookingsScreen() {
                         numberOfLines={1}
                         style={[styles.cardMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}
                       >
-                        {service?.name ?? 'Service'}
+                        {service?.name ?? (de ? 'Leistung' : 'Service')}
                       </Text>
                       <Text style={[styles.cardMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}>
                         {formatBookingWhen(item.date, item.time)}
@@ -560,10 +560,10 @@ export default function BookingsScreen() {
       {selected ? <BookingDetails booking={selected} role="customer" person={barbersById.get(selected.barber_id)?.name ?? 'Barber'} service={servicesById.get(selected.service_id)?.name ?? (de ? 'Termin' : 'Appointment')} onClose={() => setSelectedId(null)}>{renderActions(selected)}</BookingDetails> : null}
       <ConfirmSheet
         open={confirmingBooking !== null}
-        title="Cancel this booking?"
-        message="You can undo for 5 seconds."
-        cancelLabel="Keep booking"
-        confirmLabel="Cancel booking"
+        title={de ? 'Diesen Termin stornieren?' : 'Cancel this booking?'}
+        message={de ? 'Du kannst es 5 Sekunden lang rückgängig machen.' : 'You can undo for 5 seconds.'}
+        cancelLabel={de ? 'Termin behalten' : 'Keep booking'}
+        confirmLabel={de ? 'Termin stornieren' : 'Cancel booking'}
         destructive
         testID="customer-bookings-cancel-sheet"
         onClose={() => setConfirmingBooking(null)}

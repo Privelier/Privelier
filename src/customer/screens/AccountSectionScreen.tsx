@@ -13,6 +13,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../../theme/useTheme';
 import { BackButton } from '../../shared/components/ScreenBackHeader';
 import type { CustomerStackParamList } from '../CustomerNavigator';
+import { getAppLanguage } from '../../shared/locale';
 
 export type AccountSectionKey =
   | 'privacy'
@@ -29,11 +30,28 @@ export const ACCOUNT_SECTIONS: Record<AccountSectionKey, { title: string; blurb:
   },
 };
 
+const ACCOUNT_SECTIONS_DE: Record<AccountSectionKey, { title: string; blurb: string }> = {
+  privacy: {
+    title: 'Datenschutz und Sicherheit',
+    blurb: 'Deine genaue Terminadresse sieht nur der Barber des jeweiligen Termins. Ausweisdokumente sind privat und werden persönlich geprüft. Privelier nutzt keine biometrische Verifizierung.',
+  },
+  help: {
+    title: 'Hilfe',
+    blurb: 'Fragen oder Probleme mit einem Termin? Schreib uns an privelier@outlook.com.',
+  },
+};
+
+/** The section copy in the device language. */
+export function accountSection(key: AccountSectionKey): { title: string; blurb: string } {
+  return (getAppLanguage() === 'de' ? ACCOUNT_SECTIONS_DE : ACCOUNT_SECTIONS)[key];
+}
+
 type Props = NativeStackScreenProps<CustomerStackParamList, 'AccountSection'>;
 
 export default function AccountSectionScreen({ route, navigation }: Props) {
   const { colors, fonts } = useTheme();
-  const { title, blurb } = ACCOUNT_SECTIONS[route.params.section];
+  const de = getAppLanguage() === 'de';
+  const { title, blurb } = accountSection(route.params.section);
 
   return (
     <SafeAreaView
@@ -56,11 +74,11 @@ export default function AccountSectionScreen({ route, navigation }: Props) {
           <Pressable
             onPress={() => void Linking.openURL('mailto:privelier@outlook.com')}
             accessibilityRole="link"
-            accessibilityLabel="Email Privelier support"
+            accessibilityLabel={de ? 'Privelier-Support per E-Mail' : 'Email Privelier support'}
             testID="customer-account-help-email"
             style={styles.contact}
           >
-            <Text style={[styles.contactText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>Email support</Text>
+            <Text style={[styles.contactText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>{de ? 'Support anschreiben' : 'Email support'}</Text>
           </Pressable>
         ) : null}
       </View>

@@ -93,7 +93,7 @@ export default function DiscoverScreen({ navigation }: Props) {
       setServiceArea(null);
       setBarbers([]);
       setServices(null);
-      setError('Add your city to discover verified barbers near you.');
+      setError(de ? 'Füge deine Stadt hinzu, um verifizierte Barber in deiner Nähe zu finden.' : 'Add your city to discover verified barbers near you.');
       return;
     }
     const country = profileResult.profile?.country?.trim();
@@ -125,7 +125,7 @@ export default function DiscoverScreen({ navigation }: Props) {
       setActiveService(null);
     }
     setLoading(false);
-  }, []);
+  }, [de]);
 
   useEffect(() => {
     let active = true;
@@ -190,12 +190,12 @@ export default function DiscoverScreen({ navigation }: Props) {
           else void load();
         }}
         accessibilityRole="button"
-        accessibilityLabel={missingCity ? 'Add city to profile' : 'Retry discovery'}
+        accessibilityLabel={missingCity ? (de ? 'Stadt zum Profil hinzufügen' : 'Add city to profile') : (de ? 'Erneut laden' : 'Retry discovery')}
         testID={missingCity ? 'customer-home-add-city' : 'customer-home-retry'}
         style={styles.noticeAction}
       >
         <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}>
-          {missingCity ? 'Add city' : 'Try again'}
+          {missingCity ? (de ? 'Stadt hinzufügen' : 'Add city') : (de ? 'Erneut versuchen' : 'Try again')}
         </Text>
       </Pressable>
     </Notice>
@@ -250,7 +250,7 @@ export default function DiscoverScreen({ navigation }: Props) {
                 { color: colors.textSecondary, fontFamily: fonts.body },
               ]}
             >
-              {serviceArea ?? 'Your city'}
+              {serviceArea ?? (de ? 'Deine Stadt' : 'Your city')}
             </Text>
           </View>
         </View>
@@ -267,12 +267,12 @@ export default function DiscoverScreen({ navigation }: Props) {
               <TextInput
                 value={query}
                 onChangeText={setQuery}
-                placeholder="Search a barber or service"
+                placeholder={de ? 'Barber oder Leistung suchen' : 'Search a barber or service'}
                 placeholderTextColor={colors.textSecondary}
                 style={[styles.searchInput, { color: colors.textPrimary, fontFamily: fonts.body }]}
                 autoCapitalize="none"
                 autoCorrect={false}
-                accessibilityLabel="Search barbers or services"
+                accessibilityLabel={de ? 'Barber oder Leistungen suchen' : 'Search barbers or services'}
                 testID="customer-home-search"
               />
             </GlassSurface>
@@ -318,7 +318,7 @@ export default function DiscoverScreen({ navigation }: Props) {
             showsHorizontalScrollIndicator={false}
             style={styles.filtersScroll}
             contentContainerStyle={styles.filtersRow}
-            accessibilityLabel="Filter by service"
+            accessibilityLabel={de ? 'Nach Leistung filtern' : 'Filter by service'}
           >
             {serviceFilters.map((service) => {
               const selected = activeService?.toLowerCase() === service.toLowerCase();
@@ -365,8 +365,8 @@ export default function DiscoverScreen({ navigation }: Props) {
             testID="customer-home-empty"
           >
             {barbers.length === 0
-              ? `No verified barbers are available in ${cityName ?? 'your city'} yet.`
-              : 'No verified barbers match your search.'}
+              ? (de ? `In ${cityName ?? 'deiner Stadt'} gibt es noch keine verifizierten Barber.` : `No verified barbers are available in ${cityName ?? 'your city'} yet.`)
+              : (de ? 'Keine verifizierten Barber passen zu deiner Suche.' : 'No verified barbers match your search.')}
           </Text>
         ) : (
           <>

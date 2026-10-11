@@ -294,7 +294,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
                 <Text
                   style={[styles.heroMeta, { fontFamily: fonts.body, color: barber.profile_image ? HERO_TEXT_DIM : colors.textSecondary }]}
                   testID="barber-profile-rating"
-                  accessibilityLabel="No ratings yet"
+                  accessibilityLabel={german ? 'Noch keine Bewertungen' : 'No ratings yet'}
                 >
                   {german ? 'Noch keine Bewertungen' : 'No ratings yet'}
                 </Text>
@@ -496,7 +496,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
                         numberOfLines={1}
                         style={[styles.reviewName, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}
                       >
-                        {name ?? 'Verified booking'}
+                        {name ?? (german ? 'Verifizierter Termin' : 'Verified booking')}
                       </Text>
                       <Text style={[styles.reviewDate, { color: colors.textSecondary, fontFamily: fonts.body }]}>
                         {formatShortDate(review.created_at)}
@@ -504,7 +504,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
                     </View>
                     {name ? (
                       <Text style={[styles.reviewVerified, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                        Verified booking
+                        {german ? 'Verifizierter Termin' : 'Verified booking'}
                       </Text>
                     ) : null}
                     <StarRating rating={review.rating} size={14} style={styles.reviewStars} />

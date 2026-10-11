@@ -18,6 +18,7 @@
  * Loads on FOCUS (not mount): returning from a conversation must show the
  * fresh last-message preview, and bottom-tab screens stay mounted.
  */
+import { getAppLanguage } from '../../shared/locale';
 import { useCallback, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -45,6 +46,7 @@ type Props = CompositeScreenProps<
 >;
 
 export default function InboxScreen({ navigation }: Props) {
+  const de = getAppLanguage() === 'de';
   const { colors, fonts } = useTheme();
   // Real per-user read state (provider in CustomerNavigator): unread rows
   // render bold with a brass dot; the set updates live via realtime.
@@ -92,10 +94,10 @@ export default function InboxScreen({ navigation }: Props) {
     >
       <View style={styles.header}>
         <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-          Inbox
+          {de ? 'Nachrichten' : 'Inbox'}
         </Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-          Conversations with your barbers.
+          {de ? 'Gespräche mit deinen Barbern.' : 'Conversations with your barbers.'}
         </Text>
         <View style={styles.headerRule} />
       </View>
@@ -127,10 +129,10 @@ export default function InboxScreen({ navigation }: Props) {
                 style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}
                 testID="customer-inbox-empty"
               >
-                No messages yet.
+                {de ? 'Noch keine Nachrichten.' : 'No messages yet.'}
               </Text>
               <Text style={[styles.emptyHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                Conversations start once you book a barber.
+                {de ? 'Gespräche beginnen, sobald du einen Barber buchst.' : 'Conversations start once you book a barber.'}
               </Text>
             </View>
           }
@@ -138,7 +140,7 @@ export default function InboxScreen({ navigation }: Props) {
             const name = item.barber?.name ?? 'Barber';
             const preview =
               item.lastMessage?.message ??
-              (item.service ? `About: ${item.service.name}` : 'No messages yet.');
+              (item.service ? `${de ? 'Zu' : 'About'}: ${item.service.name}` : de ? 'Noch keine Nachrichten.' : 'No messages yet.');
             const unread = unreadRoomIds.has(item.room.id);
             return (
               <GlassSurface variant="card" style={styles.rowCard}>
@@ -186,7 +188,7 @@ export default function InboxScreen({ navigation }: Props) {
                     style={[styles.unreadDot, { backgroundColor: colors.accent }]}
                     testID={`customer-inbox-unread-${item.room.id}`}
                     accessible
-                    accessibilityLabel="Unread messages"
+                    accessibilityLabel={de ? 'Ungelesene Nachrichten' : 'Unread messages'}
                   />
                 ) : null}
                 </Pressable>

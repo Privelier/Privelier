@@ -18,6 +18,7 @@
  * customer-account-logout keeps its testID (referenced by the login E2E
  * flow).
  */
+import { getAppLanguage } from '../../shared/locale';
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -31,7 +32,7 @@ import { useExitRole } from '../../RoleContext';
 import { useTheme } from '../../theme/useTheme';
 import { pressOpacity } from '../../theme/motion';
 import type { UsersRow } from '../../types';
-import { ACCOUNT_SECTIONS, type AccountSectionKey } from './AccountSectionScreen';
+import { accountSection, type AccountSectionKey } from './AccountSectionScreen';
 import type { CustomerTabParamList } from '../CustomerTabs';
 import type { CustomerStackParamList } from '../CustomerNavigator';
 import { Notice } from '../../shared/components/Notice';
@@ -54,6 +55,7 @@ const SETTINGS_ROWS: { key: AccountSectionKey; icon: keyof typeof Feather.glyphM
 ];
 
 export default function AccountScreen({ navigation }: Props) {
+  const de = getAppLanguage() === 'de';
   const { colors, fonts } = useTheme();
   const { scrollY, onScroll } = useScrollGlass();
   const onSignOut = useExitRole();
@@ -80,7 +82,7 @@ export default function AccountScreen({ navigation }: Props) {
     >
       <Animated.ScrollView onScroll={onScroll} scrollEventThrottle={16} contentContainerStyle={styles.scrollContent}>
         <View style={styles.headingRow}>
-          <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>Account</Text>
+          <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{de ? 'Konto' : 'Account'}</Text>
           <NotificationBell onPress={() => navigation.navigate('NotificationCenter')} testID="customer-account-notifications" />
         </View>
 
@@ -105,7 +107,7 @@ export default function AccountScreen({ navigation }: Props) {
           <Pressable
             onPress={() => navigation.navigate('EditProfile')}
             accessibilityRole="button"
-            accessibilityLabel="Edit profile"
+            accessibilityLabel={de ? 'Profil bearbeiten' : 'Edit profile'}
             testID="customer-account-edit-profile"
             style={({ pressed }) => [styles.profileRow, pressed ? { opacity: pressOpacity.soft } : null]}
           >
@@ -133,7 +135,7 @@ export default function AccountScreen({ navigation }: Props) {
                 </Text>
               ) : null}
               <Text style={[styles.member, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
-                Member
+                {de ? 'Mitglied' : 'Member'}
               </Text>
             </View>
             <Feather name="edit-2" size={20} color={colors.textSecondary} />
@@ -147,7 +149,7 @@ export default function AccountScreen({ navigation }: Props) {
                 key={key}
                 onPress={() => navigation.navigate('AccountSection', { section: key })}
                 accessibilityRole="button"
-                accessibilityLabel={ACCOUNT_SECTIONS[key].title}
+                accessibilityLabel={accountSection(key).title}
                 testID={`customer-account-row-${key}`}
                 style={({ pressed }) => [
                   styles.settingsRow,
@@ -159,7 +161,7 @@ export default function AccountScreen({ navigation }: Props) {
                     so the accent reads as a badge, not decoration. */}
                 <Feather name={icon} size={20} color={colors.textSecondary} />
                 <Text style={[styles.settingsLabel, { color: colors.textPrimary, fontFamily: fonts.body }]}>
-                  {ACCOUNT_SECTIONS[key].title}
+                  {accountSection(key).title}
                 </Text>
                 <Feather name="chevron-right" size={20} color={colors.textSecondary} />
               </Pressable>
@@ -170,7 +172,7 @@ export default function AccountScreen({ navigation }: Props) {
         <Pressable
           onPress={onSignOut}
           accessibilityRole="button"
-          accessibilityLabel="Sign out"
+          accessibilityLabel={de ? 'Abmelden' : 'Sign out'}
           testID="customer-account-logout"
           style={({ pressed }) => [
             styles.signOutRow,
@@ -180,13 +182,13 @@ export default function AccountScreen({ navigation }: Props) {
         >
           <Feather name="log-out" size={20} color={colors.errorText} />
           <Text style={[styles.signOutText, { color: colors.errorText, fontFamily: fonts.body }]}>
-            Sign out
+            {de ? 'Abmelden' : 'Sign out'}
           </Text>
         </Pressable>
         <DeleteAccountAction onDeleted={onSignOut} testID="customer-account-delete" />
         <LegalLinks includeAll testIDPrefix="customer-account-legal" />
       </Animated.ScrollView>
-      <ScrollGlassHeader title={'Account'} scrollY={scrollY} start={48} testID="customer-account-glass-header" />
+      <ScrollGlassHeader title={de ? 'Konto' : 'Account'} scrollY={scrollY} start={48} testID="customer-account-glass-header" />
     </SafeAreaView>
   );
 }
