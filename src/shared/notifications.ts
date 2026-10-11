@@ -20,7 +20,8 @@ export interface NotificationRow {
   event_type: NotificationEventType;
   booking_id: string;
   message_id: string | null;
-  actor_id: string;
+  /** null when the change was made by Privelier itself (no user session). */
+  actor_id: string | null;
   booking_status: BookingRow['status'] | null;
   event_key: string;
   created_at: string;
@@ -33,7 +34,9 @@ export function notificationCopy(
   language = getAppLanguage()
 ): { title: string; body: string } {
   const isGerman = language === 'de';
-  const name = actorName?.trim() || (isGerman ? 'Jemand' : 'Someone');
+  const name = row.actor_id === null
+    ? 'Privelier'
+    : actorName?.trim() || (isGerman ? 'Jemand' : 'Someone');
   if (row.event_type === 'message') {
     return isGerman
       ? { title: 'Neue Nachricht', body: `${name} hat dir eine Nachricht geschickt.` }

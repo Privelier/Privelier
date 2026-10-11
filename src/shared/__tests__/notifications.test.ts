@@ -28,3 +28,15 @@ describe('notificationChannelTopic', () => {
     expect(notificationChannelTopic('notification-badge', 'user-1')).not.toBe(notificationChannelTopic('notification-badge', 'user-1'));
   });
 });
+
+describe('system-made booking changes (migration 0040)', () => {
+  it('names Privelier instead of an unknown person when no user acted', () => {
+    const row = {
+      id: 'n-1', recipient_id: 'c-1', event_type: 'booking_status', booking_id: 'b-1',
+      message_id: null, actor_id: null, booking_status: 'cancelled', event_key: 'k',
+      created_at: '2026-10-11T09:00:00Z', read_at: null,
+    } as const;
+    expect(notificationCopy(row as never, null, 'en').body).toBe('Privelier cancelled the appointment.');
+    expect(notificationCopy(row as never, null, 'en').body).not.toMatch(/Someone/);
+  });
+});

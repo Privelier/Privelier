@@ -39,7 +39,7 @@ export default function NotificationCenterScreen({
     if (result.error) { setError(true); return; }
     const notifications = (result.data ?? []) as NotificationRow[];
     setRows(notifications);
-    const actorIds = [...new Set(notifications.map((row) => row.actor_id).filter((id) => id !== userId))];
+    const actorIds = [...new Set(notifications.map((row) => row.actor_id).filter((id): id is string => id !== null && id !== userId))];
     if (actorIds.length === 0) { setNames({}); return; }
     const identities = role === 'customer'
       ? await supabase.from('barber_directory').select('id,name').in('id', actorIds)
@@ -97,7 +97,7 @@ export default function NotificationCenterScreen({
           </View>
         ) : !error ? <View style={styles.empty}><Feather name="bell" size={24} color={colors.accent} /><Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}>{isGerman ? 'Du bist auf dem neuesten Stand.' : 'You’re all caught up.'}</Text></View> : null}
         renderItem={({ item }) => {
-          const copy = notificationCopy(item, names[item.actor_id] ?? null);
+          const copy = notificationCopy(item, (item.actor_id ? names[item.actor_id] ?? null : null));
           const icon = item.event_type === 'message' ? 'message-circle'
             : item.event_type === 'new_request' ? 'calendar'
             : item.booking_status === 'accepted' ? 'check-circle'
