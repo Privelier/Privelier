@@ -116,9 +116,9 @@ env:
 - tapOn:
     id: "barber-services-delete-.*"
 - assertVisible:
-    text: "Delete service"
+    id: "barber-services-delete-confirm"
 - tapOn:
-    text: "Delete"
+    id: "barber-services-delete-confirm-confirm"
 
 - assertNotVisible:
     text: "Maestro test cut (edited)"

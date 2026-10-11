@@ -16,7 +16,7 @@
  * Plus the client-side max-6 gate (add tile hidden at the cap) and the
  * server-truth 'limit_reached' fallback.
  */
-import { AccessibilityInfo, Alert } from 'react-native';
+import { AccessibilityInfo } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import * as ImagePicker from 'expo-image-picker';
 import PortfolioScreen from '../PortfolioScreen';
@@ -29,6 +29,24 @@ import {
 } from '../../portfolioData';
 import type { PortfolioRow } from '../../../types';
 
+const mockShowToast = jest.fn();
+jest.mock('../../../shared/components/ToastProvider', () => ({
+  useToast: () => ({ showToast: mockShowToast }),
+}));
+jest.mock('../../../shared/components/ConfirmSheet', () => {
+  const React = jest.requireActual('react');
+  const { Pressable, Text, View } = jest.requireActual('react-native');
+  return {
+    ConfirmSheet: ({ open, title, onConfirm, onClose, testID }: { open: boolean; title: string; onConfirm: () => void; onClose: () => void; testID: string }) =>
+      open
+        ? React.createElement(View, { testID }, [
+            React.createElement(Text, { key: 't' }, title),
+            React.createElement(Pressable, { key: 'k', testID: `${testID}-keep`, onPress: onClose }),
+            React.createElement(Pressable, { key: 'c', testID: `${testID}-confirm`, onPress: onConfirm }),
+          ])
+        : null,
+  };
+});
 jest.mock('expo-image-picker', () => ({
   requestMediaLibraryPermissionsAsync: jest.fn(),
   launchImageLibraryAsync: jest.fn(),
@@ -113,7 +131,6 @@ const mockDelete = deletePortfolioImage as jest.Mock;
 const mockNavigate = jest.fn();
 const navigation = { navigate: mockNavigate };
 
-let alertSpy: jest.SpyInstance;
 
 /** N portfolio rows with deterministic, sortable ids (p1, p2, ...). */
 function rows(n: number): PortfolioRow[] {
@@ -124,25 +141,9 @@ function rows(n: number): PortfolioRow[] {
   }));
 }
 
-/**
- * Alert stub that auto-confirms the delete dialog: when invoked with a buttons
- * array it presses the destructive button's onPress (the "Delete" action);
- * otherwise (a plain one-arg/two-arg alert) it does nothing. This lets the
- * delete-reconcile tests drive the confirm flow deterministically.
- */
-function installAlertAutoConfirm() {
-  return jest.spyOn(Alert, 'alert').mockImplementation((_title, _msg, buttons) => {
-    if (Array.isArray(buttons)) {
-      const destructive = buttons.find((b) => b.style === 'destructive');
-      destructive?.onPress?.();
-    }
-  });
-}
-
 beforeEach(() => {
   jest.clearAllMocks();
   mockNavigate.mockReset();
-  alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
 
   // Default happy load: a signed-in barber with an empty portfolio.
@@ -151,7 +152,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  alertSpy.mockRestore();
   jest.restoreAllMocks();
 });
 
@@ -223,7 +223,7 @@ describe('PortfolioScreen', () => {
 
       await waitFor(() => expect(mockUpload).toHaveBeenCalled());
       await waitFor(() =>
-        expect(alertSpy).toHaveBeenCalledWith('Upload failed', expect.stringContaining('server'))
+        expect(mockShowToast).toHaveBeenCalledWith({ message: expect.stringMatching(/^Upload failed\. .*server/) })
       );
       // The failed upload must never reach the row insert.
       expect(mockInsert).not.toHaveBeenCalled();
@@ -296,10 +296,9 @@ describe('PortfolioScreen', () => {
       await fireEvent.press(screen.getByTestId('barber-portfolio-add'));
 
       await waitFor(() =>
-        expect(alertSpy).toHaveBeenCalledWith(
-          'Upload failed',
-          expect.stringContaining('6 portfolio images')
-        )
+        expect(mockShowToast).toHaveBeenCalledWith({
+          message: expect.stringMatching(/^Upload failed\. .*6 portfolio images/),
+        })
       );
     });
   });
@@ -308,13 +307,15 @@ describe('PortfolioScreen', () => {
     it('removes the tile optimistically on a successful delete', async () => {
       mockList.mockResolvedValue({ status: 'ok', images: rows(3) });
       mockDelete.mockResolvedValueOnce({ status: 'ok' });
-      alertSpy.mockRestore();
-      alertSpy = installAlertAutoConfirm();
 
       await renderLoaded();
       expect(screen.getByTestId('barber-portfolio-image-p2')).toBeTruthy();
 
       await fireEvent.press(screen.getByTestId('barber-portfolio-delete-p2'));
+      // Nothing is removed until the barber confirms in the sheet.
+      expect(mockDelete).not.toHaveBeenCalled();
+      expect(screen.getByTestId('barber-portfolio-image-p2')).toBeTruthy();
+      await fireEvent.press(screen.getByTestId('barber-portfolio-delete-confirm-confirm'));
 
       await waitFor(() => expect(mockDelete).toHaveBeenCalled());
       await waitFor(() => expect(screen.queryByTestId('barber-portfolio-image-p2')).toBeNull());
@@ -331,11 +332,10 @@ describe('PortfolioScreen', () => {
         message: 'We could not reach the server. Check your connection and try again.',
         retryable: true,
       });
-      alertSpy.mockRestore();
-      alertSpy = installAlertAutoConfirm();
 
       await renderLoaded();
       await fireEvent.press(screen.getByTestId('barber-portfolio-delete-p2'));
+      await fireEvent.press(screen.getByTestId('barber-portfolio-delete-confirm-confirm'));
 
       // Optimistically gone, then reconciled back after the failure.
       await waitFor(() => expect(mockDelete).toHaveBeenCalled());
@@ -343,6 +343,7 @@ describe('PortfolioScreen', () => {
       // Still all three, in stable order (p1, p2, p3).
       expect(screen.getByTestId('barber-portfolio-image-p1')).toBeTruthy();
       expect(screen.getByTestId('barber-portfolio-image-p3')).toBeTruthy();
+      expect(mockShowToast).toHaveBeenCalledWith({ message: expect.stringMatching(/^Could not delete\. /) });
     });
   });
 });

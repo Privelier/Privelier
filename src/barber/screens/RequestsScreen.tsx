@@ -76,8 +76,8 @@ import { getAppLanguage } from '../../shared/locale';
 
 /**
  * Confirm an irreversible transition before running it, matching the
- * destructive-action convention established in ServicesScreen (Alert.alert with
- * a cancel + destructive option). Accept / Mark complete are not destructive
+ * destructive-action convention shared across the Barber app (the ConfirmSheet
+ * with a keep + destructive option). Accept / Mark complete are not destructive
  * and stay one-tap.
  */
 /** Requests read soonest-first: sort by (date, time) ascending. */

@@ -20,7 +20,7 @@
  * layer only truly runs on-device after a dev-client rebuild with the picker.
  */
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, FontAwesome5 } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -30,6 +30,7 @@ import { useTheme } from '../../theme/useTheme';
 import { HAIRLINE, radius, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 import { Notice } from '../../shared/components/Notice';
+import { useToast } from '../../shared/components/ToastProvider';
 import { GlassSurface } from '../../shared/components/GlassSurface';
 import { getAppLanguage } from '../../shared/locale';
 import type { VerificationDocType, VerificationRequestRow, VerificationStatus } from '../../types';
@@ -52,6 +53,7 @@ const STATUS_COPY: Record<'de' | 'en', Record<VerificationStatus, { word: string
 export default function VerifyScreen() {
   const { colors, fonts } = useTheme();
   const language = getAppLanguage();
+  const { showToast } = useToast();
 
   const [status, setStatus] = useState<VerificationStatus | null>(null);
   const [request, setRequest] = useState<VerificationRequestRow | null>(null);
@@ -103,10 +105,9 @@ export default function VerifyScreen() {
   const handleUpload = useCallback(
     async (docType: VerificationDocType) => {
       if (!userId) {
-        Alert.alert(
-          language === 'de' ? 'Einen Moment' : 'One moment',
-          language === 'de' ? 'Dein Profil wird noch geladen. Versuch es gleich noch einmal.' : 'Your profile is still loading. Try again shortly.'
-        );
+        showToast({
+          message: language === 'de' ? 'Dein Profil wird noch geladen. Versuch es gleich noch einmal.' : 'Your profile is still loading. Try again shortly.',
+        });
         return;
       }
       // Belt-and-suspenders: the rows are already disabled while a doc uploads.
@@ -114,13 +115,10 @@ export default function VerifyScreen() {
 
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
-        Alert.alert(
-          language === 'de' ? 'Zugriff auf Fotos nötig' : 'Photo access needed',
-          language === 'de' ? 'Erlaube den Fotozugriff in den Einstellungen, um deine Unterlagen hochzuladen.' : 'Allow photo access in Settings to upload your documents.',
-          [
-          { text: language === 'de' ? 'Später' : 'Not now', style: 'cancel' },
-          { text: language === 'de' ? 'Einstellungen öffnen' : 'Open Settings', onPress: () => void Linking.openSettings() },
-        ]);
+        showToast({
+          message: language === 'de' ? 'Erlaube den Fotozugriff in den Einstellungen, um deine Unterlagen hochzuladen.' : 'Allow photo access in Settings to upload your documents.',
+          action: { label: language === 'de' ? 'Einstellungen' : 'Settings', onPress: () => void Linking.openSettings() },
+        });
         return;
       }
 
@@ -138,12 +136,12 @@ export default function VerifyScreen() {
         // never refetches (no fabricated "uploaded" state).
         const uploaded = await uploadVerificationDocument(userId, docType, asset.uri, asset.mimeType);
         if (uploaded.status !== 'ok') {
-          Alert.alert(language === 'de' ? 'Upload fehlgeschlagen' : 'Upload failed', uploaded.message);
+          showToast({ message: `${language === 'de' ? 'Upload fehlgeschlagen.' : 'Upload failed.'} ${uploaded.message}` });
           return;
         }
         const submitted = await submitVerificationDocument(userId, docType, uploaded.path);
         if (submitted.status !== 'ok') {
-          Alert.alert(language === 'de' ? 'Upload fehlgeschlagen' : 'Upload failed', submitted.message);
+          showToast({ message: `${language === 'de' ? 'Upload fehlgeschlagen.' : 'Upload failed.'} ${submitted.message}` });
           return;
         }
         await load();
@@ -151,7 +149,7 @@ export default function VerifyScreen() {
         setUploadingDoc(null);
       }
     },
-    [userId, uploadingDoc, load, language]
+    [userId, uploadingDoc, load, language, showToast]
   );
 
   const statusColor =

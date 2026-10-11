@@ -115,14 +115,18 @@ env:
 # First back is the Android hardware-back evidence for the discard guard.
 - hideKeyboard
 - back
-- assertVisible: "Discard changes?"
-- tapOn: "Keep editing"
+- assertVisible:
+    id: "barber-location-discard"
+- tapOn:
+    id: "barber-location-discard-keep"
 - assertVisible:
     id: "barber-location-screen"
 - assertNotVisible:
     id: "barber-location-pick-hint"
 - back
-- assertVisible: "Discard changes?"
-- tapOn: "Discard"
+- assertVisible:
+    id: "barber-location-discard"
+- tapOn:
+    id: "barber-location-discard-confirm"
 - assertVisible:
     id: "barber-dashboard-screen"

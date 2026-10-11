@@ -22,7 +22,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -42,6 +41,9 @@ import { pressOpacity } from '../../theme/motion';
 import { PrimaryButton } from '../../shared/components/PrimaryButton';
 import { BackButton } from '../../shared/components/ScreenBackHeader';
 import { Notice } from '../../shared/components/Notice';
+import { ConfirmSheet } from '../../shared/components/ConfirmSheet';
+import { getAppLanguage } from '../../shared/locale';
+import { useDiscardGuard } from '../../shared/useDiscardGuard';
 import { forwardGeocode, type GeocodeCandidate } from '../../shared/geocoding';
 import { MAX_ADDRESS_LENGTH, fetchOwnLocation, updateOwnLocation } from '../locationData';
 import type { BarberStackParamList } from '../BarberNavigator';
@@ -55,6 +57,7 @@ const MIN_QUERY_LENGTH = 4;
 
 export default function LocationEditScreen({ navigation }: Props) {
   const { colors, fonts, isDark } = useTheme();
+  const de = getAppLanguage() === 'de';
 
   const [barberId, setBarberId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -192,21 +195,10 @@ export default function LocationEditScreen({ navigation }: Props) {
   const needsPick = !clearing && !selectionCurrent;
   const hasUnsavedDraft = dirty || trimmed !== (savedAddress ?? '').trim();
 
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (event) => {
-      if (!hasUnsavedDraft || submitting || savedRef.current) return;
-      event.preventDefault();
-      Alert.alert('Discard changes?', "Your location changes won't be saved.", [
-        { text: 'Keep editing', style: 'cancel' },
-        {
-          text: 'Discard',
-          style: 'destructive',
-          onPress: () => navigation.dispatch(event.data.action),
-        },
-      ]);
-    });
-    return unsubscribe;
-  }, [navigation, hasUnsavedDraft, submitting]);
+  const discardGuard = useDiscardGuard(
+    navigation,
+    useCallback(() => hasUnsavedDraft && !submitting && !savedRef.current, [hasUnsavedDraft, submitting])
+  );
 
   const onSave = useCallback(async () => {
     if (!barberId) return;
@@ -379,6 +371,17 @@ export default function LocationEditScreen({ navigation }: Props) {
           </ScrollView>
         </KeyboardAvoidingView>
       )}
+      <ConfirmSheet
+        open={discardGuard.open}
+        title={de ? 'Änderungen verwerfen?' : 'Discard changes?'}
+        message={de ? 'Deine Standort-Änderungen werden nicht gespeichert.' : "Your location changes won't be saved."}
+        confirmLabel={de ? 'Verwerfen' : 'Discard'}
+        cancelLabel={de ? 'Weiter bearbeiten' : 'Keep editing'}
+        destructive
+        onConfirm={discardGuard.discard}
+        onClose={discardGuard.keepEditing}
+        testID="barber-location-discard"
+      />
     </SafeAreaView>
   );
 }

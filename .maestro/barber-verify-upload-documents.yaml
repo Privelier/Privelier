@@ -122,7 +122,7 @@ env:
 
 # No "Upload failed" alert must have appeared, and the id row must now read
 # 'Uploaded' (the refetch saw the freshly-written id_image_url path).
-- assertNotVisible: "Upload failed"
+- assertNotVisible: "Upload failed.*"
 - assertVisible: "Uploaded"
 
 # --- Upload the barber-licence document ---
@@ -139,7 +139,7 @@ env:
     notVisible:
       id: "barber-verify-doc-license-uploading"
     timeout: 20000
-- assertNotVisible: "Upload failed"
+- assertNotVisible: "Upload failed.*"
 # Both rows now uploaded -> at least two 'Uploaded' labels; asserting the
 # licence row's indicator cleared above already pins its success.
 - assertVisible: "Uploaded"

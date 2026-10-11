@@ -15,10 +15,23 @@
  *    without `savedRef` a SUCCESSFUL save would raise a discard dialog.
  */
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 import BioEditScreen from '../BioEditScreen';
 import { fetchOwnBarberProfile, updateOwnBio } from '../../profileData';
 
+jest.mock('../../../shared/components/ConfirmSheet', () => {
+  const React = jest.requireActual('react');
+  const { Pressable, Text, View } = jest.requireActual('react-native');
+  return {
+    ConfirmSheet: ({ open, title, onConfirm, onClose, testID }: { open: boolean; title: string; onConfirm: () => void; onClose: () => void; testID: string }) =>
+      open
+        ? React.createElement(View, { testID }, [
+            React.createElement(Text, { key: 't' }, title),
+            React.createElement(Pressable, { key: 'k', testID: `${testID}-keep`, onPress: onClose }),
+            React.createElement(Pressable, { key: 'c', testID: `${testID}-confirm`, onPress: onConfirm }),
+          ])
+        : null,
+  };
+});
 jest.mock('../../../../lib/supabase', () => ({
   supabase: {
     auth: {
@@ -125,7 +138,6 @@ beforeEach(() => {
       return jest.fn();
     }),
   };
-  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
 
 afterEach(() => {
@@ -206,36 +218,48 @@ describe('BioEditScreen', () => {
     // Clean screen: leaving is not obstructed.
     const cleanExit = fireBeforeRemove();
     expect(cleanExit.preventDefault).not.toHaveBeenCalled();
-    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('barber-bio-discard')).toBeNull();
 
-    // Dirty screen: the back gesture is blocked and a discard dialog is raised.
+    // Dirty screen: the back gesture is blocked and the discard sheet opens.
     await fireEvent.changeText(screen.getByTestId('barber-bio-input'), 'Edited.');
-    const dirtyExit = fireBeforeRemove();
+    let dirtyExit!: ReturnType<typeof fireBeforeRemove>;
+    await act(async () => { dirtyExit = fireBeforeRemove(); });
     expect(dirtyExit.preventDefault).toHaveBeenCalled();
-    expect(Alert.alert).toHaveBeenCalledWith(
-      'Discard changes?',
-      expect.any(String),
-      expect.any(Array)
-    );
+    expect(screen.getByText('Discard changes?')).toBeTruthy();
 
-    // Confirming "Discard" dispatches the original navigation action.
-    const buttons = (Alert.alert as jest.Mock).mock.calls[0][2] as {
-      text: string;
-      onPress?: () => void;
-    }[];
-    buttons.find((b) => b.text === 'Discard')?.onPress?.();
-    expect(navigation.dispatch).toHaveBeenCalledWith(dirtyExit.data.action);
+    // "Keep editing" closes the sheet and keeps the typed text.
+    await fireEvent.press(screen.getByTestId('barber-bio-discard-keep'));
+    expect(screen.queryByTestId('barber-bio-discard')).toBeNull();
+    expect(navigation.dispatch).not.toHaveBeenCalled();
+    expect(screen.getByTestId('barber-bio-input').props.value).toBe('Edited.');
 
     // THE TRAP: a successful save pops while `dirty` is still true. The guard
-    // must stand down, or saving would raise a discard dialog over saved work.
-    (Alert.alert as jest.Mock).mockClear();
+    // must stand down, or saving would raise a discard sheet over saved work.
     await fireEvent.press(screen.getByTestId('barber-bio-save'));
     await act(async () => {});
     expect(navigation.goBack).toHaveBeenCalled();
 
-    const savedExit = fireBeforeRemove();
+    let savedExit!: ReturnType<typeof fireBeforeRemove>;
+    await act(async () => { savedExit = fireBeforeRemove(); });
     expect(savedExit.preventDefault).not.toHaveBeenCalled();
-    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('barber-bio-discard')).toBeNull();
+  });
+
+  it('replays the blocked navigation action when the barber discards', async () => {
+    mockFetchProfile.mockResolvedValue(PROFILE('Ten years of sharp fades.'));
+    await renderScreen();
+    await flushMount();
+
+    await fireEvent.changeText(screen.getByTestId('barber-bio-input'), 'Edited.');
+    let dirtyExit!: ReturnType<typeof fireBeforeRemove>;
+    await act(async () => { dirtyExit = fireBeforeRemove(); });
+    await fireEvent.press(screen.getByTestId('barber-bio-discard-confirm'));
+    expect(navigation.dispatch).toHaveBeenCalledWith(dirtyExit.data.action);
+
+    // The replayed action re-enters beforeRemove while still dirty; it must pass.
+    let replay!: ReturnType<typeof fireBeforeRemove>;
+    await act(async () => { replay = fireBeforeRemove(); });
+    expect(replay.preventDefault).not.toHaveBeenCalled();
   });
 
   it('surfaces a failed save as a form error and stays on the screen', async () => {

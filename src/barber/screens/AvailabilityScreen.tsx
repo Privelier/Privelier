@@ -18,7 +18,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Pressable,
   StyleSheet,
@@ -35,6 +34,9 @@ import { pressOpacity } from '../../theme/motion';
 import { PrimaryButton } from '../../shared/components/PrimaryButton';
 import { BackButton } from '../../shared/components/ScreenBackHeader';
 import { Notice } from '../../shared/components/Notice';
+import { ConfirmSheet } from '../../shared/components/ConfirmSheet';
+import { useToast } from '../../shared/components/ToastProvider';
+import { getAppLanguage } from '../../shared/locale';
 import type { Palette } from '../../theme/colors';
 import type { AvailabilityRow } from '../../types';
 import {
@@ -87,6 +89,9 @@ function underlineColor(hasError: boolean, focused: boolean, colors: Palette): s
 
 export default function AvailabilityScreen({ navigation }: Props) {
   const { colors, fonts, isDark } = useTheme();
+  const de = getAppLanguage() === 'de';
+  const { showToast } = useToast();
+  const [pendingDelete, setPendingDelete] = useState<AvailabilityRow | null>(null);
 
   const [barberId, setBarberId] = useState<string | null>(null);
   const [windows, setWindows] = useState<AvailabilityRow[]>([]);
@@ -226,26 +231,30 @@ export default function AvailabilityScreen({ navigation }: Props) {
 
   const onDelete = useCallback(
     (window: AvailabilityRow) => {
-      const label = window.day_of_week !== null ? DAY_LABELS[window.day_of_week] : window.specific_date;
-      Alert.alert('Delete availability', `Delete the window on ${label}? This cannot be undone.`, [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            const result = await deleteAvailabilityWindow(window.id);
-            if (result.status === 'ok' || result.status === 'not_found') {
-              setWindows((current) => current.filter((item) => item.id !== window.id));
-              if (editingId === window.id) resetForm();
-            } else {
-              Alert.alert('Could not delete', result.message);
-            }
-          },
-        },
-      ]);
+      setPendingDelete(window);
     },
-    [editingId, resetForm]
+    []
   );
+
+  const confirmDelete = useCallback(async () => {
+    const window = pendingDelete;
+    setPendingDelete(null);
+    if (!window) return;
+    const result = await deleteAvailabilityWindow(window.id);
+    if (result.status === 'ok' || result.status === 'not_found') {
+      setWindows((current) => current.filter((item) => item.id !== window.id));
+      if (editingId === window.id) resetForm();
+      showToast({ message: de ? 'Zeitfenster gelöscht.' : 'Availability window deleted.' });
+    } else {
+      showToast({ message: `${de ? 'Löschen fehlgeschlagen.' : 'Could not delete.'} ${result.message}` });
+    }
+  }, [pendingDelete, editingId, resetForm, showToast, de]);
+
+  const pendingDeleteLabel = pendingDelete
+    ? pendingDelete.day_of_week !== null
+      ? DAY_LABELS[pendingDelete.day_of_week]
+      : pendingDelete.specific_date
+    : '';
 
   return (
     <SafeAreaView
@@ -546,6 +555,21 @@ export default function AvailabilityScreen({ navigation }: Props) {
             </View>
           </View>
         )}
+      />
+      <ConfirmSheet
+        open={pendingDelete !== null}
+        title={de ? 'Zeitfenster löschen' : 'Delete availability'}
+        message={
+          de
+            ? `Das Zeitfenster am ${pendingDeleteLabel} löschen? Das kann nicht rückgängig gemacht werden.`
+            : `Delete the window on ${pendingDeleteLabel}? This cannot be undone.`
+        }
+        confirmLabel={de ? 'Löschen' : 'Delete'}
+        cancelLabel={de ? 'Abbrechen' : 'Cancel'}
+        destructive
+        onConfirm={() => void confirmDelete()}
+        onClose={() => setPendingDelete(null)}
+        testID="barber-availability-delete-confirm"
       />
     </SafeAreaView>
   );

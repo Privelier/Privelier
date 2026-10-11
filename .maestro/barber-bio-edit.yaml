@@ -109,8 +109,10 @@ env:
 # --- The discard guard: unsaved prose must survive a stray back tap ---
 - tapOn:
     id: "barber-bio-back"
-- assertVisible: "Discard changes?"
-- tapOn: "Keep editing"
+- assertVisible:
+    id: "barber-bio-discard"
+- tapOn:
+    id: "barber-bio-discard-keep"
 
 # Still on the editor, with the typed text intact.
 - assertVisible:
@@ -120,7 +122,9 @@ env:
 # Leave for real, writing nothing (see header).
 - tapOn:
     id: "barber-bio-back"
-- assertVisible: "Discard changes?"
-- tapOn: "Discard"
+- assertVisible:
+    id: "barber-bio-discard"
+- tapOn:
+    id: "barber-bio-discard-confirm"
 - assertVisible:
     id: "barber-dashboard-screen"

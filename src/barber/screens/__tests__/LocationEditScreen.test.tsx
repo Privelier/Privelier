@@ -9,11 +9,24 @@
  * field saves an explicit NULL location (the pin-removal path).
  */
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 import LocationEditScreen from '../LocationEditScreen';
 import { fetchOwnLocation, updateOwnLocation } from '../../locationData';
 import { forwardGeocode } from '../../../shared/geocoding';
 
+jest.mock('../../../shared/components/ConfirmSheet', () => {
+  const React = jest.requireActual('react');
+  const { Pressable, Text, View } = jest.requireActual('react-native');
+  return {
+    ConfirmSheet: ({ open, title, onConfirm, onClose, testID }: { open: boolean; title: string; onConfirm: () => void; onClose: () => void; testID: string }) =>
+      open
+        ? React.createElement(View, { testID }, [
+            React.createElement(Text, { key: 't' }, title),
+            React.createElement(Pressable, { key: 'k', testID: `${testID}-keep`, onPress: onClose }),
+            React.createElement(Pressable, { key: 'c', testID: `${testID}-confirm`, onPress: onConfirm }),
+          ])
+        : null,
+  };
+});
 jest.mock('../../../../lib/supabase', () => ({
   supabase: {
     auth: {
@@ -117,7 +130,6 @@ beforeEach(() => {
       return jest.fn();
     }),
   };
-  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
 
 afterEach(async () => {
@@ -257,20 +269,15 @@ describe('LocationEditScreen', () => {
       true
     );
 
-    const draftExit = fireBeforeRemove();
+    let draftExit!: ReturnType<typeof fireBeforeRemove>;
+    await act(async () => { draftExit = fireBeforeRemove(); });
     expect(draftExit.preventDefault).toHaveBeenCalled();
-    expect(Alert.alert).toHaveBeenCalledWith(
-      'Discard changes?',
-      "Your location changes won't be saved.",
-      expect.any(Array)
-    );
+    expect(screen.getByText('Discard changes?')).toBeTruthy();
 
-    const buttons = (Alert.alert as jest.Mock).mock.calls[0][2] as {
-      text: string;
-      onPress?: () => void;
-    }[];
-    buttons.find((button) => button.text === 'Discard')?.onPress?.();
-    expect(navigation.dispatch).toHaveBeenCalledWith(draftExit.data.action);
+    // Keep editing leaves the draft in place and does not navigate.
+    await fireEvent.press(screen.getByTestId('barber-location-discard-keep'));
+    expect(screen.queryByTestId('barber-location-discard')).toBeNull();
+    expect(navigation.dispatch).not.toHaveBeenCalled();
 
     await act(() => jest.advanceTimersByTime(450));
     await act(async () => {});
@@ -279,9 +286,9 @@ describe('LocationEditScreen', () => {
     await act(async () => {});
 
     expect(navigation.goBack).toHaveBeenCalled();
-    (Alert.alert as jest.Mock).mockClear();
-    const savedExit = fireBeforeRemove();
+    let savedExit!: ReturnType<typeof fireBeforeRemove>;
+    await act(async () => { savedExit = fireBeforeRemove(); });
     expect(savedExit.preventDefault).not.toHaveBeenCalled();
-    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('barber-location-discard')).toBeNull();
   });
 });

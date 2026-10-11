@@ -29,9 +29,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   ActivityIndicator,
-  Alert,
   Image,
   LayoutAnimation,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -54,6 +54,8 @@ import { HAIRLINE, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
 import { GlassSurface } from '../../shared/components/GlassSurface';
+import { ConfirmSheet } from '../../shared/components/ConfirmSheet';
+import { useToast } from '../../shared/components/ToastProvider';
 import { getAppLanguage } from '../../shared/locale';
 import type { PortfolioRow } from '../../types';
 import {
@@ -95,6 +97,8 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 export default function PortfolioScreen({ navigation }: Props) {
   const { colors, fonts } = useTheme();
   const language = getAppLanguage();
+  const { showToast } = useToast();
+  const [pendingDelete, setPendingDelete] = useState<PortfolioRow | null>(null);
 
   const [barberId, setBarberId] = useState<string | null>(null);
   const [images, setImages] = useState<PortfolioRow[]>([]);
@@ -152,7 +156,7 @@ export default function PortfolioScreen({ navigation }: Props) {
     // ref blocks a second tap that slips in before the disable commits.
     if (busyRef.current) return;
     if (!barberId) {
-      Alert.alert('One moment', 'Your profile is still loading — try again shortly.');
+      showToast({ message: language === 'de' ? 'Dein Profil wird noch geladen. Versuch es gleich noch einmal.' : 'Your profile is still loading. Try again shortly.' });
       return;
     }
     if (images.length >= MAX_PORTFOLIO_IMAGES) return;
@@ -161,7 +165,10 @@ export default function PortfolioScreen({ navigation }: Props) {
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
-        Alert.alert('Photo access needed', 'Allow photo access to add portfolio images.');
+        showToast({
+          message: language === 'de' ? 'Erlaube den Fotozugriff in den Einstellungen, um Bilder hinzuzufügen.' : 'Allow photo access in Settings to add portfolio images.',
+          action: { label: language === 'de' ? 'Einstellungen' : 'Settings', onPress: () => void Linking.openSettings() },
+        });
         return;
       }
 
@@ -179,14 +186,14 @@ export default function PortfolioScreen({ navigation }: Props) {
       // message and never fabricates an "added" tile.
       const uploaded = await uploadPortfolioImage(barberId, asset.uri, asset.mimeType);
       if (uploaded.status !== 'ok') {
-        Alert.alert('Upload failed', uploaded.message);
+        showToast({ message: `${language === 'de' ? 'Upload fehlgeschlagen.' : 'Upload failed.'} ${uploaded.message}` });
         return;
       }
       const inserted = await insertPortfolioRow(barberId, uploaded.path);
       if (inserted.status !== 'ok') {
         // Includes 'limit_reached' (the DB trigger's server-truth cap) — its
         // copy is already brand-voiced, so surface it verbatim.
-        Alert.alert('Upload failed', inserted.message);
+        showToast({ message: `${language === 'de' ? 'Upload fehlgeschlagen.' : 'Upload failed.'} ${inserted.message}` });
         return;
       }
       setImages((prev) => [...prev, inserted.image]);
@@ -195,7 +202,7 @@ export default function PortfolioScreen({ navigation }: Props) {
       setUploading(false);
       setPendingUri(null);
     }
-  }, [barberId, images.length]);
+  }, [barberId, images.length, language, showToast]);
 
   const performDelete = useCallback(async (image: PortfolioRow) => {
     // Animate the tile's departure unless the user prefers reduced motion.
@@ -213,23 +220,11 @@ export default function PortfolioScreen({ navigation }: Props) {
       setImages((prev) =>
         [...prev, image].sort((a, b) => a.id.localeCompare(b.id))
       );
-      Alert.alert('Could not delete', result.message);
+      showToast({ message: `${language === 'de' ? 'Löschen fehlgeschlagen.' : 'Could not delete.'} ${result.message}` });
     }
-  }, []);
+  }, [language, showToast]);
 
-  const onDelete = useCallback(
-    (image: PortfolioRow) => {
-      Alert.alert(
-        'Delete image',
-        'Remove this image from your portfolio?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete', style: 'destructive', onPress: () => void performDelete(image) },
-        ]
-      );
-    },
-    [performDelete]
-  );
+  const onDelete = useCallback((image: PortfolioRow) => setPendingDelete(image), []);
 
   return (
     <SafeAreaView
@@ -338,6 +333,21 @@ export default function PortfolioScreen({ navigation }: Props) {
           </>
         )}
       </ScrollView>
+      <ConfirmSheet
+        open={pendingDelete !== null}
+        title={language === 'de' ? 'Bild löschen' : 'Delete image'}
+        message={language === 'de' ? 'Dieses Bild aus deinem Portfolio entfernen?' : 'Remove this image from your portfolio?'}
+        confirmLabel={language === 'de' ? 'Löschen' : 'Delete'}
+        cancelLabel={language === 'de' ? 'Abbrechen' : 'Cancel'}
+        destructive
+        onConfirm={() => {
+          const image = pendingDelete;
+          setPendingDelete(null);
+          if (image) void performDelete(image);
+        }}
+        onClose={() => setPendingDelete(null)}
+        testID="barber-portfolio-delete-confirm"
+      />
     </SafeAreaView>
   );
 }

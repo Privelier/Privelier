@@ -121,9 +121,9 @@ env:
 - tapOn:
     id: "barber-availability-delete-.*"
 - assertVisible:
-    text: "Delete availability"
+    id: "barber-availability-delete-confirm"
 - tapOn:
-    text: "Delete"
+    id: "barber-availability-delete-confirm-confirm"
 
 - assertNotVisible:
     text: "2026-08-15"

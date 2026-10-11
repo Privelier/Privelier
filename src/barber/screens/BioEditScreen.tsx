@@ -21,7 +21,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -38,6 +37,9 @@ import { HAIRLINE, radius, space } from '../../theme/spacing';
 import { PrimaryButton } from '../../shared/components/PrimaryButton';
 import { BackButton } from '../../shared/components/ScreenBackHeader';
 import { Notice } from '../../shared/components/Notice';
+import { ConfirmSheet } from '../../shared/components/ConfirmSheet';
+import { getAppLanguage } from '../../shared/locale';
+import { useDiscardGuard } from '../../shared/useDiscardGuard';
 import { MAX_BIO_LENGTH, fetchOwnBarberProfile, updateOwnBio } from '../profileData';
 import type { BarberStackParamList } from '../BarberNavigator';
 
@@ -53,6 +55,7 @@ const COUNTER_EMPHASIS_AT = MAX_BIO_LENGTH - 50;
 
 export default function BioEditScreen({ navigation }: Props) {
   const { colors, fonts, isDark } = useTheme();
+  const de = getAppLanguage() === 'de';
 
   const [barberId, setBarberId] = useState<string | null>(null);
   const [initialBio, setInitialBio] = useState('');
@@ -110,17 +113,10 @@ export default function BioEditScreen({ navigation }: Props) {
 
   // Losing typed prose to a stray back tap IS destructive — unlike clearing,
   // which the barber chose. Guards the header button and Android hardware back.
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      if (!dirty || submitting || savedRef.current) return;
-      e.preventDefault();
-      Alert.alert('Discard changes?', "Your bio changes won't be saved.", [
-        { text: 'Keep editing', style: 'cancel' },
-        { text: 'Discard', style: 'destructive', onPress: () => navigation.dispatch(e.data.action) },
-      ]);
-    });
-    return unsubscribe;
-  }, [navigation, dirty, submitting]);
+  const discardGuard = useDiscardGuard(
+    navigation,
+    useCallback(() => dirty && !submitting && !savedRef.current, [dirty, submitting])
+  );
 
   const onSave = useCallback(async () => {
     if (!barberId) return;
@@ -249,6 +245,17 @@ export default function BioEditScreen({ navigation }: Props) {
           </ScrollView>
         </KeyboardAvoidingView>
       )}
+      <ConfirmSheet
+        open={discardGuard.open}
+        title={de ? 'Änderungen verwerfen?' : 'Discard changes?'}
+        message={de ? 'Deine Bio-Änderungen werden nicht gespeichert.' : "Your bio changes won't be saved."}
+        confirmLabel={de ? 'Verwerfen' : 'Discard'}
+        cancelLabel={de ? 'Weiter bearbeiten' : 'Keep editing'}
+        destructive
+        onConfirm={discardGuard.discard}
+        onClose={discardGuard.keepEditing}
+        testID="barber-bio-discard"
+      />
     </SafeAreaView>
   );
 }

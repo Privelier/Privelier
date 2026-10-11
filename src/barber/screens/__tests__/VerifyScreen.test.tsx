@@ -17,7 +17,6 @@
  * disabled while the other row uploads.
  */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import VerifyScreen from '../VerifyScreen';
 import { fetchOwnProfile } from '../../../auth/authService';
@@ -25,6 +24,10 @@ import { fetchOwnBarberProfile, fetchOwnVerificationRequest } from '../../profil
 import { submitVerificationDocument, uploadVerificationDocument } from '../../verificationData';
 import { getAppLanguage } from '../../../shared/locale';
 
+const mockShowToast = jest.fn();
+jest.mock('../../../shared/components/ToastProvider', () => ({
+  useToast: () => ({ showToast: mockShowToast }),
+}));
 jest.mock('expo-image-picker', () => ({
   requestMediaLibraryPermissionsAsync: jest.fn(),
   launchImageLibraryAsync: jest.fn(),
@@ -112,12 +115,10 @@ const EMPTY_REQUEST = {
   reviewed_at: null,
 };
 
-let alertSpy: jest.SpyInstance;
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockGetAppLanguage.mockReturnValue('en');
-  alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 
   // Default happy load: a signed-in barber, pending status, no docs yet.
   mockFetchProfile.mockResolvedValue({ status: 'ok', profile: { id: 'u1' } });
@@ -129,7 +130,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  alertSpy.mockRestore();
 });
 
 /**
@@ -218,7 +218,9 @@ describe('VerifyScreen', () => {
     expect(mockLaunchPicker).not.toHaveBeenCalled();
     expect(mockUpload).not.toHaveBeenCalled();
     expect(mockSubmit).not.toHaveBeenCalled();
-    expect(alertSpy).toHaveBeenCalled();
+    expect(mockShowToast).toHaveBeenCalledWith(
+      expect.objectContaining({ action: expect.objectContaining({ label: 'Settings' }) })
+    );
   });
 
   it('does nothing (no upload) when the picker is canceled', async () => {
@@ -298,7 +300,7 @@ describe('VerifyScreen', () => {
 
     await waitFor(() => expect(mockUpload).toHaveBeenCalled());
     await waitFor(() =>
-      expect(alertSpy).toHaveBeenCalledWith('Upload failed', expect.stringContaining('server'))
+      expect(mockShowToast).toHaveBeenCalledWith({ message: expect.stringMatching(/^Upload failed\. .*server/) })
     );
     expect(mockSubmit).not.toHaveBeenCalled();
     // Only the initial load ran — a failed upload must never refetch.

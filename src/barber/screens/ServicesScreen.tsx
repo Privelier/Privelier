@@ -17,7 +17,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Pressable,
   StyleSheet,
@@ -35,6 +34,9 @@ import { pressOpacity } from '../../theme/motion';
 import { PrimaryButton } from '../../shared/components/PrimaryButton';
 import { BackButton } from '../../shared/components/ScreenBackHeader';
 import { Notice } from '../../shared/components/Notice';
+import { ConfirmSheet } from '../../shared/components/ConfirmSheet';
+import { useToast } from '../../shared/components/ToastProvider';
+import { getAppLanguage } from '../../shared/locale';
 import { formatMoney } from '../../shared/format';
 import type { Palette } from '../../theme/colors';
 import type { ServiceRow } from '../../types';
@@ -77,6 +79,9 @@ function underlineColor(hasError: boolean, focused: boolean, colors: Palette): s
 
 export default function ServicesScreen({ navigation }: Props) {
   const { colors, fonts, isDark } = useTheme();
+  const de = getAppLanguage() === 'de';
+  const { showToast } = useToast();
+  const [pendingDelete, setPendingDelete] = useState<ServiceRow | null>(null);
 
   const [barberId, setBarberId] = useState<string | null>(null);
   const [services, setServices] = useState<ServiceRow[]>([]);
@@ -202,25 +207,24 @@ export default function ServicesScreen({ navigation }: Props) {
 
   const onDelete = useCallback(
     (service: ServiceRow) => {
-      Alert.alert('Delete service', `Delete "${service.name}"? This cannot be undone.`, [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            const result = await deleteService(service.id);
-            if (result.status === 'ok' || result.status === 'not_found') {
-              setServices((current) => current.filter((item) => item.id !== service.id));
-              if (editingId === service.id) resetForm();
-            } else {
-              Alert.alert('Could not delete', result.message);
-            }
-          },
-        },
-      ]);
+      setPendingDelete(service);
     },
-    [editingId, resetForm]
+    []
   );
+
+  const confirmDelete = useCallback(async () => {
+    const service = pendingDelete;
+    setPendingDelete(null);
+    if (!service) return;
+    const result = await deleteService(service.id);
+    if (result.status === 'ok' || result.status === 'not_found') {
+      setServices((current) => current.filter((item) => item.id !== service.id));
+      if (editingId === service.id) resetForm();
+      showToast({ message: de ? `„${service.name}“ gelöscht.` : `Deleted "${service.name}".` });
+    } else {
+      showToast({ message: `${de ? 'Löschen fehlgeschlagen.' : 'Could not delete.'} ${result.message}` });
+    }
+  }, [pendingDelete, editingId, resetForm, showToast, de]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} testID="barber-services-screen">
@@ -433,6 +437,21 @@ export default function ServicesScreen({ navigation }: Props) {
             </View>
           </View>
         )}
+      />
+      <ConfirmSheet
+        open={pendingDelete !== null}
+        title={de ? 'Leistung löschen' : 'Delete service'}
+        message={
+          de
+            ? `„${pendingDelete?.name ?? ''}“ löschen? Das kann nicht rückgängig gemacht werden.`
+            : `Delete "${pendingDelete?.name ?? ''}"? This cannot be undone.`
+        }
+        confirmLabel={de ? 'Löschen' : 'Delete'}
+        cancelLabel={de ? 'Abbrechen' : 'Cancel'}
+        destructive
+        onConfirm={() => void confirmDelete()}
+        onClose={() => setPendingDelete(null)}
+        testID="barber-services-delete-confirm"
       />
     </SafeAreaView>
   );
