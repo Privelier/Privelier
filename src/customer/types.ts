@@ -7,6 +7,7 @@ import type {
   AvailabilityRow,
   BarberDirectoryRow,
   BookingRow,
+  ChatRoomRow,
   MessageRow,
   PortfolioRow,
   ReviewRow,
@@ -125,6 +126,11 @@ export type CancelBookingResult =
   | CustomerDataFailure;
 
 // ---------------------------------------------------------------------------
+/** The one chat room attached to a booking (booking detail "Message barber"). */
+export type RoomForBookingResult =
+  | { status: 'ok'; room: ChatRoomRow | null }
+  | CustomerDataFailure;
+
 // Inbox (public.chat_rooms + public.messages, read-only until step 15-16)
 // ---------------------------------------------------------------------------
 

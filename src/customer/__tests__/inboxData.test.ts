@@ -9,7 +9,8 @@ import type {
   ChatRoomRow,
   MessageRow,
 } from '../../types';
-import { buildInboxThreads } from '../inboxData';
+import { buildInboxThreads, fetchRoomForBooking } from '../inboxData';
+import { supabase } from '../../../lib/supabase';
 
 jest.mock('../../../lib/supabase', () => ({
   supabase: {
@@ -105,5 +106,35 @@ describe('buildInboxThreads', () => {
     expect(threads[0].barber?.name).toBe('Atlas');
     expect(threads[0].service?.name).toBe('Signature cut');
     expect(threads[0].lastActivityIso).toBe('2026-07-07');
+  });
+});
+
+describe('fetchRoomForBooking', () => {
+  type Builder = { select: jest.Mock; eq: jest.Mock; maybeSingle: jest.Mock };
+  function builder(result: unknown): Builder {
+    const obj: Builder = {
+      select: jest.fn(() => obj),
+      eq: jest.fn(() => obj),
+      maybeSingle: jest.fn(() => Promise.resolve(result)),
+    };
+    return obj;
+  }
+
+  it('reads the single room for the booking (RLS scopes it to participants)', async () => {
+    const room = { id: 'room-1', booking_id: 'booking-1', customer_id: 'c-1', barber_id: 'b-1' };
+    const query = builder({ data: room, error: null });
+    jest.mocked(supabase.from).mockReturnValueOnce(query as never);
+
+    await expect(fetchRoomForBooking('booking-1')).resolves.toEqual({ status: 'ok', room });
+    expect(supabase.from).toHaveBeenCalledWith('chat_rooms');
+    expect(query.eq).toHaveBeenCalledWith('booking_id', 'booking-1');
+  });
+
+  it('returns a null room when none is visible, and a typed failure on error', async () => {
+    jest.mocked(supabase.from).mockReturnValueOnce(builder({ data: null, error: null }) as never);
+    await expect(fetchRoomForBooking('booking-1')).resolves.toEqual({ status: 'ok', room: null });
+
+    jest.mocked(supabase.from).mockReturnValueOnce(builder({ data: null, error: { code: '42501', message: 'denied' } }) as never);
+    await expect(fetchRoomForBooking('booking-1')).resolves.toMatchObject({ status: 'error', code: 'forbidden' });
   });
 });

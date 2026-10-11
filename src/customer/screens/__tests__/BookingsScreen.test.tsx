@@ -6,12 +6,18 @@ import { fetchOwnReviewedBookingIds } from '../../reviewsData';
 import BookingsScreen from '../BookingsScreen';
 import { useBookingsRealtime } from '../../../shared/useBookingsRealtime';
 
+const mockNavigate = jest.fn();
+const mockFetchRoom = jest.fn();
+jest.mock('../../inboxData', () => ({
+  fetchRoomForBooking: (...args: unknown[]) => mockFetchRoom(...args),
+}));
+
 jest.mock('@react-navigation/native', () => {
   const React = jest.requireActual('react');
   return {
     useFocusEffect: (callback: () => void | (() => void)) =>
       React.useEffect(callback, [callback]),
-    useNavigation: () => ({ navigate: jest.fn() }),
+    useNavigation: () => ({ navigate: mockNavigate }),
   };
 });
 
@@ -228,5 +234,67 @@ describe('BookingsScreen status presentation', () => {
     expect(screen.getByTestId('customer-bookings-avatar-booking-1').props.accessible).toBe(false);
     await fireEvent.press(screen.getByTestId('customer-bookings-open-booking-1'));
     expect(screen.getByTestId('booking-cancel-booking-1')).toBeTruthy();
+  });
+});
+
+describe('booking detail actions', () => {
+  beforeEach(() => {
+    mockNavigate.mockReset();
+    mockFetchRoom.mockReset();
+  });
+
+  async function openDetail() {
+    await render(<BookingsScreen />);
+    await waitFor(() => expect(screen.getByTestId('customer-bookings-open-booking-1')).toBeTruthy());
+    await fireEvent.press(screen.getByTestId('customer-bookings-open-booking-1'));
+  }
+
+  it('shows the customer hint and a truthful pending timeline', async () => {
+    await openDetail();
+    expect(screen.getByTestId('booking-details-hint').props.children).toBe('Your barber still needs to accept this request.');
+    expect(screen.getByTestId('booking-details-timeline').props.accessibilityLabel).toBe(
+      'Requested, done; Accepted, waiting; Completed, not yet'
+    );
+  });
+
+  it('opens the booking chat room with the barber context', async () => {
+    const room = { id: 'room-1', booking_id: 'booking-1', customer_id: 'customer-1', barber_id: 'barber-1' };
+    mockFetchRoom.mockResolvedValue({ status: 'ok', room });
+    await openDetail();
+
+    await fireEvent.press(screen.getByTestId('booking-message-booking-1'));
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('Conversation', expect.objectContaining({
+      room,
+      title: 'Tarek Mansour',
+      counterpart: { id: 'barber-1', name: 'Tarek Mansour', profile_image: null },
+    })));
+    expect(mockFetchRoom).toHaveBeenCalledWith('booking-1');
+  });
+
+  it('explains a missing room instead of navigating', async () => {
+    mockFetchRoom.mockResolvedValue({ status: 'ok', room: null });
+    await openDetail();
+
+    await fireEvent.press(screen.getByTestId('booking-message-booking-1'));
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith({ message: 'The chat for this appointment is not available.' }));
+    expect(mockNavigate).not.toHaveBeenCalledWith('Conversation', expect.anything());
+  });
+
+  it('does not offer Book again on a booking that is still live', async () => {
+    await openDetail();
+    expect(screen.queryByTestId('booking-rebook-booking-1')).toBeNull();
+  });
+
+  it('offers Book again on a finished booking with a listed barber', async () => {
+    mockFetchBookings.mockResolvedValue({
+      status: 'ok',
+      bookings: [{ ...BOOKING, status: 'cancelled' }],
+      barbersById: new Map([[BARBER.id, BARBER]]),
+      servicesById: new Map([[SERVICE.id, SERVICE]]),
+    });
+    await openDetail();
+    expect(screen.queryByTestId('booking-message-booking-1')).toBeNull();
+    await fireEvent.press(screen.getByTestId('booking-rebook-booking-1'));
+    expect(mockNavigate).toHaveBeenCalledWith('BarberProfile', { barberId: 'barber-1' });
   });
 });

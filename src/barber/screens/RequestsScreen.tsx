@@ -448,7 +448,7 @@ export default function RequestsScreen() {
           />
         </>
       )}
-      {selected ? <BookingDetails booking={selected} person={counterpartsById.get(selected.id)?.name ?? (language === 'de' ? 'Kunde' : 'Customer')} service={servicesById.get(selected.service_id)?.name ?? (language === 'de' ? 'Termin' : 'Appointment')} onClose={() => setSelectedId(null)}>{renderActions(selected)}</BookingDetails> : null}
+      {selected ? <BookingDetails booking={selected} role="barber" person={counterpartsById.get(selected.id)?.name ?? (language === 'de' ? 'Kunde' : 'Customer')} service={servicesById.get(selected.service_id)?.name ?? (language === 'de' ? 'Termin' : 'Appointment')} onClose={() => setSelectedId(null)}>{renderActions(selected)}</BookingDetails> : null}
       <ConfirmSheet open={confirmation !== null} title={confirmation?.title ?? ''} message={language === 'de' ? 'Diese Aktion kann nicht r\u00fcckg\u00e4ngig gemacht werden.' : 'This cannot be undone.'} confirmLabel={confirmation?.label ?? ''} cancelLabel={language === 'de' ? 'Behalten' : 'Keep'} destructive testID="barber-request-confirm" onClose={() => setConfirmation(null)} onConfirm={() => { const action = confirmation?.action; setConfirmation(null); action?.(); }} />
     </SafeAreaView>
   );

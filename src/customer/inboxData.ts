@@ -15,7 +15,7 @@ import { supabase } from '../../lib/supabase';
 import type { BarberDirectoryRow, BookingRow, ChatRoomRow, MessageRow, ServiceRow } from '../types';
 import { buildInboxThreads } from '../shared/threads';
 import { mapPostgrestError } from './errors';
-import type { OwnInboxViewResult } from './types';
+import type { OwnInboxViewResult, RoomForBookingResult } from './types';
 
 // Pure assembly lives in shared/threads.ts (the barber Chats tab reuses
 // it); re-exported here so existing imports and tests stay unchanged.
@@ -69,4 +69,20 @@ export async function fetchOwnInboxView(): Promise<OwnInboxViewResult> {
     servicesById
   );
   return { status: 'ok', threads };
+}
+
+/**
+ * The chat room attached to one of the customer's bookings, for "Message
+ * barber" on the booking detail. trg_create_chat_room_for_booking (migration
+ * 0013) creates exactly one room per booking at insert time; RLS returns it
+ * only to the booking's participants. `null` means no visible room.
+ */
+export async function fetchRoomForBooking(bookingId: string): Promise<RoomForBookingResult> {
+  const { data, error } = await supabase
+    .from('chat_rooms')
+    .select('*')
+    .eq('booking_id', bookingId)
+    .maybeSingle();
+  if (error) return mapPostgrestError('fetchRoomForBooking', error);
+  return { status: 'ok', room: (data as ChatRoomRow | null) ?? null };
 }

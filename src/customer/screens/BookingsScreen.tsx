@@ -54,6 +54,7 @@ import { useToast } from '../../shared/components/ToastProvider';
 import type { BarberDirectoryRow, BookingRow, ServiceRow } from '../../types';
 import { cancelBookingAsCustomer, fetchOwnBookingsView, isUpcomingBooking } from '../bookingsData';
 import { fetchOwnReviewedBookingIds } from '../reviewsData';
+import { fetchRoomForBooking } from '../inboxData';
 import type { CustomerStackParamList } from '../CustomerNavigator';
 import {
   applyBookingChange,
@@ -263,6 +264,37 @@ export default function BookingsScreen() {
   const showError = error !== null && bookings.length === 0;
 
   const selected = bookings.find((row) => row.id === selectedId);
+
+  // "Message barber": the room already exists (created with the booking), so
+  // this only resolves it. A synchronous ref blocks a double tap from pushing
+  // two conversation screens while the lookup is in flight.
+  const openingChatRef = useRef(false);
+  const [openingChat, setOpeningChat] = useState(false);
+  const messageBarber = useCallback(async (row: BookingRow) => {
+    if (openingChatRef.current) return;
+    openingChatRef.current = true;
+    setOpeningChat(true);
+    const result = await fetchRoomForBooking(row.id);
+    openingChatRef.current = false;
+    setOpeningChat(false);
+    if (result.status !== 'ok' || !result.room) {
+      showToast({
+        message: result.status === 'ok'
+          ? de ? 'Der Chat zu diesem Termin ist nicht verfügbar.' : 'The chat for this appointment is not available.'
+          : result.message,
+      });
+      return;
+    }
+    const barber = barbersById.get(row.barber_id);
+    const service = servicesById.get(row.service_id);
+    setSelectedId(null);
+    navigation.navigate('Conversation', {
+      room: result.room,
+      title: barber?.name ?? 'Barber',
+      subtitle: [service?.name, formatBookingWhen(row.date, row.time)].filter(Boolean).join(' · ') || null,
+      counterpart: barber ? { id: barber.id, name: barber.name, profile_image: barber.profile_image } : null,
+    });
+  }, [barbersById, servicesById, navigation, showToast, de]);
   const renderActions = (item: BookingRow) => {
     const actionable = item.status === 'pending' || item.status === 'accepted';
     const busy = inFlight[item.id] === true;
@@ -331,6 +363,42 @@ export default function BookingsScreen() {
                   )
                 ) : null}
 
+    {item.status !== 'rejected' && item.status !== 'cancelled' ? (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={de ? 'Barber schreiben' : 'Message barber'}
+        accessibilityState={{ busy: openingChat, disabled: openingChat }}
+        disabled={openingChat}
+        testID={`booking-message-${item.id}`}
+        onPress={() => void messageBarber(item)}
+        style={({ pressed }) => [styles.secondaryButton, { borderColor: colors.border }, pressed ? styles.reviewPressed : null]}
+      >
+        {openingChat ? (
+          <ActivityIndicator size="small" color={colors.accent} />
+        ) : (
+          <>
+            <Feather name="message-circle" size={16} color={colors.textPrimary} />
+            <Text style={[styles.reviewText, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>
+              {de ? 'Barber schreiben' : 'Message barber'}
+            </Text>
+          </>
+        )}
+      </Pressable>
+    ) : null}
+    {!actionable && barbersById.has(item.barber_id) ? (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={de ? 'Erneut buchen' : 'Book again'}
+        testID={`booking-rebook-${item.id}`}
+        onPress={() => { setSelectedId(null); navigation.navigate('BarberProfile', { barberId: item.barber_id }); }}
+        style={({ pressed }) => [styles.secondaryButton, { borderColor: colors.border }, pressed ? styles.reviewPressed : null]}
+      >
+        <Feather name="repeat" size={16} color={colors.textPrimary} />
+        <Text style={[styles.reviewText, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>
+          {de ? 'Erneut buchen' : 'Book again'}
+        </Text>
+      </Pressable>
+    ) : null}
     {rowErrors[item.id] ? <Text accessibilityRole="alert" style={{ color: colors.errorText, marginTop: 16 }}>{rowErrors[item.id]}</Text> : null}
     </>;
   };
@@ -480,7 +548,7 @@ export default function BookingsScreen() {
           />
         </>
       )}
-      {selected ? <BookingDetails booking={selected} person={barbersById.get(selected.barber_id)?.name ?? 'Barber'} service={servicesById.get(selected.service_id)?.name ?? (de ? 'Termin' : 'Appointment')} onClose={() => setSelectedId(null)}>{renderActions(selected)}</BookingDetails> : null}
+      {selected ? <BookingDetails booking={selected} role="customer" person={barbersById.get(selected.barber_id)?.name ?? 'Barber'} service={servicesById.get(selected.service_id)?.name ?? (de ? 'Termin' : 'Appointment')} onClose={() => setSelectedId(null)}>{renderActions(selected)}</BookingDetails> : null}
       <ConfirmSheet
         open={confirmingBooking !== null}
         title="Cancel this booking?"
@@ -501,6 +569,17 @@ export default function BookingsScreen() {
 }
 
 const styles = StyleSheet.create({
+  secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.sm,
+    minHeight: 48,
+    marginTop: space.md,
+    borderWidth: 0.5,
+    borderRadius: radius.md,
+    paddingHorizontal: space.base,
+  },
   container: { flex: 1 },
   heading: { fontSize: 30, marginTop: 24, paddingHorizontal: 24 },
   tabStrip: {

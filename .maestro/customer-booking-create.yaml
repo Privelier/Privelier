@@ -219,3 +219,17 @@ env:
     text: "${TEST_SERVICE_NAME}"
 - assertVisible:
     text: "${TEST_BARBER_NAME}"
+
+# --- Booking detail: truthful pending timeline and a way to message the barber ---
+- tapOn:
+    id: "customer-bookings-open-.*"
+- assertVisible:
+    id: "booking-details-timeline"
+- assertVisible:
+    text: "Your barber still needs to accept this request."
+- tapOn:
+    id: "booking-message-.*"
+- extendedWaitUntil:
+    visible:
+      id: "customer-conversation-screen"
+    timeout: 10000
