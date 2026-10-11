@@ -74,6 +74,20 @@ const HERO_TEXT_DIM = 'rgba(245,241,232,0.72)';
 const HERO_PARALLAX_HEIGHT = 340;
 const HERO_SCRIM = OVER_IMAGE_BG;
 
+/** Count of each 5→1 star rating among loaded reviews, with its share. */
+export function ratingDistribution(reviews: readonly { rating: number }[]): { stars: number; count: number; share: number }[] {
+  const total = reviews.length;
+  return [5, 4, 3, 2, 1].map((stars) => {
+    const count = reviews.filter((review) => review.rating === stars).length;
+    return { stars, count, share: total === 0 ? 0 : count / total };
+  });
+}
+
+function reviewCountLabel(count: number, german: boolean): string {
+  if (german) return count === 1 ? '1 Bewertung' : `${count} Bewertungen`;
+  return count === 1 ? '1 review' : `${count} reviews`;
+}
+
 export default function BarberProfileScreen({ route, navigation }: Props) {
   const { barberId } = route.params;
   const { colors, fonts } = useTheme();
@@ -462,9 +476,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
                 style={[styles.reviewsSummary, { borderBottomColor: colors.border }]}
                 accessible
                 accessibilityRole="image"
-                accessibilityLabel={`${barber.rating.toFixed(1)} out of 5, ${
-                  reviews.length === 1 ? '1 review' : `${reviews.length} reviews`
-                }`}
+                accessibilityLabel={`${barber.rating.toFixed(1)} ${german ? 'von 5' : 'out of 5'}, ${reviewCountLabel(reviews.length, german)}`}
               >
                 <Text style={[styles.reviewsRating, numericText, { color: colors.textPrimary }]}>
                   {barber.rating.toFixed(1)}
@@ -473,9 +485,30 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
                   {/* Legible empty tone here so the full 5-point scale shows. */}
                   <StarRating rating={barber.rating} size={16} emptyColor={colors.textSecondary} />
                   <Text style={[styles.reviewsCount, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                    {reviews.length === 1 ? '1 review' : `${reviews.length} reviews`}
+                    {reviewCountLabel(reviews.length, german)}
                   </Text>
                 </View>
+              </View>
+
+              {/* Breakdown from the loaded review rows (all of them; the
+                  read is not paginated), so every bar is a real count. */}
+              <View
+                style={styles.distribution}
+                accessible
+                accessibilityLabel={ratingDistribution(reviews)
+                  .map(({ stars, count }) => `${stars} ${german ? 'Sterne' : 'stars'}: ${count}`)
+                  .join(', ')}
+                testID="barber-profile-rating-distribution"
+              >
+                {ratingDistribution(reviews).map(({ stars, count, share }) => (
+                  <View key={stars} style={styles.distributionRow}>
+                    <Text style={[styles.distributionLabel, numericText, { color: colors.textSecondary }]}>{stars}</Text>
+                    <View style={[styles.distributionTrack, { backgroundColor: colors.border }]}>
+                      <View style={[styles.distributionFill, { width: `${Math.round(share * 100)}%`, backgroundColor: colors.accent }]} />
+                    </View>
+                    <Text style={[styles.distributionCount, numericText, { color: colors.textSecondary }]}>{count}</Text>
+                  </View>
+                ))}
               </View>
 
               {reviews.map((review, index) => {
@@ -603,6 +636,12 @@ function BarberProfileSkeleton() {
 }
 
 const styles = StyleSheet.create({
+  distribution: { paddingVertical: 16, gap: 6 },
+  distributionRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  distributionLabel: { width: 12, fontSize: 12, textAlign: 'right' },
+  distributionTrack: { flex: 1, height: 4, borderRadius: 2, overflow: 'hidden' },
+  distributionFill: { height: 4, borderRadius: 2 },
+  distributionCount: { width: 24, fontSize: 12, textAlign: 'right' },
   container: { flex: 1 },
 
   bookingDock: { borderRadius: 0, paddingHorizontal: 24, paddingTop: 16, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12 },
