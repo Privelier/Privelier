@@ -12,6 +12,7 @@
  * Password: at least 8 characters enforced client-side (Supabase's default
  * server minimum is 6 — deliberate premium-product decision, see validation.ts).
  */
+import { getAppLanguage } from '../../shared/locale';
 import { useCallback, useRef, useState } from 'react';
 import { StyleSheet, Text, View, type TextInput } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -41,6 +42,7 @@ interface FieldErrors {
 }
 
 export default function SignupScreen({ navigation, route }: Props) {
+  const de = getAppLanguage() === 'de';
   const { role } = route.params;
   const isBarber = role === 'barber';
   const { colors, fonts } = useTheme();
@@ -68,10 +70,10 @@ export default function SignupScreen({ navigation, route }: Props) {
 
   const onSubmit = useCallback(async () => {
     const errors: FieldErrors = {
-      name: requiredText(name, 'Enter your name.'),
+      name: requiredText(name, de ? 'Gib deinen Namen ein.' : 'Enter your name.'),
       email: emailError(email),
       password: signupPasswordError(password),
-      city: requiredText(city, 'Enter your city.'),
+      city: requiredText(city, de ? 'Gib deine Stadt ein.' : 'Enter your city.'),
     };
     setFieldErrors(errors);
     setFormError(null);
@@ -98,7 +100,7 @@ export default function SignupScreen({ navigation, route }: Props) {
         break;
       case 'email_in_use':
         setEmailInUse(true);
-        setFieldErrors((current) => ({ ...current, email: 'This email is already in use.' }));
+        setFieldErrors((current) => ({ ...current, email: de ? 'Diese E-Mail-Adresse wird bereits verwendet.' : 'This email is already in use.' }));
         break;
       case 'error':
         if (result.code === 'weak_password') {
@@ -110,7 +112,7 @@ export default function SignupScreen({ navigation, route }: Props) {
         }
         break;
     }
-  }, [name, email, password, city, country, phone, bio, isBarber, navigation, role, termsAccepted, adultConfirmed]);
+  }, [name, email, password, city, country, phone, bio, isBarber, navigation, role, termsAccepted, adultConfirmed, de]);
 
   const onProviderPress = useCallback(async (provider: 'google' | 'apple') => {
     setFormError(null);
@@ -132,11 +134,11 @@ export default function SignupScreen({ navigation, route }: Props) {
     <AuthScreenShell testID="auth-signup-screen">
       <BackLink onPress={() => navigation.goBack()} testID="auth-signup-back" />
       <ScreenHeading
-        title="Create an account"
+        title={de ? 'Konto erstellen' : 'Create an account'}
         subtitle={
           isBarber
-            ? 'Set up your barber profile and start taking bookings.'
-            : 'A private barber, wherever you are.'
+            ? (de ? 'Richte dein Barber-Profil ein und nimm Buchungen an.' : 'Set up your barber profile and start taking bookings.')
+            : (de ? 'Ein privater Barber, wo immer du bist.' : 'A private barber, wherever you are.')
         }
       />
       {formError ? <Notice kind="error" message={formError} testID="auth-signup-error" /> : null}
@@ -154,7 +156,7 @@ export default function SignupScreen({ navigation, route }: Props) {
         testID="auth-signup-name"
       />
       <FormTextField
-        label="Email"
+        label={de ? 'E-Mail' : 'Email'}
         value={email}
         onChangeText={setEmail}
         error={fieldErrors.email}
@@ -171,18 +173,18 @@ export default function SignupScreen({ navigation, route }: Props) {
       {emailInUse ? (
         <View style={styles.loginInstead}>
           <TextLink
-            label="Log in instead"
+            label={de ? 'Stattdessen anmelden' : 'Log in instead'}
             onPress={() => navigation.navigate('Login', { role })}
             testID="auth-signup-login-instead"
           />
         </View>
       ) : null}
       <FormTextField
-        label="Password"
+        label={de ? 'Passwort' : 'Password'}
         value={password}
         onChangeText={setPassword}
         error={fieldErrors.password}
-        helper={`At least ${PASSWORD_MIN_LENGTH} characters.`}
+        helper={de ? `Mindestens ${PASSWORD_MIN_LENGTH} Zeichen.` : `At least ${PASSWORD_MIN_LENGTH} characters.`}
         secure
         autoCapitalize="none"
         autoComplete="new-password"
@@ -194,7 +196,7 @@ export default function SignupScreen({ navigation, route }: Props) {
         testID="auth-signup-password"
       />
       <FormTextField
-        label="City"
+        label={de ? 'Stadt' : 'City'}
         value={city}
         onChangeText={setCity}
         error={fieldErrors.city}
@@ -205,7 +207,7 @@ export default function SignupScreen({ navigation, route }: Props) {
         testID="auth-signup-city"
       />
       <FormTextField
-        label="Country"
+        label={de ? 'Land' : 'Country'}
         value={country}
         onChangeText={setCountry}
         optional
@@ -215,7 +217,7 @@ export default function SignupScreen({ navigation, route }: Props) {
         testID="auth-signup-country"
       />
       <FormTextField
-        label="Phone"
+        label={de ? 'Telefon' : 'Phone'}
         value={phone}
         onChangeText={setPhone}
         optional
@@ -231,7 +233,7 @@ export default function SignupScreen({ navigation, route }: Props) {
           onChangeText={setBio}
           optional
           multiline
-          helper="A few lines about your craft. You can edit this later."
+          helper={de ? 'Ein paar Zeilen über dein Handwerk. Du kannst das später ändern.' : 'A few lines about your craft. You can edit this later.'}
           testID="auth-signup-bio"
         />
       ) : null}
@@ -249,20 +251,20 @@ export default function SignupScreen({ navigation, route }: Props) {
         adultConfirmed={adultConfirmed}
         onTermsChange={() => setTermsAccepted((current) => !current)}
         onAdultChange={() => setAdultConfirmed((current) => !current)}
-        termsError={legalAttempted && !termsAccepted ? 'Accept the terms and acknowledge the privacy policy.' : undefined}
-        adultError={legalAttempted && !adultConfirmed ? 'You must confirm that you are at least 18.' : undefined}
+        termsError={legalAttempted && !termsAccepted ? (de ? 'Stimme den Bedingungen zu und bestätige die Datenschutzerklärung.' : 'Accept the terms and acknowledge the privacy policy.') : undefined}
+        adultError={legalAttempted && !adultConfirmed ? (de ? 'Bitte bestätige, dass du mindestens 18 bist.' : 'You must confirm that you are at least 18.') : undefined}
         testIDPrefix="auth-signup"
       />
       <View style={styles.actions}>
         <PrimaryButton
-          label="Create account"
+          label={de ? 'Konto erstellen' : 'Create account'}
           onPress={onSubmit}
           loading={submitting}
           disabled={providerSubmitting !== null}
           testID="auth-signup-submit"
         />
         <TextLink
-          label="Already have an account? Log in"
+          label={de ? 'Schon ein Konto? Anmelden' : 'Already have an account? Log in'}
           onPress={() => navigation.navigate('Login', { role })}
           disabled={submitting}
           testID="auth-signup-go-login"

@@ -2,12 +2,14 @@
  * AUTHENTICATED with role 'admin' (Contract A state 5): the mobile app does
  * not serve admins — the founders use the Supabase dashboard. Terse by design.
  */
+import { getAppLanguage } from '../../shared/locale';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/useTheme';
 import { PrimaryButton } from './ui';
 
 export default function AdminNotSupportedScreen({ onSignOut }: { onSignOut: () => void }) {
+  const de = getAppLanguage() === 'de';
   const { colors, fonts } = useTheme();
 
   return (
@@ -17,13 +19,13 @@ export default function AdminNotSupportedScreen({ onSignOut }: { onSignOut: () =
     >
       <View style={styles.center}>
         <Text style={[styles.title, { color: colors.textPrimary, fontFamily: fonts.heading }]}>
-          Admin account
+          {de ? 'Admin-Konto' : 'Admin account'}
         </Text>
         <Text style={[styles.message, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-          This account uses the admin dashboard. The app is for customers and barbers.
+          {de ? 'Dieses Konto nutzt das Admin-Dashboard. Die App ist für Kunden und Barber.' : 'This account uses the admin dashboard. The app is for customers and barbers.'}
         </Text>
         <View style={styles.actions}>
-          <PrimaryButton label="Log out" onPress={onSignOut} testID="admin-sign-out" />
+          <PrimaryButton label={de ? 'Abmelden' : 'Log out'} onPress={onSignOut} testID="admin-sign-out" />
         </View>
       </View>
     </SafeAreaView>

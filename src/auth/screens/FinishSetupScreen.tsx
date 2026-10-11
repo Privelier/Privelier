@@ -9,6 +9,7 @@
  * city (required), country/phone optional, bio optional and shown only when
  * role = barber.
  */
+import { getAppLanguage } from '../../shared/locale';
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Role } from '../../types';
@@ -39,6 +40,7 @@ interface FieldErrors {
 }
 
 export default function FinishSetupScreen({ prefill, onSubmit, onSignOut }: Props) {
+  const de = getAppLanguage() === 'de';
   const [role, setRole] = useState<Role | null>(prefill.role ?? null);
   const [name, setName] = useState(prefill.name ?? '');
   const [city, setCity] = useState(prefill.city ?? '');
@@ -54,9 +56,9 @@ export default function FinishSetupScreen({ prefill, onSubmit, onSignOut }: Prop
 
   const submit = useCallback(async () => {
     const errors: FieldErrors = {
-      role: role === null ? 'Choose whether you are a customer or a barber.' : undefined,
-      name: requiredText(name, 'Enter your name.'),
-      city: requiredText(city, 'Enter your city.'),
+      role: role === null ? (de ? 'Wähle, ob du Kunde oder Barber bist.' : 'Choose whether you are a customer or a barber.') : undefined,
+      name: requiredText(name, de ? 'Gib deinen Namen ein.' : 'Enter your name.'),
+      city: requiredText(city, de ? 'Gib deine Stadt ein.' : 'Enter your city.'),
     };
     setFieldErrors(errors);
     setFormError(null);
@@ -80,15 +82,15 @@ export default function FinishSetupScreen({ prefill, onSubmit, onSignOut }: Prop
       setFormError(result.message);
     } else if (result.status === 'needs_setup_form') {
       // Should not occur on the form path; keep the user's input and ask again.
-      setFormError('We could not save that. Check the fields and try again.');
+      setFormError(de ? 'Das konnte nicht gespeichert werden. Prüfe die Felder und versuch es erneut.' : 'We could not save that. Check the fields and try again.');
     }
-  }, [role, name, city, country, phone, bio, onSubmit, termsAccepted, adultConfirmed]);
+  }, [role, name, city, country, phone, bio, onSubmit, termsAccepted, adultConfirmed, de]);
 
   return (
     <AuthScreenShell testID="setup-screen">
       <ScreenHeading
-        title="Finish setting up"
-        subtitle="A couple of details before you continue."
+        title={de ? 'Einrichtung abschließen' : 'Finish setting up'}
+        subtitle={de ? 'Noch ein paar Angaben, bevor es weitergeht.' : 'A couple of details before you continue.'}
       />
       {formError ? <Notice kind="error" message={formError} testID="setup-error" /> : null}
       <RoleChoice value={role} onChange={setRole} error={fieldErrors.role} />
@@ -103,7 +105,7 @@ export default function FinishSetupScreen({ prefill, onSubmit, onSignOut }: Prop
         testID="setup-name"
       />
       <FormTextField
-        label="City"
+        label={de ? 'Stadt' : 'City'}
         value={city}
         onChangeText={setCity}
         error={fieldErrors.city}
@@ -111,7 +113,7 @@ export default function FinishSetupScreen({ prefill, onSubmit, onSignOut }: Prop
         testID="setup-city"
       />
       <FormTextField
-        label="Country"
+        label={de ? 'Land' : 'Country'}
         value={country}
         onChangeText={setCountry}
         optional
@@ -121,7 +123,7 @@ export default function FinishSetupScreen({ prefill, onSubmit, onSignOut }: Prop
         testID="setup-country"
       />
       <FormTextField
-        label="Phone"
+        label={de ? 'Telefon' : 'Phone'}
         value={phone}
         onChangeText={setPhone}
         optional
@@ -137,7 +139,7 @@ export default function FinishSetupScreen({ prefill, onSubmit, onSignOut }: Prop
           onChangeText={setBio}
           optional
           multiline
-          helper="A few lines about your craft. You can edit this later."
+          helper={de ? 'Ein paar Zeilen über dein Handwerk. Du kannst das später ändern.' : 'A few lines about your craft. You can edit this later.'}
           testID="setup-bio"
         />
       ) : null}
@@ -147,8 +149,8 @@ export default function FinishSetupScreen({ prefill, onSubmit, onSignOut }: Prop
         adultConfirmed={adultConfirmed}
         onTermsChange={() => setTermsAccepted((current) => !current)}
         onAdultChange={() => setAdultConfirmed((current) => !current)}
-        termsError={legalAttempted && !termsAccepted ? 'Accept the terms and acknowledge the privacy policy.' : undefined}
-        adultError={legalAttempted && !adultConfirmed ? 'You must confirm that you are at least 18.' : undefined}
+        termsError={legalAttempted && !termsAccepted ? (de ? 'Stimme den Bedingungen zu und bestätige die Datenschutzerklärung.' : 'Accept the terms and acknowledge the privacy policy.') : undefined}
+        adultError={legalAttempted && !adultConfirmed ? (de ? 'Bitte bestätige, dass du mindestens 18 bist.' : 'You must confirm that you are at least 18.') : undefined}
         testIDPrefix="setup"
       />
       <LegalLinks role={role} testIDPrefix="setup-legal" />
@@ -170,15 +172,16 @@ function RoleChoice({
   error?: string;
 }) {
   const { colors, fonts } = useTheme();
+  const de = getAppLanguage() === 'de';
 
   return (
     <View style={styles.roleField}>
       <Text style={[styles.roleLabel, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-        I am a
+        {de ? 'Ich bin' : 'I am a'}
       </Text>
       <View style={styles.roleRow}>
         <RoleOption
-          label="Customer"
+          label={de ? 'Kunde' : 'Customer'}
           selected={value === 'customer'}
           onPress={() => onChange('customer')}
           testID="setup-role-customer"

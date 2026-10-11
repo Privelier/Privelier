@@ -7,6 +7,7 @@
  *
  * Existing accounts must enter through their database-backed role's login.
  */
+import { getAppLanguage } from '../../shared/locale';
 import { useCallback, useRef, useState } from 'react';
 import { StyleSheet, View, type TextInput } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -39,6 +40,7 @@ function roleMismatchMessage(actualRole: 'customer' | 'barber'): string {
 }
 
 export default function LoginScreen({ navigation, route }: Props) {
+  const de = getAppLanguage() === 'de';
   const { role } = route.params;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -98,17 +100,17 @@ export default function LoginScreen({ navigation, route }: Props) {
     <AuthScreenShell testID="auth-login-screen">
       <BackLink onPress={() => navigation.goBack()} testID="auth-login-back" />
       <ScreenHeading
-        title="Log in"
+        title={de ? 'Anmelden' : 'Log in'}
         subtitle={
           role === 'barber'
-            ? 'Welcome back. Your bookings are waiting.'
-            : 'Welcome back.'
+            ? (de ? 'Willkommen zurück. Deine Termine warten.' : 'Welcome back. Your bookings are waiting.')
+            : (de ? 'Willkommen zurück.' : 'Welcome back.')
         }
       />
       {route.params.mismatchMessage ? <Notice kind="error" message={route.params.mismatchMessage} testID="auth-login-role-mismatch" /> : null}
       {formError ? <Notice kind="error" message={formError} testID="auth-login-error" /> : null}
       <FormTextField
-        label="Email"
+        label={de ? 'E-Mail' : 'Email'}
         value={email}
         onChangeText={setEmail}
         error={fieldErrors.email}
@@ -122,7 +124,7 @@ export default function LoginScreen({ navigation, route }: Props) {
         testID="auth-login-email"
       />
       <FormTextField
-        label="Password"
+        label={de ? 'Passwort' : 'Password'}
         value={password}
         onChangeText={setPassword}
         error={fieldErrors.password}
@@ -137,20 +139,20 @@ export default function LoginScreen({ navigation, route }: Props) {
       />
       <View style={styles.actions}>
         <PrimaryButton
-          label="Log in"
+          label={de ? 'Anmelden' : 'Log in'}
           onPress={onSubmit}
           loading={submitting}
           disabled={providerSubmitting !== null}
           testID="auth-login-submit"
         />
         <TextLink
-          label="Forgot password?"
+          label={de ? 'Passwort vergessen?' : 'Forgot password?'}
           onPress={() => navigation.navigate('ForgotPassword', { role, email })}
           disabled={submitting || providerSubmitting !== null}
           testID="auth-login-forgot-password"
         />
         <TextLink
-          label="New here? Create an account"
+          label={de ? 'Neu hier? Konto erstellen' : 'New here? Create an account'}
           onPress={() => navigation.navigate('Signup', { role })}
           disabled={submitting}
           testID="auth-login-go-signup"

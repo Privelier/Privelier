@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { getAppLanguage } from './shared/locale';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from './theme/useTheme';
@@ -11,6 +12,7 @@ type Props = {
 };
 
 export default function RoleSelectScreen({ onSelectRole }: Props) {
+  const de = getAppLanguage() === 'de';
   const { colors, fonts } = useTheme();
 
   return (
@@ -27,14 +29,14 @@ export default function RoleSelectScreen({ onSelectRole }: Props) {
 
       <View style={styles.optionList}>
         <RoleOption
-          label="Continue as customer"
-          description="Book a private barber to come to you"
+          label={de ? 'Weiter als Kunde' : 'Continue as customer'}
+          description={de ? 'Buche einen Barber, der zu dir kommt' : 'Book a private barber to come to you'}
           onPress={() => onSelectRole('customer')}
           testID="role-select-customer"
         />
         <RoleOption
-          label="Continue as barber"
-          description="Manage your services and bookings"
+          label={de ? 'Weiter als Barber' : 'Continue as barber'}
+          description={de ? 'Verwalte deine Leistungen und Termine' : 'Manage your services and bookings'}
           onPress={() => onSelectRole('barber')}
           testID="role-select-barber"
         />

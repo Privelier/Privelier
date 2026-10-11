@@ -5,6 +5,7 @@
  * persist across restarts: after a restart the user lands back at the
  * pre-auth shell and logs in normally. That is correct.
  */
+import { getAppLanguage } from '../../shared/locale';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -27,6 +28,7 @@ type ResendFeedback =
   | { kind: 'error'; message: string };
 
 export default function AwaitEmailConfirmationScreen({ navigation, route }: Props) {
+  const de = getAppLanguage() === 'de';
   const { email, role } = route.params;
   const [resending, setResending] = useState(false);
   const [feedback, setFeedback] = useState<ResendFeedback>({ kind: 'none' });
@@ -52,24 +54,24 @@ export default function AwaitEmailConfirmationScreen({ navigation, route }: Prop
           that rhythm. */}
       <Brandmark size="md" style={styles.mark} />
       <ScreenHeading
-        title="Check your inbox"
-        subtitle={`We’ve sent a confirmation link to ${email}. Open it to activate your account, then log in.`}
+        title={de ? 'Prüfe dein Postfach' : 'Check your inbox'}
+        subtitle={de ? `Wir haben einen Bestätigungslink an ${email} gesendet. Öffne ihn, um dein Konto zu aktivieren, und melde dich dann an.` : `We’ve sent a confirmation link to ${email}. Open it to activate your account, then log in.`}
       />
       {feedback.kind === 'success' ? (
-        <Notice kind="success" message="Confirmation email sent." testID="auth-confirm-success" />
+        <Notice kind="success" message={de ? 'Bestätigungs-E-Mail gesendet.' : 'Confirmation email sent.'} testID="auth-confirm-success" />
       ) : null}
       {feedback.kind === 'error' ? (
         <Notice kind="error" message={feedback.message} testID="auth-confirm-error" />
       ) : null}
       <View style={styles.actions}>
         <PrimaryButton
-          label="Back to log in"
+          label={de ? 'Zurück zur Anmeldung' : 'Back to log in'}
           onPress={() => navigation.navigate('Login', { role })}
           disabled={resending}
           testID="auth-confirm-back-to-login"
         />
         <SecondaryButton
-          label="Send the link again"
+          label={de ? 'Link erneut senden' : 'Send the link again'}
           onPress={onResend}
           loading={resending}
           testID="auth-confirm-resend"

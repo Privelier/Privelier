@@ -4,6 +4,7 @@
  * kept lightweight and brand-calm. The 'setup_form' view is a separate
  * screen (FinishSetupScreen).
  */
+import { getAppLanguage } from '../../shared/locale';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { AuthFailure } from '../errors';
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export default function ProvisioningScreen({ view, onRetry, onSignOut }: Props) {
+  const de = getAppLanguage() === 'de';
   const { colors, fonts } = useTheme();
 
   return (
@@ -34,20 +36,20 @@ export default function ProvisioningScreen({ view, onRetry, onSignOut }: Props) 
           <Brandmark size="md" style={styles.markSpacing} />
           <ActivityIndicator size="small" color={colors.accent} />
           <Text style={[styles.loadingText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-            Setting up your account
+            {de ? 'Dein Konto wird eingerichtet' : 'Setting up your account'}
           </Text>
         </View>
       ) : (
         <View style={styles.center} testID="provisioning-failure">
           <Text style={[styles.title, { color: colors.textPrimary, fontFamily: fonts.heading }]}>
-            We couldn&rsquo;t finish setting up
+            {de ? 'Die Einrichtung wurde nicht abgeschlossen' : 'We couldn’t finish setting up'}
           </Text>
           <Text style={[styles.message, { color: colors.textSecondary, fontFamily: fonts.body }]}>
             {view.failure.message}
           </Text>
           <View style={styles.actions}>
-            <PrimaryButton label="Try again" onPress={onRetry} testID="provisioning-retry" />
-            <TextLink label="Log out" onPress={onSignOut} testID="provisioning-sign-out" />
+            <PrimaryButton label={de ? 'Erneut versuchen' : 'Try again'} onPress={onRetry} testID="provisioning-retry" />
+            <TextLink label={de ? 'Abmelden' : 'Log out'} onPress={onSignOut} testID="provisioning-sign-out" />
           </View>
         </View>
       )}
