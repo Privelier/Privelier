@@ -36,3 +36,8 @@ jest.mock('react-native-reanimated', () => {
     withTiming: (value: number) => value,
   };
 });
+
+// NetInfo's native module is absent under Jest; the package ships this mock.
+jest.mock('@react-native-community/netinfo', () =>
+  jest.requireActual('@react-native-community/netinfo/jest/netinfo-mock.js')
+);

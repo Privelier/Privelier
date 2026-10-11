@@ -36,6 +36,7 @@ import CustomerNavigator from './src/customer/CustomerNavigator';
 import BarberNavigator from './src/barber/BarberNavigator';
 import { appFonts } from './src/theme/typography';
 import { ToastProvider } from './src/shared/components/ToastProvider';
+import { OfflineBanner } from './src/shared/components/OfflineBanner';
 import { darkPalette } from './src/theme/colors';
 
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
@@ -123,6 +124,7 @@ export default function App() {
           <BottomSheetModalProvider>
             <ToastProvider>
               <NavigationContainer theme={navigationTheme}>{renderRoot(shell)}</NavigationContainer>
+              <OfflineBanner />
             </ToastProvider>
           </BottomSheetModalProvider>
           <StatusBar style="light" />
