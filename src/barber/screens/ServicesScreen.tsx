@@ -38,6 +38,7 @@ import { RowListSkeleton } from '../../shared/components/ScreenSkeletons';
 import { useToast } from '../../shared/components/ToastProvider';
 import { getAppLanguage } from '../../shared/locale';
 import { formatMoney } from '../../shared/format';
+import { haptics } from '../../shared/haptics';
 import type { Palette } from '../../theme/colors';
 import type { ServiceRow } from '../../types';
 import { createService, deleteService, listOwnServices, updateService } from '../servicesData';
@@ -54,6 +55,9 @@ interface FieldErrors {
 type FieldName = 'name' | 'price' | 'duration';
 
 const isDe = () => getAppLanguage() === 'de';
+
+/** Common service lengths; the field stays free for any whole minute value. */
+const DURATION_PRESETS = [15, 30, 45, 60, 90] as const;
 
 function nameError(value: string): string | undefined {
   return value.trim().length === 0 ? (isDe() ? 'Gib einen Namen für die Leistung ein.' : 'Enter a service name.') : undefined;
@@ -345,6 +349,32 @@ export default function ServicesScreen({ navigation }: Props) {
                 ]}
                 testID="barber-services-duration"
               />
+              <View style={styles.durationChips} testID="barber-services-duration-presets">
+                {DURATION_PRESETS.map((minutes) => {
+                  const selected = duration.trim() === String(minutes);
+                  return (
+                    <Pressable
+                      key={minutes}
+                      onPress={() => {
+                        void haptics.selection();
+                        setDuration(String(minutes));
+                      }}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                      accessibilityLabel={isDe() ? `${minutes} Minuten` : `${minutes} minutes`}
+                      testID={`barber-services-duration-preset-${minutes}`}
+                      style={[
+                        styles.durationChip,
+                        { borderColor: selected ? colors.accent : colors.border, backgroundColor: selected ? colors.accent : 'transparent' },
+                      ]}
+                    >
+                      <Text style={[styles.durationChipText, numericText, { color: selected ? colors.onAccent : colors.textPrimary }]}>
+                        {minutes}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
               {fieldErrors.duration ? (
                 <Text style={[styles.errorText, { color: colors.errorText, fontFamily: fonts.body }]}>
                   {fieldErrors.duration}
@@ -462,6 +492,9 @@ export default function ServicesScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
+  durationChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  durationChip: { minWidth: 48, minHeight: 40, borderWidth: 0.5, borderRadius: 999, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
+  durationChipText: { fontSize: 14 },
   container: { flex: 1 },
   header: { paddingHorizontal: space.xl, paddingTop: space.md },
   heading: { fontSize: 24, marginTop: 16 },

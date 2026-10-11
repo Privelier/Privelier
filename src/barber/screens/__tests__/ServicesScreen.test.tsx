@@ -4,6 +4,7 @@ import { deleteService, listOwnServices } from '../../servicesData';
 
 const mockShowToast = jest.fn();
 
+jest.mock('../../../shared/haptics', () => ({ haptics: { selection: jest.fn() } }));
 jest.mock('../../../../lib/supabase', () => ({
   supabase: {
     auth: { getSession: jest.fn(() => Promise.resolve({ data: { session: { user: { id: 'barber-1' } } } })) },
@@ -77,4 +78,11 @@ it('keeps the service and explains a failed delete in a toast', async () => {
   await fireEvent.press(screen.getByTestId('barber-services-delete-confirm-confirm'));
   await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith({ message: 'Could not delete. We could not reach the server.' }));
   expect(screen.getByTestId('barber-services-row-svc-1')).toBeTruthy();
+});
+
+it('fills the duration from a preset chip and marks it selected', async () => {
+  await renderLoaded();
+  await fireEvent.press(screen.getByTestId('barber-services-duration-preset-45'));
+  expect(screen.getByTestId('barber-services-duration').props.value).toBe('45');
+  expect(screen.getByTestId('barber-services-duration-preset-45').props.accessibilityState).toMatchObject({ selected: true });
 });
