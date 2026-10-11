@@ -82,6 +82,8 @@ import { getAppLanguage } from '../../shared/locale';
  * with a keep + destructive option). Accept / Mark complete are not destructive
  * and stay one-tap.
  */
+const isDe = () => getAppLanguage() === 'de';
+
 /** Requests read soonest-first: sort by (date, time) ascending. */
 function sortAsc(rows: BookingRow[]): BookingRow[] {
   return [...rows].sort((a, b) => {
@@ -248,7 +250,7 @@ export default function RequestsScreen() {
         setBookings((prev) => applyBookingChangeSorted(prev, { eventType: 'UPDATE', row }, sortAsc));
         const message =
           result.status === 'not_found'
-            ? 'That booking could no longer be found. Refresh to see its current status.'
+            ? (isDe() ? 'Dieser Termin wurde nicht mehr gefunden. Aktualisiere, um den aktuellen Stand zu sehen.' : 'That booking could no longer be found. Refresh to see its current status.')
             : result.message;
         setRowErrors((p) => ({ ...p, [row.id]: message }));
       }
@@ -272,7 +274,7 @@ export default function RequestsScreen() {
                         style={styles.actionSpinner}
                         testID={`barber-requests-row-busy-${item.id}`}
                         accessible
-                        accessibilityLabel="Updating booking"
+                        accessibilityLabel={isDe() ? 'Termin wird aktualisiert' : 'Updating booking'}
                         accessibilityLiveRegion="polite"
                       />
                     ) : item.status === 'pending' ? (
@@ -280,10 +282,10 @@ export default function RequestsScreen() {
                         <ActionButton
                           styles={styles}
                           variant="secondary"
-                          label="Reject"
+                          label={isDe() ? 'Ablehnen' : 'Reject'}
                           testID={`request-reject-${item.id}`}
                           onPress={() =>
-                            confirmDestructive('Reject this booking?', 'Reject', () =>
+                            confirmDestructive(isDe() ? 'Diesen Termin ablehnen?' : 'Reject this booking?', isDe() ? 'Ablehnen' : 'Reject', () =>
                               runTransition(item, 'rejected', rejectBooking)
                             )
                           }
@@ -291,7 +293,7 @@ export default function RequestsScreen() {
                         <ActionButton
                           styles={styles}
                           variant="primary"
-                          label="Accept"
+                          label={isDe() ? 'Annehmen' : 'Accept'}
                           testID={`request-accept-${item.id}`}
                           onPress={() => runTransition(item, 'accepted', acceptBooking)}
                         />
@@ -301,10 +303,10 @@ export default function RequestsScreen() {
                         <ActionButton
                           styles={styles}
                           variant="secondary"
-                          label="Cancel"
+                          label={isDe() ? 'Stornieren' : 'Cancel'}
                           testID={`request-cancel-${item.id}`}
                           onPress={() =>
-                            confirmDestructive('Cancel this booking?', 'Cancel booking', () =>
+                            confirmDestructive(isDe() ? 'Diesen Termin stornieren?' : 'Cancel this booking?', isDe() ? 'Termin stornieren' : 'Cancel booking', () =>
                               runTransition(item, 'cancelled', cancelBookingAsBarber)
                             )
                           }
@@ -312,7 +314,7 @@ export default function RequestsScreen() {
                         <ActionButton
                           styles={styles}
                           variant="success"
-                          label="Mark complete"
+                          label={isDe() ? 'Als erledigt markieren' : 'Mark complete'}
                           testID={`request-complete-${item.id}`}
                           onPress={() => runTransition(item, 'completed', completeBooking)}
                         />
@@ -339,7 +341,7 @@ export default function RequestsScreen() {
     >
       <View style={styles.header}>
         <Text style={styles.heading}>{language === 'de' ? 'Deine Anfragen' : 'Your requests'}</Text>
-        <Text style={styles.subtitle}>Booking requests from your clients.</Text>
+        <Text style={styles.subtitle}>{isDe() ? 'Terminanfragen deiner Kunden.' : 'Booking requests from your clients.'}</Text>
       </View>
 
       {showSkeleton ? (
@@ -388,10 +390,10 @@ export default function RequestsScreen() {
           ListEmptyComponent={bookings.length === 0 ? (
             <View style={styles.empty}>
               <Text style={styles.emptyText} testID="barber-requests-empty">
-                No booking requests yet.
+                {isDe() ? 'Noch keine Terminanfragen.' : 'No booking requests yet.'}
               </Text>
               <Text style={styles.emptyHint}>
-                Requests appear here the moment a client books you.
+                {isDe() ? 'Anfragen erscheinen hier, sobald ein Kunde dich bucht.' : 'Requests appear here the moment a client books you.'}
               </Text>
             </View>
           ) : null}
@@ -401,8 +403,8 @@ export default function RequestsScreen() {
             const counterpart = counterpartsById.get(item.id);
             const rowError = rowErrors[item.id];
             // Lead with the customer's name when known; fall back to service.
-            const title = counterpart?.name ?? service?.name ?? 'Booking';
-            const subline = counterpart ? service?.name ?? 'Service' : formatBookingWhen(item.date, item.time);
+            const title = counterpart?.name ?? service?.name ?? (isDe() ? 'Termin' : 'Booking');
+            const subline = counterpart ? service?.name ?? (isDe() ? 'Leistung' : 'Service') : formatBookingWhen(item.date, item.time);
             return (
               <Reveal index={Math.min(index, 5)}>
                 <GlassSurface style={styles.card} testID={`barber-requests-row-${item.id}`}>

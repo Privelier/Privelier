@@ -53,21 +53,23 @@ interface FieldErrors {
 
 type FieldName = 'name' | 'price' | 'duration';
 
+const isDe = () => getAppLanguage() === 'de';
+
 function nameError(value: string): string | undefined {
-  return value.trim().length === 0 ? 'Enter a service name.' : undefined;
+  return value.trim().length === 0 ? (isDe() ? 'Gib einen Namen für die Leistung ein.' : 'Enter a service name.') : undefined;
 }
 
 function priceError(value: string): string | undefined {
-  if (value.trim().length === 0) return 'Enter a price.';
+  if (value.trim().length === 0) return isDe() ? 'Gib einen Preis ein.' : 'Enter a price.';
   const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0) return 'Enter a price of 0 or more.';
+  if (!Number.isFinite(parsed) || parsed < 0) return isDe() ? 'Gib einen Preis von 0 oder mehr ein.' : 'Enter a price of 0 or more.';
   return undefined;
 }
 
 function durationError(value: string): string | undefined {
-  if (value.trim().length === 0) return 'Enter a duration.';
+  if (value.trim().length === 0) return isDe() ? 'Gib eine Dauer ein.' : 'Enter a duration.';
   const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) return 'Enter a duration in whole minutes, greater than 0.';
+  if (!Number.isInteger(parsed) || parsed <= 0) return isDe() ? 'Gib die Dauer in ganzen Minuten an, größer als 0.' : 'Enter a duration in whole minutes, greater than 0.';
   return undefined;
 }
 
@@ -119,7 +121,7 @@ export default function ServicesScreen({ navigation }: Props) {
         void loadServices(id);
       } else {
         setListLoading(false);
-        setListError('We could not find your account. Try signing out and back in.');
+        setListError(isDe() ? 'Dein Konto wurde nicht gefunden. Melde dich ab und wieder an.' : 'We could not find your account. Try signing out and back in.');
       }
     });
     return () => {
@@ -163,7 +165,7 @@ export default function ServicesScreen({ navigation }: Props) {
     setFormError(null);
     if (errors.name || errors.price || errors.duration) return;
     if (!barberId) {
-      setFormError('We could not find your account. Try signing out and back in.');
+      setFormError(isDe() ? 'Dein Konto wurde nicht gefunden. Melde dich ab und wieder an.' : 'We could not find your account. Try signing out and back in.');
       return;
     }
 
@@ -183,7 +185,7 @@ export default function ServicesScreen({ navigation }: Props) {
         resetForm();
         void loadServices(barberId);
       } else if (result.status === 'not_found') {
-        setFormError('This service no longer exists.');
+        setFormError(isDe() ? 'Diese Leistung gibt es nicht mehr.' : 'This service no longer exists.');
         void loadServices(barberId);
       } else {
         setFormError(result.message);
@@ -231,7 +233,7 @@ export default function ServicesScreen({ navigation }: Props) {
       <View style={styles.header}>
         <BackButton onPress={() => navigation.goBack()} testID="barber-services-back" />
         <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-          Services
+          {isDe() ? 'Leistungen' : 'Services'}
         </Text>
       </View>
 
@@ -243,7 +245,7 @@ export default function ServicesScreen({ navigation }: Props) {
           <>
             <View style={[styles.form, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.formTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-                {editingId ? 'Edit service' : 'Add a service'}
+                {editingId ? (isDe() ? 'Leistung bearbeiten' : 'Edit service') : (isDe() ? 'Leistung hinzufügen' : 'Add a service')}
               </Text>
 
               {formError ? (
@@ -258,7 +260,7 @@ export default function ServicesScreen({ navigation }: Props) {
                 onChangeText={setName}
                 onFocus={() => setFocusedField('name')}
                 onBlur={() => setFocusedField((current) => (current === 'name' ? null : current))}
-                placeholder="e.g. Classic haircut"
+                placeholder={isDe() ? 'z. B. Klassischer Haarschnitt' : 'e.g. Classic haircut'}
                 placeholderTextColor={colors.textSecondary}
                 accessibilityLabel="Name"
                 selectionColor={colors.accent}
@@ -281,12 +283,12 @@ export default function ServicesScreen({ navigation }: Props) {
                 </Text>
               ) : isDuplicateName ? (
                 <Text style={[styles.helperText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                  You already have a service with this name. You can still save it.
+                  {isDe() ? 'Du hast schon eine Leistung mit diesem Namen. Du kannst sie trotzdem speichern.' : 'You already have a service with this name. You can still save it.'}
                 </Text>
               ) : null}
 
               <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-                Price
+                {isDe() ? 'Preis' : 'Price'}
               </Text>
               <TextInput
                 value={price}
@@ -296,7 +298,7 @@ export default function ServicesScreen({ navigation }: Props) {
                 placeholder="0.00"
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="decimal-pad"
-                accessibilityLabel="Price"
+                accessibilityLabel={isDe() ? 'Preis' : 'Price'}
                 selectionColor={colors.accent}
                 cursorColor={colors.accent}
                 keyboardAppearance={isDark ? 'dark' : 'light'}
@@ -318,7 +320,7 @@ export default function ServicesScreen({ navigation }: Props) {
               ) : null}
 
               <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-                Duration (minutes)
+                {isDe() ? 'Dauer (Minuten)' : 'Duration (minutes)'}
               </Text>
               <TextInput
                 value={duration}
@@ -328,7 +330,7 @@ export default function ServicesScreen({ navigation }: Props) {
                 placeholder="30"
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="number-pad"
-                accessibilityLabel="Duration in minutes"
+                accessibilityLabel={isDe() ? 'Dauer in Minuten' : 'Duration in minutes'}
                 selectionColor={colors.accent}
                 cursorColor={colors.accent}
                 keyboardAppearance={isDark ? 'dark' : 'light'}
@@ -351,7 +353,7 @@ export default function ServicesScreen({ navigation }: Props) {
 
               <View style={styles.formActions}>
                 <PrimaryButton
-                  label={editingId ? 'Save changes' : 'Add service'}
+                  label={editingId ? (isDe() ? 'Änderungen speichern' : 'Save changes') : (isDe() ? 'Leistung hinzufügen' : 'Add service')}
                   icon={editingId ? 'check' : 'plus'}
                   onPress={onSubmit}
                   loading={submitting}
@@ -363,12 +365,12 @@ export default function ServicesScreen({ navigation }: Props) {
                     onPress={resetForm}
                     disabled={submitting}
                     accessibilityRole="button"
-                    accessibilityLabel="Cancel edit"
+                    accessibilityLabel={isDe() ? 'Bearbeiten abbrechen' : 'Cancel edit'}
                     testID="barber-services-cancel-edit"
                     style={({ pressed }) => [styles.cancelButton, pressed ? { opacity: pressOpacity.soft } : null]}
                   >
                     <Text style={[styles.cancelButtonText, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-                      Cancel
+                      {isDe() ? 'Abbrechen' : 'Cancel'}
                     </Text>
                   </Pressable>
                 ) : null}
@@ -377,7 +379,7 @@ export default function ServicesScreen({ navigation }: Props) {
 
             <View style={styles.listHeader}>
               <Text style={[styles.listTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-                Your services
+                {isDe() ? 'Deine Leistungen' : 'Your services'}
               </Text>
               {listLoading ? (
                 <RowListSkeleton testID="barber-services-loading" label={de ? 'Leistungen werden geladen' : 'Loading your services'} />
@@ -389,7 +391,7 @@ export default function ServicesScreen({ navigation }: Props) {
               ) : null}
               {!listLoading && !listError && services.length === 0 ? (
                 <Text style={[styles.helperText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                  You have not added any services yet.
+                  {isDe() ? 'Du hast noch keine Leistungen angelegt.' : 'You have not added any services yet.'}
                 </Text>
               ) : null}
             </View>
@@ -412,7 +414,7 @@ export default function ServicesScreen({ navigation }: Props) {
               <Pressable
                 onPress={() => startEdit(item)}
                 accessibilityRole="button"
-                accessibilityLabel={`Edit ${item.name}`}
+                accessibilityLabel={isDe() ? `${item.name} bearbeiten` : `Edit ${item.name}`}
                 hitSlop={14}
                 testID={`barber-services-edit-${item.id}`}
                 style={({ pressed }) => (pressed ? { opacity: pressOpacity.soft } : null)}
@@ -421,19 +423,19 @@ export default function ServicesScreen({ navigation }: Props) {
                     active/live states, not a repeated per-row link (Step-18
                     Ultra pass, increment 6). */}
                 <Text style={[styles.rowActionText, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>
-                  Edit
+                  {isDe() ? 'Bearbeiten' : 'Edit'}
                 </Text>
               </Pressable>
               <Pressable
                 onPress={() => onDelete(item)}
                 accessibilityRole="button"
-                accessibilityLabel={`Delete ${item.name}`}
+                accessibilityLabel={isDe() ? `${item.name} löschen` : `Delete ${item.name}`}
                 hitSlop={14}
                 testID={`barber-services-delete-${item.id}`}
                 style={({ pressed }) => (pressed ? { opacity: pressOpacity.firm } : null)}
               >
                 <Text style={[styles.rowActionText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-                  Delete
+                  {isDe() ? 'Löschen' : 'Delete'}
                 </Text>
               </Pressable>
             </View>

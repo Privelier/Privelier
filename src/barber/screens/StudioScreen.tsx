@@ -33,40 +33,44 @@ type Props = CompositeScreenProps<
   NativeStackScreenProps<BarberStackParamList>
 >;
 
-const VERIFICATION_LINES: Record<VerificationStatus, string> = {
-  approved: 'Verification approved. Your profile can appear in customer search.',
-  pending: 'Verification is under manual review.',
-  rejected: 'Verification needs your attention.',
-};
+const isDe = () => getAppLanguage() === 'de';
+
+function verificationLine(status: VerificationStatus): string {
+  switch (status) {
+    case 'approved': return isDe() ? 'Verifizierung bestätigt. Dein Profil kann in der Kundensuche erscheinen.' : 'Verification approved. Your profile can appear in customer search.';
+    case 'pending': return isDe() ? 'Deine Verifizierung wird persönlich geprüft.' : 'Verification is under manual review.';
+    case 'rejected': return isDe() ? 'Deine Verifizierung braucht deine Aufmerksamkeit.' : 'Verification needs your attention.';
+  }
+}
 
 function readinessLabel(item: ReadinessItem): string {
   if (item.state === 'unavailable') {
     switch (item.key) {
-      case 'services': return 'Could not check services';
-      case 'availability': return 'Could not check availability';
-      case 'location': return 'Could not check location';
-      case 'portfolio': return 'Could not check portfolio';
-      case 'bio': return 'Could not check bio';
-      case 'verification': return 'Could not check verification';
+      case 'services': return (isDe() ? 'Leistungen konnten nicht geprüft werden' : 'Could not check services');
+      case 'availability': return (isDe() ? 'Verfügbarkeit konnte nicht geprüft werden' : 'Could not check availability');
+      case 'location': return (isDe() ? 'Standort konnte nicht geprüft werden' : 'Could not check location');
+      case 'portfolio': return (isDe() ? 'Portfolio konnte nicht geprüft werden' : 'Could not check portfolio');
+      case 'bio': return (isDe() ? 'Bio konnte nicht geprüft werden' : 'Could not check bio');
+      case 'verification': return (isDe() ? 'Verifizierung konnte nicht geprüft werden' : 'Could not check verification');
     }
   }
   switch (item.key) {
     case 'services':
-      return item.state === 'complete' ? 'Services added' : 'Add a service';
+      return item.state === 'complete' ? (isDe() ? 'Leistungen angelegt' : 'Services added') : (isDe() ? 'Leistung hinzufügen' : 'Add a service');
     case 'availability':
-      return item.state === 'complete' ? 'Availability set' : 'Set your availability';
+      return item.state === 'complete' ? (isDe() ? 'Verfügbarkeit festgelegt' : 'Availability set') : (isDe() ? 'Verfügbarkeit festlegen' : 'Set your availability');
     case 'location':
-      return item.state === 'complete' ? 'Location added' : 'Add your location';
+      return item.state === 'complete' ? (isDe() ? 'Standort hinzugefügt' : 'Location added') : (isDe() ? 'Standort hinzufügen' : 'Add your location');
     case 'portfolio':
-      return item.state === 'complete' ? 'Portfolio photos added' : 'Add portfolio photos';
+      return item.state === 'complete' ? (isDe() ? 'Portfoliobilder hinzugefügt' : 'Portfolio photos added') : (isDe() ? 'Portfoliobilder hinzufügen' : 'Add portfolio photos');
     case 'bio':
-      return item.state === 'complete' ? 'Bio added' : 'Add a short bio';
+      return item.state === 'complete' ? (isDe() ? 'Bio hinzugefügt' : 'Bio added') : (isDe() ? 'Kurze Bio hinzufügen' : 'Add a short bio');
     case 'verification':
       return item.state === 'complete'
-        ? 'Verified'
+        ? (isDe() ? 'Verifiziert' : 'Verified')
         : item.state === 'attention'
-          ? 'Verification needs attention'
-          : 'Verification in review';
+          ? (isDe() ? 'Verifizierung braucht Aufmerksamkeit' : 'Verification needs attention')
+          : (isDe() ? 'Verifizierung in Prüfung' : 'Verification in review');
   }
 }
 
@@ -144,20 +148,20 @@ function SectionUnavailable({
   return (
     <View style={styles.unavailable} testID={testID}>
       <Text accessibilityRole="alert" style={[styles.unavailableText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-        {label} could not load.
+        {isDe() ? `${label} konnte nicht geladen werden.` : `${label} could not load.`}
       </Text>
       {retrying ? (
-        <ActivityIndicator size="small" color={colors.accent} accessibilityLabel="Refreshing studio" />
+        <ActivityIndicator size="small" color={colors.accent} accessibilityLabel={isDe() ? 'Studio wird aktualisiert' : 'Refreshing studio'} />
       ) : (
         <Pressable
           onPress={onRetry}
           accessibilityRole="button"
-          accessibilityLabel={`Retry ${label.toLowerCase()}`}
+          accessibilityLabel={isDe() ? `${label} erneut laden` : `Retry ${label.toLowerCase()}`}
           testID={`${testID}-retry`}
           style={({ pressed }) => [styles.retryAction, { opacity: pressed ? pressOpacity.soft : 1 }]}
         >
           <Text style={[styles.retryText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
-            Try again
+            {isDe() ? 'Erneut versuchen' : 'Try again'}
           </Text>
         </Pressable>
       )}
@@ -180,7 +184,7 @@ export default function StudioScreen({ navigation }: Props) {
     try {
       const profileResult = await fetchOwnProfile();
       if (profileResult.status === 'error' || !profileResult.profile) {
-        setError(profileResult.status === 'error' ? profileResult.message : 'Could not load your profile.');
+        setError(profileResult.status === 'error' ? profileResult.message : isDe() ? 'Dein Profil konnte nicht geladen werden.' : 'Could not load your profile.');
         setView(null);
         return;
       }
@@ -189,7 +193,7 @@ export default function StudioScreen({ navigation }: Props) {
       setView(nextView);
       setError(null);
     } catch {
-      setError('Could not load your studio. Try again.');
+      setError(isDe() ? 'Dein Studio konnte nicht geladen werden. Versuch es erneut.' : 'Could not load your studio. Try again.');
       setView(null);
     } finally {
       setLoading(false);
@@ -221,8 +225,8 @@ export default function StudioScreen({ navigation }: Props) {
 
   const verification = view?.profile.status === 'ok' ? view.profile.data.verification : null;
   const verificationText = verification
-    ? VERIFICATION_LINES[verification]
-    : 'Verify your profile to appear in customer search.';
+    ? verificationLine(verification)
+    : isDe() ? 'Verifiziere dein Profil, um in der Kundensuche zu erscheinen.' : 'Verify your profile to appear in customer search.';
 
   return (
     <SafeAreaView
@@ -263,13 +267,13 @@ export default function StudioScreen({ navigation }: Props) {
           <Pressable
             onPress={onSignOut}
             accessibilityRole="button"
-            accessibilityLabel="Sign out"
+            accessibilityLabel={isDe() ? 'Abmelden' : 'Sign out'}
             testID="barber-dashboard-logout"
             style={({ pressed }) => [styles.signOut, { opacity: pressed ? pressOpacity.soft : 1 }]}
           >
             <Feather name="log-out" size={16} color={colors.textSecondary} />
             <Text style={[styles.signOutText, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-              Sign out
+              {isDe() ? 'Abmelden' : 'Sign out'}
             </Text>
           </Pressable>
         </View>
@@ -303,7 +307,7 @@ export default function StudioScreen({ navigation }: Props) {
                     <Feather name="chevron-right" size={16} color={colors.textSecondary} />
                   </Pressable>
                 ) : (
-                  <SectionUnavailable label="Verification status" testID="barber-dashboard-verification-unavailable" onRetry={retryDashboard} retrying={retrying} />
+                  <SectionUnavailable label={isDe() ? 'Verifizierungsstatus' : 'Verification status'} testID="barber-dashboard-verification-unavailable" onRetry={retryDashboard} retrying={retrying} />
                 )}
               </View>
             </Reveal>
@@ -333,14 +337,14 @@ export default function StudioScreen({ navigation }: Props) {
                       </View>
                       <EarningsTrend data={data.weeklyTrend} width={chartWidth} colors={colors} />
                       {data.completedAllTime === 0 ? (
-                        <Text style={[styles.emptyHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>Your first completed booking will start this trend.</Text>
+                        <Text style={[styles.emptyHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>{isDe() ? 'Dein erster abgeschlossener Termin startet diese Entwicklung.' : 'Your first completed booking will start this trend.'}</Text>
                       ) : null}
                     </View>
 
                     <View style={[styles.metricRow, { borderTopColor: colors.border, borderBottomColor: colors.border }]}>
-                      <Metric label="This week" value={`${data.completedWeek}`} detail="completed cuts" colors={colors} />
-                      <Metric label="This month" value={`${data.completedMonth}`} detail="completed cuts" colors={colors} />
-                      <Metric label="All time" value={`${data.completedAllTime}`} detail="completed cuts" colors={colors} />
+                      <Metric label={isDe() ? 'Diese Woche' : 'This week'} value={`${data.completedWeek}`} detail={isDe() ? 'abgeschlossene Schnitte' : 'completed cuts'} colors={colors} />
+                      <Metric label={isDe() ? 'Diesen Monat' : 'This month'} value={`${data.completedMonth}`} detail={isDe() ? 'abgeschlossene Schnitte' : 'completed cuts'} colors={colors} />
+                      <Metric label={isDe() ? 'Gesamt' : 'All time'} value={`${data.completedAllTime}`} detail={isDe() ? 'abgeschlossene Schnitte' : 'completed cuts'} colors={colors} />
                     </View>
 
                     <Pressable
@@ -370,7 +374,7 @@ export default function StudioScreen({ navigation }: Props) {
                         <Text style={[styles.appointmentWhen, { color: colors.textSecondary, fontFamily: fonts.body }]}>
                           {formatBookingWhen(next.date, next.time)}{next.customerName && next.serviceName ? ` · ${next.serviceName}` : ''}
                         </Text>
-                      </> : <Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}>Nothing scheduled yet.</Text>}
+                      </> : <Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}>{isDe() ? 'Noch nichts geplant.' : 'Nothing scheduled yet.'}</Text>}
                     </View>
 
                     <View style={styles.insightRow}>
@@ -389,7 +393,7 @@ export default function StudioScreen({ navigation }: Props) {
                         {data.busiestWeekday ? <>
                           <Text style={[styles.insightValue, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{data.busiestWeekday.weekday}</Text>
                           <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.busiestWeekday.completedCuts} completed cuts</Text>
-                        </> : <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>Will appear after your first completed booking.</Text>}
+                        </> : <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{isDe() ? 'Erscheint nach deinem ersten abgeschlossenen Termin.' : 'Will appear after your first completed booking.'}</Text>}
                       </View>
                     </View>
 
@@ -404,16 +408,16 @@ export default function StudioScreen({ navigation }: Props) {
                           <Text numberOfLines={1} style={[styles.serviceRankName, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{service.name}</Text>
                           <Text style={[styles.serviceRankCount, numericText, { color: colors.textSecondary }]}>{service.completedCuts} · {formatMoney(service.bookedValue)}</Text>
                         </View>
-                      )) : <Text style={[styles.emptyHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>Your best-performing services will appear here.</Text>}
+                      )) : <Text style={[styles.emptyHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>{isDe() ? 'Deine erfolgreichsten Leistungen erscheinen hier.' : 'Your best-performing services will appear here.'}</Text>}
                     </View>
                   </>;
                 })() : (
                   <>
                     <View style={styles.analyticsHeading}>
-                      <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>Studio performance</Text>
+                      <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{isDe() ? 'Studio-Leistung' : 'Studio performance'}</Text>
                       <Feather name="activity" size={18} color={colors.accentText} />
                     </View>
-                    <SectionUnavailable label="Studio analytics" testID="barber-dashboard-overview-unavailable" onRetry={retryDashboard} retrying={retrying} />
+                    <SectionUnavailable label={isDe() ? 'Studio-Auswertung' : 'Studio analytics'} testID="barber-dashboard-overview-unavailable" onRetry={retryDashboard} retrying={retrying} />
                   </>
                 )}
               </GlassSurface>
@@ -421,7 +425,7 @@ export default function StudioScreen({ navigation }: Props) {
 
             {view.readiness.isLive === true ? null : <View testID="barber-dashboard-readiness" style={[styles.readiness, { borderTopColor: colors.border }]}>
               <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-                Studio setup
+                {isDe() ? 'Studio einrichten' : 'Studio setup'}
               </Text>
               <Text style={[styles.readinessStatus, { color: colors.textSecondary, fontFamily: fonts.body }]}>
                 {view.readiness.isLive === null
@@ -429,7 +433,7 @@ export default function StudioScreen({ navigation }: Props) {
                   : `${view.readiness.completeCount} of ${view.readiness.total} complete`}
               </Text>
               {view.readiness.unavailableCount > 0 ? (
-                <SectionUnavailable label="Some setup details" testID="barber-dashboard-readiness-unavailable" onRetry={retryDashboard} retrying={retrying} />
+                <SectionUnavailable label={isDe() ? 'Einige Einrichtungsdetails' : 'Some setup details'} testID="barber-dashboard-readiness-unavailable" onRetry={retryDashboard} retrying={retrying} />
               ) : null}
               <View style={styles.meter} accessible={false} importantForAccessibility="no-hide-descendants">
                 {view.readiness.items.map((item) => (

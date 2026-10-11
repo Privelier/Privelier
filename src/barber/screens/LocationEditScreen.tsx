@@ -57,6 +57,8 @@ const SEARCH_DEBOUNCE_MS = 450;
 /** Minimum characters before we bother the geocoder. */
 const MIN_QUERY_LENGTH = 4;
 
+const isDe = () => getAppLanguage() === 'de';
+
 export default function LocationEditScreen({ navigation }: Props) {
   const { colors, fonts, isDark } = useTheme();
   const de = getAppLanguage() === 'de';
@@ -99,7 +101,7 @@ export default function LocationEditScreen({ navigation }: Props) {
       setBarberId(id);
       if (!id) {
         setLoading(false);
-        setLoadError('We could not find your account. Try signing out and back in.');
+        setLoadError(isDe() ? 'Dein Konto wurde nicht gefunden. Melde dich ab und wieder an.' : 'We could not find your account. Try signing out and back in.');
         return;
       }
       const result = await fetchOwnLocation(id);
@@ -236,7 +238,7 @@ export default function LocationEditScreen({ navigation }: Props) {
       <View style={styles.header}>
         <BackButton onPress={() => navigation.goBack()} testID="barber-location-back" />
         <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-          Your location
+          {isDe() ? 'Dein Standort' : 'Your location'}
         </Text>
       </View>
 
@@ -255,7 +257,7 @@ export default function LocationEditScreen({ navigation }: Props) {
         >
           <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
             <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-              Your base address places you on the Explore map so nearby customers can find you.
+              {isDe() ? 'Deine Basisadresse zeigt dich auf der Karte, damit Kunden in der Nähe dich finden.' : 'Your base address places you on the Explore map so nearby customers can find you.'}
             </Text>
 
             {/* Consent copy — mandatory per founder decision D2. */}
@@ -265,8 +267,9 @@ export default function LocationEditScreen({ navigation }: Props) {
             >
               <Feather name="eye-off" size={14} color={colors.textSecondary} style={styles.consentIcon} />
               <Text style={[styles.consentText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                Customers only ever see an approximate area — never your exact address. Your pin is
-                shifted a few hundred metres, and your street address stays private.
+                {isDe()
+                  ? 'Kunden sehen nur einen ungefähren Bereich, nie deine genaue Adresse. Dein Pin wird um einige hundert Meter verschoben, deine Straße bleibt privat.'
+                  : 'Customers only ever see an approximate area, never your exact address. Your pin is shifted a few hundred metres, and your street address stays private.'}
               </Text>
             </View>
 
@@ -283,7 +286,7 @@ export default function LocationEditScreen({ navigation }: Props) {
               placeholderTextColor={colors.textSecondary}
               maxLength={MAX_ADDRESS_LENGTH}
               autoCorrect={false}
-              accessibilityLabel="Your address"
+              accessibilityLabel={isDe() ? 'Deine Adresse' : 'Your address'}
               selectionColor={colors.accent}
               cursorColor={colors.accent}
               keyboardAppearance={isDark ? 'dark' : 'light'}
@@ -303,7 +306,7 @@ export default function LocationEditScreen({ navigation }: Props) {
               <View style={styles.searchStatusRow} testID="barber-location-searching">
                 <ActivityIndicator size="small" color={colors.accent} />
                 <Text style={[styles.searchStatusText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                  Looking up addresses…
+                  {isDe() ? 'Adressen werden gesucht …' : 'Looking up addresses…'}
                 </Text>
               </View>
             ) : null}
@@ -322,7 +325,7 @@ export default function LocationEditScreen({ navigation }: Props) {
                 testID="barber-location-no-results"
                 style={[styles.searchStatusText, { color: colors.textSecondary, fontFamily: fonts.body }]}
               >
-                No matches for that address. Try adding a street number or city.
+                {isDe() ? 'Keine Treffer für diese Adresse. Ergänze Hausnummer oder Stadt.' : 'No matches for that address. Try adding a street number or city.'}
               </Text>
             ) : null}
 
@@ -361,13 +364,13 @@ export default function LocationEditScreen({ navigation }: Props) {
                 testID="barber-location-pick-hint"
                 style={[styles.searchStatusText, { color: colors.textSecondary, fontFamily: fonts.body }]}
               >
-                Pick a suggestion so we can place you on the map.
+                {isDe() ? 'Wähle einen Vorschlag, damit wir dich auf der Karte platzieren können.' : 'Pick a suggestion so we can place you on the map.'}
               </Text>
             ) : null}
 
             <View style={styles.formActions}>
               <PrimaryButton
-                label={clearing ? 'Remove location' : 'Save location'}
+                label={clearing ? (isDe() ? 'Standort entfernen' : 'Remove location') : (isDe() ? 'Standort speichern' : 'Save location')}
                 icon={clearing ? 'trash-2' : 'check'}
                 onPress={onSave}
                 loading={submitting}

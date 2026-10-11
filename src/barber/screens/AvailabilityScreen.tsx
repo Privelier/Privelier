@@ -53,7 +53,13 @@ type Props = NativeStackScreenProps<BarberStackParamList, 'Availability'>;
 type Mode = 'day' | 'date';
 type FieldName = 'date' | 'startTime' | 'endTime';
 
-const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const isDe = () => getAppLanguage() === 'de';
+const DAY_LABELS_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const DAY_LABELS_DE = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+const DAY_SHORT_DE = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+/** Weekday names in the device language (Sunday = 0, matching day_of_week). */
+const dayLabels = () => (isDe() ? DAY_LABELS_DE : DAY_LABELS_EN);
+const dayShort = (index: number) => (isDe() ? DAY_SHORT_DE[index] : DAY_LABELS_EN[index].slice(0, 3));
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
@@ -70,15 +76,15 @@ function toHm(time: string): string {
 }
 
 function dateFieldError(value: string): string | undefined {
-  if (value.trim().length === 0) return 'Enter a date.';
-  if (!DATE_PATTERN.test(value.trim())) return 'Use the format YYYY-MM-DD.';
-  if (Number.isNaN(new Date(value.trim()).getTime())) return 'That date is not valid.';
+  if (value.trim().length === 0) return isDe() ? 'Gib ein Datum ein.' : 'Enter a date.';
+  if (!DATE_PATTERN.test(value.trim())) return isDe() ? 'Nutze das Format JJJJ-MM-TT.' : 'Use the format YYYY-MM-DD.';
+  if (Number.isNaN(new Date(value.trim()).getTime())) return isDe() ? 'Dieses Datum ist nicht gültig.' : 'That date is not valid.';
   return undefined;
 }
 
 function timeFieldError(value: string, label: string): string | undefined {
-  if (value.trim().length === 0) return `Enter a ${label} time.`;
-  if (!TIME_PATTERN.test(value.trim())) return 'Use the 24-hour format HH:MM.';
+  if (value.trim().length === 0) return isDe() ? `Gib eine ${label === 'start' ? 'Start' : 'End'}zeit ein.` : `Enter a ${label} time.`;
+  if (!TIME_PATTERN.test(value.trim())) return isDe() ? 'Nutze das 24-Stunden-Format HH:MM.' : 'Use the 24-hour format HH:MM.';
   return undefined;
 }
 
@@ -132,7 +138,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
         void loadWindows(id);
       } else {
         setListLoading(false);
-        setListError('We could not find your account. Try signing out and back in.');
+        setListError(isDe() ? 'Dein Konto wurde nicht gefunden. Melde dich ab und wieder an.' : 'We could not find your account. Try signing out and back in.');
       }
     });
     return () => {
@@ -176,7 +182,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
 
   const onSubmit = useCallback(async () => {
     const errors: FieldErrors = {
-      day: mode === 'day' && selectedDay === null ? 'Choose a day of the week.' : undefined,
+      day: mode === 'day' && selectedDay === null ? (isDe() ? 'Wähle einen Wochentag.' : 'Choose a day of the week.') : undefined,
       date: mode === 'date' ? dateFieldError(specificDate) : undefined,
       startTime: timeFieldError(startTime, 'start'),
       endTime: timeFieldError(endTime, 'end'),
@@ -185,11 +191,11 @@ export default function AvailabilityScreen({ navigation }: Props) {
     setFormError(null);
     if (errors.day || errors.date || errors.startTime || errors.endTime) return;
     if (startTime.trim() >= endTime.trim()) {
-      setFieldErrors({ ...errors, endTime: 'End time must be after start time.' });
+      setFieldErrors({ ...errors, endTime: isDe() ? 'Die Endzeit muss nach der Startzeit liegen.' : 'End time must be after start time.' });
       return;
     }
     if (!barberId) {
-      setFormError('We could not find your account. Try signing out and back in.');
+      setFormError(isDe() ? 'Dein Konto wurde nicht gefunden. Melde dich ab und wieder an.' : 'We could not find your account. Try signing out and back in.');
       return;
     }
 
@@ -207,7 +213,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
         resetForm();
         void loadWindows(barberId);
       } else if (result.status === 'not_found') {
-        setFormError('This availability window no longer exists.');
+        setFormError(isDe() ? 'Dieses Zeitfenster gibt es nicht mehr.' : 'This availability window no longer exists.');
         void loadWindows(barberId);
       } else {
         setFormError(result.message);
@@ -253,7 +259,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
 
   const pendingDeleteLabel = pendingDelete
     ? pendingDelete.day_of_week !== null
-      ? DAY_LABELS[pendingDelete.day_of_week]
+      ? dayLabels()[pendingDelete.day_of_week]
       : pendingDelete.specific_date
     : '';
 
@@ -265,7 +271,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
       <View style={styles.header}>
         <BackButton onPress={() => navigation.goBack()} testID="barber-availability-back" />
         <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-          Availability
+          {isDe() ? 'Verfügbarkeit' : 'Availability'}
         </Text>
       </View>
 
@@ -278,7 +284,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
             <DaysOffStrip barberId={barberId} />
             <View style={[styles.form, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.formTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-                {editingId ? 'Edit window' : 'Add a window'}
+                {editingId ? (isDe() ? 'Zeitfenster bearbeiten' : 'Edit window') : (isDe() ? 'Zeitfenster hinzufügen' : 'Add a window')}
               </Text>
 
               {formError ? (
@@ -290,7 +296,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
                   onPress={() => switchMode('day')}
                   accessibilityRole="button"
                   accessibilityState={{ selected: mode === 'day' }}
-                  accessibilityLabel="Repeat weekly on a day of the week"
+                  accessibilityLabel={isDe() ? 'Wöchentlich an einem Wochentag wiederholen' : 'Repeat weekly on a day of the week'}
                   testID="barber-availability-mode-day"
                   style={({ pressed }) => [
                     styles.segment,
@@ -304,7 +310,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
                       { color: mode === 'day' ? colors.onAccent : colors.textPrimary, fontFamily: fonts.bodyMedium },
                     ]}
                   >
-                    Day of week
+                    {isDe() ? 'Wochentag' : 'Day of week'}
                   </Text>
                 </Pressable>
                 <Pressable
@@ -325,14 +331,14 @@ export default function AvailabilityScreen({ navigation }: Props) {
                       { color: mode === 'date' ? colors.onAccent : colors.textPrimary, fontFamily: fonts.bodyMedium },
                     ]}
                   >
-                    Specific date
+                    {isDe() ? 'Bestimmtes Datum' : 'Specific date'}
                   </Text>
                 </Pressable>
               </View>
 
               {mode === 'day' ? (
                 <View style={styles.dayRow}>
-                  {DAY_LABELS.map((label, index) => (
+                  {dayLabels().map((label, index) => (
                     <Pressable
                       key={label}
                       onPress={() => setSelectedDay(index)}
@@ -359,7 +365,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
                           },
                         ]}
                       >
-                        {label.slice(0, 3)}
+                        {dayShort(index)}
                       </Text>
                     </Pressable>
                   ))}
@@ -374,9 +380,9 @@ export default function AvailabilityScreen({ navigation }: Props) {
                     onChangeText={setSpecificDate}
                     onFocus={() => setFocusedField('date')}
                     onBlur={() => setFocusedField((current) => (current === 'date' ? null : current))}
-                    placeholder="YYYY-MM-DD"
+                    placeholder={isDe() ? 'JJJJ-MM-TT' : 'YYYY-MM-DD'}
                     placeholderTextColor={colors.textSecondary}
-                    accessibilityLabel="Date"
+                    accessibilityLabel={isDe() ? 'Datum' : 'Date'}
                     selectionColor={colors.accent}
                     cursorColor={colors.accent}
                     keyboardAppearance={isDark ? 'dark' : 'light'}
@@ -407,7 +413,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
               <View style={styles.timeRow}>
                 <View style={styles.timeField}>
                   <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-                    Start time
+                    {isDe() ? 'Startzeit' : 'Start time'}
                   </Text>
                   <TextInput
                     value={startTime}
@@ -416,7 +422,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
                     onBlur={() => setFocusedField((current) => (current === 'startTime' ? null : current))}
                     placeholder="09:00"
                     placeholderTextColor={colors.textSecondary}
-                    accessibilityLabel="Start time"
+                    accessibilityLabel={isDe() ? 'Startzeit' : 'Start time'}
                     selectionColor={colors.accent}
                     cursorColor={colors.accent}
                     keyboardAppearance={isDark ? 'dark' : 'light'}
@@ -439,7 +445,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
                 </View>
                 <View style={styles.timeField}>
                   <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-                    End time
+                    {isDe() ? 'Endzeit' : 'End time'}
                   </Text>
                   <TextInput
                     value={endTime}
@@ -448,7 +454,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
                     onBlur={() => setFocusedField((current) => (current === 'endTime' ? null : current))}
                     placeholder="17:00"
                     placeholderTextColor={colors.textSecondary}
-                    accessibilityLabel="End time"
+                    accessibilityLabel={isDe() ? 'Endzeit' : 'End time'}
                     selectionColor={colors.accent}
                     cursorColor={colors.accent}
                     keyboardAppearance={isDark ? 'dark' : 'light'}
@@ -473,7 +479,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
 
               <View style={styles.formActions}>
                 <PrimaryButton
-                  label={editingId ? 'Save changes' : 'Add window'}
+                  label={editingId ? (isDe() ? 'Änderungen speichern' : 'Save changes') : (isDe() ? 'Zeitfenster hinzufügen' : 'Add window')}
                   icon={editingId ? 'check' : 'plus'}
                   onPress={onSubmit}
                   loading={submitting}
@@ -485,12 +491,12 @@ export default function AvailabilityScreen({ navigation }: Props) {
                     onPress={resetForm}
                     disabled={submitting}
                     accessibilityRole="button"
-                    accessibilityLabel="Cancel edit"
+                    accessibilityLabel={isDe() ? 'Bearbeiten abbrechen' : 'Cancel edit'}
                     testID="barber-availability-cancel-edit"
                     style={({ pressed }) => [styles.cancelButton, pressed ? { opacity: pressOpacity.soft } : null]}
                   >
                     <Text style={[styles.cancelButtonText, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-                      Cancel
+                      {isDe() ? 'Abbrechen' : 'Cancel'}
                     </Text>
                   </Pressable>
                 ) : null}
@@ -499,7 +505,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
 
             <View style={styles.listHeader}>
               <Text style={[styles.listTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-                Your availability
+                {isDe() ? 'Deine Verfügbarkeit' : 'Your availability'}
               </Text>
               {listLoading ? (
                 <RowListSkeleton testID="barber-availability-loading" label={de ? 'Verfügbarkeit wird geladen' : 'Loading your availability'} />
@@ -511,7 +517,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
               ) : null}
               {!listLoading && !listError && windows.length === 0 ? (
                 <Text style={[styles.helperText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                  You have not added any availability yet.
+                  {isDe() ? 'Du hast noch keine Verfügbarkeit angelegt.' : 'You have not added any availability yet.'}
                 </Text>
               ) : null}
             </View>
@@ -524,7 +530,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
           >
             <View style={styles.rowInfo}>
               <Text style={[styles.rowName, { color: colors.textPrimary, fontFamily: fonts.bodySemiBold }]}>
-                {item.day_of_week !== null ? DAY_LABELS[item.day_of_week] : item.specific_date}
+                {item.day_of_week !== null ? dayLabels()[item.day_of_week] : item.specific_date}
               </Text>
               <Text style={[styles.rowMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}>
                 {`${toHm(item.start_time)} – ${toHm(item.end_time)}`}
@@ -534,26 +540,26 @@ export default function AvailabilityScreen({ navigation }: Props) {
               <Pressable
                 onPress={() => startEdit(item)}
                 accessibilityRole="button"
-                accessibilityLabel="Edit window"
+                accessibilityLabel={`${isDe() ? 'Bearbeiten' : 'Edit'}: ${item.day_of_week !== null ? dayLabels()[item.day_of_week] : item.specific_date} ${toHm(item.start_time)}–${toHm(item.end_time)}`}
                 hitSlop={14}
                 testID={`barber-availability-edit-${item.id}`}
                 style={({ pressed }) => (pressed ? { opacity: pressOpacity.soft } : null)}
               >
                 {/* Plain, non-brass — see ServicesScreen's identical fix. */}
                 <Text style={[styles.rowActionText, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>
-                  Edit
+                  {isDe() ? 'Bearbeiten' : 'Edit'}
                 </Text>
               </Pressable>
               <Pressable
                 onPress={() => onDelete(item)}
                 accessibilityRole="button"
-                accessibilityLabel="Delete window"
+                accessibilityLabel={`${isDe() ? 'Löschen' : 'Delete'}: ${item.day_of_week !== null ? dayLabels()[item.day_of_week] : item.specific_date} ${toHm(item.start_time)}–${toHm(item.end_time)}`}
                 hitSlop={14}
                 testID={`barber-availability-delete-${item.id}`}
                 style={({ pressed }) => (pressed ? { opacity: pressOpacity.firm } : null)}
               >
                 <Text style={[styles.rowActionText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-                  Delete
+                  {isDe() ? 'Löschen' : 'Delete'}
                 </Text>
               </Pressable>
             </View>
