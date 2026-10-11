@@ -9,7 +9,7 @@
  * from the `chainable` `.from()` helper used for listBarberAvailability.
  */
 import { supabase } from '../../../lib/supabase';
-import { listBarberAvailability, listBarberBusySlots } from '../availabilityData';
+import { listBarberAvailability, listBarberBusySlots, listBarberBusySlotsRange } from '../availabilityData';
 
 jest.mock('../../../lib/supabase', () => ({
   supabase: {
@@ -145,5 +145,31 @@ describe('listBarberBusySlots', () => {
 
     const result = await listBarberBusySlots('b-1', '2026-07-13');
     expect(result).toMatchObject({ status: 'error', code: 'unknown' });
+  });
+});
+
+describe('listBarberBusySlotsRange (migration 0041)', () => {
+  it('makes one RPC call and groups the busy intervals by date', async () => {
+    jest.mocked(supabase.rpc).mockResolvedValueOnce({
+      data: [
+        { busy_date: '2030-01-09', start_time: '10:00:00', duration_minutes: 30 },
+        { busy_date: '2030-01-09', start_time: '11:00:00', duration_minutes: 45 },
+        { busy_date: '2030-01-16', start_time: '10:30:00', duration_minutes: 30 },
+      ],
+      error: null,
+    } as never);
+
+    const result = await listBarberBusySlotsRange('barber-1', '2030-01-07', '2030-01-20');
+
+    expect(supabase.rpc).toHaveBeenCalledWith('get_barber_busy_slots_range', {
+      p_barber_id: 'barber-1', p_from: '2030-01-07', p_to: '2030-01-20',
+    });
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') return;
+    expect(result.byDate.get('2030-01-09')).toEqual([
+      { startTime: '10:00:00', durationMinutes: 30 },
+      { startTime: '11:00:00', durationMinutes: 45 },
+    ]);
+    expect(result.byDate.get('2030-01-16')).toHaveLength(1);
   });
 });

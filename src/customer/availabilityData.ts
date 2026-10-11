@@ -23,7 +23,7 @@ import { supabase } from '../../lib/supabase';
 import type { AvailabilityRow } from '../types';
 import type { BusySlot } from '../shared/slots';
 import { mapPostgrestError } from './errors';
-import type { ListBarberAvailabilityResult, ListBusySlotsResult } from './types';
+import type { ListBarberAvailabilityResult, ListBusySlotsRangeResult, ListBusySlotsResult } from './types';
 
 /** All availability windows for the given barber, unfiltered by date —
  * date/weekday filtering happens in deriveAvailableSlots (src/shared/slots.ts). */
@@ -78,4 +78,29 @@ export async function listBarberBusySlots(
     durationMinutes: row.duration_minutes,
   }));
   return { status: 'ok', busy };
+}
+
+/**
+ * Busy (pending/accepted) intervals for a date range in ONE request, via the
+ * get_barber_busy_slots_range RPC (migration 0041, capped at 31 days) —
+ * same projection and privacy as listBarberBusySlots, grouped by date.
+ */
+export async function listBarberBusySlotsRange(
+  barberId: string,
+  from: string,
+  to: string
+): Promise<ListBusySlotsRangeResult> {
+  const { data, error } = await supabase.rpc('get_barber_busy_slots_range', {
+    p_barber_id: barberId,
+    p_from: from,
+    p_to: to,
+  });
+  if (error) return mapPostgrestError('listBarberBusySlotsRange', error);
+  const byDate = new Map<string, BusySlot[]>();
+  for (const row of (data as { busy_date: string; start_time: string; duration_minutes: number }[]) ?? []) {
+    const list = byDate.get(row.busy_date) ?? [];
+    list.push({ startTime: row.start_time, durationMinutes: row.duration_minutes });
+    byDate.set(row.busy_date, list);
+  }
+  return { status: 'ok', byDate };
 }

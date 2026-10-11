@@ -9,9 +9,9 @@
  * slots for each of the 14-day lookahead and runs deriveAvailableSlots for
  * every one of them up front. Dates with no candidate slot before bookings
  * are subtracted skip their busy-slot call entirely (identical result, fewer
- * round-trips — founder speed rule, 2026-10-11). Replacing the remaining
- * per-date calls with one date-range RPC needs a schema change and is
- * tracked for the schema owner. Every date in the lookahead is always shown; a date whose
+ * round-trips — founder speed rule, 2026-10-11), and all busy intervals come
+ * from ONE get_barber_busy_slots_range read (migration 0041), with the
+ * per-date RPC kept only as a fallback. Every date in the lookahead is always shown; a date whose
  * computed candidate list is empty is visually disabled, never hidden.
  *
  * useFocusEffect (not a mount-only effect) is deliberate: it is what makes
@@ -49,8 +49,8 @@ import { Skeleton } from '../../shared/components/Skeleton';
 import { getAppLanguage } from '../../shared/locale';
 import { haptics } from '../../shared/haptics';
 import type { AvailabilityRow } from '../../types';
-import { listBarberAvailability, listBarberBusySlots } from '../availabilityData';
-import { deriveAvailableSlots } from '../../shared/slots';
+import { listBarberAvailability, listBarberBusySlots, listBarberBusySlotsRange } from '../availabilityData';
+import { deriveAvailableSlots, type BusySlot } from '../../shared/slots';
 import CalendarDateStrip from '../components/CalendarDateStrip';
 import { BookingStepIndicator } from '../components/BookingStepIndicator';
 import type { CustomerStackParamList } from '../CustomerNavigator';
@@ -129,6 +129,12 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
     }
     const windows: AvailabilityRow[] = availabilityResult.windows;
 
+    // One range read for the whole lookahead (migration 0041). If it fails
+    // (e.g. a backend without 0041), fall back to the per-date reads so a
+    // single failure still only greys out the dates it affects.
+    const rangeResult = await listBarberBusySlotsRange(barberId, dates[0], dates[dates.length - 1]);
+    const busyByDate = rangeResult.status === 'ok' ? rangeResult.byDate : null;
+
     const entries = await Promise.all(
       dates.map(async (date) => {
         // A date with no candidate slot even before bookings are subtracted
@@ -141,9 +147,14 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
           durationMinutes: service.duration_minutes,
         });
         if (candidates.length === 0) return [date, [] as string[]] as const;
-        const busyResult = await listBarberBusySlots(barberId, date);
-        if (busyResult.status !== 'ok') return [date, null] as const;
-        const busy = busyResult.busy;
+        let busy: BusySlot[];
+        if (busyByDate) {
+          busy = busyByDate.get(date) ?? [];
+        } else {
+          const busyResult = await listBarberBusySlots(barberId, date);
+          if (busyResult.status !== 'ok') return [date, null] as const;
+          busy = busyResult.busy;
+        }
         const slots = deriveAvailableSlots({
           windows,
           busy,

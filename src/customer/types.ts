@@ -127,6 +127,11 @@ export type CancelBookingResult =
 
 // ---------------------------------------------------------------------------
 /** The one chat room attached to a booking (booking detail "Message barber"). */
+/** Busy intervals for a date range, keyed by 'YYYY-MM-DD'. */
+export type ListBusySlotsRangeResult =
+  | { status: 'ok'; byDate: Map<string, BusySlot[]> }
+  | CustomerDataFailure;
+
 export type RoomForBookingResult =
   | { status: 'ok'; room: ChatRoomRow | null }
   | CustomerDataFailure;

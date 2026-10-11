@@ -1,5 +1,5 @@
 import { act, render, screen, waitFor } from '@testing-library/react-native';
-import { listBarberAvailability, listBarberBusySlots } from '../../availabilityData';
+import { listBarberAvailability, listBarberBusySlots, listBarberBusySlotsRange } from '../../availabilityData';
 import BookingDateTimeScreen from '../BookingDateTimeScreen';
 
 jest.mock('@react-navigation/native', () => {
@@ -9,6 +9,7 @@ jest.mock('@react-navigation/native', () => {
 jest.mock('../../availabilityData', () => ({
   listBarberAvailability: jest.fn(),
   listBarberBusySlots: jest.fn(),
+  listBarberBusySlotsRange: jest.fn(),
 }));
 jest.mock('../../../shared/components/ScreenBackHeader', () => ({ ScreenBackHeader: () => null }));
 jest.mock('../../components/BookingStepIndicator', () => ({ BookingStepIndicator: () => null }));
@@ -30,6 +31,7 @@ const navigation = { navigate: jest.fn(), goBack: jest.fn() };
 beforeEach(() => {
   jest.mocked(listBarberAvailability).mockReset();
   jest.mocked(listBarberBusySlots).mockReset();
+  jest.mocked(listBarberBusySlotsRange).mockReset();
 });
 
 it('shows neutral date and slot shapes until real availability is known', async () => {
@@ -47,20 +49,43 @@ it('shows neutral date and slot shapes until real availability is known', async 
   expect(screen.queryByTestId('customer-booking-datetime-loading')).toBeNull();
 });
 
-it('only asks for busy slots on dates that can actually offer a slot', async () => {
+const WEDNESDAY_WINDOW = {
+  status: 'ok',
+  windows: [{ id: 'w1', barber_id: 'barber-1', day_of_week: 3, specific_date: null, start_time: '10:00:00', end_time: '12:00:00' }],
+} as never;
+
+it('reads every busy interval for the lookahead in one range request', async () => {
   jest.useFakeTimers({ now: new Date(2030, 0, 7, 8, 0) }); // Monday 08:00 local
   try {
-    // Working hours on Wednesdays only: 2 of the 14 lookahead days.
-    jest.mocked(listBarberAvailability).mockResolvedValue({
+    jest.mocked(listBarberAvailability).mockResolvedValue(WEDNESDAY_WINDOW);
+    jest.mocked(listBarberBusySlotsRange).mockResolvedValue({
       status: 'ok',
-      windows: [{ id: 'w1', barber_id: 'barber-1', day_of_week: 3, specific_date: null, start_time: '10:00:00', end_time: '12:00:00' }],
-    } as never);
+      byDate: new Map([['2030-01-09', [{ startTime: '10:00:00', durationMinutes: 30 }]]]),
+    });
+
+    await render(<BookingDateTimeScreen route={route as never} navigation={navigation as never} />);
+    await waitFor(() => expect(screen.queryByTestId('customer-booking-datetime-loading')).toBeNull());
+
+    expect(listBarberBusySlotsRange).toHaveBeenCalledTimes(1);
+    expect(listBarberBusySlotsRange).toHaveBeenCalledWith('barber-1', '2030-01-07', '2030-01-20');
+    expect(listBarberBusySlots).not.toHaveBeenCalled();
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+it('falls back to per-date reads, only for slot-bearing dates, when the range read fails', async () => {
+  jest.useFakeTimers({ now: new Date(2030, 0, 7, 8, 0) });
+  try {
+    jest.mocked(listBarberAvailability).mockResolvedValue(WEDNESDAY_WINDOW);
+    jest.mocked(listBarberBusySlotsRange).mockResolvedValue({
+      status: 'error', code: 'unknown', message: 'x', retryable: false,
+    });
     jest.mocked(listBarberBusySlots).mockResolvedValue({ status: 'ok', busy: [] });
 
     await render(<BookingDateTimeScreen route={route as never} navigation={navigation as never} />);
     await waitFor(() => expect(screen.queryByTestId('customer-booking-datetime-loading')).toBeNull());
 
-    expect(listBarberBusySlots).toHaveBeenCalledTimes(2);
     expect(jest.mocked(listBarberBusySlots).mock.calls.map(([, date]) => date)).toEqual(['2030-01-09', '2030-01-16']);
   } finally {
     jest.useRealTimers();
