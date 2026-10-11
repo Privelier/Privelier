@@ -140,7 +140,7 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
           date,
           durationMinutes: service.duration_minutes,
         });
-        if (candidates.length === 0) return [date, []] as const;
+        if (candidates.length === 0) return [date, [] as string[]] as const;
         const busyResult = await listBarberBusySlots(barberId, date);
         if (busyResult.status !== 'ok') return [date, null] as const;
         const busy = busyResult.busy;
