@@ -48,3 +48,28 @@ jest.mock('react-native-reanimated', () => {
 jest.mock('@react-native-community/netinfo', () =>
   jest.requireActual('@react-native-community/netinfo/jest/netinfo-mock.js')
 );
+
+// @gorhom/bottom-sheet needs a native Reanimated runtime. Screens that only
+// embed a sheet should still render under Jest; sheets themselves are
+// exercised through their own focused tests with explicit mocks.
+jest.mock('@gorhom/bottom-sheet', () => {
+  const React = jest.requireActual('react') as typeof import('react');
+  const { View, TextInput } = jest.requireActual('react-native') as typeof import('react-native');
+  const BottomSheetModal = React.forwardRef((_props: object, ref) => {
+    React.useImperativeHandle(ref, () => ({ present: () => {}, dismiss: () => {} }));
+    return null;
+  });
+  return {
+    __esModule: true,
+    BottomSheetModal,
+    BottomSheetModalProvider: ({ children }: { children?: React.ReactNode }) => children,
+    BottomSheetView: View,
+    BottomSheetTextInput: TextInput,
+    BottomSheetBackdrop: () => null,
+  };
+});
+
+// AsyncStorage's native module is absent under Jest; the package ships this mock.
+jest.mock('@react-native-async-storage/async-storage', () =>
+  jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock')
+);

@@ -251,6 +251,16 @@ export default function StudioScreen({ navigation }: Props) {
           </View>
           <NotificationBell onPress={() => navigation.navigate('NotificationCenter')} testID="barber-dashboard-notifications" />
           <Pressable
+            onPress={() => navigation.navigate('Settings')}
+            accessibilityRole="button"
+            accessibilityLabel={getAppLanguage() === 'de' ? 'Einstellungen' : 'Settings'}
+            hitSlop={6}
+            testID="barber-dashboard-settings"
+            style={({ pressed }) => [styles.settingsButton, { opacity: pressed ? pressOpacity.soft : 1 }]}
+          >
+            <Feather name="settings" size={20} color={colors.textSecondary} />
+          </Pressable>
+          <Pressable
             onPress={onSignOut}
             accessibilityRole="button"
             accessibilityLabel="Sign out"
@@ -498,6 +508,7 @@ function StudioSkeleton() {
 }
 
 const styles = StyleSheet.create({
+  settingsButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: space.xl, paddingTop: space.xl, paddingBottom: space['2xl'] },
   headerRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: space.sm },

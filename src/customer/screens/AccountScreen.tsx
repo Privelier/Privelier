@@ -39,6 +39,7 @@ import { Avatar } from '../../shared/components/Avatar';
 import { NotificationBell } from '../../shared/components/NotificationBell';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { LegalLinks } from '../../legal/LegalComponents';
+import { DeleteAccountAction } from '../../shared/components/DeleteAccountAction';
 import Animated from 'react-native-reanimated';
 import { Reveal, ScrollGlassHeader, useScrollGlass } from '../../shared/motion';
 
@@ -182,6 +183,7 @@ export default function AccountScreen({ navigation }: Props) {
             Sign out
           </Text>
         </Pressable>
+        <DeleteAccountAction onDeleted={onSignOut} testID="customer-account-delete" />
         <LegalLinks includeAll testIDPrefix="customer-account-legal" />
       </Animated.ScrollView>
       <ScrollGlassHeader title={'Account'} scrollY={scrollY} start={48} testID="customer-account-glass-header" />

@@ -11,6 +11,7 @@ import AvailabilityScreen from './screens/AvailabilityScreen';
 import BioEditScreen from './screens/BioEditScreen';
 import LocationEditScreen from './screens/LocationEditScreen';
 import ConversationScreen from './screens/ConversationScreen';
+import BarberSettingsScreen from './screens/BarberSettingsScreen';
 import LegalDocumentScreen from '../legal/LegalDocumentScreen';
 import type { LegalDocument } from '../legal/legalConfig';
 import NotificationCenterScreen from '../shared/screens/NotificationCenterScreen';
@@ -27,6 +28,7 @@ export type BarberStackParamList = {
   // itself upgrades the title via the 0012 counterparts RPC).
   Conversation: { room: ChatRoomRow; title: string; subtitle: string | null; counterpart?: { id: string; name: string | null; profile_image: string | null } | null };
   NotificationCenter: undefined;
+  Settings: undefined;
 };
 
 const Stack = createNativeStackNavigator<BarberStackParamList>();
@@ -46,6 +48,7 @@ export default function BarberNavigator({ onExit }: { onExit: () => void }) {
           <Stack.Screen name="BioEdit" component={BioEditScreen} />
           <Stack.Screen name="LocationEdit" component={LocationEditScreen} />
           <Stack.Screen name="Legal" component={LegalDocumentScreen} />
+          <Stack.Screen name="Settings" component={BarberSettingsScreen} />
           <Stack.Screen name="Conversation" component={ConversationScreen} />
           <Stack.Screen name="NotificationCenter">
             {(props) => <NotificationCenterScreen

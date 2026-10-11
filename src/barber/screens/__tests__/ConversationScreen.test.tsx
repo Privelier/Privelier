@@ -4,6 +4,7 @@ import { fetchConversation } from '../../conversationData';
 import { useReadReceipt } from '../../../shared/useReadReceipt';
 import { useSendQueue } from '../../../shared/useSendQueue';
 
+jest.mock('../../../shared/components/SafetyMenu', () => ({ SafetyMenu: () => null }));
 jest.mock('@react-navigation/native', () => {
   const React = jest.requireActual('react');
   return {

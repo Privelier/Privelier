@@ -55,6 +55,7 @@ import { useTypingBroadcast } from '../../shared/useTypingBroadcast';
 import { deriveIsRead, deriveReadMarkerId } from '../../shared/readReceipts';
 import { MessageReceipt } from '../../shared/components/MessageReceipt';
 import { GlassSurface } from '../../shared/components/GlassSurface';
+import { SafetyMenu } from '../../shared/components/SafetyMenu';
 import { useSendQueue, type PendingSend } from '../../shared/useSendQueue';
 import { MAX_MESSAGE_LENGTH, MESSAGE_COUNTER_VISIBLE_AT } from '../../shared/messageLimits';
 import { formatMessageClock } from '../../shared/format';
@@ -348,6 +349,12 @@ function ConversationRoom({ route, navigation }: Props) {
             </Text>
           ) : null}
         </View>
+        <SafetyMenu
+          counterpartId={counterpart?.id ?? room.customer_id}
+          counterpartName={counterpart?.name ?? headerTitle}
+          bookingId={room.booking_id}
+          testIDPrefix="barber-conversation"
+        />
       </GlassSurface>
 
       <KeyboardAvoidingView

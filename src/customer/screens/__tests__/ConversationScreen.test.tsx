@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-
 import ConversationScreen from '../ConversationScreen';
 import { fetchConversation, fetchConversationNewerThan } from '../../conversationData';
 
+jest.mock('../../../shared/components/SafetyMenu', () => ({ SafetyMenu: () => null }));
 jest.mock('@react-navigation/native', () => {
   const React = jest.requireActual('react');
   return {
