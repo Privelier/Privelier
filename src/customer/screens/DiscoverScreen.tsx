@@ -30,7 +30,8 @@ import { pressOpacity } from '../../theme/motion';
 import { Notice } from '../../shared/components/Notice';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { getAppLanguage } from '../../shared/locale';
-import { Reveal } from '../../shared/motion';
+import Animated from 'react-native-reanimated';
+import { Reveal, ScrollGlassHeader, useScrollGlass } from '../../shared/motion';
 import { GlassSurface } from '../../shared/components/GlassSurface';
 import type { BarberDirectoryRow, ServiceRow } from '../../types';
 import { listBarbersByCity, listServicesForBarberIds } from '../discoveryData';
@@ -53,6 +54,7 @@ type Props = CompositeScreenProps<
 
 export default function DiscoverScreen({ navigation }: Props) {
   const { colors, fonts } = useTheme();
+  const { scrollY, onScroll } = useScrollGlass();
   const de = getAppLanguage() === 'de';
   const { width: viewportWidth } = useWindowDimensions();
   const [ownName, setOwnName] = useState<string | null>(null);
@@ -205,7 +207,9 @@ export default function DiscoverScreen({ navigation }: Props) {
       edges={['top', 'left', 'right']}
       testID="customer-home-screen"
     >
-      <ScrollView
+      <Animated.ScrollView
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         testID="customer-home-scroll"
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -444,7 +448,8 @@ export default function DiscoverScreen({ navigation }: Props) {
             ) : null}
           </>
         )}
-      </ScrollView>
+      </Animated.ScrollView>
+      <ScrollGlassHeader title={de ? 'Entdecken' : 'Discover'} scrollY={scrollY} start={64} testID="customer-home-glass-header" />
     </SafeAreaView>
   );
 }

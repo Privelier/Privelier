@@ -18,7 +18,11 @@ jest.mock('react-native-reanimated', () => {
   const { View } = jest.requireActual('react-native') as typeof import('react-native');
   return {
     __esModule: true,
-    default: { View },
+    default: { View, ScrollView: jest.requireActual('react-native').ScrollView },
+    Extrapolation: { CLAMP: 'clamp', EXTEND: 'extend', IDENTITY: 'identity' },
+    interpolate: (value: number, input: number[], output: number[]) =>
+      value <= input[0] ? output[0] : value >= input[input.length - 1] ? output[output.length - 1] : output[0],
+    useAnimatedScrollHandler: () => () => {},
     Easing: { bezier: () => (value: number) => value },
     ReduceMotion: { System: 'system', Always: 'always', Never: 'never' },
     useReducedMotion: () => false,

@@ -1,6 +1,6 @@
 import { getAppLanguage } from '../../shared/locale';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -17,7 +17,8 @@ import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { GlassSurface } from '../../shared/components/GlassSurface';
-import { Reveal } from '../../shared/motion';
+import Animated from 'react-native-reanimated';
+import { Reveal, ScrollGlassHeader, useScrollGlass } from '../../shared/motion';
 import type { VerificationStatus } from '../../types';
 import { fetchDashboardView } from '../dashboardData';
 import { firstName, formatBookingWhen, formatMoney, timeOfDayGreeting } from '../../shared/format';
@@ -166,6 +167,7 @@ function SectionUnavailable({
 
 export default function StudioScreen({ navigation }: Props) {
   const { colors, fonts } = useTheme();
+  const { scrollY, onScroll } = useScrollGlass();
   const { width: windowWidth } = useWindowDimensions();
   const onSignOut = useExitRole();
   const [name, setName] = useState<string | null>(null);
@@ -228,7 +230,9 @@ export default function StudioScreen({ navigation }: Props) {
       edges={['top', 'left', 'right']}
       testID="barber-dashboard-screen"
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <Animated.ScrollView
+        onScroll={onScroll}
+        scrollEventThrottle={16} contentContainerStyle={styles.scrollContent}>
         <View style={styles.headerRow}>
           <View style={styles.headerText}>
             {loading && !view ? (
@@ -467,7 +471,8 @@ export default function StudioScreen({ navigation }: Props) {
             <LegalLinks includeAll testIDPrefix="barber-studio-legal" />
           </>
         ) : null}
-      </ScrollView>
+      </Animated.ScrollView>
+      <ScrollGlassHeader title={'Studio'} scrollY={scrollY} start={56} testID="barber-dashboard-glass-header" />
     </SafeAreaView>
   );
 }
