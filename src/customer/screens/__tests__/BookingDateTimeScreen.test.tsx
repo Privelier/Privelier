@@ -46,3 +46,23 @@ it('shows neutral date and slot shapes until real availability is known', async 
   await waitFor(() => expect(screen.getByTestId('customer-booking-datetime-error')).toBeTruthy());
   expect(screen.queryByTestId('customer-booking-datetime-loading')).toBeNull();
 });
+
+it('only asks for busy slots on dates that can actually offer a slot', async () => {
+  jest.useFakeTimers({ now: new Date(2030, 0, 7, 8, 0) }); // Monday 08:00 local
+  try {
+    // Working hours on Wednesdays only: 2 of the 14 lookahead days.
+    jest.mocked(listBarberAvailability).mockResolvedValue({
+      status: 'ok',
+      windows: [{ id: 'w1', barber_id: 'barber-1', day_of_week: 3, specific_date: null, start_time: '10:00:00', end_time: '12:00:00' }],
+    } as never);
+    jest.mocked(listBarberBusySlots).mockResolvedValue({ status: 'ok', busy: [] });
+
+    await render(<BookingDateTimeScreen route={route as never} navigation={navigation as never} />);
+    await waitFor(() => expect(screen.queryByTestId('customer-booking-datetime-loading')).toBeNull());
+
+    expect(listBarberBusySlots).toHaveBeenCalledTimes(2);
+    expect(jest.mocked(listBarberBusySlots).mock.calls.map(([, date]) => date)).toEqual(['2030-01-09', '2030-01-16']);
+  } finally {
+    jest.useRealTimers();
+  }
+});

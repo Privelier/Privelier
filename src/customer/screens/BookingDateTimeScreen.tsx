@@ -7,9 +7,11 @@
  * — per the design doc's Decision 4 cost note
  * (docs/design/step-11-12-booking-flow-design-approval.md) — fetches busy
  * slots for each of the 14-day lookahead and runs deriveAvailableSlots for
- * every one of them up front. This is an intentional, pre-approved
- * up-to-14-RPC-call tradeoff at MVP scale, not something to batch/optimize
- * away here. Every date in the lookahead is always shown; a date whose
+ * every one of them up front. Dates with no candidate slot before bookings
+ * are subtracted skip their busy-slot call entirely (identical result, fewer
+ * round-trips — founder speed rule, 2026-10-11). Replacing the remaining
+ * per-date calls with one date-range RPC needs a schema change and is
+ * tracked for the schema owner. Every date in the lookahead is always shown; a date whose
  * computed candidate list is empty is visually disabled, never hidden.
  *
  * useFocusEffect (not a mount-only effect) is deliberate: it is what makes
@@ -129,6 +131,16 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
 
     const entries = await Promise.all(
       dates.map(async (date) => {
+        // A date with no candidate slot even before bookings are subtracted
+        // (no working hours, or all of today's slots have passed) cannot gain
+        // one from the busy list, so skip its network round-trip.
+        const candidates = deriveAvailableSlots({
+          windows,
+          busy: [],
+          date,
+          durationMinutes: service.duration_minutes,
+        });
+        if (candidates.length === 0) return [date, []] as const;
         const busyResult = await listBarberBusySlots(barberId, date);
         if (busyResult.status !== 'ok') return [date, null] as const;
         const busy = busyResult.busy;
