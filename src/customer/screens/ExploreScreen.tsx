@@ -276,7 +276,7 @@ export default function ExploreScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
+      style={[styles.container, { backgroundColor: 'transparent' }]}
       edges={['top', 'left', 'right']}
       testID="customer-explore-screen"
     >

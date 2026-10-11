@@ -24,6 +24,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/useTheme';
 import { HAIRLINE, radius, space } from '../../theme/spacing';
 import { getAppLanguage } from '../locale';
+import { GlassSurface } from './GlassSurface';
 
 /** How long a definite offline reading must persist before it is shown. */
 export const OFFLINE_SETTLE_MS = 1500;
@@ -63,14 +64,15 @@ export function OfflineBanner() {
         accessible
         accessibilityRole="alert"
         accessibilityLiveRegion="polite"
-        style={[styles.pill, { backgroundColor: colors.surface, borderColor: colors.border }]}
       >
+        <GlassSurface variant="floating" style={styles.pill}>
         <Feather name="wifi-off" size={14} color={colors.textSecondary} />
         <Text style={[styles.text, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>
           {de
             ? 'Du bist offline. Buchungen und Nachrichten können gerade nicht gesendet werden.'
             : "You're offline. Bookings and messages can't be sent right now."}
         </Text>
+        </GlassSurface>
       </View>
     </View>
   );

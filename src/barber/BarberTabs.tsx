@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { BlurTargetView } from 'expo-blur';
 import { getAppLanguage } from '../shared/locale';
 import { GlassSurface } from '../shared/components/GlassSurface';
+import { AmbientBackdrop } from '../shared/components/AmbientBackdrop';
 /**
  * Barber bottom-tab shell, rebuilt from the prototype's BarberBottomNav:
  * five tabs (Studio, Requests, Portfolio, Chats, Verify) with the same
@@ -52,9 +53,16 @@ export default function BarberTabs() {
   const { unreadCount } = useUnread();
   return (
     <Tab.Navigator
-      screenLayout={({ children, route }) => <BlurTargetView ref={blurTargets[route.name]} style={{ flex: 1 }}>{children}</BlurTargetView>}
+      screenLayout={({ children, route }) => (
+        <BlurTargetView ref={blurTargets[route.name]} style={{ flex: 1 }}>
+          <AmbientBackdrop />
+          {children}
+        </BlurTargetView>
+      )}
       screenOptions={({ route }) => ({
         headerShown: false,
+        // Screens are transparent; the backdrop above paints beneath them.
+        sceneStyle: { backgroundColor: 'transparent' },
         tabBarActiveTintColor: colors.accentText,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {

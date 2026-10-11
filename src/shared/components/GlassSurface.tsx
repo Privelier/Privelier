@@ -7,39 +7,62 @@ import { useTheme } from '../../theme/useTheme';
 type Props = PropsWithChildren<{
   style?: StyleProp<ViewStyle>;
   testID?: string;
-  variant?: 'card' | 'navigation';
+  /**
+   * - card: content surfaces, including list rows. Translucent glass over the
+   *   ambient backdrop, never a live blur (scrolling many blurs is the most
+   *   expensive effect on Android).
+   * - navigation: tab bars and chat headers/composers (live blur where the
+   *   platform supports it).
+   * - floating: few, pinned overlays — toast, offline pill, glass title bar,
+   *   booking dock. Live blur on iOS; translucent glass elsewhere.
+   */
+  variant?: 'card' | 'navigation' | 'floating';
   blurTarget?: RefObject<View | null>;
 }>;
 
-/** A quiet polished surface: a translucent body with a fine reflected top edge. */
+/** Glass tokens: a translucent body, a light hairline edge and a top reflection. */
+export const glass = {
+  cardFill: 'rgba(28,28,32,0.52)',
+  blurFill: 'rgba(16,16,18,0.55)',
+  edge: 'rgba(245,241,232,0.14)',
+  brassEdge: 'rgba(191,160,107,0.34)',
+  reflection: 'rgba(245,241,232,0.32)',
+} as const;
+
+/** A frosted surface: translucent body, light edge, fine reflected top line. */
 export function GlassSurface({ children, style, testID, variant = 'card', blurTarget }: Props) {
   const { colors } = useTheme();
-  const navigation = variant === 'navigation';
+  const blurCapable = variant === 'navigation' || variant === 'floating';
   const [reduceTransparency, setReduceTransparency] = useState(true);
 
   useEffect(() => {
-    if (!navigation) return;
+    if (!blurCapable) return;
     let active = true;
     void AccessibilityInfo.isReduceTransparencyEnabled()
       .then((enabled) => { if (active) setReduceTransparency(enabled); })
       .catch(() => {});
     const subscription = AccessibilityInfo.addEventListener('reduceTransparencyChanged', setReduceTransparency);
     return () => { active = false; subscription.remove(); };
-  }, [navigation]);
+  }, [blurCapable]);
 
-  const blur = navigation && !reduceTransparency && (Platform.OS !== 'android' || Boolean(blurTarget));
+  const blur =
+    blurCapable &&
+    !reduceTransparency &&
+    (Platform.OS === 'ios' || (variant === 'navigation' && Boolean(blurTarget)));
+
+  // Reduce Transparency: solid, legible surfaces with the same edge.
+  const fill = blur
+    ? glass.blurFill
+    : blurCapable && reduceTransparency
+      ? colors.surface
+      : glass.cardFill;
 
   return (
     <View
       testID={testID}
       style={[
         styles.surface,
-        {
-          backgroundColor: blur
-            ? 'rgba(13,13,15,0.70)'
-            : navigation ? colors.surface : 'rgba(20,20,22,0.84)',
-          borderColor: 'rgba(191,160,107,0.30)',
-        },
+        { backgroundColor: fill, borderColor: variant === 'card' ? glass.edge : glass.brassEdge },
         style,
       ]}
     >
@@ -47,17 +70,14 @@ export function GlassSurface({ children, style, testID, variant = 'card', blurTa
         <BlurView
           testID={testID ? `${testID}-blur` : undefined}
           pointerEvents="none"
-          intensity={36}
+          intensity={variant === 'floating' ? 48 : 36}
           tint="dark"
           blurTarget={blurTarget}
           blurMethod="dimezisBlurViewSdk31Plus"
           style={StyleSheet.absoluteFill}
         />
       ) : null}
-      <View
-        pointerEvents="none"
-        style={[styles.highlight, { backgroundColor: 'rgba(245,241,232,0.20)' }]}
-      />
+      <View pointerEvents="none" style={[styles.highlight, { backgroundColor: glass.reflection }]} />
       {children}
     </View>
   );
@@ -72,9 +92,9 @@ const styles = StyleSheet.create({
   },
   highlight: {
     position: 'absolute',
-    top: 1,
-    left: 20,
-    right: 20,
+    top: 0,
+    left: 18,
+    right: 18,
     height: HAIRLINE,
   },
 });

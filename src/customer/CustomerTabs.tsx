@@ -7,6 +7,7 @@ import { View } from 'react-native';
 import { BlurTargetView } from 'expo-blur';
 import { getAppLanguage } from '../shared/locale';
 import { GlassSurface } from '../shared/components/GlassSurface';
+import { AmbientBackdrop } from '../shared/components/AmbientBackdrop';
 /**
  * Customer bottom-tab shell, rebuilt from the prototype's CustomerBottomNav:
  * five tabs (Discover, Explore, Bookings, Inbox, Account), hairline top
@@ -63,9 +64,16 @@ export default function CustomerTabs() {
   const { unreadCount } = useUnread();
   return (
     <Tab.Navigator
-      screenLayout={({ children, route }) => <BlurTargetView ref={blurTargets[route.name]} style={{ flex: 1 }}>{children}</BlurTargetView>}
+      screenLayout={({ children, route }) => (
+        <BlurTargetView ref={blurTargets[route.name]} style={{ flex: 1 }}>
+          <AmbientBackdrop />
+          {children}
+        </BlurTargetView>
+      )}
       screenOptions={({ route }) => ({
         headerShown: false,
+        // Screens are transparent; the backdrop above paints beneath them.
+        sceneStyle: { backgroundColor: 'transparent' },
         tabBarActiveTintColor: colors.accentText,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {

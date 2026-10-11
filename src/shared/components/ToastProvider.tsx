@@ -1,9 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { GlassSurface } from './GlassSurface';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { duration, easing } from '../../theme/motion';
-import { HAIRLINE, radius, space } from '../../theme/spacing';
+import { radius, space } from '../../theme/spacing';
 import { useTheme } from '../../theme/useTheme';
 
 export type ToastOptions = {
@@ -44,12 +45,9 @@ function ToastSurface({ toast, onAction }: { toast: ToastOptions; onAction: () =
     <Animated.View
       testID="global-toast"
       accessibilityLiveRegion="polite"
-      style={[
-        styles.container,
-        { bottom: Math.max(insets.bottom, space.base) + 72, backgroundColor: colors.surface, borderColor: colors.border },
-        animatedStyle,
-      ]}
+      style={[styles.anchor, { bottom: Math.max(insets.bottom, space.base) + 72 }, animatedStyle]}
     >
+      <GlassSurface variant="floating" style={styles.container}>
       <Text style={[styles.message, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>
         {toast.message}
       </Text>
@@ -66,6 +64,7 @@ function ToastSurface({ toast, onAction }: { toast: ToastOptions; onAction: () =
           </Text>
         </Pressable>
       ) : null}
+      </GlassSurface>
     </Animated.View>
   );
 }
@@ -118,12 +117,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  anchor: { position: 'absolute', left: space.base, right: space.base },
   container: {
-    position: 'absolute',
-    left: space.base,
-    right: space.base,
     minHeight: 52,
-    borderWidth: HAIRLINE,
     borderRadius: radius.lg,
     paddingLeft: space.base,
     paddingRight: space.sm,

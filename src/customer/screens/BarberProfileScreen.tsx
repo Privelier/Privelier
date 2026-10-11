@@ -220,7 +220,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
   if (loading || error || notFound) {
     return (
       <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.background }]}
+        style={[styles.container, { backgroundColor: 'transparent' }]}
         edges={['top', 'left', 'right']}
         testID="barber-profile-screen"
       >
@@ -259,7 +259,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
+      style={[styles.container, { backgroundColor: 'transparent' }]}
       edges={['left', 'right']}
       testID="barber-profile-screen"
     >
@@ -556,7 +556,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
       <ScrollGlassHeader title={barber.name} scrollY={scrollY} start={280} testID="barber-profile-glass-header" />
 
       {canBook && fromPrice !== null ? (
-        <GlassSurface style={[styles.bookingDock, { paddingBottom: Math.max(insets.bottom, 16) }]} testID="barber-profile-booking-dock">
+        <GlassSurface variant="floating" style={[styles.bookingDock, { paddingBottom: Math.max(insets.bottom, 16) }]} testID="barber-profile-booking-dock">
           <Text style={[styles.dockPrice, numericText, { color: colors.textPrimary }]}>
             {german ? 'Ab' : 'From'} {formatMoney(fromPrice)}
           </Text>

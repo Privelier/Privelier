@@ -67,7 +67,7 @@ export default function EditProfileScreen({ navigation }: Props) {
   const invalid = name.trim().length < 2 || city.trim().length < 2;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right', 'bottom']} testID="customer-edit-profile-screen">
+    <SafeAreaView style={[styles.container, { backgroundColor: 'transparent' }]} edges={['top', 'left', 'right', 'bottom']} testID="customer-edit-profile-screen">
       <ScreenBackHeader onPress={() => navigation.goBack()} backTestID="customer-edit-profile-back" backDisabled={saving} />
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">

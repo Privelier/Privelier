@@ -10,6 +10,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LegalDocumentScreen from './LegalDocumentScreen';
 import type { LegalDocument } from './legalConfig';
 import { stackScreenOptions } from '../shared/navigation/stackScreenOptions';
+import { BackdropLayout } from '../shared/components/AmbientBackdrop';
 import { useReducedMotionPreference } from '../shared/motion/useReducedMotionPreference';
 
 type LegalStackParams = { Main: undefined; Legal: { document: LegalDocument } };
@@ -19,7 +20,7 @@ const Stack = createNativeStackNavigator<LegalStackParams>();
 export function WithLegalStack({ children }: { children: ReactElement }) {
   const reduceMotion = useReducedMotionPreference();
   return (
-    <Stack.Navigator screenOptions={stackScreenOptions(reduceMotion)}>
+    <Stack.Navigator screenOptions={stackScreenOptions(reduceMotion)} screenLayout={({ children }) => <BackdropLayout>{children}</BackdropLayout>}>
       <Stack.Screen name="Main">{() => children}</Stack.Screen>
       <Stack.Screen name="Legal" component={LegalDocumentScreen} />
     </Stack.Navigator>

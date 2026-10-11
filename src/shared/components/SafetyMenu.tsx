@@ -18,6 +18,7 @@ import {
 import { ReduceMotion } from 'react-native-reanimated';
 import { HAIRLINE, radius, space } from '../../theme/spacing';
 import { useTheme } from '../../theme/useTheme';
+import { SheetGlassBackground } from './SheetGlassBackground';
 import { getAppLanguage } from '../locale';
 import { haptics } from '../haptics';
 import {
@@ -221,7 +222,7 @@ function ActionSheet({ open, onClose, testID, children }: { open: boolean; onClo
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
       overrideReduceMotion={ReduceMotion.System}
-      backgroundStyle={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: HAIRLINE }}
+      backgroundComponent={SheetGlassBackground}
       handleIndicatorStyle={{ backgroundColor: colors.accent, width: 32 }}
       backdropComponent={renderBackdrop}
       onDismiss={onClose}

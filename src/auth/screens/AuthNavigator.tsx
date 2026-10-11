@@ -10,6 +10,7 @@
  */
 import { useCallback } from 'react';
 import { stackScreenOptions } from '../../shared/navigation/stackScreenOptions';
+import { BackdropLayout } from '../../shared/components/AmbientBackdrop';
 import { useReducedMotionPreference } from '../../shared/motion/useReducedMotionPreference';
 import { useNavigation } from '@react-navigation/native';
 import {
@@ -56,7 +57,7 @@ function RoleSelectRoute() {
 export default function AuthNavigator() {
   const reduceMotion = useReducedMotionPreference();
   return (
-    <Stack.Navigator screenOptions={stackScreenOptions(reduceMotion)}>
+    <Stack.Navigator screenOptions={stackScreenOptions(reduceMotion)} screenLayout={({ children }) => <BackdropLayout>{children}</BackdropLayout>}>
       <Stack.Screen name="RoleSelect" component={RoleSelectRoute} />
       <Stack.Screen name="AuthEntry" component={AuthEntryScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />

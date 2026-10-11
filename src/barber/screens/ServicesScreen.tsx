@@ -233,7 +233,7 @@ export default function ServicesScreen({ navigation }: Props) {
   }, [pendingDelete, editingId, resetForm, showToast, de]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} testID="barber-services-screen">
+    <SafeAreaView style={[styles.container, { backgroundColor: 'transparent' }]} testID="barber-services-screen">
       <View style={styles.header}>
         <BackButton onPress={() => navigation.goBack()} testID="barber-services-back" />
         <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>

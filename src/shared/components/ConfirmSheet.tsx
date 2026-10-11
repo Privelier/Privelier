@@ -4,6 +4,7 @@ import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView, type BottomShee
 import { ReduceMotion } from 'react-native-reanimated';
 import { HAIRLINE, radius, space } from '../../theme/spacing';
 import { useTheme } from '../../theme/useTheme';
+import { SheetGlassBackground } from './SheetGlassBackground';
 
 type ConfirmSheetProps = {
   open: boolean;
@@ -40,7 +41,7 @@ export function ConfirmSheet({ open, title, message, confirmLabel, cancelLabel, 
       enablePanDownToClose
       keyboardBehavior="interactive"
       overrideReduceMotion={ReduceMotion.System}
-      backgroundStyle={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: HAIRLINE }}
+      backgroundComponent={SheetGlassBackground}
       handleIndicatorStyle={{ backgroundColor: colors.accent, width: 32 }}
       backdropComponent={renderBackdrop}
       onDismiss={onClose}

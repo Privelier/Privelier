@@ -183,7 +183,7 @@ export default function VerifyScreen() {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
+      style={[styles.container, { backgroundColor: 'transparent' }]}
       edges={['top', 'left', 'right']}
       testID="barber-verify-screen"
     >

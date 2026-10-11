@@ -83,7 +83,7 @@ export default function ChatsScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
+      style={[styles.container, { backgroundColor: 'transparent' }]}
       edges={['top', 'left', 'right']}
       testID="barber-chats-screen"
     >

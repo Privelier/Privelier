@@ -586,7 +586,7 @@ function ConversationRoom({ route, navigation }: Props) {
 function useStyles(colors: Palette) {
   const { fonts } = useTheme();
   return StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
+    container: { flex: 1, backgroundColor: 'transparent' },
 
     header: {
       flexDirection: 'row',

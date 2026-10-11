@@ -7,13 +7,19 @@ jest.mock('expo-blur', () => {
   return { BlurView: View };
 });
 
-it('renders consistent smoked glass without a moving backdrop blur', async () => {
+it('renders card glass as translucent with a light edge and never a live blur', async () => {
   await render(<GlassSurface testID="surface" />);
-  const surface = screen.getByTestId('surface');
-  expect(['rgba(20,20,22,0.84)', 'rgba(255,255,255,0.84)']).toContain(
-    StyleSheet.flatten(surface.props.style).backgroundColor
-  );
+  const style = StyleSheet.flatten(screen.getByTestId('surface').props.style);
+  expect(style.backgroundColor).toBe('rgba(28,28,32,0.52)');
+  expect(style.borderColor).toBe('rgba(245,241,232,0.14)');
   expect(screen.queryByTestId('surface-blur')).toBeNull();
+});
+
+it('falls back to a solid surface for floating glass under Reduce Transparency', async () => {
+  jest.spyOn(AccessibilityInfo, 'isReduceTransparencyEnabled').mockResolvedValue(true);
+  await render(<GlassSurface variant="floating" testID="floating" />);
+  expect(StyleSheet.flatten(screen.getByTestId('floating').props.style).backgroundColor).toBe('#1B1B1E');
+  expect(screen.queryByTestId('floating-blur')).toBeNull();
 });
 
 it('uses the opaque accessibility fallback for navigation glass before transparency is checked', async () => {

@@ -143,7 +143,7 @@ export default function BioEditScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
+      style={[styles.container, { backgroundColor: 'transparent' }]}
       testID="barber-bio-screen"
     >
       <View style={styles.header}>

@@ -232,7 +232,7 @@ export default function LocationEditScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
+      style={[styles.container, { backgroundColor: 'transparent' }]}
       testID="barber-location-screen"
     >
       <View style={styles.header}>

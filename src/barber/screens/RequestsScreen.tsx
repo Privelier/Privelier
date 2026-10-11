@@ -509,7 +509,7 @@ function ActionButton({
 function useStyles(colors: Palette) {
   const { fonts } = useTheme();
   return StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
+    container: { flex: 1, backgroundColor: 'transparent' },
     header: { paddingHorizontal: space.xl, marginTop: space.xl },
     heading: { fontSize: 30, color: colors.textPrimary, fontFamily: fonts.headingMedium },
     subtitle: { fontSize: 14, marginTop: 4, color: colors.textSecondary, fontFamily: fonts.body },

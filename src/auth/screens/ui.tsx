@@ -44,10 +44,9 @@ export { PrimaryButton } from '../../shared/components/PrimaryButton';
 // ---------------------------------------------------------------------------
 
 export function AuthScreenShell({ children, testID }: { children: ReactNode; testID: string }) {
-  const { colors } = useTheme();
   return (
     <SafeAreaView
-      style={[shellStyles.safe, { backgroundColor: colors.background }]}
+      style={[shellStyles.safe, { backgroundColor: 'transparent' }]}
       testID={testID}
     >
       <KeyboardAvoidingView

@@ -8,10 +8,9 @@
  *   a shared value, so scrolling never causes a React render.
  * - The bar's opacity and 6px settle are interpolated in a worklet.
  *
- * Speed choices: no live blur. Real-time blur over moving content is the
- * single most expensive effect on Android, so the bar uses the brand's
- * translucent glass fill and hairline instead (the tab bars keep the only
- * real blur). The bar is non-interactive (pointerEvents="none"), so controls
+ * Speed choices: live blur only on iOS (GlassSurface "floating"); Android
+ * uses the translucent glass fill, because real-time blur over scrolling
+ * content is its most expensive effect. The bar is non-interactive (pointerEvents="none"), so controls
  * underneath stay tappable at every scroll position.
  *
  * Reduce Motion: the bar still appears (it carries the title) but without
@@ -30,6 +29,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/useTheme';
 import { HAIRLINE, space } from '../../theme/spacing';
 import { useReducedMotionPreference } from './useReducedMotionPreference';
+import { GlassSurface } from '../components/GlassSurface';
 
 /** Scroll distance over which the bar fades in, after `start`. */
 const FADE_DISTANCE = 32;
@@ -68,34 +68,22 @@ export function ScrollGlassHeader({ title, scrollY, start = 56, testID }: Props)
       testID={testID}
       importantForAccessibility="no-hide-descendants"
       accessibilityElementsHidden
-      style={[
-        styles.bar,
-        {
-          backgroundColor: 'rgba(13,13,15,0.86)',
-          borderBottomColor: 'rgba(191,160,107,0.30)',
-        },
-        animatedStyle,
-      ]}
+      style={[styles.bar, animatedStyle]}
     >
-      <SafeAreaView edges={['top']} style={styles.inner}>
-        <Text numberOfLines={1} style={[styles.title, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-          {title}
-        </Text>
-      </SafeAreaView>
+      <GlassSurface variant="floating" style={styles.glass}>
+        <SafeAreaView edges={['top']} style={styles.inner}>
+          <Text numberOfLines={1} style={[styles.title, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+            {title}
+          </Text>
+        </SafeAreaView>
+      </GlassSurface>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  bar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    paddingBottom: space.md,
-    paddingHorizontal: space.xl,
-    borderBottomWidth: HAIRLINE,
-  },
-  inner: { alignItems: 'center', paddingTop: space.sm },
+  bar: { position: 'absolute', top: 0, left: 0, right: 0 },
+  glass: { borderRadius: 0, borderTopWidth: 0, borderLeftWidth: 0, borderRightWidth: 0, borderBottomWidth: HAIRLINE },
+  inner: { alignItems: 'center', paddingTop: space.sm, paddingBottom: space.md, paddingHorizontal: space.xl },
   title: { fontSize: 17, lineHeight: 22 },
 });
