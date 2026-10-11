@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { listBarberAvailability, listBarberBusySlots, listBarberBusySlotsRange, listBarberDaysOff } from '../../availabilityData';
 import BookingDateTimeScreen from '../BookingDateTimeScreen';
 
@@ -106,6 +106,28 @@ it('offers no slots on a barber day off even when weekly hours cover it', async 
     // Wednesday 9 Jan is index 2 in the lookahead; Wednesday 16 Jan stays bookable.
     expect(screen.getByTestId('customer-booking-datetime-day-2').props.accessibilityState).toMatchObject({ disabled: true });
     expect(screen.getByTestId('customer-booking-datetime-day-9').props.accessibilityState).toMatchObject({ disabled: false });
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+it('jumps to the earliest real open time and shows real slot density', async () => {
+  jest.useFakeTimers({ now: new Date(2030, 0, 7, 8, 0) });
+  try {
+    jest.mocked(listBarberAvailability).mockResolvedValue(WEDNESDAY_WINDOW);
+    jest.mocked(listBarberBusySlotsRange).mockResolvedValue({ status: 'ok', byDate: new Map() });
+    jest.mocked(listBarberDaysOff).mockResolvedValue(new Set());
+
+    await render(<BookingDateTimeScreen route={route as never} navigation={navigation as never} />);
+    await waitFor(() => expect(screen.getByTestId('customer-booking-datetime-next-available')).toBeTruthy());
+
+    // 10:00–12:00 in 30-minute slots = 4 open times on Wednesday 9 Jan -> 2 dots; Monday has none.
+    expect(screen.getByTestId('customer-booking-datetime-day-2-dots-2')).toBeTruthy();
+    expect(screen.getByTestId('customer-booking-datetime-day-0-dots-0')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('customer-booking-datetime-next-available'));
+    expect(screen.getByTestId('customer-booking-datetime-day-2').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.queryByTestId('customer-booking-datetime-next-available')).toBeNull();
   } finally {
     jest.useRealTimers();
   }

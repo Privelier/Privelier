@@ -15,12 +15,20 @@ import { memo, useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
 import { haptics } from '../../shared/haptics';
+import { getAppLanguage } from '../../shared/locale';
 
-const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
-const MONTH_LABELS = [
+const WEEKDAY_LABELS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
+const WEEKDAY_LABELS_DE = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'] as const;
+const MONTH_LABELS_EN = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ] as const;
+const MONTH_LABELS_DE = [
+  'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+  'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
+] as const;
+const isDe = () => getAppLanguage() === 'de';
+const monthLabels = () => (isDe() ? MONTH_LABELS_DE : MONTH_LABELS_EN);
 
 /** Local (not UTC) parse — mirrors deriveAvailableSlots' date rule. */
 function parseLocal(date: string): Date {
@@ -32,8 +40,8 @@ function monthRangeLabel(dates: string[]): string {
   if (dates.length === 0) return '';
   const first = parseLocal(dates[0]);
   const last = parseLocal(dates[dates.length - 1]);
-  const firstMonth = MONTH_LABELS[first.getMonth()];
-  const lastMonth = MONTH_LABELS[last.getMonth()];
+  const firstMonth = monthLabels()[first.getMonth()];
+  const lastMonth = monthLabels()[last.getMonth()];
   if (first.getMonth() === last.getMonth() && first.getFullYear() === last.getFullYear()) {
     return `${firstMonth} ${first.getFullYear()}`;
   }
@@ -52,6 +60,16 @@ export interface CalendarDateStripProps {
   onSelectDate: (date: string) => void;
   /** Prefix for the per-day testID: `${testIDPrefix}-day-${index}`. */
   testIDPrefix: string;
+  /** Bookable slots per date; drives the density dots (absent = no dots). */
+  slotCounts?: ReadonlyMap<string, number>;
+}
+
+/** 0–3 dots from a real slot count: few, some, many. Never invented. */
+export function densityDots(count: number): number {
+  if (count <= 0) return 0;
+  if (count <= 2) return 1;
+  if (count <= 5) return 2;
+  return 3;
 }
 
 function CalendarDateStrip({
@@ -60,6 +78,7 @@ function CalendarDateStrip({
   selectedDate,
   onSelectDate,
   testIDPrefix,
+  slotCounts,
 }: CalendarDateStripProps) {
   const { colors, fonts } = useTheme();
   const monthLabel = useMemo(() => monthRangeLabel(dates), [dates]);
@@ -78,7 +97,9 @@ function CalendarDateStrip({
           const disabled = disabledDates.has(date);
           const active = selectedDate === date;
           const parsed = parseLocal(date);
-          const weekday = index === 0 ? 'Today' : WEEKDAY_LABELS[parsed.getDay()];
+          const weekday = index === 0 ? (isDe() ? 'Heute' : 'Today') : (isDe() ? WEEKDAY_LABELS_DE : WEEKDAY_LABELS_EN)[parsed.getDay()];
+          const slots = slotCounts?.get(date) ?? 0;
+          const dots = disabled ? 0 : densityDots(slots);
           const day = String(parsed.getDate());
           return (
             <Pressable
@@ -90,7 +111,9 @@ function CalendarDateStrip({
               }}
               accessibilityRole="button"
               accessibilityState={{ disabled, selected: active }}
-              accessibilityLabel={`${weekday} ${day}`}
+              accessibilityLabel={slotCounts && !disabled
+                ? `${weekday} ${day}, ${isDe() ? `${slots} freie Zeiten` : `${slots} open times`}`
+                : `${weekday} ${day}`}
               testID={`${testIDPrefix}-day-${index}`}
               style={({ pressed }) => [
                 styles.chip,
@@ -118,6 +141,17 @@ function CalendarDateStrip({
               >
                 {day}
               </Text>
+              <View style={styles.dots} testID={`${testIDPrefix}-day-${index}-dots-${dots}`}>
+                {[0, 1, 2].map((dot) => (
+                  <View
+                    key={dot}
+                    style={[
+                      styles.dot,
+                      { backgroundColor: dot < dots ? (active ? colors.onAccent : colors.accent) : 'transparent' },
+                    ]}
+                  />
+                ))}
+              </View>
             </Pressable>
           );
         })}
@@ -141,4 +175,6 @@ const styles = StyleSheet.create({
   },
   weekday: { fontSize: 11, letterSpacing: 0.2 },
   day: { fontSize: 19 },
+  dots: { flexDirection: 'row', gap: 3, height: 4 },
+  dot: { width: 4, height: 4, borderRadius: 2 },
 });

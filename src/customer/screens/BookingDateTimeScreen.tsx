@@ -48,6 +48,7 @@ import { Notice } from '../../shared/components/Notice';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { getAppLanguage } from '../../shared/locale';
 import { haptics } from '../../shared/haptics';
+import { formatBookingWhen } from '../../shared/format';
 import type { AvailabilityRow } from '../../types';
 import { listBarberAvailability, listBarberBusySlots, listBarberBusySlotsRange, listBarberDaysOff } from '../availabilityData';
 import { deriveAvailableSlots, type BusySlot } from '../../shared/slots';
@@ -58,11 +59,6 @@ import type { CustomerStackParamList } from '../CustomerNavigator';
 type Props = NativeStackScreenProps<CustomerStackParamList, 'BookingDateTime'>;
 
 const LOOKAHEAD_DAYS = 14;
-const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
-const SHORT_MONTHS = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-] as const;
 
 /** Ordered part-of-day buckets for grouping the time grid. */
 const PERIODS = [
@@ -98,11 +94,19 @@ function periodOf(time: string): PeriodKey {
   return 'evening';
 }
 
-/** "Sat 19 Jul · 14:30" — reflected back above the Continue bar. */
-function formatSelection(date: string, time: string): string {
-  const [y, m, d] = date.split('-').map(Number);
-  const parsed = new Date(y, m - 1, d);
-  return `${WEEKDAY_LABELS[parsed.getDay()]} ${d} ${SHORT_MONTHS[parsed.getMonth()]} · ${time.slice(0, 5)}`;
+
+/** The earliest verified open slot in the lookahead, or null. */
+export function firstOpenSlot(
+  dates: string[],
+  slotsByDate: ReadonlyMap<string, string[]>,
+  unverifiedDates: ReadonlySet<string>
+): { date: string; time: string } | null {
+  for (const date of dates) {
+    if (unverifiedDates.has(date)) continue;
+    const first = (slotsByDate.get(date) ?? [])[0];
+    if (first) return { date, time: first };
+  }
+  return null;
 }
 
 export default function BookingDateTimeScreen({ route, navigation }: Props) {
@@ -188,6 +192,20 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
     useCallback(() => {
       void load();
     }, [load])
+  );
+
+  // Real slot counts drive the strip's density dots and the shortcut to the
+  // earliest open time; nothing is shown until availability has loaded.
+  const slotCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const date of dates) {
+      if (!unverifiedDates.has(date)) map.set(date, (slotsByDate.get(date) ?? []).length);
+    }
+    return map;
+  }, [dates, slotsByDate, unverifiedDates]);
+  const nextAvailable = useMemo(
+    () => (loading ? null : firstOpenSlot(dates, slotsByDate, unverifiedDates)),
+    [loading, dates, slotsByDate, unverifiedDates]
   );
 
   const disabledDates = useMemo(
@@ -292,12 +310,29 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
             <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
               {de ? 'Datum' : 'Date'}
             </Text>
+            {nextAvailable && selection.date !== nextAvailable.date ? (
+              <Pressable
+                onPress={() => {
+                  void haptics.selection();
+                  setSelection({ date: nextAvailable.date, time: nextAvailable.time });
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`${de ? 'Nächster freier Termin' : 'Next available'}: ${formatBookingWhen(nextAvailable.date, nextAvailable.time)}`}
+                testID="customer-booking-datetime-next-available"
+                style={({ pressed }) => [styles.nextAvailable, { borderColor: colors.accent, opacity: pressed ? 0.85 : 1 }]}
+              >
+                <Text style={[styles.nextAvailableText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
+                  {de ? 'Nächster freier Termin' : 'Next available'} · {formatBookingWhen(nextAvailable.date, nextAvailable.time)}
+                </Text>
+              </Pressable>
+            ) : null}
             <CalendarDateStrip
               dates={dates}
               disabledDates={disabledDates}
               selectedDate={selection.date}
               onSelectDate={(date) => setSelection({ date, time: null })}
               testIDPrefix="customer-booking-datetime"
+              slotCounts={slotCounts}
             />
 
             <Text style={[styles.sectionLabel, styles.timeLabel, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
@@ -372,7 +407,7 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
             style={[styles.summary, { color: colors.textSecondary, fontFamily: fonts.body }]}
             testID="customer-booking-datetime-summary"
           >
-            {formatSelection(selection.date, selection.time)}
+            {formatBookingWhen(selection.date, selection.time)}
           </Text>
         ) : null}
         <PrimaryButton
@@ -418,6 +453,8 @@ function DateTimeSkeleton() {
 }
 
 const styles = StyleSheet.create({
+  nextAvailable: { alignSelf: 'flex-start', minHeight: 40, justifyContent: 'center', borderWidth: 0.5, borderRadius: 999, paddingHorizontal: 14, marginBottom: 14 },
+  nextAvailableText: { fontSize: 13 },
   container: { flex: 1 },
 
   scrollContent: { paddingHorizontal: space.xl, paddingTop: space.base, paddingBottom: space.xl },
