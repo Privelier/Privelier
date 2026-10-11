@@ -134,12 +134,16 @@ describe('DiscoverScreen', () => {
     const navigate = jest.fn();
 
     await render(<DiscoverScreen navigation={{ navigate } as never} route={{} as never} />);
-    await waitFor(() => expect(screen.getByText('Barber spotlight')).toBeTruthy());
+    await waitFor(() => expect(screen.getByTestId('customer-home-spotlight')).toBeTruthy());
+    // The rotating lead card must disclose that it is not a ranking.
+    expect(screen.getByTestId('customer-home-spotlight-note')).toBeTruthy();
     return navigate;
   }
 
   it('renders truthful discovery for the profile city', async () => {
     await renderDiscovery();
+    expect(screen.queryByText('Barber spotlight')).toBeNull();
+    expect(screen.getByText(/^(A barber to meet|Ein Barber zum Kennenlernen)$/)).toBeTruthy();
 
     expect(mockListBarbers).toHaveBeenCalledWith('Nürnberg');
     expect(screen.getByText('Nürnberg, Germany')).toBeTruthy();

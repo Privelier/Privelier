@@ -71,10 +71,11 @@ env:
 - assertNotVisible:
     id: "customer-explore-error"
 
-# Chips: All + Verified are state-independent; the view toggle is always there.
+# Chips: All is state-independent; the view toggle is always there. There is
+# no Verified chip (the directory is approved-only).
 - assertVisible:
     id: "customer-explore-chip-all"
-- assertVisible:
+- assertNotVisible:
     id: "customer-explore-chip-verified"
 - assertVisible:
     id: "customer-explore-toggle-list"
@@ -99,6 +100,6 @@ env:
 # A chip tap re-renders without an error state (rows vs empty is backend-
 # dependent and deliberately unasserted).
 - tapOn:
-    id: "customer-explore-chip-verified"
+    id: "customer-explore-chip-all"
 - assertNotVisible:
     id: "customer-explore-error"

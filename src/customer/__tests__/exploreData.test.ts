@@ -120,9 +120,6 @@ describe('applyExploreFilter', () => {
     expect(UNDER_PRICE_THRESHOLD).toBe(100);
   });
 
-  it("'verified' filters on the directory's verified flag", () => {
-    expect(applyExploreFilter(barbers, 'verified', ctx).map((x) => x.id)).toEqual(['a', 'c']);
-  });
 });
 
 describe('toMapPin (the D4 honesty rule)', () => {

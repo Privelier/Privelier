@@ -29,6 +29,7 @@ import { useTheme } from '../../theme/useTheme';
 import { pressOpacity } from '../../theme/motion';
 import { Notice } from '../../shared/components/Notice';
 import { Skeleton } from '../../shared/components/Skeleton';
+import { getAppLanguage } from '../../shared/locale';
 import { GlassSurface } from '../../shared/components/GlassSurface';
 import type { BarberDirectoryRow, ServiceRow } from '../../types';
 import { listBarbersByCity, listServicesForBarberIds } from '../discoveryData';
@@ -51,6 +52,7 @@ type Props = CompositeScreenProps<
 
 export default function DiscoverScreen({ navigation }: Props) {
   const { colors, fonts } = useTheme();
+  const de = getAppLanguage() === 'de';
   const { width: viewportWidth } = useWindowDimensions();
   const [ownName, setOwnName] = useState<string | null>(null);
   const [cityName, setCityName] = useState<string | null>(null);
@@ -347,7 +349,15 @@ export default function DiscoverScreen({ navigation }: Props) {
                     { color: colors.textPrimary, fontFamily: fonts.headingMedium },
                   ]}
                 >
-                  Barber spotlight
+                  {de ? 'Ein Barber zum Kennenlernen' : 'A barber to meet'}
+                </Text>
+                {/* The lead card rotates daily by a stable order; it is not a
+                    ranking or an editorial endorsement, and says so. */}
+                <Text
+                  style={[styles.spotlightNote, { color: colors.textSecondary, fontFamily: fonts.body }]}
+                  testID="customer-home-spotlight-note"
+                >
+                  {de ? 'Wechselt täglich · keine Rangliste' : 'Rotates daily · not a ranking'}
                 </Text>
                 <View style={styles.spotlightCard}>
                   <BarberCard
@@ -490,6 +500,7 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 21, lineHeight: 28 },
   sectionMeta: { fontSize: 12, lineHeight: 18 },
   spotlightCard: { marginTop: 16 },
+  spotlightNote: { fontSize: 13, lineHeight: 18, marginTop: 4 },
   directory: { marginTop: 16 },
   directoryContent: { gap: 16, paddingHorizontal: 24, paddingBottom: 2 },
   skeletonTextGroup: { marginTop: 12, gap: 8 },

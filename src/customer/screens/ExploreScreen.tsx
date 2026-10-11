@@ -1,7 +1,7 @@
 /**
  * Customer Explore tab (Run B — design: docs/design/explore-location-
  * design-approval.md) — replaces the placeholder. Prototype layout: filter
- * chips (All / Available today / Under €100 / Verified), a map/list view
+ * chips (All / Hours today / Under €100), a map/list view
  * toggle, and the barber list; the docked-card-on-pin-tap half arrives with
  * the map integration follow-up.
  *
@@ -63,8 +63,10 @@ export default function ExploreScreen({ navigation }: Props) {
   const { colors, fonts, isDark } = useTheme();
   const isGerman = getAppLanguage() === 'de';
   const chipLabels: Record<ExploreFilterKey, string> = isGerman
-    ? { all: 'Alle', today: 'Heute verfügbar', under100: 'Unter 100 €', verified: 'Verifiziert' }
-    : { all: 'All', today: 'Works today', under100: 'Under €100', verified: 'Verified' };
+    // "Today" only means working hours cover today; busy slots are not
+    // checked, so the label must not promise a free appointment.
+    ? { all: 'Alle', today: 'Arbeitszeit heute', under100: 'Unter 100 €' }
+    : { all: 'All', today: 'Hours today', under100: 'Under €100' };
   const listActionLabel = isGerman ? 'Zur Liste wechseln' : 'Switch to list view';
 
   const [city, setCity] = useState<string | null>(null);
@@ -153,7 +155,6 @@ export default function ExploreScreen({ navigation }: Props) {
     const chips: ExploreFilterKey[] = ['all'];
     if (windows !== null) chips.push('today');
     if (services !== null) chips.push('under100');
-    chips.push('verified');
     return chips;
   }, [services, windows]);
 

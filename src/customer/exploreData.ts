@@ -16,7 +16,7 @@
  */
 import type { AvailabilityRow, BarberDirectoryRow, ServiceRow } from '../types';
 
-export type ExploreFilterKey = 'all' | 'today' | 'under100' | 'verified';
+export type ExploreFilterKey = 'all' | 'today' | 'under100';
 
 /** "Under €100" chip threshold (founder-specified label; strict less-than). */
 export const UNDER_PRICE_THRESHOLD = 100;
@@ -95,9 +95,8 @@ export interface ExploreFilterContext {
 
 /**
  * Apply one active chip to the directory list. Pure narrowing — see header.
- * 'verified' filters on the view's verified flag; note the recorded flag:
- * every directory row is approved ⇒ verified by construction today, so this
- * chip currently selects everything (founder-acknowledged).
+ * There is deliberately no "verified" chip: the directory is approved-only,
+ * so such a chip selected everyone while implying some barbers were not.
  */
 export function applyExploreFilter(
   barbers: BarberDirectoryRow[],
@@ -114,8 +113,6 @@ export function applyExploreFilter(
         const min = fromPrice(ctx.servicesByBarber.get(b.id) ?? []);
         return min !== null && min < UNDER_PRICE_THRESHOLD;
       });
-    case 'verified':
-      return barbers.filter((b) => b.verified === true);
   }
 }
 
