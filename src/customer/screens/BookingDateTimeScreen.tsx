@@ -49,7 +49,7 @@ import { Skeleton } from '../../shared/components/Skeleton';
 import { getAppLanguage } from '../../shared/locale';
 import { haptics } from '../../shared/haptics';
 import type { AvailabilityRow } from '../../types';
-import { listBarberAvailability, listBarberBusySlots, listBarberBusySlotsRange } from '../availabilityData';
+import { listBarberAvailability, listBarberBusySlots, listBarberBusySlotsRange, listBarberDaysOff } from '../availabilityData';
 import { deriveAvailableSlots, type BusySlot } from '../../shared/slots';
 import CalendarDateStrip from '../components/CalendarDateStrip';
 import { BookingStepIndicator } from '../components/BookingStepIndicator';
@@ -132,7 +132,10 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
     // One range read for the whole lookahead (migration 0041). If it fails
     // (e.g. a backend without 0041), fall back to the per-date reads so a
     // single failure still only greys out the dates it affects.
-    const rangeResult = await listBarberBusySlotsRange(barberId, dates[0], dates[dates.length - 1]);
+    const [rangeResult, daysOff] = await Promise.all([
+      listBarberBusySlotsRange(barberId, dates[0], dates[dates.length - 1]),
+      listBarberDaysOff(barberId, dates[0], dates[dates.length - 1]),
+    ]);
     const busyByDate = rangeResult.status === 'ok' ? rangeResult.byDate : null;
 
     const entries = await Promise.all(
@@ -140,6 +143,8 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
         // A date with no candidate slot even before bookings are subtracted
         // (no working hours, or all of today's slots have passed) cannot gain
         // one from the busy list, so skip its network round-trip.
+        // A barber's day off offers nothing, whatever the weekly hours say.
+        if (daysOff?.has(date)) return [date, [] as string[]] as const;
         const candidates = deriveAvailableSlots({
           windows,
           busy: [],

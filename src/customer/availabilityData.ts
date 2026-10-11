@@ -104,3 +104,19 @@ export async function listBarberBusySlotsRange(
   }
   return { status: 'ok', byDate };
 }
+
+/**
+ * A barber's days off in a date range (migration 0046). Readable for
+ * approved barbers; the booking validator refuses those dates (PA003), so
+ * the calendar greys them out instead of offering slots that would fail.
+ */
+export async function listBarberDaysOff(barberId: string, from: string, to: string): Promise<Set<string> | null> {
+  const { data, error } = await supabase
+    .from('barber_days_off')
+    .select('day')
+    .eq('barber_id', barberId)
+    .gte('day', from)
+    .lte('day', to);
+  if (error) return null;
+  return new Set(((data as { day: string }[]) ?? []).map((row) => row.day));
+}

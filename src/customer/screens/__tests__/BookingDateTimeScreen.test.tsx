@@ -1,5 +1,5 @@
 import { act, render, screen, waitFor } from '@testing-library/react-native';
-import { listBarberAvailability, listBarberBusySlots, listBarberBusySlotsRange } from '../../availabilityData';
+import { listBarberAvailability, listBarberBusySlots, listBarberBusySlotsRange, listBarberDaysOff } from '../../availabilityData';
 import BookingDateTimeScreen from '../BookingDateTimeScreen';
 
 jest.mock('@react-navigation/native', () => {
@@ -10,6 +10,7 @@ jest.mock('../../availabilityData', () => ({
   listBarberAvailability: jest.fn(),
   listBarberBusySlots: jest.fn(),
   listBarberBusySlotsRange: jest.fn(),
+  listBarberDaysOff: jest.fn(() => Promise.resolve(new Set())),
 }));
 jest.mock('../../../shared/components/ScreenBackHeader', () => ({ ScreenBackHeader: () => null }));
 jest.mock('../../components/BookingStepIndicator', () => ({ BookingStepIndicator: () => null }));
@@ -87,6 +88,24 @@ it('falls back to per-date reads, only for slot-bearing dates, when the range re
     await waitFor(() => expect(screen.queryByTestId('customer-booking-datetime-loading')).toBeNull());
 
     expect(jest.mocked(listBarberBusySlots).mock.calls.map(([, date]) => date)).toEqual(['2030-01-09', '2030-01-16']);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+it('offers no slots on a barber day off even when weekly hours cover it', async () => {
+  jest.useFakeTimers({ now: new Date(2030, 0, 7, 8, 0) });
+  try {
+    jest.mocked(listBarberAvailability).mockResolvedValue(WEDNESDAY_WINDOW);
+    jest.mocked(listBarberBusySlotsRange).mockResolvedValue({ status: 'ok', byDate: new Map() });
+    jest.mocked(listBarberDaysOff).mockResolvedValue(new Set(['2030-01-09']));
+
+    await render(<BookingDateTimeScreen route={route as never} navigation={navigation as never} />);
+    await waitFor(() => expect(screen.queryByTestId('customer-booking-datetime-loading')).toBeNull());
+
+    // Wednesday 9 Jan is index 2 in the lookahead; Wednesday 16 Jan stays bookable.
+    expect(screen.getByTestId('customer-booking-datetime-day-2').props.accessibilityState).toMatchObject({ disabled: true });
+    expect(screen.getByTestId('customer-booking-datetime-day-9').props.accessibilityState).toMatchObject({ disabled: false });
   } finally {
     jest.useRealTimers();
   }

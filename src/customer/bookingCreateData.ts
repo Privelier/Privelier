@@ -49,6 +49,8 @@ function classifySlotRejection(error: {
   code?: string | null;
   message?: string | null;
 }): 'conflict' | 'slot_unavailable' | null {
+  // Day off (migration 0046) has its own SQLSTATE.
+  if (error.code === 'PA003') return 'slot_unavailable';
   if (error.code !== RAISE_EXCEPTION) return null;
   const message = (error.message ?? '').toLowerCase();
   if (message.includes('overlaps an existing active booking')) return 'conflict';

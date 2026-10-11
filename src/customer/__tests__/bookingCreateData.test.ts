@@ -168,6 +168,12 @@ describe('insertBooking', () => {
       expect(result).toEqual({ status: 'slot_unavailable' });
     });
 
+    it('maps a barber day off (PA003, migration 0046) to slot_unavailable', async () => {
+      mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'customer-1' } }, error: null });
+      mockFrom.mockReturnValueOnce(chainable({ data: null, error: { code: 'PA003', message: 'The barber is not working on this date' } }));
+      await expect(insertBooking(VALID_INPUT)).resolves.toEqual({ status: 'slot_unavailable' });
+    });
+
     it('leaves an unrecognized P0001 to the generic mapper', async () => {
       const result = await insertRejectedWith('stamp_booking_price_from_service: service s-1 does not belong to barber b-1');
       expect(result.status).toBe('error');

@@ -35,6 +35,7 @@ import { BackButton } from '../../shared/components/ScreenBackHeader';
 import { Notice } from '../../shared/components/Notice';
 import { ConfirmSheet } from '../../shared/components/ConfirmSheet';
 import { RowListSkeleton } from '../../shared/components/ScreenSkeletons';
+import { DaysOffStrip } from '../components/DaysOffStrip';
 import { useToast } from '../../shared/components/ToastProvider';
 import { getAppLanguage } from '../../shared/locale';
 import type { Palette } from '../../theme/colors';
@@ -274,6 +275,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <>
+            <DaysOffStrip barberId={barberId} />
             <View style={[styles.form, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.formTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
                 {editingId ? 'Edit window' : 'Add a window'}

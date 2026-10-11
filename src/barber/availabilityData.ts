@@ -106,3 +106,24 @@ export async function deleteAvailabilityWindow(id: string): Promise<DeleteAvaila
   if (!data) return { status: 'not_found' };
   return { status: 'ok' };
 }
+
+/** The barber's own days off from `from` onward (migration 0046). */
+export async function listOwnDaysOff(barberId: string, from: string): Promise<Set<string> | null> {
+  const { data, error } = await supabase
+    .from('barber_days_off')
+    .select('day')
+    .eq('barber_id', barberId)
+    .gte('day', from);
+  if (error) return null;
+  return new Set(((data as { day: string }[]) ?? []).map((row) => row.day));
+}
+
+/** Mark or clear one day off. Idempotent in both directions. */
+export async function setDayOff(barberId: string, day: string, off: boolean): Promise<boolean> {
+  if (off) {
+    const { error } = await supabase.from('barber_days_off').insert({ barber_id: barberId, day });
+    return !error || error.code === '23505';
+  }
+  const { error } = await supabase.from('barber_days_off').delete().eq('barber_id', barberId).eq('day', day);
+  return !error;
+}
