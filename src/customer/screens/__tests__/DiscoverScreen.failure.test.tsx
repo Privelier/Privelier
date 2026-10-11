@@ -102,7 +102,7 @@ describe('DiscoverScreen service-enrichment failure', () => {
     });
 
     await render(
-      <DiscoverScreen navigation={{ navigate: jest.fn() } as never} route={{} as never} />
+      <DiscoverScreen navigation={{ navigate: jest.fn(), addListener: jest.fn(() => jest.fn()) } as never} route={{} as never} />
     );
     await waitFor(() => expect(screen.getByTestId('customer-home-error')).toBeTruthy());
 

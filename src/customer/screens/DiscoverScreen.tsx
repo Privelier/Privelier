@@ -7,7 +7,7 @@
  * customer-home-screen / -loading / -error / -retry / -empty /
  * -search / -barber-{id}.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -133,6 +133,27 @@ export default function DiscoverScreen({ navigation }: Props) {
       active = false;
     };
   }, [load]);
+
+  // The directory is keyed by the profile city, which the customer can change
+  // in Edit profile (including from this screen's missing-city action). On
+  // refocus, one profile read decides whether the city changed; only then is
+  // the directory reloaded, so ordinary tab switches cost no list requests.
+  const loadedCityRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    // Recorded only once a load has settled on a city (or on "no city").
+    if (hasSnapshot || missingCity) loadedCityRef.current = missingCity ? null : cityName;
+  }, [cityName, missingCity, hasSnapshot]);
+  useEffect(() => {
+    return navigation.addListener('focus', () => {
+      if (loadedCityRef.current === undefined) return; // first load still owns this
+      void fetchOwnProfile().then((result) => {
+        if (result.status !== 'ok') return;
+        const city = result.profile?.city?.trim() || null;
+        const loaded = loadedCityRef.current?.trim() || null;
+        if ((city ?? '').toLocaleLowerCase() !== (loaded ?? '').toLocaleLowerCase()) void load();
+      });
+    });
+  }, [navigation, load]);
 
   const servicesByBarber = useMemo(
     () => groupServicesByBarber(services ?? []),

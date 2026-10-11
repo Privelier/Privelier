@@ -61,6 +61,11 @@ jest.mock('react-native-safe-area-context', () => {
 });
 
 const mockFetchOwnProfile = fetchOwnProfile as jest.Mock;
+let focusListener: (() => void) | undefined;
+const mockAddListener = jest.fn((event: string, listener: () => void) => {
+  if (event === 'focus') focusListener = listener;
+  return jest.fn();
+});
 const mockListBarbers = listBarbersByCity as jest.Mock;
 const mockListServices = listServicesForBarberIds as jest.Mock;
 const mockGetAppLanguage = getAppLanguage as jest.MockedFunction<typeof getAppLanguage>;
@@ -133,7 +138,7 @@ describe('DiscoverScreen', () => {
     mockListServices.mockResolvedValue({ status: 'ok', services });
     const navigate = jest.fn();
 
-    await render(<DiscoverScreen navigation={{ navigate } as never} route={{} as never} />);
+    await render(<DiscoverScreen navigation={{ navigate, addListener: mockAddListener } as never} route={{} as never} />);
     await waitFor(() => expect(screen.getByTestId('customer-home-spotlight')).toBeTruthy());
     // The rotating lead card must disclose that it is not a ranking.
     expect(screen.getByTestId('customer-home-spotlight-note')).toBeTruthy();
@@ -226,12 +231,27 @@ describe('DiscoverScreen', () => {
     });
     const navigate = jest.fn();
 
-    await render(<DiscoverScreen navigation={{ navigate } as never} route={{} as never} />);
+    await render(<DiscoverScreen navigation={{ navigate, addListener: mockAddListener } as never} route={{} as never} />);
     await waitFor(() => expect(screen.getByTestId('customer-home-add-city')).toBeTruthy());
 
     expect(screen.getByText('Add your city to discover verified barbers near you.')).toBeTruthy();
     expect(mockListBarbers).not.toHaveBeenCalled();
     await fireEvent.press(screen.getByTestId('customer-home-add-city'));
     expect(navigate).toHaveBeenCalledWith('EditProfile');
+  });
+
+  it('reloads the directory on refocus only when the profile city changed', async () => {
+    await renderDiscovery();
+    expect(mockListBarbers).toHaveBeenCalledTimes(1);
+
+    // Same city (any case/spacing): one profile read, no directory reload.
+    mockFetchOwnProfile.mockResolvedValue({ status: 'ok', profile: { ...profile, city: ` ${(profile.city ?? '').toUpperCase()} ` } });
+    await act(async () => { focusListener?.(); });
+    expect(mockListBarbers).toHaveBeenCalledTimes(1);
+
+    // City edited in Edit profile: the directory reloads for the new city.
+    mockFetchOwnProfile.mockResolvedValue({ status: 'ok', profile: { ...profile, city: 'Hamburg' } });
+    await act(async () => { focusListener?.(); });
+    await waitFor(() => expect(mockListBarbers).toHaveBeenLastCalledWith('Hamburg'));
   });
 });
