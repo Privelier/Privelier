@@ -35,7 +35,7 @@ export function Notice({
 }) {
   const { colors, fonts } = useTheme();
   const borderColor =
-    variant === 'error' ? colors.error : variant === 'success' ? colors.success : colors.border;
+    variant === 'error' ? colors.errorText : variant === 'success' ? colors.success : colors.border;
   const textColor =
     variant === 'error'
       ? colors.errorText

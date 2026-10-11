@@ -6,6 +6,9 @@ import { Skeleton } from './Skeleton';
 /** Content-shaped first-load state for both booking lists. */
 export function BookingListSkeleton({ testID, avatarSize = 48 }: { testID: string; avatarSize?: number }) {
   const { colors } = useTheme();
+  // The cards are `surface`, which is also the Skeleton's own colour, so the
+  // bars would vanish into the card. On a card they use the hairline tone.
+  const bar = { backgroundColor: colors.border };
 
   return (
     <View testID={testID} accessible accessibilityRole="progressbar" accessibilityLabel="Loading bookings" style={styles.list}>
@@ -15,16 +18,16 @@ export function BookingListSkeleton({ testID, avatarSize = 48 }: { testID: strin
           style={[styles.card, { borderColor: colors.border, backgroundColor: colors.surface }]}
         >
           <View style={styles.row}>
-            <Skeleton style={{ width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }} />
+            <Skeleton style={[bar, { width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }]} />
             <View style={styles.details}>
-              <Skeleton style={styles.name} />
-              <Skeleton style={styles.meta} />
+              <Skeleton style={[bar, styles.name]} />
+              <Skeleton style={[bar, styles.meta]} />
             </View>
-            <Skeleton style={styles.price} />
+            <Skeleton style={[bar, styles.price]} />
           </View>
           <View style={styles.footer}>
-            <Skeleton style={styles.date} />
-            <Skeleton style={styles.status} />
+            <Skeleton style={[bar, styles.date]} />
+            <Skeleton style={[bar, styles.status]} />
           </View>
         </View>
       ))}

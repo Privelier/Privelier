@@ -82,7 +82,7 @@ function timeFieldError(value: string, label: string): string | undefined {
 }
 
 function underlineColor(hasError: boolean, focused: boolean, colors: Palette): string {
-  if (hasError) return colors.error;
+  if (hasError) return colors.errorText;
   if (focused) return colors.accent;
   return colors.border;
 }

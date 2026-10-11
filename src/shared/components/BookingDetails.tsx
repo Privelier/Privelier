@@ -133,7 +133,7 @@ export function StatusTimeline({ status, role }: { status: BookingRow['status'];
     >
       {steps.map((step, index) => {
         const toneOf = (item: Step) =>
-          item.state === 'done' ? colors.accent : item.state === 'stopped' ? colors.error : colors.border;
+          item.state === 'done' ? colors.accent : item.state === 'stopped' ? colors.errorText : colors.border;
         const tone = toneOf(step);
         const next = steps[index + 1];
         return (

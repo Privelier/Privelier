@@ -67,7 +67,7 @@ export function ConfirmSheet({ open, title, message, confirmLabel, cancelLabel, 
             accessibilityRole="button"
             accessibilityLabel={confirmLabel}
             onPress={onConfirm}
-            style={[styles.button, { borderColor: destructive ? colors.error : colors.accent }]}
+            style={[styles.button, { borderColor: destructive ? colors.errorText : colors.accent }]}
           >
             <Text style={[styles.buttonText, { color: destructive ? colors.errorText : colors.accentText, fontFamily: fonts.bodySemiBold }]}>
               {confirmLabel}

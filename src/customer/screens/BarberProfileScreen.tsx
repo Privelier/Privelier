@@ -197,7 +197,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
           <View
             testID="barber-profile-error"
             accessibilityRole="alert"
-            style={[styles.notice, { borderColor: colors.error, backgroundColor: colors.surface }]}
+            style={[styles.notice, { borderColor: colors.errorText, backgroundColor: colors.surface }]}
           >
             <Text style={[styles.noticeText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
               {error}
