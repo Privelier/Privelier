@@ -14,6 +14,7 @@
  * with an explicit label. Targets are padded to a comfortable size regardless
  * of the glyph `size`.
  */
+import { getAppLanguage } from '../locale';
 import { Pressable, View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/useTheme';
@@ -41,8 +42,8 @@ export function StarRatingInput({
     <View
       style={[styles.row, disabled ? styles.rowDisabled : null]}
       accessibilityRole="adjustable"
-      accessibilityLabel="Your rating"
-      accessibilityValue={{ text: value > 0 ? `${value} out of 5 stars` : 'No rating selected' }}
+      accessibilityLabel={getAppLanguage() === 'de' ? 'Deine Bewertung' : 'Your rating'}
+      accessibilityValue={{ text: value > 0 ? (getAppLanguage() === 'de' ? `${value} von 5 Sternen` : `${value} out of 5 stars`) : (getAppLanguage() === 'de' ? 'Keine Bewertung gewählt' : 'No rating selected') }}
       accessibilityActions={disabled ? undefined : [{ name: 'increment' }, { name: 'decrement' }]}
       onAccessibilityAction={(e) => {
         if (disabled) return;

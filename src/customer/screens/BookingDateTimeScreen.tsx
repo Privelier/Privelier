@@ -393,7 +393,7 @@ function RetryAvailability({ onPress }: { onPress: () => void }) {
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel="Retry availability"
+      accessibilityLabel={getAppLanguage() === 'de' ? 'Verfügbarkeit erneut laden' : 'Retry availability'}
       testID="customer-booking-datetime-retry-inline"
       style={({ pressed }) => [styles.retryLink, pressed ? { opacity: pressOpacity.soft } : null]}
     >

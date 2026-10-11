@@ -1,4 +1,5 @@
 import { StyleSheet, View } from 'react-native';
+import { getAppLanguage } from '../locale';
 import { useTheme } from '../../theme/useTheme';
 import { HAIRLINE, radius } from '../../theme/spacing';
 import { Skeleton } from './Skeleton';
@@ -8,7 +9,7 @@ export function BookingListSkeleton({ testID, avatarSize = 48 }: { testID: strin
   const { colors } = useTheme();
 
   return (
-    <View testID={testID} accessible accessibilityRole="progressbar" accessibilityLabel="Loading bookings" style={styles.list}>
+    <View testID={testID} accessible accessibilityRole="progressbar" accessibilityLabel={getAppLanguage() === 'de' ? 'Termine werden geladen' : 'Loading bookings'} style={styles.list}>
       {[0, 1].map((index) => (
         <View
           key={index}

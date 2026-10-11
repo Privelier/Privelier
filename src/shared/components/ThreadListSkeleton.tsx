@@ -1,4 +1,5 @@
 import { StyleSheet, View } from 'react-native';
+import { getAppLanguage } from '../locale';
 import { HAIRLINE } from '../../theme/spacing';
 import { useTheme } from '../../theme/useTheme';
 import { Skeleton } from './Skeleton';
@@ -8,7 +9,7 @@ export function ThreadListSkeleton({ testID }: { testID: string }) {
   const { colors } = useTheme();
 
   return (
-    <View testID={testID} accessible accessibilityRole="progressbar" accessibilityLabel="Loading conversations" style={styles.list}>
+    <View testID={testID} accessible accessibilityRole="progressbar" accessibilityLabel={getAppLanguage() === 'de' ? 'Gespräche werden geladen' : 'Loading conversations'} style={styles.list}>
       {[0, 1, 2].map((index) => (
         <View key={index} style={[styles.row, index > 0 && { borderTopWidth: HAIRLINE, borderTopColor: colors.border }]}>
           <Skeleton style={styles.avatar} />

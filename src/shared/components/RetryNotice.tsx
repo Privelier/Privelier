@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
+import { getAppLanguage } from '../locale';
 import { useTheme } from '../../theme/useTheme';
 import { pressOpacity } from '../../theme/motion';
 import { Notice } from './Notice';
@@ -15,7 +16,7 @@ export function RetryNotice({ message, testID, onRetry, style }: {
       <Pressable
         onPress={onRetry}
         accessibilityRole="button"
-        accessibilityLabel="Try again"
+        accessibilityLabel={getAppLanguage() === 'de' ? 'Erneut versuchen' : 'Try again'}
         testID={`${testID}-retry`}
         style={({ pressed }) => [styles.action, pressed ? { opacity: pressOpacity.soft } : null]}
       >

@@ -104,7 +104,7 @@ export default function BarberCard({ barber, services, variant = 'wide', feature
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={cardLabel}
-        accessibilityHint="Opens the barber profile"
+        accessibilityHint={getAppLanguage() === 'de' ? 'Öffnet das Barber-Profil' : 'Opens the barber profile'}
         testID={`customer-home-barber-${barber.id}`}
       style={({ pressed }) => [styles.compactPressable, { opacity: pressed ? pressOpacity.soft : 1 }]}
       >
@@ -153,7 +153,7 @@ export default function BarberCard({ barber, services, variant = 'wide', feature
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={cardLabel}
-      accessibilityHint="Opens the barber profile"
+      accessibilityHint={getAppLanguage() === 'de' ? 'Öffnet das Barber-Profil' : 'Opens the barber profile'}
       testID={`customer-home-barber-${barber.id}`}
       style={({ pressed }) => [styles.widePressable, { opacity: pressed ? pressOpacity.soft : 1 }]}
     >

@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { getAppLanguage } from '../shared/locale';
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import type { Role } from '../types';
 import { useTheme } from '../theme/useTheme';
@@ -125,7 +126,7 @@ export function LegalConsentFields({
         <Pressable
           onPress={onAdultChange}
           accessibilityRole="checkbox"
-          accessibilityLabel="Confirm that you are at least 18 years old"
+          accessibilityLabel={getAppLanguage() === 'de' ? 'Bestätige, dass du mindestens 18 Jahre alt bist' : 'Confirm that you are at least 18 years old'}
           accessibilityState={{ checked: adultConfirmed }}
           testID={`${testIDPrefix}-legal-adult`}
           // 22pt visual box, 44pt touch target.
