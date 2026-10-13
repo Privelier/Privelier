@@ -22,7 +22,7 @@ import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabase';
 import { acceptCurrentLegalConsent, ensureProfile, ensureProfileFromForm, signOut, syncLegalConsent } from './authService';
 import type { LegalConsentView } from './screens/LegalConsentGateScreen';
-import { applyAuthCallbackUrl, isPasswordRecoveryUrl } from './deepLink';
+import { applyAuthCallbackUrl, isOAuthSessionActive } from './deepLink';
 import type { AuthFailure } from './errors';
 import type { EnsureProfileResult, ProfilePrefill, SetupFormFields } from './types';
 import type { UsersRow } from '../types';
@@ -121,24 +121,19 @@ export function useAuthShell(): AuthShell {
     };
   }, []);
 
-  // Auth deep links (email confirmation) land here: applyAuthCallbackUrl
-  // calls setSession(), which fires the onAuthStateChange subscription above
-  // like any other sign-in — no separate state wiring needed. Handles both
-  // a cold start via the link (getInitialURL) and the app already running
-  // (the 'url' event).
+  // Auth deep links (email confirmation, password recovery) land here:
+  // applyAuthCallbackUrl exchanges the PKCE code, which fires the
+  // onAuthStateChange subscription above (SIGNED_IN or PASSWORD_RECOVERY)
+  // like any other sign-in. Handles both a cold start via the link
+  // (getInitialURL) and the app already running (the 'url' event). OAuth
+  // redirects are left to signInWithProvider while its browser is open.
   useEffect(() => {
     const handleUrl = async (url: string) => {
-      const isRecovery = isPasswordRecoveryUrl(url);
-      if (isRecovery) setPasswordRecovery('opening');
+      if (isOAuthSessionActive()) return;
       const outcome = await applyAuthCallbackUrl(url);
       if (outcome === 'recovery_applied') setPasswordRecovery('ready');
-      else if (outcome === 'expired_or_used') {
-        if (isRecovery) setPasswordRecovery('expired');
-        else setAuthLinkError('expired');
-      } else if (outcome === 'error') {
-        if (isRecovery) setPasswordRecovery('error');
-        else setAuthLinkError('error');
-      }
+      else if (outcome === 'expired_or_used') setAuthLinkError('expired');
+      else if (outcome === 'error') setAuthLinkError('error');
     };
     Linking.getInitialURL().then((url) => {
       if (url) void handleUrl(url);

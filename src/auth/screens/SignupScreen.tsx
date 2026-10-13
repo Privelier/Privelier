@@ -16,7 +16,7 @@ import { defaultCountry, getAppLanguage } from '../../shared/locale';
 import { useCallback, useRef, useState } from 'react';
 import { StyleSheet, Text, View, type TextInput } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { signInWithProvider, signUpBarber, signUpCustomer } from '../authService';
+import { isAppleSignInSupported, signInWithProvider, signUpBarber, signUpCustomer } from '../authService';
 import { LegalConsentFields, LegalLinks } from '../../legal/LegalComponents';
 import { useTheme } from '../../theme/useTheme';
 import type { AuthStackParamList } from './AuthNavigator';
@@ -272,7 +272,7 @@ export default function SignupScreen({ navigation, route }: Props) {
       </View>
       <View style={styles.providerActions}>
         <OAuthButton provider="google" onPress={() => onProviderPress('google')} loading={providerSubmitting === 'google'} disabled={submitting || providerSubmitting !== null} testID="auth-signup-google" />
-        <OAuthButton provider="apple" onPress={() => onProviderPress('apple')} loading={providerSubmitting === 'apple'} disabled={submitting || providerSubmitting !== null} testID="auth-signup-apple" />
+        {isAppleSignInSupported() ? <OAuthButton provider="apple" onPress={() => onProviderPress('apple')} loading={providerSubmitting === 'apple'} disabled={submitting || providerSubmitting !== null} testID="auth-signup-apple" /> : null}
       </View>
       <LegalLinks role={role} testIDPrefix="auth-signup-legal" />
     </AuthScreenShell>

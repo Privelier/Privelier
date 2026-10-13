@@ -113,21 +113,19 @@ export async function reportUser(input: {
 }
 
 /**
- * Delete the signed-in account. Public portfolio images are removed through
- * the Storage API first (SQL cannot reach storage); a failure there does not
- * block deletion, because the rows that reference them are deleted anyway.
+ * Delete the signed-in account through the `delete-account` Edge Function:
+ * it runs delete_own_account() as this user (refusing with 409 while
+ * bookings are live) and only then erases the user's portfolio images and
+ * private verification documents with server-side rights the app never has.
  */
 export async function deleteOwnAccount(): Promise<DeleteAccountResult> {
   const me = await currentUserId();
   if (!me) return { status: 'error', message: errorCopy({ code: '42501' }) };
 
-  const portfolio = await supabase.from('portfolio').select('image_url').eq('barber_id', me);
-  const paths = ((portfolio.data as { image_url: string }[] | null) ?? []).map((row) => row.image_url);
-  if (paths.length > 0) await supabase.storage.from('portfolio').remove(paths);
-
-  const { error } = await supabase.rpc('delete_own_account');
+  const { error } = await supabase.functions.invoke('delete-account', { method: 'POST' });
   if (error) {
-    if (error.code === 'PA001') {
+    const status = (error as { context?: { status?: number } }).context?.status;
+    if (status === 409) {
       const de = getAppLanguage() === 'de';
       return {
         status: 'active_bookings',
@@ -136,7 +134,7 @@ export async function deleteOwnAccount(): Promise<DeleteAccountResult> {
           : 'You still have pending or accepted bookings. Cancel them first, then you can delete your account.',
       };
     }
-    return { status: 'error', message: errorCopy(error) };
+    return { status: 'error', message: errorCopy(status === 401 ? { code: '42501' } : {}) };
   }
   return { status: 'ok' };
 }

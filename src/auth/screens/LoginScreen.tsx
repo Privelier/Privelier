@@ -11,7 +11,7 @@ import { getAppLanguage } from '../../shared/locale';
 import { useCallback, useRef, useState } from 'react';
 import { StyleSheet, View, type TextInput } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { signIn, signInWithProvider } from '../authService';
+import { isAppleSignInSupported, signIn, signInWithProvider } from '../authService';
 import { LegalLinks } from '../../legal/LegalComponents';
 import type { AuthStackParamList } from './AuthNavigator';
 import { emailError, loginPasswordError } from './validation';
@@ -160,7 +160,7 @@ export default function LoginScreen({ navigation, route }: Props) {
       </View>
       <View style={styles.providerActions}>
         <OAuthButton provider="google" onPress={() => onProviderPress('google')} loading={providerSubmitting === 'google'} disabled={submitting || providerSubmitting !== null} testID="auth-login-google" />
-        <OAuthButton provider="apple" onPress={() => onProviderPress('apple')} loading={providerSubmitting === 'apple'} disabled={submitting || providerSubmitting !== null} testID="auth-login-apple" />
+        {isAppleSignInSupported() ? <OAuthButton provider="apple" onPress={() => onProviderPress('apple')} loading={providerSubmitting === 'apple'} disabled={submitting || providerSubmitting !== null} testID="auth-login-apple" /> : null}
       </View>
       <LegalLinks role={role} testIDPrefix="auth-login-legal" />
     </AuthScreenShell>

@@ -139,7 +139,7 @@ export default function VerifyScreen() {
         // Strict order: bytes to the private bucket first, then the row upsert,
         // then refetch. A failure at either step surfaces its honest message and
         // never refetches (no fabricated "uploaded" state).
-        const uploaded = await uploadVerificationDocument(userId, docType, asset.uri, asset.mimeType);
+        const uploaded = await uploadVerificationDocument(userId, docType, asset.uri);
         if (uploaded.status !== 'ok') {
           showToast({ message: `${language === 'de' ? 'Upload fehlgeschlagen.' : 'Upload failed.'} ${uploaded.message}` });
           return;

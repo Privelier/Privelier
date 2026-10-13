@@ -17,7 +17,8 @@ export type CustomerDataErrorCode =
   | 'unknown'
   | 'conflict'
   | 'transition_rejected'
-  | 'already_reviewed';
+  | 'already_reviewed'
+  | 'too_many_pending';
 
 /** The error arm shared by every discovery result union. */
 export interface CustomerDataFailure {
@@ -39,6 +40,8 @@ export const customerDataErrorCopy: Record<CustomerDataErrorCode, string> = {
   transition_rejected:
     'That booking can no longer be cancelled. Refresh to see its current status.',
   already_reviewed: 'You have already reviewed this booking.',
+  too_many_pending:
+    'You already have several open requests. Wait for a barber to reply, or cancel one, before sending another.',
 };
 
 const retryableCodes: ReadonlySet<CustomerDataErrorCode> = new Set(['network']);
@@ -53,6 +56,8 @@ export const customerDataErrorCopyDe: Record<CustomerDataErrorCode, string> = {
   conflict: 'Diese Uhrzeit wurde gerade von jemand anderem gebucht. Wähle eine andere Uhrzeit.',
   transition_rejected: 'Dieser Termin kann nicht mehr storniert werden. Aktualisiere, um den aktuellen Stand zu sehen.',
   already_reviewed: 'Du hast diesen Termin bereits bewertet.',
+  too_many_pending:
+    'Du hast bereits mehrere offene Anfragen. Warte auf eine Antwort oder sage eine ab, bevor du eine neue sendest.',
 };
 
 export function failure(code: CustomerDataErrorCode): CustomerDataFailure {

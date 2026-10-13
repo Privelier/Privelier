@@ -73,45 +73,29 @@ describe('parseAuthCallbackUrl', () => {
     });
   });
 
-  it('rejects a callback that combines the PKCE and implicit token shapes', () => {
+  it('never returns implicit-flow tokens from a fragment (session substitution)', () => {
     expect(
-      parseAuthCallbackUrl(
-        'privelier://auth-callback?code=pkce-code-1#access_token=at-1&refresh_token=rt-1'
-      )
+      parseAuthCallbackUrl('privelier://auth-callback#access_token=at-1&refresh_token=rt-1&type=signup')
     ).toBeNull();
   });
 
-  it('extracts access_token and refresh_token from the fragment', () => {
-    const url = 'privelier://auth-callback#access_token=at-1&refresh_token=rt-1&type=signup';
-    expect(parseAuthCallbackUrl(url)).toEqual({
-      accessToken: 'at-1',
-      refreshToken: 'rt-1',
-      errorCode: undefined,
-      type: 'signup',
-    });
-  });
-
-  it('extracts error_code when the link is expired or already used', () => {
+  it('extracts error_code from the fragment when the link is expired or already used', () => {
     const url =
       'privelier://auth-callback#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired';
-    expect(parseAuthCallbackUrl(url)).toEqual({
-      accessToken: undefined,
-      refreshToken: undefined,
-      errorCode: 'otp_expired',
-      type: undefined,
-    });
+    expect(parseAuthCallbackUrl(url)).toEqual({ errorCode: 'otp_expired' });
+  });
+
+  it('extracts error_code from the query (PKCE error redirect)', () => {
+    const url = 'privelier://auth-callback?error=access_denied&error_code=otp_expired';
+    expect(parseAuthCallbackUrl(url)).toEqual({ errorCode: 'otp_expired' });
   });
 
   it('falls back to the bare error param when error_code is absent', () => {
-    const url = 'privelier://auth-callback#error=access_denied';
-    expect(parseAuthCallbackUrl(url)?.errorCode).toBe('access_denied');
+    expect(parseAuthCallbackUrl('privelier://auth-callback#error=access_denied')?.errorCode).toBe('access_denied');
   });
 
-  it('returns null for a URL with no fragment', () => {
+  it('returns null for a URL with no code and no error', () => {
     expect(parseAuthCallbackUrl('privelier://auth-callback')).toBeNull();
-  });
-
-  it('returns null for a URL with an empty fragment', () => {
     expect(parseAuthCallbackUrl('privelier://auth-callback#')).toBeNull();
   });
 
@@ -122,108 +106,66 @@ describe('parseAuthCallbackUrl', () => {
 
 describe('applyAuthCallbackUrl', () => {
   it('returns "ignored" for a non-auth-callback URL', async () => {
-    const outcome = await applyAuthCallbackUrl('privelier://some-other-path');
-    expect(outcome).toBe('ignored');
-    expect(mockAuth.setSession).not.toHaveBeenCalled();
+    await expect(applyAuthCallbackUrl('privelier://some-other-path')).resolves.toBe('ignored');
+    expect(mockAuth.exchangeCodeForSession).not.toHaveBeenCalled();
   });
 
   it.each([
+    'privelier://auth-callback#access_token=at-1&refresh_token=rt-1',
+    'privelier://auth-callback#access_token=at-1&refresh_token=rt-1&type=recovery',
     'https://auth-callback#access_token=at-1&refresh_token=rt-1',
-    'privelier://some-other-path#access_token=at-1&refresh_token=rt-1',
-    'privelier://auth-callback/extra#access_token=at-1&refresh_token=rt-1',
     'privelier://auth-callback.evil.example#access_token=at-1&refresh_token=rt-1',
-  ])('ignores valid-looking tokens from an unexpected URL: %s', async (url) => {
-    const outcome = await applyAuthCallbackUrl(url);
-
-    expect(outcome).toBe('ignored');
+  ])('never sets a session from fragment tokens: %s', async (url) => {
+    await expect(applyAuthCallbackUrl(url)).resolves.toBe('ignored');
     expect(mockAuth.setSession).not.toHaveBeenCalled();
-  });
-
-  it('calls setSession with the parsed tokens and returns "applied" on success', async () => {
-    mockAuth.setSession.mockResolvedValue({ data: {}, error: null } as never);
-    const url = 'privelier://auth-callback#access_token=at-1&refresh_token=rt-1&type=signup';
-
-    const outcome = await applyAuthCallbackUrl(url);
-
-    expect(outcome).toBe('applied');
-    expect(mockAuth.setSession).toHaveBeenCalledWith({
-      access_token: 'at-1',
-      refresh_token: 'rt-1',
-    });
   });
 
   it('exchanges a PKCE code and returns "applied" on success', async () => {
     mockAuth.exchangeCodeForSession.mockResolvedValue({ data: {}, error: null } as never);
 
-    const outcome = await applyAuthCallbackUrl('privelier://auth-callback?code=pkce-code-1');
-
-    expect(outcome).toBe('applied');
+    await expect(applyAuthCallbackUrl('privelier://auth-callback?code=pkce-code-1')).resolves.toBe('applied');
     expect(mockAuth.exchangeCodeForSession).toHaveBeenCalledWith('pkce-code-1');
-    expect(mockAuth.setSession).not.toHaveBeenCalled();
+  });
+
+  it('returns "recovery_applied" when the exchanged code was a password recovery', async () => {
+    mockAuth.exchangeCodeForSession.mockResolvedValue({ data: { redirectType: 'recovery' }, error: null } as never);
+
+    await expect(applyAuthCallbackUrl('privelier://auth-callback?code=recovery-code')).resolves.toBe(
+      'recovery_applied'
+    );
+  });
+
+  it('exchanges a code once when the same callback arrives twice (Android OAuth race)', async () => {
+    let resolve: (value: unknown) => void = () => undefined;
+    mockAuth.exchangeCodeForSession.mockReturnValue(new Promise((r) => { resolve = r; }) as never);
+
+    const first = applyAuthCallbackUrl('privelier://auth-callback?code=race-code');
+    const second = applyAuthCallbackUrl('privelier://auth-callback?code=race-code');
+    resolve({ data: {}, error: null });
+
+    await expect(Promise.all([first, second])).resolves.toEqual(['applied', 'applied']);
+    expect(mockAuth.exchangeCodeForSession).toHaveBeenCalledTimes(1);
+    // A late third delivery reuses the settled outcome instead of re-exchanging.
+    await expect(applyAuthCallbackUrl('privelier://auth-callback?code=race-code')).resolves.toBe('applied');
+    expect(mockAuth.exchangeCodeForSession).toHaveBeenCalledTimes(1);
   });
 
   it('returns "error" when PKCE code exchange fails', async () => {
     mockAuth.exchangeCodeForSession.mockResolvedValue({ data: {}, error: { message: 'boom' } } as never);
 
-    await expect(applyAuthCallbackUrl('privelier://auth-callback?code=pkce-code-1')).resolves.toBe(
-      'error'
-    );
+    await expect(applyAuthCallbackUrl('privelier://auth-callback?code=bad-code')).resolves.toBe('error');
   });
 
-  it('returns "recovery_applied" for a valid password recovery callback', async () => {
-    mockAuth.setSession.mockResolvedValue({ data: {}, error: null } as never);
-    const outcome = await applyAuthCallbackUrl(
-      'privelier://auth-callback#access_token=at-1&refresh_token=rt-1&type=recovery'
-    );
-    expect(outcome).toBe('recovery_applied');
+  it('returns "expired_or_used" for otp_expired without exchanging anything', async () => {
+    const url = 'privelier://auth-callback?error=access_denied&error_code=otp_expired&code=ignored';
+
+    await expect(applyAuthCallbackUrl(url)).resolves.toBe('expired_or_used');
+    expect(mockAuth.exchangeCodeForSession).not.toHaveBeenCalled();
   });
 
-  it('returns "error" when setSession itself fails', async () => {
-    mockAuth.setSession.mockResolvedValue({
-      data: {},
-      error: { message: 'boom' },
-    } as never);
-    const url = 'privelier://auth-callback#access_token=at-1&refresh_token=rt-1';
-
-    const outcome = await applyAuthCallbackUrl(url);
-
-    expect(outcome).toBe('error');
-  });
-
-  it('returns "expired_or_used" for otp_expired without calling setSession', async () => {
-    const url =
-      'privelier://auth-callback#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired';
-
-    const outcome = await applyAuthCallbackUrl(url);
-
-    expect(outcome).toBe('expired_or_used');
-    expect(mockAuth.setSession).not.toHaveBeenCalled();
-  });
-
-  it('returns "error" for any other error_code without calling setSession', async () => {
-    const url = 'privelier://auth-callback#error=access_denied&error_code=something_else';
-
-    const outcome = await applyAuthCallbackUrl(url);
-
-    expect(outcome).toBe('error');
-    expect(mockAuth.setSession).not.toHaveBeenCalled();
-  });
-
-  it('returns "ignored" when the fragment has neither tokens nor an error_code', async () => {
-    const url = 'privelier://auth-callback#type=signup';
-
-    const outcome = await applyAuthCallbackUrl(url);
-
-    expect(outcome).toBe('ignored');
-    expect(mockAuth.setSession).not.toHaveBeenCalled();
-  });
-
-  it('returns "error" when only one of access_token/refresh_token is present', async () => {
-    const url = 'privelier://auth-callback#access_token=at-1';
-
-    const outcome = await applyAuthCallbackUrl(url);
-
-    expect(outcome).toBe('error');
-    expect(mockAuth.setSession).not.toHaveBeenCalled();
+  it('returns "error" for any other error_code', async () => {
+    await expect(
+      applyAuthCallbackUrl('privelier://auth-callback#error=access_denied&error_code=something_else')
+    ).resolves.toBe('error');
   });
 });

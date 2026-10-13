@@ -1,18 +1,18 @@
 /**
- * Auth deep-link callback handling (build-order step 5 hardening).
+ * Auth deep-link callback handling.
  *
- * Supabase's email confirmation link redirects to whatever `emailRedirectTo`
- * was passed at signUp/resend time, appending the session as a URL fragment:
- *   <redirectTo>#access_token=...&refresh_token=...&type=signup
- * or, if the link is stale/already used:
- *   <redirectTo>#error=access_denied&error_code=otp_expired&error_description=...
+ * The client runs the PKCE flow (lib/supabase.ts), so every legitimate
+ * callback — email confirmation, password recovery, Google/Apple web OAuth —
+ * arrives as `privelier://auth-callback?code=...`. Exchanging the code needs
+ * the verifier this device stored when it started the flow, so a link crafted
+ * by someone else cannot sign this device into a foreign account.
  *
- * The app never has a `window.location` for supabase-js to read automatically
- * (that is what `detectSessionInUrl` controls, and it is a no-op outside a
- * browser) — so this module is the manual equivalent: it turns the deep link
- * URL Linking hands us into a real session via `setSession`, which then flows
- * through the existing `onAuthStateChange` subscription in useAuthShell
- * exactly like any other sign-in.
+ * Implicit-flow fragments (`#access_token=...&refresh_token=...`) are refused
+ * on purpose: any web page or app can open that URL with the attacker's own
+ * tokens and silently swap the victim into the attacker's session.
+ *
+ * Failed or stale links arrive as `?error=...&error_code=otp_expired` (PKCE)
+ * or the same keys in the fragment; both are read.
  */
 import * as Linking from 'expo-linking';
 import { supabase } from '../../lib/supabase';
@@ -42,11 +42,8 @@ export function hasStableAuthRedirect(): boolean {
 export type AuthCallbackOutcome = 'applied' | 'recovery_applied' | 'expired_or_used' | 'error' | 'ignored';
 
 interface ParsedCallback {
-  accessToken?: string;
-  refreshToken?: string;
   code?: string;
   errorCode?: string;
-  type?: string;
 }
 
 /**
@@ -56,8 +53,7 @@ interface ParsedCallback {
  * production auth target.
  *
  * Query parameters are allowed, but user-info, ports, and extra path
- * segments are not. In particular, do not trust a token-bearing fragment
- * until this boundary has been checked.
+ * segments are not.
  */
 export function isExpectedAuthCallbackUrl(url: string): boolean {
   try {
@@ -80,23 +76,38 @@ export function isExpectedAuthCallbackUrl(url: string): boolean {
   }
 }
 
-/** Pure parser — the URL fragment is not a standard query string, so this is
- * hand-rolled rather than relying on URL/Linking's query-string parsing. */
+/** Pure parser: a PKCE code, or an error from the query or the fragment.
+ * Token-bearing fragments are never returned (see the module comment). */
 export function parseAuthCallbackUrl(url: string): ParsedCallback | null {
   if (!isExpectedAuthCallbackUrl(url)) return null;
-  const callbackUrl = new URL(url);
-  const code = callbackUrl.searchParams.get('code') ?? undefined;
+  const query = new URL(url).searchParams;
   const hashIndex = url.indexOf('#');
-  if (hashIndex === -1) return code ? { code } : null;
-  const fragment = url.slice(hashIndex + 1);
-  if (fragment.length === 0 || code) return null;
-  const params = new URLSearchParams(fragment);
-  const accessToken = params.get('access_token') ?? undefined;
-  const refreshToken = params.get('refresh_token') ?? undefined;
-  const errorCode = params.get('error_code') ?? params.get('error') ?? undefined;
-  const type = params.get('type') ?? undefined;
-  if (!accessToken && !refreshToken && !errorCode) return null;
-  return { accessToken, refreshToken, errorCode, type };
+  const fragment = new URLSearchParams(hashIndex === -1 ? '' : url.slice(hashIndex + 1));
+  const errorCode =
+    query.get('error_code') ?? query.get('error') ?? fragment.get('error_code') ?? fragment.get('error') ?? undefined;
+  if (errorCode) return { errorCode };
+  const code = query.get('code') ?? undefined;
+  return code ? { code } : null;
+}
+
+/**
+ * On Android the OAuth redirect reaches both WebBrowser.openAuthSessionAsync
+ * and the app-wide Linking listener. A PKCE code can be exchanged only once,
+ * so concurrent callers for the same code share one exchange instead of the
+ * loser failing with "invalid flow state" and signing the user back out.
+ */
+const inFlightExchanges = new Map<string, Promise<AuthCallbackOutcome>>();
+
+async function exchangeCode(code: string): Promise<AuthCallbackOutcome> {
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+  if (error) {
+    logAuthError('deepLink.exchangeCodeForSession', error);
+    return 'error';
+  }
+  // auth-js returns redirectType at runtime (verifier stored as "<v>/recovery")
+  // but its public type omits it.
+  const redirectType = (data as { redirectType?: string | null } | null)?.redirectType;
+  return redirectType === 'recovery' ? 'recovery_applied' : 'applied';
 }
 
 /**
@@ -110,29 +121,26 @@ export async function applyAuthCallbackUrl(url: string): Promise<AuthCallbackOut
     logAuthError('deepLink', `auth callback returned error_code=${parsed.errorCode}`);
     return parsed.errorCode === 'otp_expired' ? 'expired_or_used' : 'error';
   }
-  if (parsed.code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(parsed.code);
-    if (error) {
-      logAuthError('deepLink.exchangeCodeForSession', error);
-      return 'error';
-    }
-    return 'applied';
-  }
-  if (!parsed.accessToken || !parsed.refreshToken) {
-    logAuthError('deepLink', 'auth callback missing access_token/refresh_token');
-    return 'error';
-  }
-  const { error } = await supabase.auth.setSession({
-    access_token: parsed.accessToken,
-    refresh_token: parsed.refreshToken,
-  });
-  if (error) {
-    logAuthError('deepLink.setSession', error);
-    return 'error';
-  }
-  return parsed.type === 'recovery' ? 'recovery_applied' : 'applied';
+  const code = parsed.code as string;
+  const pending = inFlightExchanges.get(code);
+  if (pending) return pending;
+  // Settled results stay cached so a late duplicate delivery of the same URL
+  // resolves to the same outcome instead of re-exchanging a spent code.
+  if (inFlightExchanges.size >= 20) inFlightExchanges.clear();
+  const exchange = exchangeCode(code);
+  inFlightExchanges.set(code, exchange);
+  return exchange;
 }
 
-export function isPasswordRecoveryUrl(url: string): boolean {
-  return parseAuthCallbackUrl(url)?.type === 'recovery';
+/**
+ * True while signInWithProvider owns an OAuth browser session. The app-wide
+ * Linking listener leaves the callback to that caller, which reports errors
+ * inline on the sign-in screen instead of the email-link error screen.
+ */
+let oauthSessionActive = false;
+export function setOAuthSessionActive(active: boolean): void {
+  oauthSessionActive = active;
+}
+export function isOAuthSessionActive(): boolean {
+  return oauthSessionActive;
 }

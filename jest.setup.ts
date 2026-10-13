@@ -75,3 +75,22 @@ jest.mock('@gorhom/bottom-sheet', () => {
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
+
+// expo-image-manipulator is native-only. The mock re-encodes to a predictable
+// JPEG URI so upload tests can assert that the normalized file is uploaded.
+jest.mock('expo-image-manipulator', () => {
+  const ref = (width: number, height: number) => ({
+    width,
+    height,
+    saveAsync: jest.fn(async () => ({ uri: 'file:///normalized.jpg', width, height })),
+  });
+  interface MockContext { resize: jest.Mock; renderAsync: jest.Mock }
+  const manipulate = jest.fn(() => {
+    const context: MockContext = {
+      resize: jest.fn(() => context),
+      renderAsync: jest.fn(async () => ref(1024, 768)),
+    };
+    return context;
+  });
+  return { ImageManipulator: { manipulate }, SaveFormat: { JPEG: 'jpeg', PNG: 'png', WEBP: 'webp' } };
+});

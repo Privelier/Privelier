@@ -40,7 +40,7 @@ export type SignInResult =
   | { status: 'email_not_confirmed'; email: string }
   | AuthFailure;
 
-export type OAuthSignInResult = { status: 'started' } | { status: 'role_mismatch'; actualRole: Role } | AuthFailure;
+export type OAuthSignInResult = { status: 'started' } | { status: 'cancelled' } | { status: 'role_mismatch'; actualRole: Role } | AuthFailure;
 
 /** Result of resendConfirmation. */
 export type ResendConfirmationResult = { status: 'sent' } | AuthFailure;

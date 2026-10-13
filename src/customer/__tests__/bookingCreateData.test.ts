@@ -174,6 +174,12 @@ describe('insertBooking', () => {
       await expect(insertBooking(VALID_INPUT)).resolves.toEqual({ status: 'slot_unavailable' });
     });
 
+    it('explains the open-request cap (PA004, migration 0048) instead of a generic error', async () => {
+      mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'customer-1' } }, error: null });
+      mockFrom.mockReturnValueOnce(chainable({ data: null, error: { code: 'PA004', message: 'too many open booking requests' } }));
+      await expect(insertBooking(VALID_INPUT)).resolves.toMatchObject({ status: 'error', code: 'too_many_pending', retryable: false });
+    });
+
     it('leaves an unrecognized P0001 to the generic mapper', async () => {
       const result = await insertRejectedWith('stamp_booking_price_from_service: service s-1 does not belong to barber b-1');
       expect(result.status).toBe('error');

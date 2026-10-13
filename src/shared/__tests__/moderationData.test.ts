@@ -9,6 +9,7 @@ jest.mock('../../../lib/supabase', () => ({
     auth: { getSession: jest.fn() },
     from: jest.fn(),
     rpc: jest.fn(),
+    functions: { invoke: jest.fn() },
     storage: { from: jest.fn(() => ({ remove: (...args: unknown[]) => mockRemove(...args) })) },
   },
 }));
@@ -65,19 +66,24 @@ describe('reportUser', () => {
 });
 
 describe('deleteOwnAccount', () => {
-  it('removes public portfolio images first, then deletes through the server function', async () => {
-    mockFrom.mockReturnValueOnce(builder({ data: [{ image_url: 'me/a.jpg' }, { image_url: 'me/b.jpg' }], error: null }));
-    mockRpc.mockResolvedValueOnce({ error: null });
+  const mockInvoke = supabase.functions.invoke as jest.Mock;
+
+  it('deletes through the server function and never removes storage from the client', async () => {
+    mockInvoke.mockResolvedValueOnce({ data: { status: 'deleted' }, error: null });
     await expect(deleteOwnAccount()).resolves.toEqual({ status: 'ok' });
-    expect(mockRemove).toHaveBeenCalledWith(['me/a.jpg', 'me/b.jpg']);
-    expect(mockRpc).toHaveBeenCalledWith('delete_own_account');
+    expect(mockInvoke).toHaveBeenCalledWith('delete-account', { method: 'POST' });
+    expect(mockRemove).not.toHaveBeenCalled();
+    expect(mockRpc).not.toHaveBeenCalled();
   });
 
-  it('explains active bookings (PA001) instead of failing generically', async () => {
-    mockFrom.mockReturnValueOnce(builder({ data: [], error: null }));
-    mockRpc.mockResolvedValueOnce({ error: { code: 'PA001', message: 'cancel your active bookings' } });
+  it('explains active bookings (409) instead of failing generically', async () => {
+    mockInvoke.mockResolvedValueOnce({ data: null, error: { context: { status: 409 } } });
     const result = await deleteOwnAccount();
     expect(result.status).toBe('active_bookings');
-    expect(mockRemove).not.toHaveBeenCalled();
+  });
+
+  it('returns a typed error when the function fails', async () => {
+    mockInvoke.mockResolvedValueOnce({ data: null, error: { context: { status: 500 } } });
+    await expect(deleteOwnAccount()).resolves.toMatchObject({ status: 'error' });
   });
 });

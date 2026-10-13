@@ -17,6 +17,7 @@
  * error (design D5).
  */
 import { supabase } from '../../lib/supabase';
+import { normalizeImageForUpload } from '../shared/imageUpload';
 import { uniqueObjectName } from '../shared/objectNames';
 import type { PortfolioRow } from '../types';
 import { failure, logBarberDataError, mapPostgrestError, mapStorageError } from './errors';
@@ -63,17 +64,20 @@ export async function listOwnPortfolio(barberId: string): Promise<ListOwnPortfol
  */
 export async function uploadPortfolioImage(
   barberId: string,
-  fileUri: string,
-  mimeType?: string
+  fileUri: string
 ): Promise<UploadPortfolioImageResult> {
   const path = `${barberId}/${uniqueObjectName('img')}`;
 
   // Reading local file bytes via fetch(uri).arrayBuffer() is the Expo/RN
   // pattern for turning a device file URI into an uploadable body; a
   // fetch/read failure is treated as network (retryable).
+  // Re-encode first: strips EXIF/GPS and normalizes HEIC (see imageUpload).
   let bytes: ArrayBuffer;
+  let contentType: string;
   try {
-    const res = await fetch(fileUri);
+    const normalized = await normalizeImageForUpload(fileUri);
+    contentType = normalized.mimeType;
+    const res = await fetch(normalized.uri);
     bytes = await res.arrayBuffer();
   } catch (err) {
     logBarberDataError('uploadPortfolioImage.read', err);
@@ -84,7 +88,7 @@ export async function uploadPortfolioImage(
     .from(PORTFOLIO_BUCKET)
     // No upsert: the path is unique per upload, so there is nothing to
     // overwrite (deliberate — see uniqueObjectName).
-    .upload(path, bytes, { contentType: mimeType ?? 'image/jpeg' });
+    .upload(path, bytes, { contentType });
 
   if (error) return mapStorageError('uploadPortfolioImage.upload', error);
   return { status: 'ok', path };

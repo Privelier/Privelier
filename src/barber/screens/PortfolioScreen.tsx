@@ -189,7 +189,7 @@ export default function PortfolioScreen({ navigation }: Props) {
       // Strict order: bytes to the bucket first, then the row insert, then
       // reflect the new row. A failure at either step surfaces its honest
       // message and never fabricates an "added" tile.
-      const uploaded = await uploadPortfolioImage(barberId, asset.uri, asset.mimeType);
+      const uploaded = await uploadPortfolioImage(barberId, asset.uri);
       if (uploaded.status !== 'ok') {
         showToast({ message: `${language === 'de' ? 'Upload fehlgeschlagen.' : 'Upload failed.'} ${uploaded.message}` });
         return;

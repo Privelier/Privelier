@@ -24,6 +24,7 @@
  *   columns are admin-owned).
  */
 import { supabase } from '../../lib/supabase';
+import { normalizeImageForUpload } from '../shared/imageUpload';
 import type { VerificationDocType, VerificationRequestRow } from '../types';
 import { uniqueObjectName } from '../shared/objectNames';
 import { failure, logBarberDataError, mapPostgrestError, mapStorageError } from './errors';
@@ -77,8 +78,7 @@ const DOC_TARGETS: Record<
 export async function uploadVerificationDocument(
   userId: string,
   docType: VerificationDocType,
-  fileUri: string,
-  mimeType?: string
+  fileUri: string
 ): Promise<UploadVerificationDocumentResult> {
   const { prefix } = DOC_TARGETS[docType];
   const path = `${userId}/${uniqueObjectName(prefix)}`;
@@ -87,9 +87,13 @@ export async function uploadVerificationDocument(
   // pattern for turning a device file URI into an uploadable body. It is the
   // one thing here that can only be confirmed on-device once the dev-client is
   // rebuilt with the image picker; a fetch/read failure is treated as network.
+  // Re-encode first: strips EXIF/GPS and normalizes HEIC (see imageUpload).
   let bytes: ArrayBuffer;
+  let contentType: string;
   try {
-    const res = await fetch(fileUri);
+    const normalized = await normalizeImageForUpload(fileUri);
+    contentType = normalized.mimeType;
+    const res = await fetch(normalized.uri);
     bytes = await res.arrayBuffer();
   } catch (err) {
     logBarberDataError('uploadVerificationDocument.read', err);
@@ -100,7 +104,7 @@ export async function uploadVerificationDocument(
     .from(VERIFICATION_BUCKET)
     // No upsert: the path is unique per upload, so there is nothing to overwrite
     // (deliberate — see uniqueObjectName).
-    .upload(path, bytes, { contentType: mimeType ?? 'image/jpeg' });
+    .upload(path, bytes, { contentType });
 
   if (error) return mapStorageError('uploadVerificationDocument.upload', error);
   return { status: 'ok', path };

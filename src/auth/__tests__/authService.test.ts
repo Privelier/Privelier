@@ -34,6 +34,7 @@ jest.mock('../../../lib/supabase', () => ({
       updateUser: jest.fn(),
       signOut: jest.fn(),
       getSession: jest.fn(),
+      signInWithIdToken: jest.fn(),
     },
     from: jest.fn(),
     rpc: jest.fn(),
@@ -48,10 +49,22 @@ jest.mock('../deepLink', () => ({
   getEmailRedirectTo: jest.fn(() => 'privelier://auth-callback'),
   hasStableAuthRedirect: jest.fn(() => true),
   applyAuthCallbackUrl: jest.fn(),
+  setOAuthSessionActive: jest.fn(),
 }));
 
 jest.mock('expo-web-browser', () => ({
   openAuthSessionAsync: jest.fn(),
+}));
+
+jest.mock('expo-apple-authentication', () => ({
+  signInAsync: jest.fn(),
+  AppleAuthenticationScope: { FULL_NAME: 0, EMAIL: 1 },
+}));
+
+jest.mock('expo-crypto', () => ({
+  randomUUID: jest.fn(() => 'raw-nonce'),
+  digestStringAsync: jest.fn(async () => 'hashed-nonce'),
+  CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
 }));
 
 const { applyAuthCallbackUrl } = jest.requireMock('../deepLink') as {
@@ -63,6 +76,10 @@ const { hasStableAuthRedirect } = jest.requireMock('../deepLink') as {
 const { openAuthSessionAsync } = jest.requireMock('expo-web-browser') as {
   openAuthSessionAsync: jest.Mock;
 };
+const { setOAuthSessionActive } = jest.requireMock('../deepLink') as {
+  setOAuthSessionActive: jest.Mock;
+};
+const appleSignInAsync = (jest.requireMock('expo-apple-authentication') as { signInAsync: jest.Mock }).signInAsync;
 
 const mockAuth = supabase.auth as jest.Mocked<typeof supabase.auth>;
 const mockFrom = supabase.from as jest.Mock;
@@ -326,8 +343,14 @@ describe('signInWithProvider', () => {
 
     expect(mockAuth.signInWithOAuth).toHaveBeenCalledWith({
       provider: 'google',
-      options: { redirectTo: 'privelier://auth-callback', skipBrowserRedirect: true },
+      options: {
+        redirectTo: 'privelier://auth-callback',
+        skipBrowserRedirect: true,
+        queryParams: { prompt: 'select_account' },
+      },
     });
+    // The app-wide Linking listener stands aside only while the browser is open.
+    expect(setOAuthSessionActive.mock.calls).toEqual([[true], [false]]);
     expect(openAuthSessionAsync).toHaveBeenCalledWith(
       'https://project.supabase.co/auth/v1/authorize',
       'privelier://auth-callback'
@@ -371,11 +394,67 @@ describe('signInWithProvider', () => {
       error: new AuthApiError('Unsupported provider: Provider is not enabled', 400, 'validation_failed'),
     } as never);
 
-    await expect(signInWithProvider('apple')).resolves.toMatchObject({
+    await expect(signInWithProvider('google')).resolves.toMatchObject({
       status: 'error',
       code: 'provider_unavailable',
       retryable: true,
     });
+  });
+
+  it('reports a browser cancel as cancelled, not as success or an error', async () => {
+    mockAuth.signInWithOAuth.mockResolvedValue({ data: { url: 'https://x/authorize' }, error: null } as never);
+    openAuthSessionAsync.mockResolvedValue({ type: 'cancel' });
+
+    await expect(signInWithProvider('google')).resolves.toEqual({ status: 'cancelled' });
+    expect(applyAuthCallbackUrl).not.toHaveBeenCalled();
+    expect(setOAuthSessionActive).toHaveBeenLastCalledWith(false);
+  });
+
+  it('fails clearly when Supabase redirects somewhere other than the app callback', async () => {
+    mockAuth.signInWithOAuth.mockResolvedValue({ data: { url: 'https://x/authorize' }, error: null } as never);
+    openAuthSessionAsync.mockResolvedValue({ type: 'success', url: 'privelier://auth-callback?code=c' });
+    applyAuthCallbackUrl.mockResolvedValue('ignored');
+
+    await expect(signInWithProvider('google')).resolves.toMatchObject({ status: 'error', code: 'provider_unavailable' });
+  });
+
+  it('signs in with Apple natively on iOS using a hashed nonce and saves the first-login name', async () => {
+    appleSignInAsync.mockResolvedValue({
+      identityToken: 'apple-id-token',
+      fullName: { givenName: 'Ada', familyName: 'Lovelace' },
+    });
+    mockAuth.signInWithIdToken.mockResolvedValue({ data: {}, error: null } as never);
+    mockAuth.updateUser.mockResolvedValue({ data: {}, error: null } as never);
+
+    await expect(signInWithProvider('apple')).resolves.toEqual({ status: 'started' });
+
+    expect(appleSignInAsync).toHaveBeenCalledWith(expect.objectContaining({ nonce: 'hashed-nonce' }));
+    expect(mockAuth.signInWithIdToken).toHaveBeenCalledWith({
+      provider: 'apple',
+      token: 'apple-id-token',
+      nonce: 'raw-nonce',
+    });
+    expect(mockAuth.updateUser).toHaveBeenCalledWith({ data: { name: 'Ada Lovelace', full_name: 'Ada Lovelace' } });
+    expect(mockAuth.signInWithOAuth).not.toHaveBeenCalled();
+  });
+
+  it('treats a cancelled Apple sheet as cancelled without touching Supabase', async () => {
+    appleSignInAsync.mockRejectedValue(Object.assign(new Error('canceled'), { code: 'ERR_REQUEST_CANCELED' }));
+
+    await expect(signInWithProvider('apple')).resolves.toEqual({ status: 'cancelled' });
+    expect(mockAuth.signInWithIdToken).not.toHaveBeenCalled();
+  });
+
+  it('maps a rejected Apple identity token to a typed error', async () => {
+    const { AuthApiError } = jest.requireActual('@supabase/supabase-js');
+    appleSignInAsync.mockResolvedValue({ identityToken: 'bad', fullName: null });
+    mockAuth.signInWithIdToken.mockResolvedValue({
+      data: {},
+      error: new AuthApiError('Provider (issuer "https://appleid.apple.com") is not enabled', 400, 'provider_disabled'),
+    } as never);
+
+    await expect(signInWithProvider('apple')).resolves.toMatchObject({ status: 'error' });
+    expect(mockAuth.updateUser).not.toHaveBeenCalled();
   });
 });
 

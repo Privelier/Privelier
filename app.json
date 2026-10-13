@@ -13,7 +13,8 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "CFBundleAllowMixedLocalizations": true
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "com.privelier.app",
@@ -22,7 +23,11 @@
         "foregroundImage": "./assets/privelier-app-foreground.png",
         "monochromeImage": "./assets/privelier-app-foreground.png"
       },
-      "predictiveBackGestureEnabled": true
+      "predictiveBackGestureEnabled": true,
+      "blockedPermissions": [
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR"
+      ]
     },
     "web": {
       "favicon": "./assets/privelier-favicon.png"
@@ -37,21 +42,17 @@
       [
         "expo-localization",
         {
-          "supportedLocales": ["de", "en"]
+          "supportedLocales": [
+            "de",
+            "en"
+          ]
         }
       ],
       [
         "expo-calendar",
         {
-          "calendarPermission": "Allow Privelier to manage appointment events in your calendar.",
-          "remindersPermission": "Allow Privelier to access calendar reminders."
-        }
-      ],
-      [
-        "expo-notifications",
-        {
-          "color": "#BFA06B",
-          "enableBackgroundRemoteNotifications": false
+          "calendarPermission": "Allow Privelier to add your appointments to your calendar.",
+          "remindersPermission": false
         }
       ],
       [
@@ -63,7 +64,16 @@
           "resizeMode": "contain"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-apple-authentication",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Privelier to choose photos for your portfolio and verification documents.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
     ],
     "extra": {
       "eas": {

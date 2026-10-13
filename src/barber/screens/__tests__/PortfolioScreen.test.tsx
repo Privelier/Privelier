@@ -198,7 +198,7 @@ describe('PortfolioScreen', () => {
       await fireEvent.press(screen.getByTestId('barber-portfolio-add'));
 
       await waitFor(() => expect(mockInsert).toHaveBeenCalled());
-      expect(mockUpload).toHaveBeenCalledWith('b1', 'file:///tmp/pic.jpg', 'image/jpeg');
+      expect(mockUpload).toHaveBeenCalledWith('b1', 'file:///tmp/pic.jpg');
       // Insert is fed exactly the uploaded object PATH.
       expect(mockInsert).toHaveBeenCalledWith('b1', 'b1/img-new.jpg');
       // The freshly-inserted tile is reflected optimistically.

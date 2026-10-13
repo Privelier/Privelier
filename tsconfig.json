@@ -11,4 +11,9 @@
       ]
     }
   }
+,
+  "exclude": [
+    "node_modules",
+    "supabase/functions"
+  ]
 }

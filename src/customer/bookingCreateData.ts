@@ -36,6 +36,8 @@ import type { InsertBookingResult } from './types';
 
 /** Postgres raise_exception — validate_booking_slot (migrations 0024/0025). */
 const RAISE_EXCEPTION = 'P0001';
+/** enforce_pending_booking_cap (migration 0048). */
+const PENDING_CAP = 'PA004';
 
 /**
  * validate_booking_slot serializes same-barber/day writes with an advisory
@@ -93,6 +95,8 @@ export async function insertBooking(input: {
 
   if (error) {
     if (error.code === UNIQUE_VIOLATION) return { status: 'conflict' };
+    // Open-request cap (migration 0048): 5 pending in total, 2 per barber.
+    if (error.code === PENDING_CAP) return failure('too_many_pending');
     const slotOutcome = classifySlotRejection(error);
     if (slotOutcome) {
       logCustomerDataError('insertBooking.slot', error);

@@ -16,10 +16,13 @@
  * No UI in this module. Screens are built in the next pipeline stage.
  */
 import type { Session } from '@supabase/supabase-js';
+import { Platform } from 'react-native';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 import * as WebBrowser from 'expo-web-browser';
 import { supabase } from '../../lib/supabase';
 import type { Role, UsersRow } from '../types';
-import { applyAuthCallbackUrl, getEmailRedirectTo, hasStableAuthRedirect } from './deepLink';
+import { applyAuthCallbackUrl, getEmailRedirectTo, hasStableAuthRedirect, setOAuthSessionActive } from './deepLink';
 import { failure, logAuthError, mapAuthApiError, mapPostgrestError } from './errors';
 import type { AuthFailure } from './errors';
 import type {
@@ -160,25 +163,108 @@ export async function signIn(email: string, password: string, expectedRole?: Rol
   return { status: 'signed_in' };
 }
 
+/**
+ * Sign in with Apple is offered on iOS only, where it is native
+ * (ASAuthorizationController) and needs no Services ID or rotating client
+ * secret. App Store Guideline 4.8 requires it there because Google sign-in is
+ * offered; Android users have Google and email.
+ */
+export function isAppleSignInSupported(): boolean {
+  return Platform.OS === 'ios';
+}
+
+/**
+ * Native Sign in with Apple -> Supabase signInWithIdToken.
+ * https://supabase.com/docs/guides/auth/social-login/auth-apple (Expo native)
+ * A random nonce is SHA-256 hashed into Apple's request and the raw value is
+ * sent to Supabase, which checks the token's nonce claim (replay protection).
+ * Apple returns the name only on the very first authorization, so it is
+ * saved to user_metadata straight away for the finish-setup prefill.
+ */
+async function signInWithAppleNative(): Promise<{ status: 'started' } | { status: 'cancelled' } | AuthFailure> {
+  const rawNonce = Crypto.randomUUID();
+  const hashedNonce = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, rawNonce);
+  let credential: AppleAuthentication.AppleAuthenticationCredential;
+  try {
+    credential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+      nonce: hashedNonce,
+    });
+  } catch (raw) {
+    if ((raw as { code?: string } | null)?.code === 'ERR_REQUEST_CANCELED') return { status: 'cancelled' };
+    logAuthError('signInWithApple.native', raw);
+    return failure('provider_unavailable');
+  }
+  if (!credential.identityToken) {
+    logAuthError('signInWithApple.native', 'no identity token returned');
+    return failure('provider_unavailable');
+  }
+  const { error } = await supabase.auth.signInWithIdToken({
+    provider: 'apple',
+    token: credential.identityToken,
+    nonce: rawNonce,
+  });
+  if (error) return mapAuthApiError('signInWithApple.idToken', error);
+  const name = [credential.fullName?.givenName, credential.fullName?.familyName]
+    .filter((part): part is string => typeof part === 'string' && part.trim().length > 0)
+    .join(' ');
+  if (name) {
+    const updated = await supabase.auth.updateUser({ data: { name, full_name: name } });
+    if (updated.error) logAuthError('signInWithApple.saveName', updated.error);
+  }
+  return { status: 'started' };
+}
+
+/**
+ * Google (and Apple on non-iOS, if ever enabled) through Supabase's hosted
+ * OAuth + PKCE in the system auth session (ASWebAuthenticationSession /
+ * Custom Tabs — never an embedded WebView, which Google blocks).
+ * https://supabase.com/docs/guides/auth/social-login/auth-google
+ */
+async function signInWithBrowserOAuth(
+  provider: 'google' | 'apple'
+): Promise<{ status: 'started' } | { status: 'cancelled' } | AuthFailure> {
+  const redirectTo = getEmailRedirectTo();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo,
+      skipBrowserRedirect: true,
+      // Let people choose which Google account to use instead of silently
+      // reusing the one the browser is signed into.
+      queryParams: provider === 'google' ? { prompt: 'select_account' } : undefined,
+    },
+  });
+  if (error) return mapAuthApiError(`signInWithProvider.${provider}`, error);
+  if (!data.url) return failure('provider_unavailable');
+  setOAuthSessionActive(true);
+  try {
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+    if (result.type === 'cancel' || result.type === 'dismiss') return { status: 'cancelled' };
+    if (result.type !== 'success') return failure('provider_unavailable');
+    const outcome = await applyAuthCallbackUrl(result.url);
+    if (outcome === 'applied' || outcome === 'recovery_applied') return { status: 'started' };
+    // 'ignored' means Supabase redirected somewhere other than our callback:
+    // the redirect URL is missing from Auth -> URL Configuration.
+    logAuthError(`signInWithProvider.${provider}`, `callback outcome=${outcome}`);
+    return failure('provider_unavailable');
+  } finally {
+    setOAuthSessionActive(false);
+  }
+}
+
 export async function signInWithProvider(
   provider: 'google' | 'apple',
   expectedRole?: Role
 ): Promise<OAuthSignInResult> {
-  if (!hasStableAuthRedirect()) return failure('development_build_required');
+  const native = provider === 'apple' && isAppleSignInSupported();
+  if (!native && !hasStableAuthRedirect()) return failure('development_build_required');
   try {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: getEmailRedirectTo(), skipBrowserRedirect: true },
-    });
-    if (error) return mapAuthApiError(`signInWithProvider.${provider}`, error);
-    if (!data.url) return failure('unknown');
-    const result = await WebBrowser.openAuthSessionAsync(data.url, getEmailRedirectTo());
-    if (result.type === 'cancel' || result.type === 'dismiss') return { status: 'started' };
-    if (result.type !== 'success') return failure('unknown');
-    const outcome = await applyAuthCallbackUrl(result.url);
-    if (outcome === 'error' || outcome === 'expired_or_used' || outcome === 'ignored') {
-      return failure('unknown');
-    }
+    const result = native ? await signInWithAppleNative() : await signInWithBrowserOAuth(provider);
+    if (result.status !== 'started') return result;
     if (expectedRole) {
       const actualRole = await signOutOnRoleMismatch(expectedRole);
       if (actualRole) return { status: 'role_mismatch', actualRole };

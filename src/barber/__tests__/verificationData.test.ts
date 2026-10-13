@@ -108,7 +108,8 @@ describe('uploadVerificationDocument', () => {
     expect(result.status).toBe('ok');
     const path = (result as { status: 'ok'; path: string }).path;
     expect(path).toMatch(ID_PATH);
-    expect(fetchFn).toHaveBeenCalledWith('file:///tmp/pic.jpg');
+    // The re-encoded copy is read, never the original picked file.
+    expect(fetchFn).toHaveBeenCalledWith('file:///normalized.jpg');
     expect(mockStorageFrom).toHaveBeenCalledWith('verification-docs');
     // The returned path is exactly the one uploaded, and no upsert is requested.
     expect(upload).toHaveBeenCalledWith(path, expect.any(ArrayBuffer), {
@@ -129,15 +130,16 @@ describe('uploadVerificationDocument', () => {
     });
   });
 
-  it('passes an explicit mimeType through as the contentType', async () => {
-    fetchYields();
+  it('uploads the re-encoded JPEG (EXIF stripped), whatever the picked format', async () => {
+    const fetchFn = fetchYields();
     const upload = storageUpload({ error: null });
 
-    await uploadVerificationDocument('u1', 'id', 'file:///tmp/pic.png', 'image/png');
+    await uploadVerificationDocument('u1', 'id', 'file:///tmp/pic.png');
 
     expect(upload).toHaveBeenCalledWith(expect.stringMatching(ID_PATH), expect.any(ArrayBuffer), {
-      contentType: 'image/png',
+      contentType: 'image/jpeg',
     });
+    expect(fetchFn).toHaveBeenCalledWith('file:///normalized.jpg');
   });
 
   it('maps a thrown fetch/read to network (and never calls upload)', async () => {

@@ -274,7 +274,7 @@ describe('VerifyScreen', () => {
       expect(screen.queryByTestId('barber-verify-doc-id-uploading')).toBeNull()
     );
 
-    expect(mockUpload).toHaveBeenCalledWith('u1', 'id', 'file:///tmp/id.jpg', 'image/jpeg');
+    expect(mockUpload).toHaveBeenCalledWith('u1', 'id', 'file:///tmp/id.jpg');
     // fetchOwnProfile ran once for the initial load and once for the refetch.
     expect(mockFetchProfile).toHaveBeenCalledTimes(2);
     // The id row now reads 'Uploaded'.
