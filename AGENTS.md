@@ -30,11 +30,11 @@ Supabase gives you two keys: the `anon` key (public, safe to ship inside the mob
 
 **Dark mode (default):** background `#121214`, card surface `#1B1B1E`, primary text `#F5F1E8`, secondary/muted text `#9A968C`, accent (brass) `#BFA06B` used sparingly — buttons, star ratings, verified badges, active states only, never as a large fill. Success `#51785C`, error `#A8453E`.
 
-**Light mode:** background `#F8F4EC`, card surface `#FFFFFF` with a thin `#E6DFD0` border, primary text `#211D17`, secondary text `#8A8175`, accent text uses the darker `#8A6B3D` for contrast (fills/icons can still use `#BFA06B`). Success `#4F7355`, error `#A8453E`.
+**Dark only (founder decision 2026-10-14):** the app ships one dark theme. Light mode is not planned; do not add a light palette without a new founder decision.
 
 **Typography:** an editorial serif for headings, a clean sans-serif for body text. Sentence case, never all-caps or Title Case.
 
-**Layout:** flat design — no gradients, no heavy drop shadows. Thin 0.5px borders/dividers. Generous whitespace. Calm, minimal, never cluttered.
+**Layout (founder decision 2026-10-14, supersedes "flat, no gradients"):** smoked-glass components over the dark background are the visual language. Glass comes only from the shared glass primitives in `src/shared/components/Glass*.tsx`; screens never hand-roll their own blur, sheen, or rgba fills. No heavy drop shadows. Thin 0.5px borders/dividers. Generous whitespace. Calm, minimal, never cluttered.
 
 ## Roles
 
