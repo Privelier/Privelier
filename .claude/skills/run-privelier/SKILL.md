@@ -32,17 +32,23 @@ npm install --prefix .claude/skills/run-privelier --no-audit --no-fund   # playw
    - `200` → reuse it, skip to step 3.
    - `000`/timeout → it is wedged; stop it (PowerShell:
      `Stop-Process -Id (Get-NetTCPConnection -LocalPort 8081 -State Listen).OwningProcess -Force`).
-2. Start the server in the background (Bash tool, `run_in_background: true`):
+2. Start the server in the background (Bash tool, `run_in_background: true`).
+   Use **production mode** — the founder judges speed on this, and the default
+   development bundle (React debug checks, unminified) feels far slower than
+   the real app:
    ```bash
-   npx expo start --go --lan --port 8081 --clear
+   npx expo start --go --lan --port 8081 --no-dev --minify
    ```
+   Add `--clear` after `node_modules` changes. Drop `--no-dev --minify` only
+   when someone needs fast refresh or dev error overlays while coding.
 3. Run the helper — waits for the server, pre-builds the iOS bundle (bundling
    errors surface here, not on the phone), prints the `exp://` URL and opens a
    QR image on the founder's screen:
    ```bash
    node .claude/skills/run-privelier/expo-go.mjs 8081
    ```
-   Expected: `manifest ok: Privelier (exposdk:57.0.0)`, `iOS bundle ok: ~13.9 MB`,
+   Expected: `manifest ok: Privelier (exposdk:57.0.0)`, `iOS bundle ok: 11.0 MB`
+   (production; a development server reports ~13.9 MB), and
    `Expo Go URL: exp://192.168.1.30:8081`.
 4. Tell the founder to scan the QR with the iPhone camera, which hands the
    `exp://` link to Expo Go. Phone and PC must be on the same Wi-Fi.
@@ -83,8 +89,12 @@ else is a Playwright selector (`text=Log in`). Flags: `--url`, `--headed`,
 screenshots — a blank dark PNG means the React tree crashed; the driver prints
 `pageerror:` lines for that.
 
-Do not create accounts on the shared Supabase project just to test; there is no
-seeded test account here.
+To get past login, `login customer` or `login barber` reads the test account
+from the gitignored `.claude/skills/run-privelier/.test-accounts.env`
+(`CUSTOMER_EMAIL=`, `CUSTOMER_PASSWORD=`, `BARBER_EMAIL=`, `BARBER_PASSWORD=`),
+so passwords never appear in commands or chat. Run `logout` (or `--fresh`)
+before switching roles. Do not create accounts on the shared Supabase project
+just to test.
 
 ## Checks
 

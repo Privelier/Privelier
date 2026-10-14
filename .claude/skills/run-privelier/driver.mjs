@@ -2,7 +2,7 @@
 // Privelier web driver: runs a sequence of steps against the Expo web build
 // in the locally installed Chrome (playwright-core, channel "chrome" — no
 // browser download). One invocation = one browser session; the Chrome
-// profile persists in .profile/ so a Supabase login survives across runs.
+// profile persists in the OS temp dir so a Supabase login survives runs.
 //
 // Usage (from the repo root):
 //   node .claude/skills/run-privelier/driver.mjs [--url http://localhost:8090] [--headed] [--fresh] STEP...
@@ -22,13 +22,16 @@
 // Selectors: "#foo" means [data-testid="foo"] (RN testID). Anything else is a
 // Playwright selector: text=Log in, role=button[name="Log in"], css, etc.
 import { chromium } from 'playwright-core';
-import { mkdirSync, rmSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const outDir = join(here, 'out');
-const profileDir = join(here, '.profile');
+// Outside the repo: Metro watches the project tree, and Chrome writes to its
+// profile constantly.
+const profileDir = join(tmpdir(), 'privelier-driver-profile');
 
 const argv = process.argv.slice(2);
 let baseUrl = process.env.PRIVELIER_URL ?? 'http://localhost:8090';
@@ -41,7 +44,22 @@ while (argv[0]?.startsWith('--')) {
   else throw new Error(`unknown flag ${flag}`);
 }
 
-const ARITY = { goto: 1, click: 1, fill: 2, press: 1, wait: 1, ss: 1, text: 0, testids: 0, eval: 1, logout: 0 };
+const ARITY = { goto: 1, click: 1, fill: 2, press: 1, wait: 1, ss: 1, text: 0, testids: 0, eval: 1, logout: 0, login: 1 };
+
+// `login customer|barber` reads credentials from the gitignored .test-accounts.env
+// so passwords never appear on the command line.
+function testAccount(role) {
+  const env = Object.fromEntries(
+    readFileSync(join(here, '.test-accounts.env'), 'utf8')
+      .split(/\r?\n/)
+      .filter((l) => /^[A-Z_]+=/.test(l))
+      .map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1).trim()]),
+  );
+  const email = env[`${role.toUpperCase()}_EMAIL`];
+  const password = env[`${role.toUpperCase()}_PASSWORD`];
+  if (!email || !password) throw new Error(`no ${role} login in .test-accounts.env`);
+  return { email, password };
+}
 const steps = [];
 while (argv.length) {
   const verb = argv.shift();
@@ -106,6 +124,22 @@ try {
       case 'eval':
         console.log(JSON.stringify(await page.evaluate(a), null, 2));
         break;
+      case 'login': {
+        const { email, password } = testAccount(a);
+        await page.goto(baseUrl, { waitUntil: 'load', timeout: 120_000 });
+        await page.locator(sel(`#role-select-${a}`)).click({ timeout: 60_000 });
+        await page.locator(sel('#auth-entry-login')).click({ timeout: 15_000 });
+        await page.locator(sel('#auth-login-email')).fill(email);
+        await page.locator(sel('#auth-login-password')).fill(password);
+        await page.locator(sel('#auth-login-submit')).click();
+        // Success unmounts the login form; an error notice means bad credentials.
+        const ok = page.locator(sel('#auth-login-email')).waitFor({ state: 'detached', timeout: 30_000 }).then(() => 'ok');
+        const bad = page.locator(sel('#auth-login-error')).waitFor({ timeout: 30_000 }).then(() => 'bad');
+        ok.catch(() => {});
+        bad.catch(() => {});
+        if ((await Promise.any([ok, bad])) === 'bad') throw new Error(`${a} login rejected`);
+        break;
+      }
       case 'logout':
         await page.evaluate(() => localStorage.clear());
         await page.reload({ waitUntil: 'load' });
