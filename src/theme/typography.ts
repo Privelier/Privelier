@@ -39,6 +39,26 @@ export const fontFamily = {
   logoSemiBold: 'Cinzel_600SemiBold', // the roundel's P — one weight step up, for stroke hierarchy
 } as const;
 
+/**
+ * Type scale: every text size in the app is one of these roles. Sizes and line
+ * heights travel together so a screen never picks them separately. 12 is the
+ * floor — anything smaller is unreadable on a phone and breaks large-text mode.
+ * Pair a role with a family from `fontFamily`; roles carry no weight.
+ */
+export const typeScale = {
+  display: { fontSize: 40, lineHeight: 48 },
+  title1: { fontSize: 30, lineHeight: 38 },
+  title2: { fontSize: 24, lineHeight: 31 },
+  title3: { fontSize: 20, lineHeight: 26 },
+  headline: { fontSize: 18, lineHeight: 24 },
+  bodyLarge: { fontSize: 16, lineHeight: 24 },
+  body: { fontSize: 14, lineHeight: 21 },
+  secondary: { fontSize: 13, lineHeight: 19 },
+  caption: { fontSize: 12, lineHeight: 17 },
+} as const satisfies Record<string, Pick<TextStyle, 'fontSize' | 'lineHeight'>>;
+
+export type TypeRole = keyof typeof typeScale;
+
 /** Lining, fixed-width figures keep prices, times and dashboard values aligned. */
 export const numericText: TextStyle = {
   fontFamily: fontFamily.bodySemiBold,

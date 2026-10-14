@@ -31,6 +31,7 @@ import { AuthProviderLogo } from '../../shared/components/AuthProviderLogo';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/useTheme';
 import { radius, space } from '../../theme/spacing';
+import { typeScale } from '../../theme/typography';
 import { Notice as SharedNotice } from '../../shared/components/Notice';
 import { BackButton } from '../../shared/components/ScreenBackHeader';
 
@@ -101,8 +102,8 @@ const shellStyles = StyleSheet.create({
   flex: { flex: 1 },
   content: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 12, paddingBottom: 32 },
   heading: { marginTop: 24, marginBottom: 32 },
-  title: { fontSize: 30, marginBottom: 8 },
-  subtitle: { fontSize: 15, lineHeight: 22 },
+  title: { ...typeScale.title1, marginBottom: space.sm },
+  subtitle: typeScale.bodyLarge,
   backLink: { alignSelf: 'flex-start' },
 });
 
@@ -233,18 +234,18 @@ export function FormTextField({
 const fieldStyles = StyleSheet.create({
   field: { marginBottom: 20 },
   labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  label: { fontSize: 14, letterSpacing: 0 },
-  optional: { fontSize: 12 },
+  label: { ...typeScale.body, letterSpacing: 0 },
+  optional: typeScale.caption,
   inputRow: {
     minHeight: 56,
     borderRadius: 14,
     borderWidth: 0.5,
     paddingHorizontal: space.base,
   },
-  input: { flex: 1, fontSize: 16, paddingVertical: 10 },
+  input: { flex: 1, fontSize: typeScale.bodyLarge.fontSize, paddingVertical: 10 },
   inputMultiline: { minHeight: 96, textAlignVertical: 'top' },
-  toggle: { fontSize: 14, marginLeft: 12 },
-  meta: { fontSize: 13, marginTop: 6, lineHeight: 18 },
+  toggle: { ...typeScale.body, marginLeft: space.md },
+  meta: { ...typeScale.secondary, marginTop: 6 },
 });
 
 // ---------------------------------------------------------------------------
@@ -360,7 +361,7 @@ const buttonStyles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 52,
   },
-  secondaryLabel: { fontSize: 16 },
+  secondaryLabel: { fontSize: typeScale.bodyLarge.fontSize },
   oauth: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -371,9 +372,9 @@ const buttonStyles = StyleSheet.create({
     paddingVertical: 16,
     minHeight: 52,
   },
-  oauthLabel: { fontSize: 15 },
+  oauthLabel: { fontSize: typeScale.bodyLarge.fontSize },
   link: { alignSelf: 'center', paddingVertical: 8 },
-  linkLabel: { fontSize: 14 },
+  linkLabel: typeScale.body,
 });
 
 // ---------------------------------------------------------------------------

@@ -3,7 +3,8 @@ import { getAppLanguage } from './shared/locale';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from './theme/useTheme';
-import { radius } from './theme/spacing';
+import { HAIRLINE, radius, space } from './theme/spacing';
+import { typeScale } from './theme/typography';
 import Brandmark from './shared/components/Brandmark';
 import type { Role } from './types';
 
@@ -102,31 +103,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   subtitle: {
-    fontSize: 15,
-    marginTop: 16,
+    ...typeScale.bodyLarge,
+    marginTop: space.base,
     textAlign: 'center',
   },
   optionList: {
-    gap: 12,
+    gap: space.md,
   },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 0.5,
+    borderWidth: HAIRLINE,
     borderRadius: radius.xl,
-    paddingVertical: 20,
-    paddingHorizontal: 20,
+    paddingVertical: space.lg,
+    paddingHorizontal: space.lg,
   },
   optionText: {
     flex: 1,
-    marginRight: 12,
+    marginRight: space.md,
   },
   optionLabel: {
-    fontSize: 16,
-    marginBottom: 4,
+    ...typeScale.bodyLarge,
+    marginBottom: space.xs,
   },
   optionDescription: {
-    fontSize: 13,
+    ...typeScale.secondary,
   },
 });

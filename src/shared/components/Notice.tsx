@@ -13,6 +13,7 @@
  */
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { typeScale } from '../../theme/typography';
 import { useTheme } from '../../theme/useTheme';
 import { HAIRLINE, radius, space } from '../../theme/spacing';
 
@@ -63,5 +64,5 @@ const styles = StyleSheet.create({
     paddingVertical: space.md, // 12
     paddingHorizontal: 14, // matches the reviews/booking reference bar
   },
-  text: { fontSize: 14, lineHeight: 20 },
+  text: typeScale.body,
 });

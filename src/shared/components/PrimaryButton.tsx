@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Animated from 'react-native-reanimated';
 import { radius, space } from '../../theme/spacing';
+import { typeScale } from '../../theme/typography';
 import { useTheme } from '../../theme/useTheme';
 import { usePressFeedback } from '../motion';
 
@@ -89,5 +90,6 @@ const styles = StyleSheet.create({
   },
   fullWidth: { width: '100%' },
   disabled: { opacity: 0.6 },
-  label: { fontSize: 16 },
+  // Size only: a line height here would add to the button's own padding.
+  label: { fontSize: typeScale.bodyLarge.fontSize },
 });
