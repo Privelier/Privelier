@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { AccessibilityInfo } from 'react-native';
+import { AccessibilityInfo, Platform } from 'react-native';
 
 /**
  * One app-wide Reduce Transparency subscription shared by every glass
@@ -20,6 +20,8 @@ function publish(next: boolean) {
 function start() {
   if (started) return;
   started = true;
+  // react-native-web has no Reduce Transparency API; calling it throws.
+  if (Platform.OS === 'web') return;
   void AccessibilityInfo.isReduceTransparencyEnabled().then(publish).catch(() => {});
   AccessibilityInfo.addEventListener('reduceTransparencyChanged', publish);
 }
