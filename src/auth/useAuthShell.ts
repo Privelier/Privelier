@@ -23,7 +23,7 @@ import { supabase } from '../../lib/supabase';
 import { acceptCurrentLegalConsent, ensureProfile, ensureProfileFromForm, signOut, syncLegalConsent } from './authService';
 import type { LegalConsentView } from './screens/LegalConsentGateScreen';
 import { applyAuthCallbackUrl, isOAuthSessionActive } from './deepLink';
-import type { AuthFailure } from './errors';
+import { failure, type AuthFailure } from './errors';
 import type { EnsureProfileResult, ProfilePrefill, SetupFormFields } from './types';
 import type { UsersRow } from '../types';
 
@@ -78,11 +78,16 @@ export function useAuthShell(): AuthShell {
   useEffect(() => {
     let active = true;
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (!active) return;
-      setSession(data.session ?? null);
-      setRestoring(false);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data }) => data.session ?? null)
+      // A failed restore must never leave the app on the splash screen.
+      .catch(() => null)
+      .then((restored) => {
+        if (!active) return;
+        setSession(restored);
+        setRestoring(false);
+      });
 
     const { data: subscription } = supabase.auth.onAuthStateChange((event, nextSession) => {
       // Synchronous state updates ONLY in this callback.
@@ -175,9 +180,12 @@ export function useAuthShell(): AuthShell {
   useEffect(() => {
     if (restoring || userId === null || profile !== null) return;
     let cancelled = false;
-    ensureProfile().then((result) => {
-      if (!cancelled) applyEnsureResult(result);
-    });
+    ensureProfile()
+      // An unexpected throw shows the retryable failure, not an endless spinner.
+      .catch(() => failure('network'))
+      .then((result) => {
+        if (!cancelled) applyEnsureResult(result);
+      });
     return () => {
       cancelled = true;
     };
@@ -215,12 +223,14 @@ export function useAuthShell(): AuthShell {
   useEffect(() => {
     if (profileId === null || consent.kind !== 'checking') return;
     let cancelled = false;
-    syncLegalConsent(profileId, formConsentRef.current || metadataConsent).then((result) => {
-      if (cancelled) return;
-      if (result === 'current') setConsent({ kind: 'current' });
-      else if (result === 'required') setConsent({ kind: 'required' });
-      else setConsent({ kind: 'failure', message: result.message });
-    });
+    syncLegalConsent(profileId, formConsentRef.current || metadataConsent)
+      .catch(() => failure('network'))
+      .then((result) => {
+        if (cancelled) return;
+        if (result === 'current') setConsent({ kind: 'current' });
+        else if (result === 'required') setConsent({ kind: 'required' });
+        else setConsent({ kind: 'failure', message: result.message });
+      });
     return () => {
       cancelled = true;
     };

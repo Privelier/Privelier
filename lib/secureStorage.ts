@@ -40,7 +40,16 @@ class LargeSecureStore {
     if (!encrypted) {
       return null;
     }
-    return this.decrypt(key, encrypted);
+    try {
+      return await this.decrypt(key, encrypted);
+    } catch {
+      // The key material is unreadable (e.g. Android Keystore keys are not
+      // restored with an app backup). supabase-js does not catch storage
+      // errors, so throwing here would hold the splash screen forever.
+      // Drop the unusable session; the user simply signs in again.
+      await this.removeItem(key).catch(() => {});
+      return null;
+    }
   }
 
   async removeItem(key: string) {
