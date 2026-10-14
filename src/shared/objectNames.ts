@@ -3,7 +3,7 @@
  * two upload paths (portfolio images + verification documents) that previously
  * each carried an identical `Math.random()`-based helper.
  *
- * WHY A CSPRNG (portfolio security finding L2, 2026-07-14): `Math.random()` is
+ * WHY A CSPRNG: `Math.random()` is
  * not cryptographically strong. On the PUBLIC `portfolio` bucket the object name
  * is the ONLY barrier against an unauthenticated caller guessing/enumerating an
  * image URL, so its random segment must be unguessable. The private

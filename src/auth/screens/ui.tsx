@@ -5,7 +5,7 @@
  * Brand rules applied: flat design, 0.5px borders, brass accent restricted to
  * the primary CTA and active states, sentence case copy, serif headings.
  *
- * Visual pass (2026-07-09): headings moved to the editorial medium-weight
+ * Visual language: headings moved to the editorial medium-weight
  * serif, back navigation switched to the icon-circle button, and form inputs
  * switched from boxed fields to hairline-underline fields (brass on focus) —
  * matching the pattern already applied to Studio/Inbox/Account-section and

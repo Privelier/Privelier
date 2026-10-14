@@ -1,7 +1,6 @@
 /**
- * Pure realtime-merge reducer for the BOOKINGS table (build-order step
- * 13-14, the app's FIRST realtime subscription — chat in step 15-16 copies
- * this shape).
+ * Pure realtime-merge reducer for the BOOKINGS table (messageRealtime.ts
+ * mirrors this shape).
  *
  * This module is deliberately side-effect free and framework-free so it can
  * be unit-tested in isolation. The React subscription that feeds it lives in

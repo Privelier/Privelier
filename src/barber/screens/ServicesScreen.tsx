@@ -1,14 +1,13 @@
 /**
- * Barber "add a service" + manage-services screen (build-order step 7-8).
+ * Barber "add a service" + manage-services screen.
  *
  * Lists the barber's own services and lets them create/edit/delete a service
- * via the Stage 4 data layer (servicesData.ts). All authorization is enforced
+ * via the data layer (servicesData.ts). All authorization is enforced
  * server-side by RLS; this screen only does client-side input validation
  * (non-empty name, price >= 0, duration > 0) plus a soft, non-blocking
- * duplicate-name warning (duplicate names are allowed at the DB level per the
- * Stage 2 architect review).
+ * duplicate-name warning (duplicate names are allowed at the DB level).
  *
- * Visual pass (2026-07-09): restyled to the Lovable prototype's form look —
+ * Visual language: styled to the Lovable prototype's form look —
  * hairline-underline inputs (brass on focus), a full-width brass submit
  * button, and editorial serif section headers — matching the pattern already
  * used on the Studio/Inbox/Account-section screens. No behavior, validation,
@@ -450,8 +449,7 @@ export default function ServicesScreen({ navigation }: Props) {
                 style={({ pressed }) => (pressed ? { opacity: pressOpacity.soft } : null)}
               >
                 {/* Plain, non-brass — brass is rationed for the app's genuinely
-                    active/live states, not a repeated per-row link (Step-18
-                    Ultra pass, increment 6). */}
+                    active/live states, not a repeated per-row link. */}
                 <Text style={[styles.rowActionText, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>
                   {isDe() ? 'Bearbeiten' : 'Edit'}
                 </Text>

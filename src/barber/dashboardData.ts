@@ -1,5 +1,5 @@
 /**
- * Barber Studio dashboard data layer (build-order step 17, last sub-feature).
+ * Barber Studio dashboard data layer.
  *
  * Booking analytics arrive as a bounded result from a barber-scoped Postgres
  * RPC; setup sections reuse the same owner-scoped reads as the relevant tabs.

@@ -1,5 +1,5 @@
 /**
- * Review submission (build-order step 18) — reached from a completed booking's
+ * Review submission — reached from a completed booking's
  * Past card on the Bookings tab.
  *
  * The customer picks a 1–5 star rating (required) and an optional comment, then

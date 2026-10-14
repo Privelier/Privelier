@@ -1,6 +1,6 @@
 /**
- * Barber settings (Wave 3/7): the Barber app had no account surface, so
- * legal access, help, sign-out and account deletion had no home. Reached from
+ * Barber settings: the home for legal access, help, sign-out and account
+ * deletion. Reached from
  * Studio without replacing any of the five role-specific tabs.
  */
 import { useEffect, useState } from 'react';

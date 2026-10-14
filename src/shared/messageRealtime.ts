@@ -1,7 +1,6 @@
 /**
- * Pure realtime-merge reducer for the MESSAGES table (build-order step
- * 15-16). This is the chat copy of `bookingRealtime.ts` — the step 13-14
- * reference architecture — with the same contract:
+ * Pure realtime-merge reducer for the MESSAGES table. This is the chat copy
+ * of `bookingRealtime.ts`, with the same contract:
  *
  * CONTRACT — idempotency is the whole point:
  * Re-applying the SAME event yields an equal list, so the realtime echo of a

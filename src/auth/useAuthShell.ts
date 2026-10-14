@@ -1,5 +1,5 @@
 /**
- * Session-driven root state machine (Contract A, build-order step 5).
+ * Session-driven root state machine (Contract A).
  *
  * Drives the single root switch in App.tsx over (session, profileRow):
  *   RESTORING → UNAUTHENTICATED | PROVISIONING → AUTHENTICATED
@@ -48,7 +48,7 @@ export interface AuthShell {
   retryProvisioning: () => void;
   /** Submit the finish-setup form ('needs_setup_form' path). */
   submitSetupForm: (fields: SetupFormFields) => Promise<EnsureProfileResult>;
-  /** Real sign-out — replaces the step-4 pre-auth "exit role" behavior. */
+  /** Real sign-out. */
   signOutNow: () => void;
   finishPasswordRecovery: () => void;
   dismissPasswordRecovery: () => void;

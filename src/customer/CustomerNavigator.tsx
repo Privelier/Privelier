@@ -24,7 +24,7 @@ export type CustomerStackParamList = {
   AccountSection: { section: AccountSectionKey };
   EditProfile: undefined;
   Legal: { document: LegalDocument };
-  // Booking flow (build-order step 11-12): DateTime -> Location -> Confirm,
+  // Booking flow: DateTime -> Location -> Confirm,
   // each screen carrying forward everything the next one needs so nothing
   // has to be re-fetched mid-flow. barberName rides along from
   // BarberProfileScreen (already loaded there) purely to avoid an extra
@@ -45,14 +45,14 @@ export type CustomerStackParamList = {
     time: string;
     location: string;
   };
-  // Chat (build-order step 15-16): the Inbox thread row carries the room
+  // Chat: the Inbox thread row carries the room
   // plus its already-loaded display context so the conversation screen
   // never re-fetches what the list already knew. title = barber name,
   // subtitle = service context (both best-effort strings, prepared by the
   // Inbox row).
   Conversation: { room: ChatRoomRow; title: string; subtitle: string | null; counterpart?: { id: string; name: string | null; profile_image: string | null } | null };
   NotificationCenter: undefined;
-  // Review submission (build-order step 18): reached from a completed booking's
+  // Review submission: reached from a completed booking's
   // Past card on the Bookings tab. barberName/serviceName ride along (already
   // loaded on that card) purely for the summary; barberId is passed to the
   // write but is NOT trusted — the 0022 RLS predicate re-checks the whole

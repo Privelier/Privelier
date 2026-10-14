@@ -1,5 +1,5 @@
 /**
- * Barber conversation data layer (build-order step 15-16). Mirrors the
+ * Barber conversation data layer. Mirrors the
  * customer module — RLS does all authorization (`messages_select_participants`
  * / `messages_insert_participants`); messages are immutable; rooms are
  * created server-side by trg_create_chat_room_for_booking (migration 0013).

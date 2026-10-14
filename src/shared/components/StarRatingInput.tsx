@@ -1,5 +1,5 @@
 /**
- * StarRatingInput — interactive 1–5 star picker (build-order step 18, reviews).
+ * StarRatingInput — interactive 1–5 star picker.
  *
  * The app's first rating INPUT (design C9). Used by the customer
  * ReviewSubmitScreen. Each star is an independent touch target: tapping star N

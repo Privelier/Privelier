@@ -43,7 +43,7 @@ export async function fetchOwnBarberProfile(
 }
 
 /**
- * Update the signed-in barber's own bio (build-order step 17, bio-edit run).
+ * Update the signed-in barber's own bio.
  * Per architect-review C1/C2:
  * - Writes ONLY `bio` — never the admin-owned columns (verified/rating/
  *   verification_status are trigger-frozen anyway) nor any identity column.
@@ -83,7 +83,7 @@ export async function updateOwnBio(userId: string, bio: string): Promise<UpdateB
 
 /**
  * The signed-in barber's verification request, if any (newest first if
- * several exist). Read-only — submitting documents is build-order step 17;
+ * several exist). Read-only — submitting documents lives in verificationData.ts;
  * reviewing them is the founders', via the dashboard, never the app's.
  */
 export async function fetchOwnVerificationRequest(

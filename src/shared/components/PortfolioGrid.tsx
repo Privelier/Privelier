@@ -1,7 +1,7 @@
 /**
  * PortfolioGrid — the shared two-column layout container for portfolio tiles.
  *
- * An "ultra component" in the CalendarDateStrip lineage: pure layout, no data,
+ * Pure layout, no data,
  * no theme colour. It owns exactly one thing — the row/wrap/gap flow and the
  * two-column tile-width contract — and exports `portfolioTileStyle` so every
  * tile that lives in this flow (the shared PortfolioTile, plus the barber-only

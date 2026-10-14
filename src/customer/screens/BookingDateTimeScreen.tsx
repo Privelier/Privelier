@@ -9,7 +9,7 @@
  * slots for each of the 14-day lookahead and runs deriveAvailableSlots for
  * every one of them up front. Dates with no candidate slot before bookings
  * are subtracted skip their busy-slot call entirely (identical result, fewer
- * round-trips — founder speed rule, 2026-10-11), and all busy intervals come
+ * round-trips), and all busy intervals come
  * from ONE get_barber_busy_slots_range read (migration 0041), with the
  * per-date RPC kept only as a fallback. Every date in the lookahead is always shown; a date whose
  * computed candidate list is empty is visually disabled, never hidden.
@@ -27,8 +27,7 @@
  * failure of the single listBarberAvailability call surfaces as the
  * page-level error notice.
  *
- * UI (Ultra rebuild 2026-07-13): the date picker is the reusable
- * CalendarDateStrip ultra-component; time slots are grouped by part of day
+ * UI: the date picker is the reusable CalendarDateStrip; time slots are grouped by part of day
  * (morning / afternoon / evening) to chunk choice (Hick's Law); and the
  * current selection is echoed above the Continue bar so the customer never
  * has to hold it in their head (recognition over recall). Behaviour, data

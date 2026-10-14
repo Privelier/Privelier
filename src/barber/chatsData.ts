@@ -2,13 +2,12 @@
  * Barber chats data layer (Chats tab of the UI rebuild).
  *
  * Read-only mirror of the customer inbox data layer: sending messages and
- * Realtime subscriptions are build-order step 15-16. RLS
+ * Realtime subscriptions live in the conversation modules. RLS
  * (`chat_rooms_select_participants` / `messages_select_participants`)
  * scopes every read to the caller's own rooms.
  *
  * No counterpart identity: users RLS is own-row-only, so a barber cannot
- * read the customer's name/photo (same gap as the Requests tab, tracked
- * for step 13-14 in CLAUDE.md). Threads carry `barber: null` and the
+ * read the customer's name/photo (same gap as the Requests tab). Threads carry `barber: null` and the
  * screen leads with the booking's service instead.
  */
 import { supabase } from '../../lib/supabase';

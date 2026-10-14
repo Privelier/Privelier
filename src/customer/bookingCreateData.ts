@@ -1,5 +1,5 @@
 /**
- * Booking creation (build-order step 11-12). Kept separate from the
+ * Booking creation. Kept separate from the
  * existing read-only src/customer/bookingsData.ts, whose own header
  * comment explicitly says creating bookings does NOT live there.
  *

@@ -1,6 +1,5 @@
 /**
- * Public result types for the barber services/availability data layer
- * (build-order step 7-8). Every service function returns a discriminated
+ * Public result types for the barber data layer. Every service function returns a discriminated
  * union the UI can switch on; nothing here ever carries raw server error
  * text.
  */
@@ -20,7 +19,7 @@ import type { ConversationCursor } from '../shared/conversationPagination';
 import type { BarberDataFailure } from './errors';
 
 // ---------------------------------------------------------------------------
-// Portfolio (public.portfolio, read-only until step 17)
+// Portfolio (public.portfolio)
 // ---------------------------------------------------------------------------
 
 export type ListOwnPortfolioResult =
@@ -58,7 +57,7 @@ export type DeletePortfolioImageResult =
   | BarberDataFailure;
 
 // ---------------------------------------------------------------------------
-// Chats (public.chat_rooms + public.messages, read-only until step 15-16)
+// Chats (public.chat_rooms + public.messages)
 // ---------------------------------------------------------------------------
 
 export type OwnChatsViewResult =
@@ -66,7 +65,7 @@ export type OwnChatsViewResult =
   | BarberDataFailure;
 
 // ---------------------------------------------------------------------------
-// Conversation (public.messages, build-order step 15-16)
+// Conversation (public.messages)
 // ---------------------------------------------------------------------------
 
 export type FetchConversationResult =
@@ -98,7 +97,7 @@ export type SendMessageResult =
   | BarberDataFailure;
 
 // ---------------------------------------------------------------------------
-// Incoming requests (public.bookings, read-only until step 13-14)
+// Incoming requests (public.bookings)
 // ---------------------------------------------------------------------------
 
 /**
@@ -155,7 +154,7 @@ export type FetchOwnBarberProfileResult =
   | BarberDataFailure;
 
 /**
- * Result of writing the barber's own bio (build-order step 17, bio-edit run).
+ * Result of writing the barber's own bio.
  * `profile` is the freshly-updated row. 'not_found' means the update matched
  * no visible row (defensive — the row always exists for a barber; RLS would
  * also hide a non-owner's row, indistinguishable by design). An over-length
@@ -167,7 +166,7 @@ export type UpdateBioResult =
   | { status: 'not_found' }
   | BarberDataFailure;
 
-/** `request: null` = no documents submitted yet (expected until step 17). */
+/** `request: null` = no documents submitted yet. */
 export type FetchOwnVerificationRequestResult =
   | { status: 'ok'; request: VerificationRequestRow | null }
   | BarberDataFailure;
@@ -309,7 +308,7 @@ export interface BarberDashboardAnalytics {
 /**
  * Per-item readiness state. `in_progress` is the deliberate calm state for a
  * verification still under manual review — it is NEVER rendered as the
- * barber's fault (founder decision 2026-07-14). `attention` is for a
+ * barber's fault. `attention` is for a
  * rejected verification (the one item that genuinely needs the barber to act).
  */
 export type ReadinessState = 'complete' | 'incomplete' | 'in_progress' | 'attention' | 'unavailable';
@@ -323,8 +322,7 @@ export interface ReadinessItem {
 
 /**
  * "Readiness to go live" — NOT a score. Six items: services, availability,
- * location, portfolio, bio, verification (bio was re-added 2026-07-15 once the bio-edit
- * screen shipped). `isLive` is true only when ALL items are complete — this is
+ * location, portfolio, bio, verification. `isLive` is true only when ALL items are complete — this is
  * the meter's soft "profile fully set up" notion, not the literal search gate
  * (the DB gates customer visibility on approved verification alone). A barber
  * can therefore be searchable while the meter still nudges an unset bio.

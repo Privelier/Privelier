@@ -4,11 +4,11 @@
  * bar, name + verified badge + meta overlaid on a flat scrim), bio with
  * service-name chips, and a Services / Portfolio / Reviews tab strip.
  *
- * Same step 9-10 data layer as before (getBarberProfile +
+ * Uses the discovery data layer (getBarberProfile +
  * listServicesForBarber); rendering differences from the prototype are all
  * data-honesty ones:
  * - services have no description column → name + "N min · €X" only;
- * - the per-row Book button now navigates into the step 11-12 booking flow
+ * - the per-row Book button navigates into the booking flow
  *   (BookingDateTime -> BookingLocation -> BookingConfirm), carrying
  *   barberId/barberName/the full service row forward so those screens never
  *   need to re-fetch what is already loaded here;

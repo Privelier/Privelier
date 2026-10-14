@@ -1,7 +1,7 @@
 /**
  * Central mapping from PostgREST (supabase.from(...)) errors to a closed set
  * of typed codes with user-facing copy, for the barber services/availability
- * data layer (build-order step 7-8).
+ * data layer.
  *
  * Mirrors src/auth/errors.ts: the UI only ever sees a BarberDataFailure with
  * a code from BarberDataErrorCode and calm, sentence-case copy. Raw
@@ -41,7 +41,7 @@ export const barberDataErrorCopy: Record<BarberDataErrorCode, string> = {
     'You can have at most 6 portfolio images. Delete one before adding another.',
 };
 
-/** German copy for the same codes (Wave 6). */
+/** German copy for the same codes. */
 export const barberDataErrorCopyDe: Record<BarberDataErrorCode, string> = {
   forbidden: 'Das ist nicht erlaubt.',
   invalid_input: 'Diese Eingabe ist nicht gültig. Prüfe die Werte (auch Tag, Datum und Uhrzeiten) und versuch es erneut.',

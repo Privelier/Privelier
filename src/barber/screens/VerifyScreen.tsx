@@ -11,7 +11,7 @@
  * the prototype's client-side status write is deliberately NOT ported, and
  * no code in this app may ever write that column.
  *
- * Document upload IS wired here (build-order step 17): each row picks an image
+ * Document upload: each row picks an image
  * (expo-image-picker), then runs the strict two-step data-layer flow —
  * uploadVerificationDocument (bytes → private bucket) then
  * submitVerificationDocument (path → own verification_requests row) — and
@@ -419,8 +419,7 @@ function DocRow({
       ) : (
         // Idle state — brass is reserved for the one genuinely active upload
         // (above); with two rows visible at once, an idle "Upload"/"Replace"
-        // affordance in brass would double it for no reason (Step-18 Ultra
-        // pass, increment 6).
+        // affordance in brass would double it for no reason.
         <View style={styles.docAction}>
           <Feather name="upload" size={14} color={colors.textSecondary} />
           <Text style={[styles.docActionText, { color: colors.textSecondary, fontFamily: fonts.body }]}>

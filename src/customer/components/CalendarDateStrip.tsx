@@ -1,7 +1,7 @@
 /**
  * CalendarDateStrip — reusable, brand-faithful horizontal date picker.
  *
- * An "ultra component": theme-aware, accessible, and test-stable. It renders a
+ * Theme-aware, accessible, and test-stable. It renders a
  * month-context label (a single month, or a "July – August 2026" range when the
  * lookahead crosses a boundary) above a horizontal strip of day chips. The first
  * date is marked "Today". Dates the caller marks disabled are shown dimmed and

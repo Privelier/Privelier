@@ -1,5 +1,5 @@
 /**
- * Auth + profile provisioning data layer (build-order step 5).
+ * Auth + profile provisioning data layer.
  *
  * Implements Contract B exactly:
  * - Email confirmation is ON: signUp() returns no session and performs NO
@@ -13,7 +13,7 @@
  * - There is no client-side rollback across auth.users → users →
  *   barber_profile: recovery is detection + idempotent retry, never deletion.
  *
- * No UI in this module. Screens are built in the next pipeline stage.
+ * No UI in this module.
  */
 import type { Session } from '@supabase/supabase-js';
 import { Platform } from 'react-native';

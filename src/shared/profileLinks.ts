@@ -1,5 +1,5 @@
 /**
- * Barber profile links (Wave 5): `privelier://barber/<uuid>`.
+ * Barber profile links: `privelier://barber/<uuid>`.
  *
  * The Customer app opens the profile; if the link launched the app before
  * sign-in, the Customer navigator picks it up once it mounts after login.

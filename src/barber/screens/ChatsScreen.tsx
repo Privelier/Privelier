@@ -4,11 +4,11 @@
  * Inbox tab.
  *
  * Real data end to end via fetchOwnChatsView (RLS-scoped chat_rooms +
- * messages). No rooms exist until step 15-16 ships chat, so the empty
+ * messages). A barber with no bookings yet has no rooms, so the empty
  * state is the expected first render.
  *
  * Counterpart identity is resolved through the narrow 0012 RPC. Tapping a
- * thread opens the real conversation screen (step 15-16).
+ * thread opens the conversation screen.
  *
  * Loads on FOCUS (not mount): returning from a conversation must show the
  * fresh last-message preview, and bottom-tab screens stay mounted.

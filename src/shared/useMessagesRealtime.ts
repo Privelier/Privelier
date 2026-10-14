@@ -1,8 +1,7 @@
 /**
  * React hook wrapping a Supabase `postgres_changes` subscription on
- * `public.messages`, scoped to ONE chat room (build-order step 15-16). This
- * is the chat copy of `useBookingsRealtime.ts` — the step 13-14 reference
- * architecture — including the F1 recovery contract. Divergences from that
+ * `public.messages`, scoped to ONE chat room. This is the chat copy of
+ * `useBookingsRealtime.ts`, including the F1 recovery contract. Divergences from that
  * file are deliberate and minimal: the filter column is fixed (`chat_id`),
  * and the subscriber is a stack screen rather than a tab, but the lifecycle
  * contract is identical (the caller still drives `enabled` from focus).

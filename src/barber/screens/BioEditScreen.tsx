@@ -1,5 +1,5 @@
 /**
- * Barber "edit your bio" screen (build-order step 17, bio-edit run) — a leaf
+ * Barber "edit your bio" screen — a leaf
  * STACK screen reached from the Studio tab's Bio card. Single field: the
  * barber's own profile bio.
  *

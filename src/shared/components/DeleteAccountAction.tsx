@@ -1,5 +1,5 @@
 /**
- * "Delete account" for both apps (Wave 7; migration 0043). A destructive row
+ * "Delete account" for both apps (migration 0043). A destructive row
  * opens a confirmation sheet that states exactly what is removed; the server
  * function deletes only the signed-in account and refuses while a booking is
  * pending or accepted, which is surfaced as guidance rather than an error.

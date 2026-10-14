@@ -1,6 +1,6 @@
 /**
  * Calendar and directions actions shown in the booking detail once a booking
- * is accepted (Wave 5). Each app decides which tools apply: customers get
+ * is accepted. Each app decides which tools apply: customers get
  * "Add to calendar"; barbers also get "Directions" to the customer address.
  */
 import { Pressable, StyleSheet, Text, View } from 'react-native';

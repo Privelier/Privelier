@@ -1,6 +1,6 @@
 /**
  * Customer-facing availability/busy-slot reads for the booking flow
- * (build-order step 11-12). Does NOT reuse src/barber/availabilityData.ts's
+ * Does NOT reuse src/barber/availabilityData.ts's
  * listOwnAvailability — that one is self-scoped to the caller's own
  * barber_id under availability_write_own semantics and is the wrong tool
  * here; this module reads any barber's availability as a prospective

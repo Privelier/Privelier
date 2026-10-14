@@ -1,7 +1,6 @@
 /**
- * BackButton + ScreenBackHeader — the canonical back affordance (Step-18 Ultra
- * design pass). The 36×36 disc was byte-identical across ~8 screens; this is
- * the real deduplication.
+ * BackButton + ScreenBackHeader — the canonical back affordance, shared by
+ * every screen with a 36×36 back disc.
  *
  * `BackButton` is the atom (use it directly when a screen's header layout is
  * bespoke — e.g. a stacked title, a step indicator, or a disc floating over a
@@ -21,9 +20,7 @@ import { useGlassStyle } from './GlassSurface';
 // Theme-INDEPENDENT: a disc (or any overlay) over a photo hero must read the
 // same in both modes. Exported so any screen with its own hero — currently
 // BarberProfileScreen's title-block scrim/text — shares this ONE value
-// instead of carrying a byte-identical local copy (Step-18 Ultra pass,
-// increment-4 mop-up: this dedup was the mechanical half of the tracked
-// "shared HERO_SCRIM constant" item; unifying it with Discover's differently-
+// instead of carrying a byte-identical local copy (unifying it with Discover's differently-
 // valued trending-tile scrim, rgba(0,0,0,0.55), is a separate, real design
 // call and is deliberately NOT made here).
 export const OVER_IMAGE_BG = 'rgba(18,18,20,0.72)';

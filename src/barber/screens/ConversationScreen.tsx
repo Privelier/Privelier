@@ -1,8 +1,8 @@
 import { getAppLanguage } from '../../shared/locale';
 /**
- * Barber conversation screen (build-order step 15-16) — one chat room,
+ * Barber conversation screen — one chat room,
  * reached from a Chats thread row. Same realtime/focus/sending architecture
- * as the customer conversation screen (both copy the step 13-14 reference:
+ * as the customer conversation screen (both follow useBookingsRealtime:
  * channel-before-fetch, idempotent merge with the F2 reference bailout, F1
  * onRecovered refetch; honest pending-send bubbles, no fabricated state).
  *
@@ -239,7 +239,7 @@ function ConversationRoom({ route, navigation }: Props) {
   }, [earliestCursor, hasEarlier, room.id]);
 
   // Mark-as-read is owned by the unread provider; this screen only declares
-  // which room is being looked at (the founder's trigger: OPENING this
+  // which room is being looked at (the trigger: OPENING this
   // specific conversation, not the thread list loading).
   const { setActiveRoom } = useUnread();
 
@@ -445,7 +445,7 @@ function ConversationRoom({ route, navigation }: Props) {
               // NO manual counter-transform here — see the customer screen's
               // identical note: RN counter-flips ListEmptyComponent itself,
               // and Android's inversion is scale(-1), so a manual transform
-              // overrides it and mirrors the text (2026-07-10 fix).
+              // overrides it and mirrors the text.
               <View style={styles.empty}>
                 <Text style={styles.emptyText} testID="barber-conversation-empty">
                   {de ? 'Noch keine Nachrichten. Sag hallo.' : 'No messages yet. Say hello.'}

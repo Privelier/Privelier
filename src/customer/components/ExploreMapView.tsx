@@ -57,7 +57,7 @@ export default function ExploreMapView({
   // Camera target from the pure, tested pinBounds. Applied as DIRECT Camera
   // props, not defaultSettings: on-device (Android, v10.3) defaultSettings
   // silently failed to apply, leaving the camera at the world-view (0,0)
-  // default with the pin far off screen (founder-reported 2026-07-15).
+  // default with the pin far off screen.
   // Direct props apply on mount AND whenever the pin set changes, so filter
   // chips re-frame the map to the barbers they match. The zero-pin case
   // never reaches this component (ExploreScreen renders its map-empty state

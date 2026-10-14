@@ -1,5 +1,5 @@
 /**
- * Barber portfolio data layer (Portfolio tab, build-order step 17).
+ * Barber portfolio data layer (Portfolio tab).
  *
  * Upload/delete follow the verificationData.ts template: a two-step,
  * caller-orchestrated upload-then-write (never write a row for an object that

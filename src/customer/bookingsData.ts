@@ -1,8 +1,7 @@
 /**
  * Customer bookings data layer (Bookings tab of the UI rebuild).
  *
- * Reads only — creating bookings is build-order step 11-12 and does NOT
- * live here. Authorization is RLS's job end to end:
+ * Reads only — creating bookings lives in bookingCreateData.ts. Authorization is RLS's job end to end:
  * - `bookings` (`bookings_select_participants`): a caller only ever
  *   receives rows where they are the customer or the barber, so the plain
  *   select below needs no explicit user-id filter.
@@ -67,7 +66,7 @@ export async function fetchOwnBookingsView(): Promise<OwnBookingsViewResult> {
  * Customer cancels their own booking (-> cancelled). This single mutation
  * covers BOTH transitions the actor-aware trigger (migration 0011) allows the
  * customer: pending -> cancelled (withdraw a request the barber has not yet
- * answered — a founder-approved 2026-07-09 transition) and accepted ->
+ * answered) and accepted ->
  * cancelled (call off a confirmed booking). Authorization is entirely RLS +
  * that trigger; this issues the write and shapes the result. `.select()
  * .single()` returns the new row for optimistic reconciliation. A trigger

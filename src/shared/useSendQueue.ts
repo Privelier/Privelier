@@ -1,12 +1,11 @@
 /**
- * Send-queue hook shared by the two conversation screens (build-order step
- * 15-16). Owns the honest optimistic-send state: an in-flight send is a
+ * Send-queue hook shared by the two conversation screens. Owns the honest optimistic-send state: an in-flight send is a
  * PendingSend entry (local text + numeric key only — never a fabricated
  * row/id/timestamp), removed when the server returns the authoritative row
  * (handed to `onSent` for the caller's idempotent merge) or flipped to
  * `failed` for tap-to-retry.
  *
- * THE M1 GUARD (realtime-optimizer review, 2026-07-10): React state (`failed`
+ * THE DOUBLE-SEND GUARD: React state (`failed`
  * flags, disabled buttons) only takes effect after the next commit, so a
  * same-tick double-fire must be blocked SYNCHRONOUSLY — messages are
  * immutable and undeletable, so a duplicate insert is permanent. `inFlightRef`

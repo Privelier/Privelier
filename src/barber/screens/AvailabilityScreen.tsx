@@ -1,15 +1,15 @@
 /**
- * Barber availability-management screen (build-order step 7-8).
+ * Barber availability-management screen.
  *
  * Lists the barber's own availability windows and lets them create/edit/
- * delete a window via the Stage 4 data layer (availabilityData.ts). A window
+ * delete a window via the data layer (availabilityData.ts). A window
  * is EITHER a day-of-week OR a specific date — the UI enforces this with a
  * segmented toggle (not just the DB's chk_availability_day_or_date check),
  * so the two inputs are always mutually exclusive from the user's point of
  * view. day_of_week follows the same convention as JS Date#getDay() /
  * Postgres extract(dow): 0 = Sunday .. 6 = Saturday.
  *
- * Visual pass (2026-07-09): restyled to the Lovable prototype's form look —
+ * Visual language: styled to the Lovable prototype's form look —
  * hairline-underline inputs (brass on focus), a full-width brass submit
  * button, and editorial serif section headers — matching the pattern already
  * used on the Studio/Inbox/Account-section screens. No behavior, validation,

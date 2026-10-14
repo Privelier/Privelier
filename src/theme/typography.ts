@@ -3,9 +3,8 @@ import {
   PlayfairDisplay_700Bold,
 } from '@expo-google-fonts/playfair-display';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
-// Cinzel is the LOGOTYPE face (founder-supplied with the chosen "Signet" mark,
-// 2026-07-21). Static faces deliberately, not the variable TTF the founders
-// sent: React Native addresses fonts by family-name string, and weight
+// Cinzel is the LOGOTYPE face (the "Signet" mark). Static faces deliberately,
+// not the variable TTF: React Native addresses fonts by family-name string, and weight
 // selection inside a variable font is not reliable across iOS/Android in Expo.
 import { Cinzel_400Regular, Cinzel_600SemiBold } from '@expo-google-fonts/cinzel';
 import type { TextStyle } from 'react-native';

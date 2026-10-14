@@ -1,6 +1,6 @@
 /**
  * Block, report and account-deletion data layer shared by both apps
- * (Wave 7; migrations 0042 and 0043). Authorization lives in the database:
+ * (migrations 0042 and 0043). Authorization lives in the database:
  * - user_blocks: a user only sees, adds and removes their OWN blocks, and
  *   RESTRICTIVE policies refuse new messages/bookings across a block in
  *   either direction.

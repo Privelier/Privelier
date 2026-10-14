@@ -1,5 +1,5 @@
 /**
- * App-level unread provider hook (step 15-16 follow-on, design:
+ * App-level unread provider hook (design:
  * docs/design/step-15-16-unread-indicator-design.md). Mounted ONCE per app
  * (inside each navigator's UnreadProvider) — owns the single source of truth
  * for which rooms are unread, feeding the tab badge, the thread-list bold
@@ -26,7 +26,7 @@
  *
  * MARK-AS-READ is owned HERE, not by screens: the conversation screen only
  * declares itself active (`setActiveRoom(room.id)` on focus, null on blur).
- * The provider marks read when a room becomes active (the founder's trigger:
+ * The provider marks read when a room becomes active (the trigger:
  * opening that specific conversation) and again when an INSERT lands for the
  * active room (the user is looking at it). The written marker is
  * resolveReadMarker(now, newest known message) — see unread.ts for the
@@ -88,8 +88,8 @@ export function useUnreadThreads(): UnreadState {
   // True only while the app is genuinely in the foreground. Navigation focus
   // does NOT blur on home-button backgrounding, so without this gate a
   // pocketed phone with a conversation left open would keep marking incoming
-  // messages read — a fabricated, counterpart-visible receipt since 0017
-  // (realtime-optimizer finding M2, 2026-07-14). Only explicit
+  // messages read — a fabricated, counterpart-visible receipt since 0017.
+  // Only explicit
   // 'background'/'inactive' count as away: iOS reports 'unknown' at cold
   // start, when the app IS in front of the user.
   const appActiveRef = useRef(

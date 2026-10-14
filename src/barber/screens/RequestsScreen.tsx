@@ -1,6 +1,6 @@
 /**
  * Barber Requests tab — rebuild of the prototype's barber.requests route with
- * LIVE status transitions (build-order step 13-14).
+ * LIVE status transitions.
  *
  * A serif header + subtitle and booking-request cards (serif title, slot line,
  * location, price + status label). Real data end to end via

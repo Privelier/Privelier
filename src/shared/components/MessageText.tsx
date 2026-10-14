@@ -1,5 +1,5 @@
 /**
- * Chat message text for both conversation screens (Wave 4).
+ * Chat message text for both conversation screens.
  *
  * - Phone numbers, email addresses and web links inside a message become
  *   tappable (tel:, mailto:, https:). Only http(s) web links are opened;

@@ -1,5 +1,5 @@
 /**
- * Cross-app portfolio image read helper (build-order step 17, design D2/D6).
+ * Cross-app portfolio image read helper (design D2/D6).
  *
  * The `portfolio` bucket is PUBLIC (design D1), so an object's bytes are
  * served by a stable public URL with no auth and no expiry. The DB stores the

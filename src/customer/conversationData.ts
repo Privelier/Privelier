@@ -1,5 +1,5 @@
 /**
- * Customer conversation data layer (build-order step 15-16).
+ * Customer conversation data layer.
  *
  * Authorization is RLS end to end: `messages_select_participants` scopes the
  * read to rooms the caller belongs to, and `messages_insert_participants`

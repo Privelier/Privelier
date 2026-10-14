@@ -23,7 +23,7 @@ export type BarberStackParamList = {
   BioEdit: undefined;
   LocationEdit: undefined;
   Legal: { document: LegalDocument };
-  // Chat (build-order step 15-16): title from the Chats row (service name —
+  // Chat: title from the Chats row (service name —
   // the customer's name is unreadable list-side under users RLS; the screen
   // itself upgrades the title via the 0012 counterparts RPC).
   Conversation: { room: ChatRoomRow; title: string; subtitle: string | null; counterpart?: { id: string; name: string | null; profile_image: string | null } | null };

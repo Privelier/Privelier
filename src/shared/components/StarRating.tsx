@@ -1,5 +1,5 @@
 /**
- * StarRating — read-only 1–5 star display (build-order step 18, reviews).
+ * StarRating — read-only 1–5 star display.
  *
  * Shared by the customer BarberProfileScreen Reviews tab (per-review rows and
  * the aggregate header). Pure presentation: renders five glyphs, filled up to
@@ -13,7 +13,7 @@
  * that copy themselves (see BarberCard's RatingLine / the profile header).
  *
  * Two opt-in props keep the shared default calm while letting the one prominent
- * instance (the aggregate header) read correctly (Ultra design pass 2026-07-21):
+ * instance (the aggregate header) read correctly:
  * `emptyColor` lets a large instance use a more legible empty tone so the full
  * 5-point scale stays visible, and `importantForAccessibility` lets a header
  * that already announces "4.3, 12 reviews" hide this element's redundant

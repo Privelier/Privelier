@@ -1,7 +1,7 @@
 /**
  * PortfolioTile — the reusable, presentation-only portfolio image unit.
  *
- * An "ultra component": both apps consume it, it holds no state and calls no
+ * Both apps consume it; it holds no state and calls no
  * data layer beyond the synchronous public-URL derivation. Pass the object
  * PATH stored in `portfolio.image_url`; the tile resolves the public URL.
  *

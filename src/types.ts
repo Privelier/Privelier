@@ -101,14 +101,14 @@ export interface BookingRow {
 }
 
 /**
- * Row shape of `public.reviews` (build-order step 18). A review is allowed
+ * Row shape of `public.reviews`. A review is allowed
  * only for a completed booking the customer owns, with a non-forgeable barber
  * attribution (migration 0022's hardened `reviews_insert_own_customer`).
  * `rating` is 1–5 (DB CHECK); `comment` is optional (nullable). Reads are open
  * to every authenticated caller (`reviews_select_all`); the reviewer's first
  * name is projected separately via the `get_review_authors` RPC (0006 hides
  * `users.name` from cross-user joins). Reviews are immutable once posted
- * (founder decision D3 — no update/delete surface).
+ * (no update/delete surface).
  */
 export interface ReviewRow {
   id: string;
@@ -168,8 +168,7 @@ export interface VerificationRequestRow {
 }
 
 /**
- * The two document kinds a barber uploads for manual verification
- * (build-order step 17). Each maps to one storage filename and one writable
+ * The two document kinds a barber uploads for manual verification. Each maps to one storage filename and one writable
  * column on `verification_requests` (see src/barber/verificationData.ts). No
  * selfie / biometric kind exists — deliberate, per the hard rules.
  */
@@ -188,8 +187,7 @@ export interface ChatRoomRow {
 }
 
 /**
- * Row shape of `public.messages` (Realtime-enabled; live subscriptions are
- * build-order step 15-16). Reads gated by RLS
+ * Row shape of `public.messages` (Realtime-enabled). Reads gated by RLS
  * (`messages_select_participants` via the parent room).
  */
 export interface MessageRow {
@@ -235,7 +233,7 @@ export interface BarberDirectoryRow {
   /**
    * Since migration 0019. All directory rows are approved by construction, so
    * `verified` is expected true absent the tracked two-status drift — the
-   * Explore "Verified" chip filters on it anyway (founder decision 2026-07-15).
+   * Explore "Verified" chip filters on it anyway.
    */
   verified: boolean;
   /**

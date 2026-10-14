@@ -1,6 +1,5 @@
 /**
- * Skeleton — a flat, calm loading placeholder block (Step-18 Ultra design
- * pass, increment-4 mop-up). A single surface-coloured rectangle with a
+ * Skeleton — a flat, calm loading placeholder block. A single surface-coloured rectangle with a
  * continuous, gentle opacity pulse — no gradient sweep (the brand forbids
  * gradients), no shadow. Screens compose it into content-shaped skeletons so
  * a loading state previews its layout instead of a bare spinner.

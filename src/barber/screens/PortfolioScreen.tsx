@@ -3,7 +3,7 @@
  * route: serif header, "N of 6 — a curated set." counter, and a 2-column
  * square grid with an add tile (brass plus) while under the cap.
  *
- * Upload + delete are live (build-order step 17):
+ * Upload + delete:
  * - the add tile mirrors VerifyScreen's expo-image-picker usage — request
  *   media-library permission, launchImageLibraryAsync, then the strict
  *   two-step data-layer flow uploadPortfolioImage (bytes → PUBLIC bucket) then

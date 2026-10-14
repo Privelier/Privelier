@@ -1,5 +1,5 @@
 /**
- * Customer reviews data layer (build-order step 18).
+ * Customer reviews data layer.
  *
  * WRITE — submitReview inserts into `public.reviews` ONLY. It NEVER touches
  * `barber_profile`: the rating aggregate is server-owned, recomputed by the

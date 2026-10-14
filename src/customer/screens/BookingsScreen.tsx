@@ -1,6 +1,6 @@
 /**
  * Customer Bookings tab — rebuild of the prototype's customer.bookings route
- * with LIVE status updates (build-order step 13-14).
+ * with LIVE status updates.
  *
  * Serif header, Upcoming/Past tab strip, and booking cards (barber image +
  * name + status label, service, "Wed 8 Jul · 14:30", price, location). Real

@@ -7,8 +7,7 @@
  *
  * Honesty rules made code:
  *  - toMapPin returns null when either display coordinate is missing — a
- *    barber without location data can NEVER produce a pin (founder decision
- *    D4). The coordinates used are ONLY the offset display pair the
+ *    barber without location data can NEVER produce a pin. The coordinates used are ONLY the offset display pair the
  *    barber_directory view republishes; exact coordinates never reach the
  *    customer app at all (0019's RLS makes that structural, not a habit).
  *  - Filters only ever NARROW the RLS-authorized directory list — no filter
@@ -18,7 +17,7 @@ import type { AvailabilityRow, BarberDirectoryRow, ServiceRow } from '../types';
 
 export type ExploreFilterKey = 'all' | 'today' | 'under100' | 'saved';
 
-/** "Under €100" chip threshold (founder-specified label; strict less-than). */
+/** "Under €100" chip threshold (strict less-than). */
 export const UNDER_PRICE_THRESHOLD = 100;
 
 /**
@@ -74,7 +73,7 @@ function localDateString(now: Date): string {
  * "Available today" = the barber has working hours covering today, following
  * slots.ts's window-selection rule: specific_date rows for today's date take
  * full precedence; otherwise a recurring day_of_week row for today's weekday
- * counts. DELIBERATE approximation (documented for the founders): this does
+ * counts. DELIBERATE approximation: this does
  * not check remaining free time-of-day slots — that would need the busy-slot
  * RPC per barber per day, far too heavy for a list filter. "Has working
  * hours today", not "has a free slot right now".

@@ -1,6 +1,5 @@
 /**
- * Typing indicator over a PRIVATE Supabase Realtime broadcast channel (chat
- * follow-on, founder-directed 2026-07-14; design:
+ * Typing indicator over a PRIVATE Supabase Realtime broadcast channel (design:
  * docs/design/chat-read-receipts-typing-design-approval.md, decisions D4 +
  * contract C4). Topic `typing:{chat_id}`; authorization is RLS on
  * `realtime.messages` (migration 0017) — participants only, both directions.

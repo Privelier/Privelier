@@ -1,8 +1,7 @@
 /**
  * BookingStepIndicator — the "•••  Step N of 3" marker shared by the three
  * booking-flow step screens (DateTime / Location / Confirm), which each carried
- * a byte-identical copy of this markup + styles. Real triplication, extracted
- * in the Step-18 Ultra pass (increment 5); it rides each screen's
+ * a byte-identical copy of this markup + styles, so it lives here; it rides each screen's
  * ScreenBackHeader `right` slot. No testIDs (the dots are decorative).
  */
 import { StyleSheet, Text, View } from 'react-native';

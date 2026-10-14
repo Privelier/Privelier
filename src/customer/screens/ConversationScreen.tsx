@@ -1,10 +1,10 @@
 import { getAppLanguage } from '../../shared/locale';
 /**
- * Customer conversation screen (build-order step 15-16) — one chat room,
+ * Customer conversation screen — one chat room,
  * reached from an Inbox thread row. Serif header (barber name + service
  * context), inverted message list, input row with send.
  *
- * REALTIME + FOCUS (copies the step 13-14 reference architecture verbatim):
+ * REALTIME + FOCUS (same architecture as useBookingsRealtime):
  * - Channel gated on focus via useFocusEffect, opened BEFORE the baseline
  *   fetch so no message is missed in the gap window; torn down on blur.
  * - Snapshot rows and stream events both fold through applyMessageChange
@@ -23,8 +23,7 @@ import { getAppLanguage } from '../../shared/locale';
  * plus the in-flight key guard inside useSendQueue — React state alone
  * commits too late, and a duplicate message insert would be permanent.
  *
- * READ RECEIPTS + TYPING are real as of the 2026-07-14 founder decision
- * (migration 0017): the receipt comes from the counterpart's own
+ * READ RECEIPTS + TYPING (migration 0017): the receipt comes from the counterpart's own
  * `chat_read_state.last_read_at` via useReadReceipt, and typing from a
  * private `typing:{chat_id}` broadcast via useTypingBroadcast — both are
  * observed state, never fabricated. PRESENCE remains unbuilt.
@@ -241,7 +240,7 @@ function ConversationRoom({ route, navigation }: Props) {
   }, [earliestCursor, hasEarlier, room.id]);
 
   // Mark-as-read is owned by the unread provider; this screen only declares
-  // which room is being looked at (the founder's trigger: OPENING this
+  // which room is being looked at (the trigger: OPENING this
   // specific conversation, not the thread list loading).
   const { setActiveRoom } = useUnread();
 
@@ -446,8 +445,7 @@ function ConversationRoom({ route, navigation }: Props) {
               // own inversion style onto ListEmptyComponent, and on Android
               // that inversion is scale(-1) (both axes), not scaleY(-1) — a
               // manual transform overrides RN's counter-flip (same style key)
-              // and mirrors the text horizontally. Founder-reported bug,
-              // fixed 2026-07-10.
+              // and mirrors the text horizontally.
               <View style={styles.empty}>
                 <Text style={styles.emptyText} testID="customer-conversation-empty">
                   {de ? 'Noch keine Nachrichten. Sag hallo.' : 'No messages yet. Say hello.'}

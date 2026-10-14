@@ -7,8 +7,7 @@
  *
  * The scale is the canonical 4-based rhythm — every margin, padding and gap in
  * the app should resolve to one of these values, never an arbitrary number.
- * This is what makes spacing read as "one system" across screens (the Step-18
- * Ultra design pass, 2026-07-21).
+ * This is what makes spacing read as "one system" across screens.
  *
  * ELEVATION PHILOSOPHY (authoritative brand): depth is expressed with 0.5px
  * hairlines and surface-colour contrast, NEVER drop shadows or gradients. There
@@ -16,7 +15,7 @@
  * the flat brand. Separation comes from `border` (hairline) + `surface` vs
  * `background`.
  *
- * Exception (2026-10-11): glass components carry their own sheen gradient and
+ * Exception: glass components carry their own sheen gradient and
  * inset light edge (see shared/components/GlassSurface.tsx). Screens stay flat.
  */
 

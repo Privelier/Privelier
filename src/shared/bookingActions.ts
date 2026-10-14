@@ -1,5 +1,5 @@
 /**
- * Device actions for an accepted booking (Wave 5), shared by both apps.
+ * Device actions for an accepted booking, shared by both apps.
  *
  * - Add to calendar opens the system "new event" sheet prefilled with the
  *   appointment (expo-calendar legacy dialog). The user confirms in the OS

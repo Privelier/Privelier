@@ -1,5 +1,5 @@
 /**
- * Client-side form validation for the auth screens (build-order step 5).
+ * Client-side form validation for the auth screens.
  * Copy is brand voice: sentence case, calm, no exclamation marks.
  */
 
@@ -7,7 +7,7 @@ import { getAppLanguage } from '../../shared/locale';
 
 /**
  * Supabase's server-side default minimum is 6 characters; we deliberately
- * enforce 8 client-side for a premium product (recorded step-5 decision).
+ * enforce 8 client-side for a premium product.
  * The server remains the authority — this is UX guidance, not security.
  */
 export const PASSWORD_MIN_LENGTH = 8;

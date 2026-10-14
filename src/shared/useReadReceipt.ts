@@ -1,6 +1,6 @@
 /**
  * Read-receipt hook: the counterpart's `last_read_at` for ONE chat room,
- * kept live (chat follow-on, founder-directed 2026-07-14; design:
+ * kept live (design:
  * docs/design/chat-read-receipts-typing-design-approval.md).
  *
  * Copies the house realtime architecture (contract C2): focus-gated channel,

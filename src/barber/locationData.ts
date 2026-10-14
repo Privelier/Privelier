@@ -13,7 +13,7 @@
  *    sends them, and nothing here could make a client-supplied value stick.
  *  - Clearing the location is a first-class state: address/coords all NULL;
  *    the trigger then NULLs the display coords and the barber's pin
- *    disappears from Explore (founder decision D4 — never a stale pin).
+ *    disappears from Explore (never a stale pin).
  */
 import { supabase } from '../../lib/supabase';
 import type { BarberLocationRow } from '../types';

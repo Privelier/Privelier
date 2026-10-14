@@ -1,6 +1,5 @@
 /**
- * Public result types for the customer discovery data layer (build-order
- * step 9-10). Every function returns a discriminated union the UI can
+ * Public result types for the customer data layer. Every function returns a discriminated union the UI can
  * switch on; nothing here ever carries raw server error text.
  */
 import type {
@@ -60,7 +59,7 @@ export type ListPortfolioForBarberResult =
   | CustomerDataFailure;
 
 // ---------------------------------------------------------------------------
-// Bookings (public.bookings, read-only until build-order step 11-12)
+// Bookings (public.bookings)
 // ---------------------------------------------------------------------------
 
 /**
@@ -77,7 +76,7 @@ export type OwnBookingsViewResult =
   | CustomerDataFailure;
 
 // ---------------------------------------------------------------------------
-// Availability & busy slots (build-order step 11-12 booking flow)
+// Availability & busy slots (booking flow)
 // ---------------------------------------------------------------------------
 
 export type ListBarberAvailabilityResult =
@@ -89,7 +88,7 @@ export type ListBusySlotsResult =
   | CustomerDataFailure;
 
 // ---------------------------------------------------------------------------
-// Booking creation (public.bookings insert, build-order step 11-12)
+// Booking creation (public.bookings insert)
 // ---------------------------------------------------------------------------
 
 /**
@@ -107,7 +106,7 @@ export type InsertBookingResult =
   | CustomerDataFailure;
 
 // ---------------------------------------------------------------------------
-// Booking cancellation (public.bookings status transition, step 13-14)
+// Booking cancellation (public.bookings status transition)
 // ---------------------------------------------------------------------------
 
 /**
@@ -136,7 +135,7 @@ export type RoomForBookingResult =
   | { status: 'ok'; room: ChatRoomRow | null }
   | CustomerDataFailure;
 
-// Inbox (public.chat_rooms + public.messages, read-only until step 15-16)
+// Inbox (public.chat_rooms + public.messages)
 // ---------------------------------------------------------------------------
 
 // Thread shape moved to shared/threads.ts (the barber Chats tab reuses
@@ -148,7 +147,7 @@ export type OwnInboxViewResult =
   | CustomerDataFailure;
 
 // ---------------------------------------------------------------------------
-// Conversation (public.messages, build-order step 15-16)
+// Conversation (public.messages)
 // ---------------------------------------------------------------------------
 
 export type FetchConversationResult =
@@ -180,7 +179,7 @@ export type SendMessageResult =
   | CustomerDataFailure;
 
 // ---------------------------------------------------------------------------
-// Reviews (public.reviews, build-order step 18)
+// Reviews (public.reviews)
 // ---------------------------------------------------------------------------
 
 /**

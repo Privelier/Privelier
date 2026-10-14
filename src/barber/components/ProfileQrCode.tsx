@@ -1,5 +1,5 @@
 /**
- * A real, locally generated QR code for the barber's profile link (Wave 5).
+ * A real, locally generated QR code for the barber's profile link.
  * The matrix comes from the `qrcode` library (no network), drawn as one SVG
  * path so even a dense code is a single native view.
  */

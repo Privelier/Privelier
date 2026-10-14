@@ -1,5 +1,5 @@
 /**
- * Pure unread-state logic (step 15-16 follow-on, design:
+ * Pure unread-state logic (design:
  * docs/design/step-15-16-unread-indicator-design.md). No I/O — the provider
  * hook feeds it RLS-scoped rows; these functions are the unit-tested core.
  *
@@ -59,8 +59,7 @@ export function computeUnreadRoomIds(params: {
 /**
  * The timestamp to write when marking a room read, or null for "write
  * nothing". The marker is the newest KNOWN message's server-generated
- * timestamp — never the device clock (realtime-optimizer finding M1,
- * 2026-07-14): since migration 0017 the marker is a counterpart-visible
+ * timestamp — never the device clock: since migration 0017 the marker is a counterpart-visible
  * receipt, and a device clock running AHEAD would stamp a future marker
  * that "reads" messages sent after the reader left — a fabricated receipt.
  * Pinning to the newest seen message is immune to skew in both directions:

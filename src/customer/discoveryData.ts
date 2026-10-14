@@ -1,5 +1,5 @@
 /**
- * Customer discovery data layer (build-order step 9-10).
+ * Customer discovery data layer.
  *
  * Reads rely entirely on RLS/the view's own WHERE clause for authorization:
  * - `barber_directory` (migration 0006) is pre-filtered to
@@ -15,7 +15,7 @@
  *
  * No schema changes, no availability-fetching (out of scope for this
  * feature per the backlog — availability consumption belongs to the
- * build-order step 11-12 booking flow), no screens.
+ * booking flow), no screens.
  */
 import { supabase } from '../../lib/supabase';
 import type { BarberDirectoryRow, PortfolioRow, ServiceRow } from '../types';
@@ -27,8 +27,8 @@ import type {
   ListServicesForBarberResult,
 } from './types';
 
-/** Defensive cap for the flat discovery list — not real pagination (Stage 2
- * architect-review decision: fine for MVP scale). */
+/** Defensive cap for the flat discovery list — not real pagination
+ * (fine at MVP scale). */
 const LIST_BARBERS_LIMIT = 100;
 
 /**
@@ -122,7 +122,7 @@ export async function listServicesForBarber(
 
 /**
  * A barber's portfolio images for the BarberProfileScreen Portfolio tab
- * (build-order step 17). The table's `portfolio_select_all` RLS permits any
+ * The table's `portfolio_select_all` RLS permits any
  * authenticated caller, so any barberId a customer can navigate to is safe to
  * pass. Ordered by `id` for a stable render order; the caller derives each
  * public URL via src/shared/portfolioImages.ts.

@@ -3,9 +3,9 @@
  * (Favorites, Notifications, Privacy & security, Preferences, Help center)
  * pushes this screen with its section key. Each body is a calm, honest
  * placeholder until the underlying feature exists — none of these are MVP
- * build-order items, but the rows navigating somewhere real keeps the
+ * features, but the rows navigating somewhere real keeps the
  * Account tab's structure final. Wallet/payments and gift cards are
- * deliberately absent (founder-excluded, out of MVP scope).
+ * deliberately absent (out of MVP scope).
  */
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';

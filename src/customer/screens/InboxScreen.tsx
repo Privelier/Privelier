@@ -5,14 +5,14 @@
  * compact date on the right).
  *
  * Real data end to end via fetchOwnInboxView (RLS scopes chat_rooms and
- * messages to the caller's own threads). Until step 15-16 ships chat there
- * are no rooms, so the empty state is the expected first render.
+ * messages to the caller's own threads). A customer with no bookings has no
+ * rooms, so the empty state is the expected first render.
  *
  * Honesty deviations from the prototype: no fake "online" presence dot
  * (there is no presence system), and the preview line is the real latest
  * message — falling back to "About: {service}" booking context, which is
  * all the prototype ever showed — instead of mocked message text. Tapping
- * a thread opens the real conversation screen (step 15-16), carrying the
+ * a thread opens the conversation screen, carrying the
  * row's already-loaded barber/service context as the header.
  *
  * Loads on FOCUS (not mount): returning from a conversation must show the

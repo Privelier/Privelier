@@ -15,7 +15,7 @@
  *
  * Remount stability: TOKEN_REFRESHED / USER_UPDATED never change the derived
  * phase, and each phase renders stable element types with component={} screens
- * only — navigators are never remounted by auth noise (step-4 fix preserved).
+ * only — navigators are never remounted by auth noise.
  */
 import { useCallback, type ReactElement } from 'react';
 import { StatusBar } from 'expo-status-bar';
@@ -105,7 +105,7 @@ function renderRoot(shell: AuthShell): ReactElement {
     case 'authenticated':
       // Routing authority is public.users.role — never user_metadata, never
       // which auth screen was used. "Exit" in authenticated states is a real
-      // sign-out (replaces the step-4 pre-auth exit-role behavior).
+      // sign-out.
       switch (state.profile.role) {
         case 'customer':
           return <CustomerNavigator onExit={signOutNow} />;

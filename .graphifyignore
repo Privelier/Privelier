@@ -11,7 +11,6 @@ assets/*.png
 # tree-sitter AST parsing.
 CLAUDE.md
 README.md
-src/mobile_dev_review_notes.md
 
 # Agent frameworks are operating instructions, not application architecture.
 .agents/

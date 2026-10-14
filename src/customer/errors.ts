@@ -1,7 +1,7 @@
 /**
  * Central mapping from PostgREST (supabase.from(...)) errors to a closed set
  * of typed codes with user-facing copy, for the customer discovery data
- * layer (build-order step 9-10).
+ * layer.
  *
  * Mirrors src/barber/errors.ts: the UI only ever sees a CustomerDataFailure
  * with a code from CustomerDataErrorCode and calm, sentence-case copy. Raw
@@ -47,7 +47,7 @@ export const customerDataErrorCopy: Record<CustomerDataErrorCode, string> = {
 const retryableCodes: ReadonlySet<CustomerDataErrorCode> = new Set(['network']);
 
 /** Build a typed failure for a known code. */
-/** German copy for the same codes (Wave 6). */
+/** German copy for the same codes. */
 export const customerDataErrorCopyDe: Record<CustomerDataErrorCode, string> = {
   forbidden: 'Das ist nicht erlaubt.',
   invalid_input: 'Diese Eingabe ist nicht gültig. Prüfe die Werte und versuch es erneut.',

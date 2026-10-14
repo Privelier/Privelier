@@ -1,5 +1,5 @@
 /**
- * Barber services data layer (build-order step 7-8).
+ * Barber services data layer.
  *
  * Writes rely entirely on RLS (`services_write_own`: barber_id = auth.uid()
  * AND has_role('barber')) for authorization — this module does not
@@ -8,8 +8,7 @@
  * 'forbidden' failure, never a raw Postgrest error object.
  *
  * No schema changes, no overlap/slot-computation logic, no uniqueness
- * enforcement on service name — all explicitly deferred per the Stage 2
- * architect review.
+ * enforcement on service name.
  */
 import { supabase } from '../../lib/supabase';
 import type { ServiceRow } from '../types';

@@ -1,5 +1,5 @@
 /**
- * Barber "Days off" for the next 30 days (Wave 3; migration 0046). Tapping a
+ * Barber "Days off" for the next 30 days (migration 0046). Tapping a
  * date toggles it; the change is optimistic and rolls back if the write
  * fails. The booking validator refuses requests on these dates, so a day off
  * is binding, not cosmetic. Existing bookings on a day are not cancelled —

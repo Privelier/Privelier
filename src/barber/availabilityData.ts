@@ -1,5 +1,5 @@
 /**
- * Barber availability data layer (build-order step 7-8).
+ * Barber availability data layer.
  *
  * Writes rely entirely on RLS (`availability_write_own`: barber_id =
  * auth.uid() AND has_role('barber')) for authorization — this module does
@@ -9,8 +9,7 @@
  * chk_availability_time_order: start_time < end_time) comes back as a clean
  * mapped 'invalid_input' failure — never a raw Postgres constraint message.
  *
- * No schema changes, no overlap-prevention logic — explicitly deferred to
- * the booking-flow pipeline run per the Stage 2 architect review.
+ * No overlap-prevention logic here: overlap rules belong to the booking flow.
  */
 import { supabase } from '../../lib/supabase';
 import type { AvailabilityRow } from '../types';

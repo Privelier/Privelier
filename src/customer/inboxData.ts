@@ -1,8 +1,8 @@
 /**
  * Customer inbox data layer (Inbox tab of the UI rebuild).
  *
- * Read-only: full chat (sending, Realtime subscriptions) is build-order
- * step 15-16 and does NOT live here. Authorization is RLS end to end —
+ * Read-only: full chat (sending, Realtime subscriptions) lives in
+ * conversationData.ts. Authorization is RLS end to end —
  * `chat_rooms_select_participants` / `messages_select_participants` scope
  * every read to rooms the caller participates in, so no explicit user-id
  * filters are needed.
@@ -23,7 +23,7 @@ export { buildInboxThreads };
 
 /**
  * Defensive cap on the batched last-message scan. Fine while chats are
- * young (MVP scale); the step 15-16 chat pipeline owns real pagination.
+ * young (MVP scale); add real pagination when it is not.
  */
 export const MESSAGES_SCAN_LIMIT = 200;
 

@@ -4,7 +4,7 @@
  *
  * `barber` is the counterpart lookup for the CUSTOMER side (via
  * barber_directory). The barber side has no counterpart read path yet
- * (users RLS is own-row-only — gap tracked for step 13-14 in CLAUDE.md), so
+ * (users RLS is own-row-only), so
  * it passes an empty map and its threads carry `barber: null` by design.
  */
 import type {

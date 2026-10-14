@@ -1,5 +1,5 @@
 /**
- * Slot-derivation for the customer booking flow (build-order step 11-12).
+ * Slot-derivation for the customer booking flow.
  * Pure — no Supabase imports, no I/O — so it can be unit-tested with fixed
  * inputs. Algorithm is locked by design review (see
  * docs/design/step-11-12-booking-flow-design-approval.md, Decision 1); do

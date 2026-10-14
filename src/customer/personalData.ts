@@ -1,5 +1,5 @@
 /**
- * Customer favorites and saved addresses (Wave 2; migration 0045). Both are
+ * Customer favorites and saved addresses (migration 0045). Both are
  * owner-only by RLS; a favorite can only point at an approved barber, and at
  * most 10 addresses can be saved (PA002). Nothing here is visible to barbers.
  */

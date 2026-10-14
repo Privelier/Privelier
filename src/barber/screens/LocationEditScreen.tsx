@@ -12,9 +12,9 @@
  * with coordinates), so every pin on the Explore map traces back to a real
  * geocode. Clearing the field and saving removes the location entirely — the
  * 0019 trigger then NULLs the display coords and the barber's pin disappears
- * (founder decision D4: never a stale or fake pin).
+ * (never a stale or fake pin).
  *
- * Privacy (founder decision D2, consent copy is mandatory on this screen):
+ * Privacy (consent copy is mandatory on this screen):
  * customers only ever see an approximate area — the stored display
  * coordinates are offset 200–500 m server-side; the exact address and
  * coordinates never leave the barber's own row.
@@ -260,7 +260,7 @@ export default function LocationEditScreen({ navigation }: Props) {
               {isDe() ? 'Deine Basisadresse zeigt dich auf der Karte, damit Kunden in der Nähe dich finden.' : 'Your base address places you on the Explore map so nearby customers can find you.'}
             </Text>
 
-            {/* Consent copy — mandatory per founder decision D2. */}
+            {/* Consent copy — mandatory. */}
             <View
               testID="barber-location-consent"
               style={[styles.consent, { borderColor: colors.border, backgroundColor: colors.surface }]}

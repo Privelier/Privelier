@@ -1,5 +1,5 @@
 /**
- * Notice — the canonical calm feedback surface (Step-18 Ultra design pass).
+ * Notice — the canonical calm feedback surface.
  *
  * A hairline-bordered box on `surface`, tone set by `variant`: `error` (the
  * only one that interrupts as an a11y alert), `info` (a benign terminal state

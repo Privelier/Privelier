@@ -1,7 +1,6 @@
 /**
  * React hook wrapping a Supabase `postgres_changes` subscription on
- * `public.bookings` — the app's FIRST realtime channel (build-order step
- * 13-14). Chat (step 15-16) should mirror this file's shape.
+ * `public.bookings`. useMessagesRealtime mirrors this file's shape.
  *
  * WHAT IT DOES: opens ONE channel per (filterColumn, filterValue) and hands
  * every INSERT/UPDATE/DELETE to `onChange` as a normalized

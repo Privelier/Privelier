@@ -1,6 +1,5 @@
 /**
- * Pure read-receipt logic (chat follow-on, founder-directed 2026-07-14;
- * design: docs/design/chat-read-receipts-typing-design-approval.md). No I/O —
+ * Pure read-receipt logic (design: docs/design/chat-read-receipts-typing-design-approval.md). No I/O —
  * the hook feeds it RLS-scoped values; these functions are the unit-tested
  * core.
  *
@@ -11,7 +10,7 @@
  * `Date.parse` normalizes both variants to epoch ms. Millisecond truncation is
  * safe because `resolveReadMarker` (unread.ts) writes the marker as EXACTLY
  * the newest known message's server-generated `created_at` — the device clock
- * is never consulted (realtime-optimizer finding M1, 2026-07-14: since
+ * is never consulted (since
  * migration 0017 the marker is a counterpart-visible receipt, and a fast
  * device clock would fabricate one). A marker covering a message is therefore
  * `>=` its timestamp by construction, with equality the normal case.

@@ -1,5 +1,5 @@
 /**
- * Barber verification-document upload (Verify tab, build-order step 17).
+ * Barber verification-document upload (Verify tab).
  *
  * Two-step, in this exact order — orchestrated by the caller (the screen), not
  * here:
@@ -53,7 +53,7 @@ const DOC_TARGETS: Record<
 /**
  * Object names come from the shared `uniqueObjectName` (src/shared/objectNames):
  * a fresh, UNGUESSABLE name per upload. A DETERMINISTIC path plus
- * upsert would break two guarantees (security-auditor finding, Step 17 gate):
+ * upsert would break two guarantees:
  *  1. Re-queue — the DB trigger re-queues a resubmission only when the stored
  *     image-column value changes. A fixed path is byte-identical across
  *     re-uploads, so a rejected barber's resubmission would silently never

@@ -69,7 +69,7 @@ const retryableCodes: ReadonlySet<AuthErrorCode> = new Set([
 ]);
 
 /** Build a typed failure for a known code. */
-/** German copy for the same codes (Wave 6). */
+/** German copy for the same codes. */
 export const authErrorCopyDe: Record<AuthErrorCode, string> = {
   email_in_use: 'Diese E-Mail-Adresse wird bereits verwendet. Melde dich stattdessen an.',
   weak_password: 'Dieses Passwort ist zu schwach. Wähle ein längeres, weniger übliches.',
