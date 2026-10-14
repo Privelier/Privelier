@@ -39,8 +39,17 @@ import {
   deriveServiceFilters,
   getDiscoverBrandMessages,
   groupServicesByBarber,
+  selectRebookBarbers,
+  selectUpNext,
 } from '../discoverPresentation';
 import { firstName, timeOfDayGreeting } from '../format';
+import { fetchOwnBookingsView } from '../bookingsData';
+import type { OwnBookingsViewResult } from '../types';
+import { UpNextCard } from '../components/UpNextCard';
+import { RebookRail } from '../components/RebookRail';
+import { EmptyState } from '../../shared/components/EmptyState';
+import { typeScale } from '../../theme/typography';
+import { space } from '../../theme/spacing';
 import BarberCard from '../components/BarberCard';
 import { NotificationBell } from '../../shared/components/NotificationBell';
 import type { CustomerTabParamList } from '../CustomerTabs';
@@ -73,8 +82,21 @@ export default function DiscoverScreen({ navigation }: Props) {
   const [activeService, setActiveService] = useState<string | null>(null);
   const [activeBrandMessage, setActiveBrandMessage] = useState(0);
   const brandMessages = getDiscoverBrandMessages(Intl.DateTimeFormat().resolvedOptions().locale);
+  // The customer's own bookings feed "Up next" and "Book again". Optional
+  // enrichment: a failed read hides both sections and never blocks discovery.
+  const [ownBookings, setOwnBookings] = useState<Extract<OwnBookingsViewResult, { status: 'ok' }> | null>(null);
+
+  const loadOwnBookings = useCallback(async () => {
+    try {
+      const result = await fetchOwnBookingsView();
+      if (result.status === 'ok') setOwnBookings(result);
+    } catch {
+      // Keep the last good snapshot; the directory does not depend on it.
+    }
+  }, []);
 
   const load = useCallback(async () => {
+    void loadOwnBookings();
     setLoading(true);
     setError(null);
     setMissingCity(false);
@@ -128,7 +150,7 @@ export default function DiscoverScreen({ navigation }: Props) {
       setActiveService(null);
     }
     setLoading(false);
-  }, [de]);
+  }, [de, loadOwnBookings]);
 
   useEffect(() => {
     let active = true;
@@ -152,6 +174,8 @@ export default function DiscoverScreen({ navigation }: Props) {
   useEffect(() => {
     return navigation.addListener('focus', () => {
       if (loadedCityRef.current === undefined) return; // first load still owns this
+      // A booking made or answered elsewhere shows up here on return.
+      void loadOwnBookings();
       void fetchOwnProfile().then((result) => {
         if (result.status !== 'ok') return;
         const city = result.profile?.city?.trim() || null;
@@ -159,7 +183,7 @@ export default function DiscoverScreen({ navigation }: Props) {
         if ((city ?? '').toLocaleLowerCase() !== (loaded ?? '').toLocaleLowerCase()) void load();
       });
     });
-  }, [navigation, load]);
+  }, [navigation, load, loadOwnBookings]);
 
   const servicesByBarber = useMemo(
     () => groupServicesByBarber(services ?? []),
@@ -182,6 +206,21 @@ export default function DiscoverScreen({ navigation }: Props) {
     (barberId: string) => navigation.navigate('BarberProfile', { barberId }),
     [navigation]
   );
+
+  const upNext = useMemo(
+    () => (ownBookings ? selectUpNext(ownBookings.bookings, ownBookings.barbersById, ownBookings.servicesById) : null),
+    [ownBookings]
+  );
+  const rebookBarbers = useMemo(
+    () => (ownBookings ? selectRebookBarbers(ownBookings.bookings, ownBookings.barbersById) : []),
+    [ownBookings]
+  );
+  const clearFilters = useCallback(() => {
+    setQuery('');
+    setActiveService(null);
+  }, []);
+  const filtering = presentation.hasActiveFilter;
+  const resultCount = presentation.directory.length;
 
   const spotlight = presentation.spotlight;
   const hasResults = Boolean(spotlight) || presentation.directory.length > 0;
@@ -258,6 +297,14 @@ export default function DiscoverScreen({ navigation }: Props) {
           </View>
         </View>
 
+        {upNext ? (
+          <Reveal index={0}>
+            <View style={[styles.pad, styles.upNextWrap]}>
+              <UpNextCard upNext={upNext} onPress={() => navigation.navigate('Bookings')} />
+            </View>
+          </Reveal>
+        ) : null}
+
         <Reveal index={0}>
           <View style={[styles.pad, styles.searchWrap]}>
             <GlassSurface
@@ -275,43 +322,23 @@ export default function DiscoverScreen({ navigation }: Props) {
                 style={[styles.searchInput, { color: colors.textPrimary, fontFamily: fonts.body }]}
                 autoCapitalize="none"
                 autoCorrect={false}
+                returnKeyType="search"
                 accessibilityLabel={de ? 'Barber oder Leistungen suchen' : 'Search barbers or services'}
                 testID="customer-home-search"
               />
+              {query.length > 0 ? (
+                <Pressable
+                  onPress={() => setQuery('')}
+                  accessibilityRole="button"
+                  accessibilityLabel={de ? 'Suche löschen' : 'Clear search'}
+                  hitSlop={8}
+                  testID="customer-home-search-clear"
+                  style={styles.searchClear}
+                >
+                  <Feather name="x-circle" size={16} color={colors.textSecondary} />
+                </Pressable>
+              ) : null}
             </GlassSurface>
-          </View>
-        </Reveal>
-
-        <Reveal index={1}>
-          <View style={styles.messageCarousel} testID="customer-home-brand-carousel">
-            <ScrollView
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              accessibilityLabel={`Privelier inspiration, ${activeBrandMessage + 1} of ${brandMessages.length}`}
-              onMomentumScrollEnd={({ nativeEvent }) =>
-                setActiveBrandMessage(Math.max(0, Math.min(brandMessages.length - 1, Math.round(nativeEvent.contentOffset.x / viewportWidth))))
-              }
-            >
-              {brandMessages.map((message, index) => (
-                <View key={message} style={[styles.messagePage, { width: viewportWidth }]}>
-                  <GlassSurface style={styles.messageCard} testID={`customer-home-brand-message-${index + 1}`}>
-                    <Feather name={(['scissors', 'clock', 'home', 'sun'] as const)[index]} size={20} color={colors.accentText} />
-                    <Text style={[styles.messageCopy, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-                      {message}
-                    </Text>
-                  </GlassSurface>
-                </View>
-              ))}
-            </ScrollView>
-            <View style={styles.messageDots} accessible accessibilityLabel={`Slide ${activeBrandMessage + 1} of ${brandMessages.length}`}>
-              {brandMessages.map((message, index) => (
-                <View
-                  key={message}
-                  style={[styles.messageDot, { backgroundColor: index === activeBrandMessage ? colors.accent : colors.border }]}
-                />
-              ))}
-            </View>
           </View>
         </Reveal>
 
@@ -331,11 +358,54 @@ export default function DiscoverScreen({ navigation }: Props) {
                   label={service}
                   selected={selected}
                   onPress={() => setActiveService(selected ? null : service)}
-                  accessibilityLabel={`Filter by ${service}`}
+                  accessibilityLabel={de ? `Nach ${service} filtern` : `Filter by ${service}`}
                 />
               );
             })}
           </ScrollView>
+        ) : null}
+
+        {!filtering ? (
+          <Reveal index={1}>
+            <View style={styles.messageCarousel} testID="customer-home-brand-carousel">
+              <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                accessibilityLabel={`Privelier inspiration, ${activeBrandMessage + 1} of ${brandMessages.length}`}
+                onMomentumScrollEnd={({ nativeEvent }) =>
+                  setActiveBrandMessage(Math.max(0, Math.min(brandMessages.length - 1, Math.round(nativeEvent.contentOffset.x / viewportWidth))))
+                }
+              >
+                {brandMessages.map((message, index) => (
+                  <View key={message} style={[styles.messagePage, { width: viewportWidth }]}>
+                    <GlassSurface style={styles.messageCard} testID={`customer-home-brand-message-${index + 1}`}>
+                      <Feather name={(['scissors', 'clock', 'home', 'sun'] as const)[index]} size={20} color={colors.accentText} />
+                      <Text style={[styles.messageCopy, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+                        {message}
+                      </Text>
+                    </GlassSurface>
+                  </View>
+                ))}
+              </ScrollView>
+              <View style={styles.messageDots} accessible accessibilityLabel={`Slide ${activeBrandMessage + 1} of ${brandMessages.length}`}>
+                {brandMessages.map((message, index) => (
+                  <View
+                    key={message}
+                    style={[styles.messageDot, { backgroundColor: index === activeBrandMessage ? colors.accent : colors.border }]}
+                  />
+                ))}
+              </View>
+            </View>
+          </Reveal>
+        ) : null}
+
+        {!filtering && rebookBarbers.length > 0 ? (
+          <Reveal index={2}>
+            <View style={styles.section}>
+              <RebookRail barbers={rebookBarbers} onOpen={openProfile} />
+            </View>
+          </Reveal>
         ) : null}
 
         {hasSnapshot ? errorNotice : null}
@@ -344,18 +414,67 @@ export default function DiscoverScreen({ navigation }: Props) {
         ) : error && !hasSnapshot ? (
           errorNotice
         ) : !hasResults ? (
-          <Text
-            style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}
-            testID="customer-home-empty"
-          >
-            {barbers.length === 0
-              ? (de ? `In ${cityName ?? 'deiner Stadt'} gibt es noch keine verifizierten Barber.` : `No verified barbers are available in ${cityName ?? 'your city'} yet.`)
-              : (de ? 'Keine verifizierten Barber passen zu deiner Suche.' : 'No verified barbers match your search.')}
-          </Text>
+          barbers.length === 0 ? (
+            <EmptyState
+              icon="map-pin"
+              testID="customer-home-empty"
+              title={de ? `Noch keine Barber in ${cityName ?? 'deiner Stadt'}` : `No barbers in ${cityName ?? 'your city'} yet`}
+              body={
+                de
+                  ? 'Wir prüfen jeden Barber persönlich, bevor er hier erscheint. Schau bald wieder vorbei oder ändere deine Stadt.'
+                  : 'We check every barber by hand before they appear here. Check back soon, or change your city.'
+              }
+              action={{ label: de ? 'Stadt ändern' : 'Change city', onPress: () => navigation.navigate('EditProfile'), testID: 'customer-home-empty-change-city' }}
+            />
+          ) : (
+            <EmptyState
+              icon="search"
+              testID="customer-home-empty"
+              title={de ? 'Keine Treffer' : 'No matches'}
+              body={de ? 'Kein verifizierter Barber passt zu deiner Suche. Versuch einen anderen Namen oder eine andere Leistung.' : 'No verified barber matches your search. Try another name or service.'}
+              action={{ label: de ? 'Suche zurücksetzen' : 'Clear search', onPress: clearFilters, testID: 'customer-home-empty-clear' }}
+            />
+          )
+        ) : filtering ? (
+          <View style={[styles.pad, styles.resultsSection]} testID="customer-home-directory">
+            <View style={styles.resultsHeader}>
+              <Text
+                accessibilityRole="header"
+                accessibilityLiveRegion="polite"
+                style={[typeScale.secondary, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}
+                testID="customer-home-result-count"
+              >
+                {de ? `${resultCount} Treffer` : `${resultCount} ${resultCount === 1 ? 'result' : 'results'}`}
+              </Text>
+              <Pressable
+                onPress={clearFilters}
+                accessibilityRole="button"
+                accessibilityLabel={de ? 'Suche und Filter zurücksetzen' : 'Clear search and filters'}
+                hitSlop={8}
+                testID="customer-home-clear-filters"
+                style={styles.clearAction}
+              >
+                <Text style={[typeScale.secondary, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
+                  {de ? 'Zurücksetzen' : 'Clear'}
+                </Text>
+              </Pressable>
+            </View>
+            <View style={styles.resultsList}>
+              {presentation.directory.map((barber) => (
+                <BarberCard
+                  key={barber.id}
+                  barber={barber}
+                  services={servicesByBarber.get(barber.id) ?? []}
+                  variant="row"
+                  onPress={() => openProfile(barber.id)}
+                />
+              ))}
+            </View>
+          </View>
         ) : (
           <>
             {spotlight ? (
-              <Reveal index={2}>
+              <Reveal index={3}>
                 <View style={[styles.pad, styles.section]} testID="customer-home-spotlight">
                   <Text
                     accessibilityRole="header"
@@ -387,7 +506,7 @@ export default function DiscoverScreen({ navigation }: Props) {
             ) : null}
 
             {presentation.directory.length > 0 ? (
-              <Reveal index={3}>
+              <Reveal index={4}>
                 <View style={styles.section} testID="customer-home-directory">
                   <View style={[styles.pad, styles.sectionHeader]}>
                     <Text
@@ -397,7 +516,7 @@ export default function DiscoverScreen({ navigation }: Props) {
                         { color: colors.textPrimary, fontFamily: fonts.headingMedium },
                       ]}
                     >
-                      {`Verified barbers in ${cityName ?? 'your city'}`}
+                      {de ? `Verifizierte Barber in ${cityName ?? 'deiner Stadt'}` : `Verified barbers in ${cityName ?? 'your city'}`}
                     </Text>
                     <Text
                       style={[
@@ -405,9 +524,7 @@ export default function DiscoverScreen({ navigation }: Props) {
                         { color: colors.textSecondary, fontFamily: fonts.body },
                       ]}
                     >
-                      {`${presentation.directory.length} ${
-                        presentation.directory.length === 1 ? 'barber' : 'barbers'
-                      }`}
+                      {de ? `${resultCount} Barber` : `${resultCount} ${resultCount === 1 ? 'barber' : 'barbers'}`}
                     </Text>
                   </View>
                   <FlatList
@@ -417,7 +534,7 @@ export default function DiscoverScreen({ navigation }: Props) {
                     keyExtractor={(item) => item.id}
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.directoryContent}
-                    accessibilityLabel={`Verified barbers in ${cityName ?? 'your city'}`}
+                    accessibilityLabel={de ? `Verifizierte Barber in ${cityName ?? 'deiner Stadt'}` : `Verified barbers in ${cityName ?? 'your city'}`}
                     renderItem={({ item }) => (
                       <BarberCard
                         barber={item}
@@ -495,6 +612,12 @@ const styles = StyleSheet.create({
   messageDots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 10 },
   messageDot: { width: 5, height: 5, borderRadius: 3 },
   searchInput: { flex: 1, minWidth: 0, fontSize: 14, paddingVertical: 10 },
+  searchClear: { minWidth: 32, minHeight: 32, alignItems: 'center', justifyContent: 'center' },
+  upNextWrap: { marginTop: space.xl },
+  resultsSection: { marginTop: space.xl },
+  resultsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 44 },
+  clearAction: { minHeight: 44, minWidth: 44, alignItems: 'flex-end', justifyContent: 'center' },
+  resultsList: { gap: space.md, marginTop: space.xs },
   filtersScroll: { marginTop: 16, flexGrow: 0 },
   filtersRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 24, paddingBottom: 2 },
   noticeMargins: { marginTop: 32, marginHorizontal: 24 },

@@ -28,7 +28,8 @@ import { formatMoney } from '../format';
 type Props = {
   barber: BarberDirectoryRow;
   services: ServiceRow[];
-  variant?: 'wide' | 'compact';
+  /** row: a dense list row for search and filter results. */
+  variant?: 'wide' | 'compact' | 'row';
   /**
    * Only a genuinely-featured wide card shows the "Editor's pick" mark. Discover
    * passes it on its lead card alone; Explore (a plain list) never does — so the
@@ -97,6 +98,58 @@ export default function BarberCard({ barber, services, variant = 'wide', feature
     from !== null ? language === 'de' ? `Leistungen ab ${formatMoney(from)}` : `services from ${formatMoney(from)}` : null,
     language === 'de' ? 'Verifizierter Barber' : 'Verified barber',
   ].filter(Boolean).join(', ');
+
+  if (variant === 'row') {
+    return (
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={cardLabel}
+        accessibilityHint={language === 'de' ? 'Öffnet das Barber-Profil' : 'Opens the barber profile'}
+        testID={`customer-home-barber-${barber.id}`}
+        style={({ pressed }) => ({ opacity: pressed ? pressOpacity.soft : 1 })}
+      >
+        <GlassSurface style={styles.row}>
+          <Avatar
+            id={barber.id}
+            name={barber.name}
+            imageUrl={barber.profile_image}
+            shape="rounded"
+            monogramFontSize={24}
+            accessible={false}
+            style={styles.rowImage}
+          />
+          <View style={styles.rowText}>
+            <View style={styles.nameRow}>
+              <Text
+                numberOfLines={1}
+                style={[styles.compactName, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}
+              >
+                {barber.name}
+              </Text>
+              <MaterialCommunityIcons name="check-decagram" size={14} color={colors.accent} />
+            </View>
+            <Text
+              numberOfLines={1}
+              style={[styles.rowMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}
+            >
+              {specialties || (language === 'de' ? 'Noch keine Leistungen' : 'No services listed')}
+            </Text>
+            <View style={styles.rowFoot}>
+              <RatingLine rating={barber.rating} size={12} language={language} />
+              {from !== null ? (
+                <Text style={[styles.rowMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                  {language === 'de' ? 'ab' : 'from'}{' '}
+                  <Text style={[numericText, { color: colors.textPrimary }]}>{formatMoney(from)}</Text>
+                </Text>
+              ) : null}
+            </View>
+          </View>
+          <Feather name="chevron-right" size={18} color={colors.textSecondary} />
+        </GlassSurface>
+      </Pressable>
+    );
+  }
 
   if (variant === 'compact') {
     return (
@@ -201,6 +254,12 @@ export default function BarberCard({ barber, services, variant = 'wide', feature
 
 const styles = StyleSheet.create({
   image: { width: '100%', borderRadius: 0 },
+
+  row: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 12, borderRadius: radius.xl },
+  rowImage: { width: 76, height: 76, borderRadius: radius.lg },
+  rowText: { flex: 1, minWidth: 0, gap: 3 },
+  rowMeta: { fontSize: 13, lineHeight: 19 },
+  rowFoot: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 2 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4, justifyContent: 'flex-end' },
 

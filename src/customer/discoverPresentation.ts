@@ -1,4 +1,6 @@
-import type { BarberDirectoryRow, ServiceRow } from '../types';
+import type { BarberDirectoryRow, BookingRow, ServiceRow } from '../types';
+import { bookingSlotStart, isUpcomingBooking } from '../shared/bookingTime';
+import { formatBookingWhen } from '../shared/format';
 
 export const MAX_DISCOVER_SERVICE_FILTERS = 6;
 
@@ -165,4 +167,97 @@ export function buildDiscoverPresentation({
       : filtered,
     hasActiveFilter,
   };
+}
+
+/**
+ * "Up next" on Discover: the soonest booking that can still happen (pending
+ * or accepted, slot not yet passed — the same predicate the Bookings tab
+ * uses), with its best-effort barber/service enrichment and how many other
+ * live bookings follow it. Null when nothing is upcoming.
+ */
+export type UpNextBooking = {
+  booking: BookingRow;
+  barber: BarberDirectoryRow | null;
+  service: ServiceRow | null;
+  laterCount: number;
+};
+
+export function selectUpNext(
+  bookings: readonly BookingRow[],
+  barbersById: ReadonlyMap<string, BarberDirectoryRow>,
+  servicesById: ReadonlyMap<string, ServiceRow>,
+  now = new Date()
+): UpNextBooking | null {
+  const upcoming = bookings
+    .filter((booking) => isUpcomingBooking(booking, now))
+    .sort((left, right) => bookingSlotStart(left).getTime() - bookingSlotStart(right).getTime());
+  const next = upcoming[0];
+  if (!next) return null;
+  return {
+    booking: next,
+    barber: barbersById.get(next.barber_id) ?? null,
+    service: servicesById.get(next.service_id) ?? null,
+    laterCount: upcoming.length - 1,
+  };
+}
+
+/**
+ * "Book again": barbers the customer has a completed booking with, most
+ * recent first, one entry each. Only barbers still in the approved directory
+ * are returned, so the rail never links to a profile that would not open.
+ */
+export function selectRebookBarbers(
+  bookings: readonly BookingRow[],
+  barbersById: ReadonlyMap<string, BarberDirectoryRow>,
+  limit = 8
+): BarberDirectoryRow[] {
+  const completed = bookings
+    .filter((booking) => booking.status === 'completed')
+    .sort((left, right) => bookingSlotStart(right).getTime() - bookingSlotStart(left).getTime());
+  const seen = new Set<string>();
+  const result: BarberDirectoryRow[] = [];
+  for (const booking of completed) {
+    if (seen.has(booking.barber_id)) continue;
+    seen.add(booking.barber_id);
+    const barber = barbersById.get(booking.barber_id);
+    if (barber) result.push(barber);
+    if (result.length >= limit) break;
+  }
+  return result;
+}
+
+function startOfDay(date: Date): number {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+}
+
+/**
+ * "Today · 14:30", "Tomorrow · 09:00", else the standard booking date line.
+ * Calendar days are compared at local midnight so a slot at 00:30 tomorrow
+ * reads as tomorrow even when it is under an hour away.
+ */
+export function formatUpNextWhen(booking: Pick<BookingRow, 'date' | 'time'>, now = new Date(), de = false): string {
+  const slot = bookingSlotStart(booking);
+  const clock = booking.time.slice(0, 5);
+  if (Number.isNaN(slot.getTime())) return formatBookingWhen(booking.date, booking.time);
+  const days = Math.round((startOfDay(slot) - startOfDay(now)) / DAY_IN_MS);
+  if (days === 0) return `${de ? 'Heute' : 'Today'} · ${clock}`;
+  if (days === 1) return `${de ? 'Morgen' : 'Tomorrow'} · ${clock}`;
+  return formatBookingWhen(booking.date, booking.time);
+}
+
+/**
+ * A short countdown for a slot within the next 24 hours ("in 2 h 15 min",
+ * "in 25 min", "starting now"); null when the slot is further away or the
+ * row is malformed. Callers re-render it on a minute tick.
+ */
+export function formatStartsIn(booking: Pick<BookingRow, 'date' | 'time'>, now = new Date(), de = false): string | null {
+  const slot = bookingSlotStart(booking);
+  if (Number.isNaN(slot.getTime())) return null;
+  const minutes = Math.ceil((slot.getTime() - now.getTime()) / 60_000);
+  if (minutes > 24 * 60) return null;
+  if (minutes <= 0) return de ? 'Beginnt jetzt' : 'Starting now';
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  const span = hours === 0 ? `${rest} min` : rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
+  return `In ${span}`; // "In" reads the same in German and English
 }

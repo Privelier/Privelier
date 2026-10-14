@@ -1,8 +1,9 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import type { BarberDirectoryRow, ServiceRow, UsersRow } from '../../../types';
+import type { BarberDirectoryRow, BookingRow, ServiceRow, UsersRow } from '../../../types';
 import { fetchOwnProfile } from '../../../auth/authService';
 import { listBarbersByCity, listServicesForBarberIds } from '../../discoveryData';
 import DiscoverScreen from '../DiscoverScreen';
+import { fetchOwnBookingsView } from '../../bookingsData';
 import { getAppLanguage } from '../../../shared/locale';
 
 jest.mock('../../../auth/authService', () => ({ fetchOwnProfile: jest.fn() }));
@@ -12,6 +13,9 @@ jest.mock('../../../shared/components/NotificationBell', () => {
   const { Pressable } = jest.requireActual('react-native');
   return { NotificationBell: ({ testID }: { testID: string }) => React.createElement(Pressable, { testID }) };
 });
+jest.mock('../../bookingsData', () => ({
+  fetchOwnBookingsView: jest.fn(async () => ({ status: 'ok', bookings: [], barbersById: new Map(), servicesById: new Map() })),
+}));
 jest.mock('../../discoveryData', () => ({
   listBarbersByCity: jest.fn(),
   listServicesForBarberIds: jest.fn(),
@@ -253,5 +257,130 @@ describe('DiscoverScreen', () => {
     mockFetchOwnProfile.mockResolvedValue({ status: 'ok', profile: { ...profile, city: 'Hamburg' } });
     await act(async () => { focusListener?.(); });
     await waitFor(() => expect(mockListBarbers).toHaveBeenLastCalledWith('Hamburg'));
+  });
+});
+
+function dayOffset(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function booking(id: string, overrides: Partial<BookingRow>): BookingRow {
+  return {
+    id,
+    customer_id: 'customer-1',
+    barber_id: 'a',
+    service_id: 's1',
+    date: dayOffset(3),
+    time: '14:30:00',
+    location: 'Private address',
+    price: 40,
+    duration_minutes: 45,
+    status: 'pending',
+    created_at: '2026-09-21T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+describe('DiscoverScreen personal sections and search', () => {
+  const mockFetchBookings = fetchOwnBookingsView as jest.Mock;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetAppLanguage.mockReturnValue('en');
+    mockFetchOwnProfile.mockResolvedValue({ status: 'ok', profile });
+    mockListBarbers.mockResolvedValue({ status: 'ok', barbers });
+    mockListServices.mockResolvedValue({ status: 'ok', services });
+  });
+
+  async function renderWith() {
+    const navigate = jest.fn();
+    await render(<DiscoverScreen navigation={{ navigate, addListener: mockAddListener } as never} route={{} as never} />);
+    await waitFor(() => expect(screen.getByTestId('customer-home-spotlight')).toBeTruthy());
+    return navigate;
+  }
+
+  it('shows the soonest live booking as up next and opens Bookings', async () => {
+    mockFetchBookings.mockResolvedValue({
+      status: 'ok',
+      bookings: [
+        booking('later', { date: dayOffset(9), status: 'accepted' }),
+        booking('soon', { date: dayOffset(1), time: '09:00:00', status: 'pending', price: 42.5 }),
+        booking('done', { date: dayOffset(-5), status: 'completed', barber_id: 'b' }),
+        booking('gone', { date: dayOffset(-2), status: 'pending' }),
+      ],
+      barbersById: new Map(barbers.map((row) => [row.id, row])),
+      servicesById: new Map(services.map((row) => [row.id, row])),
+    });
+    const navigate = await renderWith();
+
+    await waitFor(() => expect(screen.getByTestId('customer-home-up-next')).toBeTruthy());
+    expect(screen.getByTestId('customer-home-up-next-when').props.children).toBe('Tomorrow · 09:00');
+    expect(screen.getByText('Waiting for Amir')).toBeTruthy();
+    expect(screen.getByText('€42.50')).toBeTruthy();
+    expect(screen.getByText('+1 more booking')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('customer-home-up-next'));
+    expect(navigate).toHaveBeenCalledWith('Bookings');
+  });
+
+  it('offers book again only for barbers with a completed booking', async () => {
+    mockFetchBookings.mockResolvedValue({
+      status: 'ok',
+      bookings: [booking('done', { date: dayOffset(-5), status: 'completed', barber_id: 'b' })],
+      barbersById: new Map(barbers.map((row) => [row.id, row])),
+      servicesById: new Map(),
+    });
+    const navigate = await renderWith();
+
+    await waitFor(() => expect(screen.getByTestId('customer-home-rebook-b')).toBeTruthy());
+    expect(screen.queryByTestId('customer-home-rebook-a')).toBeNull();
+    expect(screen.queryByTestId('customer-home-up-next')).toBeNull();
+    await fireEvent.press(screen.getByTestId('customer-home-rebook-b'));
+    expect(navigate).toHaveBeenCalledWith('BarberProfile', { barberId: 'b' });
+  });
+
+  it('keeps discovery working when the bookings read fails', async () => {
+    mockFetchBookings.mockRejectedValue(new Error('offline'));
+    await renderWith();
+    expect(screen.queryByTestId('customer-home-up-next')).toBeNull();
+    expect(screen.queryByTestId('customer-home-rebook')).toBeNull();
+    expect(screen.getByTestId('customer-home-directory')).toBeTruthy();
+  });
+
+  it('lists search results with a count and clears them in one tap', async () => {
+    await renderWith();
+    expect(screen.queryByTestId('customer-home-search-clear')).toBeNull();
+
+    await fireEvent.changeText(screen.getByTestId('customer-home-search'), 'a');
+    expect(screen.getByTestId('customer-home-result-count').props.children).toBe('3 results');
+    expect(screen.queryByTestId('customer-home-brand-carousel')).toBeNull();
+
+    await fireEvent.changeText(screen.getByTestId('customer-home-search'), 'Benedikt');
+    expect(screen.getByTestId('customer-home-result-count').props.children).toBe('1 result');
+
+    await fireEvent.press(screen.getByTestId('customer-home-clear-filters'));
+    expect(screen.getByTestId('customer-home-search').props.value).toBe('');
+    expect(screen.getByTestId('customer-home-spotlight')).toBeTruthy();
+  });
+
+  it('turns a search with no matches into a recoverable empty state', async () => {
+    await renderWith();
+    await fireEvent.changeText(screen.getByTestId('customer-home-search'), 'zzz');
+    expect(screen.getByText('No matches')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('customer-home-empty-clear'));
+    expect(screen.getByTestId('customer-home-spotlight')).toBeTruthy();
+  });
+
+  it('offers a city change when the city has no barbers yet', async () => {
+    mockListBarbers.mockResolvedValue({ status: 'ok', barbers: [] });
+    const navigate = jest.fn();
+    await render(<DiscoverScreen navigation={{ navigate, addListener: mockAddListener } as never} route={{} as never} />);
+    await waitFor(() => expect(screen.getByTestId('customer-home-empty')).toBeTruthy());
+    expect(screen.getByText('No barbers in Nürnberg yet')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('customer-home-empty-change-city'));
+    expect(navigate).toHaveBeenCalledWith('EditProfile');
   });
 });
