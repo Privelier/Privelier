@@ -28,11 +28,14 @@ export type CustomerStackParamList = {
   // each screen carrying forward everything the next one needs so nothing
   // has to be re-fetched mid-flow. barberName rides along from
   // BarberProfileScreen (already loaded there) purely to avoid an extra
-  // getBarberProfile call on the Confirm screen's summary.
-  BookingDateTime: { barberId: string; barberName: string; service: ServiceRow };
+  // getBarberProfile call on the Confirm screen's summary. barberImage rides
+  // along the same way so the chat opened from Confirm shows the barber's
+  // photo, as it does when opened from Inbox or Bookings.
+  BookingDateTime: { barberId: string; barberName: string; barberImage?: string | null; service: ServiceRow };
   BookingLocation: {
     barberId: string;
     barberName: string;
+    barberImage?: string | null;
     service: ServiceRow;
     date: string;
     time: string;
@@ -40,6 +43,7 @@ export type CustomerStackParamList = {
   BookingConfirm: {
     barberId: string;
     barberName: string;
+    barberImage?: string | null;
     service: ServiceRow;
     date: string;
     time: string;

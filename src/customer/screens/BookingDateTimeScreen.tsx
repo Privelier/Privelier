@@ -109,7 +109,7 @@ export function firstOpenSlot(
 }
 
 export default function BookingDateTimeScreen({ route, navigation }: Props) {
-  const { barberId, barberName, service } = route.params;
+  const { barberId, barberName, barberImage, service } = route.params;
   const { colors, fonts } = useTheme();
   const de = getAppLanguage() === 'de';
 
@@ -237,11 +237,12 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
     navigation.navigate('BookingLocation', {
       barberId,
       barberName,
+      barberImage,
       service,
       date: selection.date,
       time: selection.time,
     });
-  }, [navigation, barberId, barberName, service, selection]);
+  }, [navigation, barberId, barberName, barberImage, service, selection]);
 
   return (
     <SafeAreaView
