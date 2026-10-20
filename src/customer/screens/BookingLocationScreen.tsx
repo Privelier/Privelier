@@ -30,7 +30,7 @@ type Props = NativeStackScreenProps<CustomerStackParamList, 'BookingLocation'>;
 
 export default function BookingLocationScreen({ route, navigation }: Props) {
   const de = getAppLanguage() === 'de';
-  const { barberId, barberName, service, date, time } = route.params;
+  const { barberId, barberName, barberImage, service, date, time } = route.params;
   const { colors, fonts } = useTheme();
 
   const [street, setStreet] = useState('');
@@ -80,8 +80,8 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
   const location = [trimmedStreet, unit.trim(), trimmedCity, instructions.trim()].filter(Boolean).join(', ');
 
   const goToConfirm = useCallback((chosenLocation: string) => {
-    navigation.navigate('BookingConfirm', { barberId, barberName, service, date, time, location: chosenLocation });
-  }, [navigation, barberId, barberName, service, date, time]);
+    navigation.navigate('BookingConfirm', { barberId, barberName, barberImage, service, date, time, location: chosenLocation });
+  }, [navigation, barberId, barberName, barberImage, service, date, time]);
 
   const onUseSaved = useCallback((saved: SavedAddress) => {
     void haptics.selection();
@@ -101,12 +101,13 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
     navigation.navigate('BookingConfirm', {
       barberId,
       barberName,
+      barberImage,
       service,
       date,
       time,
       location,
     });
-  }, [navigation, barberId, barberName, service, date, time, location, canContinue, saveForLater, savedAddresses, trimmedStreet, showToast, de]);
+  }, [navigation, barberId, barberName, barberImage, service, date, time, location, canContinue, saveForLater, savedAddresses, trimmedStreet, showToast, de]);
 
   const onSubmitLastField = useCallback(() => {
     Keyboard.dismiss();

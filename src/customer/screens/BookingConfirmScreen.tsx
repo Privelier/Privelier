@@ -51,7 +51,7 @@ type Props = NativeStackScreenProps<CustomerStackParamList, 'BookingConfirm'>;
 // Long enough to register as an intentional confirmation, short enough not
 // to feel like a stall — matches the "brief success state" spec.
 export default function BookingConfirmScreen({ route, navigation }: Props) {
-  const { barberId, barberName, service, date, time, location } = route.params;
+  const { barberId, barberName, barberImage, service, date, time, location } = route.params;
   const { colors, fonts } = useTheme();
   const de = getAppLanguage() === 'de';
 
@@ -133,11 +133,12 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
             room: result.room,
             title: barberName,
             subtitle: [service.name, formatBookingWhen(date, time)].join(' · '),
+            counterpart: { id: barberId, name: barberName, profile_image: barberImage ?? null },
           },
         },
       ],
     });
-  }, [created, navigation, showToast, de, barberName, service.name, date, time]);
+  }, [created, navigation, showToast, de, barberId, barberName, barberImage, service.name, date, time]);
 
   const onViewBookings = useCallback(() => {
     navigation.reset({

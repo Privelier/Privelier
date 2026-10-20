@@ -208,7 +208,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
   const onBook = useCallback(
     (service: ServiceRow) => {
       if (!barber) return;
-      navigation.navigate('BookingDateTime', { barberId: barber.id, barberName: barber.name, service });
+      navigation.navigate('BookingDateTime', { barberId: barber.id, barberName: barber.name, barberImage: barber.profile_image, service });
     },
     [navigation, barber]
   );

@@ -36,7 +36,7 @@ jest.mock('../../../theme/useTheme', () => ({
 
 const route = {
   params: {
-    barberId: 'barber-1', barberName: 'Ada',
+    barberId: 'barber-1', barberName: 'Ada', barberImage: 'https://example.invalid/ada.jpg',
     service: { id: 'service-1', name: 'Haircut', price: 30, duration_minutes: 30 },
     date: '2026-09-28', time: '12:00:00', location: 'Main Street 1',
   },
@@ -139,7 +139,15 @@ it('shows the real request timeline and opens the booking chat over Bookings', a
     index: 1,
     routes: [
       { name: 'CustomerTabs', params: { screen: 'Bookings' } },
-      { name: 'Conversation', params: expect.objectContaining({ room, title: 'Ada' }) },
+      {
+        name: 'Conversation',
+        params: expect.objectContaining({
+          room,
+          title: 'Ada',
+          // Same header as a chat opened from Inbox: the barber's photo, not initials.
+          counterpart: { id: 'barber-1', name: 'Ada', profile_image: 'https://example.invalid/ada.jpg' },
+        }),
+      },
     ],
   }));
   expect(mockFetchRoom).toHaveBeenCalledWith('booking-1');
