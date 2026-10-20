@@ -36,6 +36,12 @@ type Props = CompositeScreenProps<
 
 const isDe = () => getAppLanguage() === 'de';
 
+/** The analytics RPC names the busiest weekday in English; German devices show it in German. */
+const GERMAN_WEEKDAYS: Record<string, string> = {
+  Monday: 'Montag', Tuesday: 'Dienstag', Wednesday: 'Mittwoch', Thursday: 'Donnerstag',
+  Friday: 'Freitag', Saturday: 'Samstag', Sunday: 'Sonntag',
+};
+
 function verificationLine(status: VerificationStatus): string {
   switch (status) {
     case 'approved': return isDe() ? 'Verifizierung bestätigt. Dein Profil kann in der Kundensuche erscheinen.' : 'Verification approved. Your profile can appear in customer search.';
@@ -353,7 +359,7 @@ export default function StudioScreen({ navigation }: Props) {
                     <Pressable
                       onPress={() => navigation.navigate('Requests')}
                       accessibilityRole="button"
-                      accessibilityLabel={`${data.pendingCount} pending requests. View requests.`}
+                      accessibilityLabel={isDe() ? `${data.pendingCount} offene Anfragen. Anfragen ansehen.` : `${data.pendingCount} pending requests. View requests.`}
                       testID="barber-dashboard-overview"
                       style={({ pressed }) => [styles.pendingBanner, { borderColor: colors.border, opacity: pressed ? pressOpacity.soft : 1 }]}
                     >
@@ -361,8 +367,8 @@ export default function StudioScreen({ navigation }: Props) {
                         <Text style={[styles.pendingBadgeValue, numericText, { color: data.pendingCount > 0 ? colors.onAccent : colors.textSecondary }]}>{data.pendingCount}</Text>
                       </View>
                       <View style={styles.pendingCopy}>
-                        <Text style={[styles.pendingTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{data.pendingCount === 1 ? 'Open request' : 'Open requests'}</Text>
-                        <Text style={[styles.pendingHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.pendingCount > 0 ? 'Waiting for your reply' : 'You’re all caught up'}</Text>
+                        <Text style={[styles.pendingTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{data.pendingCount === 1 ? (isDe() ? 'Offene Anfrage' : 'Open request') : (isDe() ? 'Offene Anfragen' : 'Open requests')}</Text>
+                        <Text style={[styles.pendingHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.pendingCount > 0 ? (isDe() ? 'Warten auf deine Antwort' : 'Waiting for your reply') : (isDe() ? 'Alles erledigt' : 'You’re all caught up')}</Text>
                       </View>
                       <Feather name="arrow-up-right" size={17} color={colors.textSecondary} />
                     </Pressable>
@@ -370,10 +376,10 @@ export default function StudioScreen({ navigation }: Props) {
                     <View style={[styles.appointmentCard, { backgroundColor: colors.background }]}>
                       <View style={styles.appointmentTopline}>
                         <Text style={[styles.eyebrow, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'N\u00e4chster Termin' : 'Next appointment'}</Text>
-                        <Text style={[styles.upcomingText, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.upcomingCount} in the next 7 days</Text>
+                        <Text style={[styles.upcomingText, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.upcomingCount} {isDe() ? 'in den nächsten 7 Tagen' : 'in the next 7 days'}</Text>
                       </View>
                       {next ? <>
-                        <Text style={[styles.appointmentName, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{next.customerName ?? next.serviceName ?? 'Confirmed appointment'}</Text>
+                        <Text style={[styles.appointmentName, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{next.customerName ?? next.serviceName ?? (isDe() ? 'Bestätigter Termin' : 'Confirmed appointment')}</Text>
                         <Text style={[styles.appointmentWhen, { color: colors.textSecondary, fontFamily: fonts.body }]}>
                           {formatBookingWhen(next.date, next.time)}{next.customerName && next.serviceName ? ` · ${next.serviceName}` : ''}
                         </Text>
@@ -385,17 +391,21 @@ export default function StudioScreen({ navigation }: Props) {
                         <Text style={[styles.eyebrow, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Kundenstimmen' : 'Client feedback'}</Text>
                         {data.reviewCount > 0 && data.ratingAverage !== null ? <>
                           <Text testID="barber-dashboard-rating" style={[styles.insightValue, numericText, { color: colors.textPrimary }]}>{data.ratingAverage.toFixed(2)} <Text style={{ color: colors.accentText }}>★</Text></Text>
-                          <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.reviewCount} {data.reviewCount === 1 ? 'review' : 'reviews'} · {data.repeatCustomerCount} returning clients</Text>
+                          <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{isDe()
+                            ? `${data.reviewCount} ${data.reviewCount === 1 ? 'Bewertung' : 'Bewertungen'} · ${data.repeatCustomerCount} ${data.repeatCustomerCount === 1 ? 'Stammkunde' : 'Stammkunden'}`
+                            : `${data.reviewCount} ${data.reviewCount === 1 ? 'review' : 'reviews'} · ${data.repeatCustomerCount} returning clients`}</Text>
                         </> : <>
                           <Text style={[styles.insightValue, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>—</Text>
-                          <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.repeatCustomerCount} returning clients · no reviews yet</Text>
+                          <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{isDe()
+                            ? `${data.repeatCustomerCount} ${data.repeatCustomerCount === 1 ? 'Stammkunde' : 'Stammkunden'} · noch keine Bewertungen`
+                            : `${data.repeatCustomerCount} returning clients · no reviews yet`}</Text>
                         </>}
                       </View>
                       <View style={[styles.insightCard, { backgroundColor: colors.background }]}>
                         <Text style={[styles.eyebrow, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Beliebtester Tag' : 'Busiest day'}</Text>
                         {data.busiestWeekday ? <>
-                          <Text style={[styles.insightValue, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{data.busiestWeekday.weekday}</Text>
-                          <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.busiestWeekday.completedCuts} completed cuts</Text>
+                          <Text style={[styles.insightValue, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{isDe() ? (GERMAN_WEEKDAYS[data.busiestWeekday.weekday] ?? data.busiestWeekday.weekday) : data.busiestWeekday.weekday}</Text>
+                          <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.busiestWeekday.completedCuts} {isDe() ? (data.busiestWeekday.completedCuts === 1 ? 'abgeschlossener Schnitt' : 'abgeschlossene Schnitte') : 'completed cuts'}</Text>
                         </> : <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{isDe() ? 'Erscheint nach deinem ersten abgeschlossenen Termin.' : 'Will appear after your first completed booking.'}</Text>}
                       </View>
                     </View>

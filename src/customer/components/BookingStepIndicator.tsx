@@ -7,6 +7,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
 import { space } from '../../theme/spacing';
+import { getAppLanguage } from '../../shared/locale';
 
 export function BookingStepIndicator({ current }: { current: 1 | 2 | 3 }) {
   const { colors, fonts } = useTheme();
@@ -21,7 +22,7 @@ export function BookingStepIndicator({ current }: { current: 1 | 2 | 3 }) {
         ))}
       </View>
       <Text style={[styles.step, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-        {`Step ${current} of 3`}
+        {getAppLanguage() === 'de' ? `Schritt ${current} von 3` : `Step ${current} of 3`}
       </Text>
     </View>
   );
