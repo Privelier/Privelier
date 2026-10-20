@@ -13,7 +13,8 @@ export function HapticTabButton(props: BottomTabBarButtonProps) {
   return (
     <Pressable
       {...buttonProps}
-      style={[{ minHeight: 44 }, props.style]}
+      // No side padding: five tabs share ~74pt each, and the label needs all of it.
+      style={[{ minHeight: 44 }, props.style, { paddingHorizontal: 0 }]}
       onPress={(event) => {
         if (!props.accessibilityState?.selected) void haptics.selection();
         props.onPress?.(event);

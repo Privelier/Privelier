@@ -89,7 +89,10 @@ export default function BarberTabs() {
           </GlassSurface>
         ),
         tabBarLabel: labels[route.name],
-        tabBarLabelStyle: { fontSize: 12, fontFamily: fonts.bodyMedium },
+        // 11pt (with HapticTabButton's full-width label area) so the longest
+        // German labels ("Nachrichten", "Verifizierung") fit a 393pt-wide
+        // iPhone; at 12pt they were cut to "Nachrich…".
+        tabBarLabelStyle: { fontSize: 11, fontFamily: fonts.bodyMedium },
         tabBarIcon: ({ color, focused }) => <BrassTabIcon name={TAB_ICONS[route.name]} color={color} focused={focused} />,
         tabBarButton: (props) => <HapticTabButton {...props} />,
         tabBarAccessibilityLabel: labels[route.name],
