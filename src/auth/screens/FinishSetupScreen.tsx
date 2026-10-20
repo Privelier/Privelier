@@ -155,7 +155,7 @@ export default function FinishSetupScreen({ prefill, onSubmit, onSignOut }: Prop
       />
       <LegalLinks role={role} testIDPrefix="setup-legal" />
       <View style={styles.actions}>
-        <PrimaryButton label="Continue" onPress={submit} loading={submitting} testID="setup-submit" />
+        <PrimaryButton label={de ? 'Weiter' : 'Continue'} onPress={submit} loading={submitting} testID="setup-submit" />
         <TextLink label="Log out" onPress={onSignOut} disabled={submitting} testID="setup-sign-out" />
       </View>
     </AuthScreenShell>

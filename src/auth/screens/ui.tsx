@@ -34,6 +34,7 @@ import { radius, space } from '../../theme/spacing';
 import { typeScale } from '../../theme/typography';
 import { Notice as SharedNotice } from '../../shared/components/Notice';
 import { BackButton } from '../../shared/components/ScreenBackHeader';
+import { getAppLanguage } from '../../shared/locale';
 
 // PrimaryButton is now the shared canonical CTA — re-exported so existing auth
 // call sites (label/onPress/testID/loading/disabled) are unchanged, and they
@@ -153,6 +154,7 @@ export function FormTextField({
   blurOnSubmit,
 }: FormTextFieldProps) {
   const { colors, fonts } = useTheme();
+  const de = getAppLanguage() === 'de';
   const [hidden, setHidden] = useState(true);
   const [focused, setFocused] = useState(false);
 
@@ -205,11 +207,11 @@ export function FormTextField({
         {secure ? (
           <InputSlot
             onPress={() => setHidden((current) => !current)}
-            accessibilityLabel={hidden ? 'Show password' : 'Hide password'}
+            accessibilityLabel={de ? (hidden ? 'Passwort anzeigen' : 'Passwort ausblenden') : hidden ? 'Show password' : 'Hide password'}
             className="min-h-11 min-w-11"
           >
             <Text style={[fieldStyles.toggle, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-              {hidden ? 'Show' : 'Hide'}
+              {de ? (hidden ? 'Anzeigen' : 'Ausblenden') : hidden ? 'Show' : 'Hide'}
             </Text>
           </InputSlot>
         ) : null}

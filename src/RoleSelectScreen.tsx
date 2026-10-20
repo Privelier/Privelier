@@ -24,7 +24,7 @@ export default function RoleSelectScreen({ onSelectRole }: Props) {
             carried no testID, so nothing depends on it). */}
         <Brandmark lockup="vertical" size="xl" />
         <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-          Choose how you&rsquo;d like to continue
+          {de ? 'Wie möchtest du fortfahren?' : 'Choose how you’d like to continue'}
         </Text>
       </View>
 
