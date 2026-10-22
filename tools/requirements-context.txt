@@ -1,1 +1,1 @@
-graphifyy[sql]==0.9.55
+graphifyy[sql]==0.9.94
