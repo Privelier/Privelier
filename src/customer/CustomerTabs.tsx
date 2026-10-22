@@ -7,7 +7,7 @@ import { View } from 'react-native';
 import { BlurTargetView } from 'expo-blur';
 import { getAppLanguage } from '../shared/locale';
 import { GlassSurface } from '../shared/components/GlassSurface';
-import { TAB_BAR_FLOAT_GAP } from '../shared/navigation/tabBarClearance';
+import { useFloatingTabBarStyle } from '../shared/navigation/tabBarClearance';
 import { TabBarClearanceBridge } from '../shared/navigation/TabBarClearanceBridge';
 /**
  * Customer bottom-tab shell, rebuilt from the prototype's CustomerBottomNav:
@@ -56,6 +56,7 @@ export default function CustomerTabs() {
     [stackNavigation]
   );
   const { colors, fonts } = useTheme();
+  const tabBarStyle = useFloatingTabBarStyle();
   const language = getAppLanguage();
   const [blurTargets] = useState(() => ({ Discover: createRef<View>(), Explore: createRef<View>(), Bookings: createRef<View>(), Inbox: createRef<View>(), Account: createRef<View>() }));
   const labels = language === 'de' ? { Discover: 'Entdecken', Explore: 'Karte', Bookings: 'Termine', Inbox: 'Nachrichten', Account: 'Konto' } : { Discover: 'Discover', Explore: 'Explore', Bookings: 'Bookings', Inbox: 'Messages', Account: 'Account' };
@@ -65,6 +66,9 @@ export default function CustomerTabs() {
   const { unreadCount } = useUnread();
   return (
     <Tab.Navigator
+      // The pill floats above the home indicator (see useFloatingTabBarStyle),
+      // so the bar must not also pad itself by the bottom inset.
+      safeAreaInsets={{ bottom: 0 }}
       screenLayout={({ children, route }) => (
         // The blur target is the screen itself: the floating glass bar frosts
         // the content scrolling beneath it.
@@ -77,22 +81,8 @@ export default function CustomerTabs() {
         sceneStyle: { backgroundColor: colors.background },
         tabBarActiveTintColor: colors.accentText,
         tabBarInactiveTintColor: colors.textSecondary,
-        tabBarStyle: {
-          // Floats over the screen (scroll content clears it with
-          // useTabBarClearance), so the glass has content to frost.
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'transparent',
-          marginHorizontal: 12,
-          marginBottom: TAB_BAR_FLOAT_GAP,
-          borderRadius: 24,
-          paddingTop: 6,
-          borderTopWidth: 0,
-          borderTopColor: colors.border,
-          elevation: 0,
-        },
+        tabBarStyle,
+
         tabBarHideOnKeyboard: true,
         tabBarBackground: () => (
           <GlassSurface variant="navigation" blurTarget={blurTargets[route.name]} style={{ flex: 1, borderRadius: 24 }}>
