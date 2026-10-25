@@ -20,6 +20,30 @@ optional country manually; users can edit both later. Discovery currently uses
 an exact city match after trimming and case-insensitive comparison. Do not map
 city aliases in this version.
 
+## Current founder decision: free location stack, live arrival, push
+
+Founder decision by Ali on 2026-10-25:
+
+- Maps move off Mapbox to MapLibre + OpenFreeMap tiles; address search uses
+  Photon; road routing uses the FOSSGIS OSRM/Valhalla servers. All are free
+  and keyless, approved third-party services. No paid map API.
+- Build barber "On my way" live arrival tracking (`booking_trips`, migration
+  0049), booking address coordinates, and in-home safety (hold-for-SOS,
+  share trip). Location permission is still never required for signup,
+  login or app entry: it is asked only when a barber starts a trip, and only
+  "while using".
+- Push notifications are now allowed, via the free Expo push service
+  triggered from Postgres (`pg_net`), asked in context, never at app entry.
+- Python is used for tooling and automation (`tools/geo`), not as a server.
+  Live logic stays in the apps plus Supabase.
+- Founder request by Ali on 2026-10-25 (UI/UX + speed pass): React Compiler
+  and Metro inline requires are on; shared motion kit in `src/shared/motion`
+  (PressableScale, AnimatedNumber, SuccessBurst, CelebrationOverlay,
+  RevealItem). `barber_stats` (migration 0050) is computed nightly by
+  `tools/automation/compute_barber_stats.py` on GitHub Actions and powers the
+  reply-time badge, popular times and the barber "Your rhythm" card —
+  aggregates only. `npm run ui:audit` guards design-system consistency.
+
 ## Legal consent versioning
 
 The legal consent migration intentionally seeds `placeholder-1` for the

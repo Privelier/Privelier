@@ -42,7 +42,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, SectionList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../theme/useTheme';
 import { numericText } from '../../theme/typography';
@@ -54,6 +55,9 @@ import { BookingDetails } from '../../shared/components/BookingDetails';
 import { ConfirmSheet } from '../../shared/components/ConfirmSheet';
 import { Reveal } from '../../shared/motion';
 import { AcceptedBookingTools } from '../../shared/components/AcceptedBookingTools';
+import { OnMyWayButton } from '../components/OnMyWayButton';
+import { CelebrationOverlay } from '../../shared/motion/CelebrationOverlay';
+import type { BarberStackParamList } from '../BarberNavigator';
 import { GlassSurface } from '../../shared/components/GlassSurface';
 import { Avatar } from '../../shared/components/Avatar';
 import { BookingListSkeleton } from '../../shared/components/BookingListSkeleton';
@@ -118,6 +122,17 @@ export function buildRequestSections(bookings: BookingRow[], today: string, lang
   return result;
 }
 
+/**
+ * "On my way" is offered from 12 h before the slot until its scheduled end:
+ * early enough for a long drive, never for a booking days away (the server
+ * independently refuses trips more than a day from the appointment).
+ */
+export function isTripWindow(booking: Pick<BookingRow, 'date' | 'time' | 'duration_minutes'>, now = Date.now()): boolean {
+  const start = Date.parse(`${booking.date}T${booking.time}`);
+  if (Number.isNaN(start)) return false;
+  return now >= start - 12 * 60 * 60 * 1000 && now <= start + booking.duration_minutes * 60 * 1000;
+}
+
 export default function RequestsScreen() {
   // Scroll the last row clear of the floating glass tab bar.
   const tabClearance = useTabBarClearance(32);
@@ -125,6 +140,9 @@ export default function RequestsScreen() {
   const styles = useStyles(colors);
   const language = getAppLanguage();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const navigation = useNavigation<NativeStackNavigationProp<BarberStackParamList>>();
+  const [celebration, setCelebration] = useState<string | null>(null);
+  const clearCelebration = useCallback(() => setCelebration(null), []);
   const [confirmation, setConfirmation] = useState<{ title: string; label: string; action: () => void } | null>(null);
   const confirmDestructive = (title: string, label: string, action: () => void) => {
     setSelectedId(null);
@@ -249,6 +267,8 @@ export default function RequestsScreen() {
         setBookings((prev) =>
           applyBookingChangeSorted(prev, { eventType: 'UPDATE', row: result.booking }, sortAsc)
         );
+        if (nextStatus === 'accepted') setCelebration(isDe() ? 'Termin bestätigt' : 'Booking accepted');
+        else if (nextStatus === 'completed') setCelebration(isDe() ? 'Gut gemacht' : 'Nicely done');
       } else {
         // Roll the card back to its prior state and surface the reason inline.
         setBookings((prev) => applyBookingChangeSorted(prev, { eventType: 'UPDATE', row }, sortAsc));
@@ -328,6 +348,19 @@ export default function RequestsScreen() {
                 ) : null}
 
     {rowErrors[item.id] ? <Text accessibilityRole="alert" style={{ color: colors.errorText, marginTop: 16 }}>{rowErrors[item.id]}</Text> : null}
+    {item.status === 'accepted' && isTripWindow(item) ? (
+      <OnMyWayButton
+        bookingId={item.id}
+        onPress={() => {
+          setSelectedId(null);
+          navigation.navigate('Trip', {
+            booking: item,
+            customerName: counterpartsById.get(item.id)?.name ?? (language === 'de' ? 'Kunde' : 'Customer'),
+            serviceName: servicesById.get(item.service_id)?.name ?? (language === 'de' ? 'Termin' : 'Appointment'),
+          });
+        }}
+      />
+    ) : null}
     <AcceptedBookingTools
       booking={item}
       calendarTitle={`${servicesById.get(item.service_id)?.name ?? (language === 'de' ? 'Termin' : 'Appointment')} · ${counterpartsById.get(item.id)?.name ?? (language === 'de' ? 'Kunde' : 'Customer')}`}
@@ -464,6 +497,7 @@ export default function RequestsScreen() {
       )}
       {selected ? <BookingDetails booking={selected} role="barber" person={counterpartsById.get(selected.id)?.name ?? (language === 'de' ? 'Kunde' : 'Customer')} service={servicesById.get(selected.service_id)?.name ?? (language === 'de' ? 'Termin' : 'Appointment')} onClose={() => setSelectedId(null)}>{renderActions(selected)}</BookingDetails> : null}
       <ConfirmSheet open={confirmation !== null} title={confirmation?.title ?? ''} message={language === 'de' ? 'Diese Aktion kann nicht r\u00fcckg\u00e4ngig gemacht werden.' : 'This cannot be undone.'} confirmLabel={confirmation?.label ?? ''} cancelLabel={language === 'de' ? 'Behalten' : 'Keep'} destructive testID="barber-request-confirm" onClose={() => setConfirmation(null)} onConfirm={() => { const action = confirmation?.action; setConfirmation(null); action?.(); }} />
+      <CelebrationOverlay message={celebration} onDone={clearCelebration} testID="barber-requests-celebration" />
     </SafeAreaView>
   );
 }

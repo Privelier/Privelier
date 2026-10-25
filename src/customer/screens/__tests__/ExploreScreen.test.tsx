@@ -15,16 +15,18 @@ jest.mock('../../discoveryData', () => ({ listBarbersByCity: jest.fn(), listServ
 jest.mock('../../../shared/locale', () => ({ getAppLanguage: jest.fn(() => 'en') }));
 jest.mock('../../../shared/components/RetryNotice', () => ({ RetryNotice: () => null }));
 jest.mock('../../components/BarberCard', () => () => null);
-jest.mock('../../mapRuntime', () => ({
-  buildStaticMapUrl: (pins: { latitude: number; longitude: number }[]) =>
-    pins.length ? `https://api.mapbox.com/static/map/${pins.length}` : null,
-  hasMapboxPublicToken: () => true,
-  isMapNativeAvailable: () => false,
-}));
-jest.mock('expo-image', () => {
+// The real map renders native MapLibre or a WebView; the stub exposes the
+// scene it was given and lets a test fire map events.
+const mockMapEvents: { current: ((event: unknown) => void) | null } = { current: null };
+jest.mock('../../../shared/maps/PrivelierMap', () => {
   const React = jest.requireActual('react');
-  const { Image } = jest.requireActual('react-native');
-  return { Image: (props: unknown) => React.createElement(Image, props as never) };
+  const { View } = jest.requireActual('react-native');
+  return {
+    PrivelierMap: ({ scene, onEvent, testID }: { scene: { pins?: unknown[] }; onEvent: (e: unknown) => void; testID: string }) => {
+      mockMapEvents.current = onEvent;
+      return React.createElement(View, { testID, accessibilityHint: JSON.stringify(scene.pins ?? []) });
+    },
+  };
 });
 jest.mock('@expo/vector-icons', () => ({ Feather: () => null }));
 jest.mock('../../../theme/useTheme', () => ({
@@ -41,7 +43,7 @@ jest.mock('react-native-safe-area-context', () => {
 
 const mockLanguage = getAppLanguage as jest.MockedFunction<typeof getAppLanguage>;
 
-describe('ExploreScreen map fallback', () => {
+describe('ExploreScreen map', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockLanguage.mockReturnValue('en');
@@ -67,37 +69,38 @@ describe('ExploreScreen map fallback', () => {
     return view;
   }
 
-  it('shows the Mapbox preview in Expo Go and offers a direct return to the list', async () => {
+  it('renders the free MapLibre map with one pin per located barber and docks a card on pin tap', async () => {
     await renderExplore();
     await waitFor(() => expect(screen.getByTestId('customer-explore-toggle-map')).toBeTruthy());
     fireEvent.press(screen.getByTestId('customer-explore-toggle-map'));
 
-    expect(await screen.findByTestId('customer-explore-static-map')).toBeTruthy();
-    expect(screen.getByText('Mapbox map preview')).toBeTruthy();
-    expect(screen.getByTestId('customer-explore-static-map').props.source.uri).toBe('https://api.mapbox.com/static/map/1');
-    fireEvent.press(screen.getByTestId('customer-explore-map-switch-to-list'));
-    await waitFor(() => expect(screen.queryByTestId('customer-explore-map-area')).toBeNull());
+    const surface = await screen.findByTestId('customer-explore-map-surface');
+    const pins = JSON.parse(surface.props.accessibilityHint) as { id: string; lngLat: number[]; label: string }[];
+    expect(pins).toEqual([expect.objectContaining({ id: 'barber-1', lngLat: [13.4, 52.52], label: 'Test Barber' })]);
+    expect(screen.queryByTestId('customer-explore-docked-card')).toBeNull();
+
+    await act(async () => { mockMapEvents.current?.({ type: 'pin', id: 'barber-1' }); });
+    expect(await screen.findByTestId('customer-explore-docked-card')).toBeTruthy();
+    await act(async () => { mockMapEvents.current?.({ type: 'map' }); });
+    await waitFor(() => expect(screen.queryByTestId('customer-explore-docked-card')).toBeNull());
   });
 
-  it('offers a map retry after an image load failure', async () => {
-    await renderExplore();
-    fireEvent.press(screen.getByTestId('customer-explore-toggle-map'));
-    const mapImage = await screen.findByTestId('customer-explore-static-map');
-
-    fireEvent(mapImage, 'error');
-
-    expect(await screen.findByTestId('customer-explore-map-retry')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('customer-explore-map-retry'));
-    expect(await screen.findByTestId('customer-explore-static-map')).toBeTruthy();
-  });
-
-  it('localizes the map fallback and its accessible action in German', async () => {
+  it('shows the empty state with a list shortcut, localized in German, when no barber has a location', async () => {
     mockLanguage.mockReturnValue('de');
+    (listBarbersByCity as jest.Mock).mockResolvedValue({
+      status: 'ok',
+      barbers: [{ id: 'barber-1', name: 'Test Barber', display_latitude: null, display_longitude: null }],
+    });
     await renderExplore();
     await waitFor(() => expect(screen.getByTestId('customer-explore-toggle-map')).toBeTruthy());
     fireEvent.press(screen.getByTestId('customer-explore-toggle-map'));
-    expect(await screen.findByTestId('customer-explore-static-map')).toBeTruthy();
-    expect(screen.getByText('Mapbox Kartenvorschau')).toBeTruthy();
-    expect(screen.getByTestId('customer-explore-map-switch-to-list').props.accessibilityLabel).toBe('Zur Liste wechseln');
+
+    expect(await screen.findByTestId('customer-explore-map-empty')).toBeTruthy();
+    expect(screen.getByText('Noch keine Barber auf der Karte')).toBeTruthy();
+    expect(screen.queryByTestId('customer-explore-map-surface')).toBeNull();
+    const toList = screen.getByTestId('customer-explore-map-switch-to-list');
+    expect(toList.props.accessibilityLabel).toBe('Zur Liste wechseln');
+    fireEvent.press(toList);
+    await waitFor(() => expect(screen.queryByTestId('customer-explore-map-area')).toBeNull());
   });
 });

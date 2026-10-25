@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import { listPerformance } from '../listPerformance';
+import { RevealItem } from '../motion/Reveal';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -86,6 +88,7 @@ export default function NotificationCenterScreen({
       </View>
       {error ? <Text accessibilityRole="alert" style={[styles.emptyText, { color: colors.errorText }]}>{isGerman ? 'Benachrichtigungen konnten nicht geladen werden. Tippe auf Aktualisieren, um es erneut zu versuchen.' : 'Notifications could not load. Tap refresh to try again.'}</Text> : null}
       <FlatList
+        {...listPerformance}
         data={rows}
         keyExtractor={(item) => item.id}
         refreshing={loading && rows.length > 0}
@@ -96,15 +99,19 @@ export default function NotificationCenterScreen({
             {[0, 1, 2].map((item) => <View key={item} style={styles.skeletonRow}><Skeleton style={styles.skeletonDot} /><View style={styles.skeletonCopy}><Skeleton style={styles.skeletonTitle} /><Skeleton style={styles.skeletonBody} /><Skeleton style={styles.skeletonTime} /></View></View>)}
           </View>
         ) : !error ? <View style={styles.empty}><Feather name="bell" size={24} color={colors.accent} /><Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}>{isGerman ? 'Du bist auf dem neuesten Stand.' : 'You’re all caught up.'}</Text></View> : null}
-        renderItem={({ item }) => {
+        renderItem={({ item, index }) => {
           const copy = notificationCopy(item, (item.actor_id ? names[item.actor_id] ?? null : null));
           const icon = item.event_type === 'message' ? 'message-circle'
             : item.event_type === 'new_request' ? 'calendar'
+            : item.event_type === 'trip_started' ? 'navigation'
+            : item.event_type === 'trip_arriving' ? 'map-pin'
+            : item.event_type === 'trip_arrived' ? 'home'
             : item.booking_status === 'accepted' ? 'check-circle'
             : item.booking_status === 'completed' ? 'check'
             : item.booking_status === 'cancelled' ? 'x-circle'
             : item.booking_status === 'rejected' ? 'slash' : 'clock';
           return (
+            <RevealItem index={index}>
             <Pressable
               onPress={() => { if (!item.read_at) void markRead(item.id); onOpenNotification(item); }}
               accessibilityRole="button"
@@ -121,6 +128,7 @@ export default function NotificationCenterScreen({
               </View>
               {!item.read_at ? <View style={[styles.marker, { backgroundColor: colors.accent }]} /> : null}
             </Pressable>
+            </RevealItem>
           );
         }}
       />

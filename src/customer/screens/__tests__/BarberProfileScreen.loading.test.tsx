@@ -69,7 +69,7 @@ it('keeps real service selection reachable from portfolio and uses the selected 
   await fireEvent.press(screen.getByTestId('barber-profile-choose-service'));
   expect(navigate).not.toHaveBeenCalled();
   await fireEvent.press(screen.getByTestId('barber-profile-book-service-1'));
-  expect(navigate).toHaveBeenCalledWith('BookingDateTime', { barberId: barber.id, barberName: barber.name, service });
+  expect(navigate).toHaveBeenCalledWith('BookingDateTime', { barberId: barber.id, barberName: barber.name, barberImage: null, service });
 });
 
 it('does not offer a booking or starting price when no services exist', async () => {

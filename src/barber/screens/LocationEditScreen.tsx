@@ -5,7 +5,7 @@
  * shape exactly (leaf editor, plain useEffect mount-fetch per the bio-edit C6
  * precedent, save pops back to Studio whose focus refresh re-reads the card).
  *
- * Flow: the barber types their address → debounced Mapbox forward geocoding
+ * Flow: the barber types their address → debounced Photon (free OSM) forward geocoding
  * (src/shared/geocoding.ts, plain HTTPS — no native module) → picks a
  * candidate → saves. The saved coordinates are ALWAYS a picked candidate's,
  * never hand-typed (free text without a picked candidate cannot be saved

@@ -49,6 +49,29 @@ export function directionsUrl(address: string, platform: string = Platform.OS): 
   return platform === 'ios' ? `https://maps.apple.com/?daddr=${query}` : `geo:0,0?q=${query}`;
 }
 
+/**
+ * Turn-by-turn to exact coordinates in the phone's own maps app (free: Apple
+ * Maps / Google Maps do the navigating; Privelier only shares the ETA).
+ */
+export function navigationUrls(latitude: number, longitude: number, platform: string = Platform.OS): string[] {
+  const at = `${latitude.toFixed(6)},${longitude.toFixed(6)}`;
+  return platform === 'ios'
+    ? [`https://maps.apple.com/?daddr=${at}&dirflg=d`]
+    : [`google.navigation:q=${at}&mode=d`, `geo:${at}?q=${at}`];
+}
+
+export async function openNavigationTo(latitude: number, longitude: number): Promise<DeviceActionResult> {
+  for (const url of navigationUrls(latitude, longitude)) {
+    try {
+      await Linking.openURL(url);
+      return 'done';
+    } catch {
+      // Try the next scheme.
+    }
+  }
+  return 'unavailable';
+}
+
 export async function openDirections(address: string): Promise<DeviceActionResult> {
   try {
     await Linking.openURL(directionsUrl(address));

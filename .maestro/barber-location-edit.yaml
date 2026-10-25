@@ -1,7 +1,7 @@
 # Barber location entry flow (Explore/location Run A): log in as the barber ->
 # Studio tab -> tap the Location management card -> the LocationEdit screen
 # renders with its privacy consent copy -> type a well-known address -> the
-# debounced Mapbox geocode returns candidates -> pick the first one and assert
+# debounced Photon (free OSM) geocode returns candidates -> pick the first one and assert
 # it fills the input.
 #
 # Deliberately NOT asserted (deterministic-path-only, same philosophy as
@@ -14,10 +14,9 @@
 # - The Studio card's summary text (state-dependent: address vs the
 #   "Add your address" placeholder).
 #
-# REAL NETWORK: the candidate step calls the real Mapbox Geocoding API using
-# the EXPO_PUBLIC_MAPBOX_TOKEN baked into the dev build. A device without
-# network (or a build without the token) fails at the candidates step — that
-# is a genuine failure of the feature under test, not flakiness.
+# REAL NETWORK: the candidate step calls the real, keyless Photon API
+# (photon.komoot.io). A device without network fails at the candidates
+# step — that is a genuine failure of the feature under test, not flakiness.
 #
 # NOT YET RUN — same tooling gap as every other flow here: no Maestro CLI on
 # the authoring machine (see .maestro/README.md). Once available:
@@ -92,7 +91,7 @@ env:
 - assertVisible:
     id: "barber-location-input"
 
-# --- Geocode a well-known address; candidates come from the REAL Mapbox API ---
+# --- Geocode a well-known address; candidates come from the REAL Photon API ---
 - tapOn:
     id: "barber-location-input"
 # Clear whatever is seeded (a saved address from an earlier run) first.

@@ -5,7 +5,7 @@ Privelier is a premium, private marketplace for customers to book independent ba
 ## Prerequisites
 
 - Node.js 20 LTS or later and npm
-- An Expo development build for native-only features (Secure Store, image picker, and Mapbox)
+- An Expo development build for native-only features (Secure Store, image picker, native MapLibre maps, background trip location and push). Expo Go still shows maps through the MapLibre GL web renderer.
 - Access to the project Supabase instance
 
 Copy `.env.example` to `.env` and set the public runtime values. The file is gitignored.
@@ -15,7 +15,7 @@ Copy-Item .env.example .env
 npm ci
 ```
 
-Never put a Supabase `service_role` key, Mapbox secret download token, provider secret, or private key in `.env`, Expo config, or client code. `EXPO_PUBLIC_*` values are embedded in the client: use only the Supabase anon key and a Mapbox public `pk.` token there. The Mapbox download token belongs only in EAS secrets (`RNMAPBOX_DOWNLOAD_TOKEN` or `RNMAPBOX_MAPS_DOWNLOAD_TOKEN`).
+Never put a Supabase `service_role` key, provider secret, or private key in `.env`, Expo config, or client code. `EXPO_PUBLIC_*` values are embedded in the client: only the Supabase URL and anon key belong there. Maps (MapLibre + OpenFreeMap), address search (Photon) and routing (FOSSGIS OSRM/Valhalla) are free and keyless; see `tools/geo/README.md` for the location stack and its Python tooling.
 
 ## Run and validate
 
@@ -30,7 +30,7 @@ npm test -- --runInBand
 npx expo-doctor
 ```
 
-For the intended native preview, install a compatible development build on a physical device, run `npm start -- --dev-client`, then open the displayed Expo link. `npm run web` is useful for a quick navigation/UI preview, but it cannot validate native image selection, Secure Store, or the Mapbox native module.
+For the intended native preview, install a compatible development build on a physical device, run `npm start -- --dev-client`, then open the displayed Expo link. `npm run web` is useful for a quick navigation/UI preview, but it cannot validate native image selection, Secure Store, or the native MapLibre module.
 
 ## Architecture
 
@@ -53,7 +53,7 @@ The current release blocker is server-side appointment validation: the client de
 
 Unit and component tests run in Jest. Authored Maestro flows live in `.maestro/`; see its README for seeded-account requirements and commands. They require a real Android/iOS development build and have not all been executed on this machine.
 
-Release also requires founder-controlled validation that cannot be faked locally: two-session Realtime booking/chat behavior and recovery, image selection, Secure Store, Mapbox, manual verification review, social OAuth provider configuration, iOS development build, and the end-to-end real-user flow.
+Release also requires founder-controlled validation that cannot be faked locally: two-session Realtime booking/chat behavior and recovery, image selection, Secure Store, native maps, live trip tracking and push on two devices, manual verification review, social OAuth provider configuration, iOS development build, and the end-to-end real-user flow.
 
 ## Scope and security
 

@@ -17,6 +17,8 @@ import EditProfileScreen from './screens/EditProfileScreen';
 import LegalDocumentScreen from '../legal/LegalDocumentScreen';
 import type { LegalDocument } from '../legal/legalConfig';
 import NotificationCenterScreen from '../shared/screens/NotificationCenterScreen';
+import LiveTripScreen from './screens/LiveTripScreen';
+import type { LiveTripContext } from './liveTripData';
 
 export type CustomerStackParamList = {
   CustomerTabs: NavigatorScreenParams<CustomerTabParamList> | undefined;
@@ -48,6 +50,8 @@ export type CustomerStackParamList = {
     date: string;
     time: string;
     location: string;
+    /** Street + city only (no flat number or door notes) for an accurate pin. */
+    geocodeQuery?: string;
   };
   // Chat: the Inbox thread row carries the room
   // plus its already-loaded display context so the conversation screen
@@ -56,6 +60,9 @@ export type CustomerStackParamList = {
   // Inbox row).
   Conversation: { room: ChatRoomRow; title: string; subtitle: string | null; counterpart?: { id: string; name: string | null; profile_image: string | null } | null };
   NotificationCenter: undefined;
+  // Live arrival tracking: opened from a push/feed tap (id only) or from a
+  // booking card (context rides along so nothing is re-fetched).
+  LiveTrip: { bookingId: string; context?: LiveTripContext };
   // Review submission: reached from a completed booking's
   // Past card on the Bookings tab. barberName/serviceName ride along (already
   // loaded on that card) purely for the summary; barberId is passed to the
@@ -95,11 +102,16 @@ export default function CustomerNavigator({ onExit }: { onExit: () => void }) {
               onBack={() => props.navigation.goBack()}
               onOpenNotification={(row) => {
                 props.navigation.goBack();
+                if (row.event_type.startsWith('trip_')) {
+                  props.navigation.navigate('LiveTrip', { bookingId: row.booking_id });
+                  return;
+                }
                 props.navigation.navigate('CustomerTabs', { screen: row.event_type === 'message' ? 'Inbox' : 'Bookings' });
               }}
             />}
           </Stack.Screen>
           <Stack.Screen name="ReviewSubmit" component={ReviewSubmitScreen} />
+          <Stack.Screen name="LiveTrip" component={LiveTripScreen} options={{ animation: reduceMotion ? 'fade' : 'slide_from_bottom' }} />
         </Stack.Navigator>
       </UnreadProvider>
     </RoleExitProvider>

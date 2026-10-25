@@ -1,12 +1,8 @@
 /**
- * Explore map pane (map-integration follow-up of Run B — design:
- * docs/design/explore-location-design-approval.md, condition C8).
- *
- * IMPORT CONTRACT: this module imports @rnmapbox/maps EAGERLY, and that
- * package THROWS at import time when its native side is absent — so this
- * file must only ever be require()d behind isMapNativeAvailable()
- * (src/customer/mapRuntime.ts). ExploreScreen does exactly that; never add
- * a static import of this file anywhere.
+ * Explore map pane (design: docs/design/explore-location-design-approval.md,
+ * condition C8) on free MapLibre + OpenFreeMap tiles — native in app
+ * builds, the MapLibre GL web renderer in Expo Go and on web (PrivelierMap
+ * picks; no API key or per-load fee anywhere).
  *
  * Privacy: the coordinates rendered here are ONLY the offset display pair
  * from barber_directory (an ExploreMapPin cannot even carry anything else —
@@ -16,25 +12,19 @@
  *
  * Interaction: tap a pin -> the barber's card docks at the bottom (the
  * screen's one deliberate moment); tap the map background -> it undocks;
- * tap the card -> the barber profile. Camera starts fitted to the pins
- * (pure pinBounds; the empty case never reaches this component — the screen
- * renders its map-empty state instead of a pointless globe).
+ * tap the card -> the barber profile. The camera frames every pin once; the
+ * empty case never reaches this component (ExploreScreen renders its
+ * map-empty state instead of a pointless globe).
  */
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { AccessibilityInfo, Animated, Easing, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import Mapbox from '@rnmapbox/maps';
-import { useTheme } from '../../theme/useTheme';
-import { numericText } from '../../theme/typography';
+import { AccessibilityInfo, Animated, Easing, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { duration } from '../../theme/motion';
 import type { BarberDirectoryRow, ServiceRow } from '../../types';
 import { formatMoney } from '../format';
-import { pinBounds, type ExploreMapPin } from '../exploreData';
+import type { ExploreMapPin } from '../exploreData';
+import { PrivelierMap } from '../../shared/maps/PrivelierMap';
+import type { MapEvent, MapScene } from '../../shared/maps/mapScene';
 import BarberCard from './BarberCard';
-
-// Runtime API access uses the PUBLIC pk. token (same one the geocoding
-// client uses). Module scope is safe: this module only loads when the
-// native side exists, and setAccessToken is idempotent.
-void Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? null);
 
 export interface ExploreMapViewProps {
   pins: ExploreMapPin[];
@@ -43,108 +33,43 @@ export interface ExploreMapViewProps {
   onOpenProfile: (barberId: string) => void;
 }
 
-const CAMERA_PADDING = 48;
-
 export default function ExploreMapView({
   pins,
   barbersById,
   servicesByBarber,
   onOpenProfile,
 }: ExploreMapViewProps) {
-  const { colors, fonts, isDark } = useTheme();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // Camera target from the pure, tested pinBounds. Applied as DIRECT Camera
-  // props, not defaultSettings: on-device (Android, v10.3) defaultSettings
-  // silently failed to apply, leaving the camera at the world-view (0,0)
-  // default with the pin far off screen.
-  // Direct props apply on mount AND whenever the pin set changes, so filter
-  // chips re-frame the map to the barbers they match. The zero-pin case
-  // never reaches this component (ExploreScreen renders its map-empty state
-  // instead of a map), so there is no (0,0) fallback to have.
-  const camera = useMemo(() => pinBounds(pins), [pins]);
+  const scene = useMemo<MapScene>(() => ({
+    camera: 'fit',
+    pins: pins.map((pin) => {
+      const barber = barbersById.get(pin.barberId);
+      const price = pin.fromPrice !== null ? formatMoney(pin.fromPrice) : null;
+      return {
+        id: pin.barberId,
+        lngLat: [pin.longitude, pin.latitude],
+        label: price ?? barber?.name ?? '·',
+        accessibilityLabel: barber ? `${barber.name}${price ? `, from ${price}` : ''}` : 'Barber pin',
+        active: pin.barberId === selectedId,
+      };
+    }),
+  }), [pins, barbersById, selectedId]);
+
+  const onEvent = useCallback((event: MapEvent) => {
+    if (event.type === 'pin') setSelectedId(event.id);
+    else if (event.type === 'map') setSelectedId(null);
+  }, []);
 
   const selected = selectedId !== null ? (barbersById.get(selectedId) ?? null) : null;
 
-  const deselect = useCallback(() => setSelectedId(null), []);
-
   return (
     <View style={styles.container} testID="customer-explore-map">
-      <Mapbox.MapView
-        style={styles.map}
-        styleURL={isDark ? Mapbox.StyleURL.Dark : Mapbox.StyleURL.Light}
-        scaleBarEnabled={false}
-        onPress={deselect}
-      >
-        {camera?.kind === 'bounds' ? (
-          <Mapbox.Camera
-            bounds={{
-              ne: camera.ne,
-              sw: camera.sw,
-              paddingTop: CAMERA_PADDING,
-              paddingBottom: CAMERA_PADDING,
-              paddingLeft: CAMERA_PADDING,
-              paddingRight: CAMERA_PADDING,
-            }}
-            animationDuration={0}
-          />
-        ) : camera?.kind === 'center' ? (
-          <Mapbox.Camera
-            centerCoordinate={camera.center}
-            zoomLevel={13}
-            animationDuration={0}
-          />
-        ) : null}
-        {pins.map((pin) => {
-          const barber = barbersById.get(pin.barberId);
-          const active = pin.barberId === selectedId;
-          const label =
-            pin.fromPrice !== null ? formatMoney(pin.fromPrice) : (barber?.name ?? '·');
-          return (
-            <Mapbox.MarkerView
-              key={pin.barberId}
-              coordinate={[pin.longitude, pin.latitude]}
-              allowOverlap
-            >
-              <Pressable
-                onPress={() => setSelectedId(pin.barberId)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                accessibilityLabel={
-                  barber
-                    ? `${barber.name}${pin.fromPrice !== null ? `, from ${formatMoney(pin.fromPrice)}` : ''}`
-                    : 'Barber pin'
-                }
-                testID={`customer-explore-pin-${pin.barberId}`}
-                hitSlop={8}
-                style={({ pressed }) => [
-                  styles.pin,
-                  active
-                    ? { backgroundColor: colors.accent, borderColor: colors.accent }
-                    : { backgroundColor: colors.surface, borderColor: colors.border },
-                  { opacity: pressed ? 0.85 : 1 },
-                ]}
-              >
-                <Text
-                  numberOfLines={1}
-                  style={[
-                    styles.pinText,
-                    pin.fromPrice !== null ? numericText : { fontFamily: fonts.bodySemiBold },
-                    { color: active ? colors.onAccent : colors.textPrimary },
-                  ]}
-                >
-                  {label}
-                </Text>
-              </Pressable>
-            </Mapbox.MarkerView>
-          );
-        })}
-      </Mapbox.MapView>
+      <PrivelierMap scene={scene} onEvent={onEvent} testID="customer-explore-map-surface" />
 
       {selected ? (
         // Keyed by barber id so switching pins (not just first dock) remounts
-        // the wrapper and replays the entrance — a fresh docking each time,
-        // not just the first one.
+        // the wrapper and replays the entrance — a fresh docking each time.
         <DockedCard key={selected.id} style={styles.docked} testID="customer-explore-docked-card">
           <BarberCard
             barber={selected}
@@ -172,10 +97,7 @@ function DockedCard({
   testID: string;
   children: ReactNode;
 }) {
-  // useState's lazy initializer (not useRef) — see Skeleton.tsx for why:
-  // react-hooks/refs flags a ref's `.current` read during render, and
-  // Animated.Value is mutated by the animation engine itself, so holding it
-  // as never-set state is the correct, lint-clean equivalent.
+  // useState's lazy initializer (not useRef) — see Skeleton.tsx for why.
   const [opacity] = useState(() => new Animated.Value(0));
   const [translateY] = useState(() => new Animated.Value(8));
 
@@ -205,18 +127,6 @@ function DockedCard({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  map: { flex: 1 },
-  pin: {
-    borderWidth: 0.5,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    minHeight: 30,
-    maxWidth: 140,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pinText: { fontSize: 12 },
   docked: {
     position: 'absolute',
     left: 16,

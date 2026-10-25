@@ -14,6 +14,7 @@
  * recycled list row.
  */
 import type { PropsWithChildren } from 'react';
+import { View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import Animated, { FadeInDown, ReduceMotion } from 'react-native-reanimated';
 import { easing, reveal } from '../../theme/motion';
@@ -40,4 +41,13 @@ export function Reveal({ index = 0, style, testID, children }: Props) {
       {children}
     </Animated.View>
   );
+}
+
+/**
+ * List-row variant: the first screenful staggers in; rows mounted later
+ * (scrolling, recycling) appear instantly, so long lists stay cheap.
+ */
+export function RevealItem({ index, style, testID, children }: Props & { index: number }) {
+  if (index >= 8) return <View style={style} testID={testID}>{children}</View>;
+  return <Reveal index={index} style={style} testID={testID}>{children}</Reveal>;
 }

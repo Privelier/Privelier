@@ -13,11 +13,12 @@
  * verification_status = 'approved'), so every visible row is verified by
  * construction.
  */
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { PressableScale } from '../../shared/motion/PressableScale';
+import { ResponseBadge } from '../../shared/components/stats/ResponseBadge';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/useTheme';
 import { numericText } from '../../theme/typography';
-import { pressOpacity } from '../../theme/motion';
 import { radius } from '../../theme/spacing';
 import { Avatar } from '../../shared/components/Avatar';
 import { GlassSurface } from '../../shared/components/GlassSurface';
@@ -36,6 +37,8 @@ type Props = {
    * label means something and brass stays rationed.
    */
   featured?: boolean;
+  /** Median reply time from barber_stats (wide variant shows the badge). */
+  responseMinutes?: number | null;
   onPress: () => void;
 };
 
@@ -81,7 +84,7 @@ function RatingLine({ rating, size, language }: { rating: number; size: number; 
   );
 }
 
-export default function BarberCard({ barber, services, variant = 'wide', featured = false, onPress }: Props) {
+export default function BarberCard({ barber, services, variant = 'wide', featured = false, responseMinutes = null, onPress }: Props) {
   const { colors, fonts } = useTheme();
   const language = getAppLanguage();
   const from = startingPrice(services);
@@ -101,13 +104,13 @@ export default function BarberCard({ barber, services, variant = 'wide', feature
 
   if (variant === 'row') {
     return (
-      <Pressable
+      <PressableScale
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={cardLabel}
         accessibilityHint={language === 'de' ? 'Öffnet das Barber-Profil' : 'Opens the barber profile'}
         testID={`customer-home-barber-${barber.id}`}
-        style={({ pressed }) => ({ opacity: pressed ? pressOpacity.soft : 1 })}
+        haptic
       >
         <GlassSurface style={styles.row}>
           <Avatar
@@ -147,19 +150,20 @@ export default function BarberCard({ barber, services, variant = 'wide', feature
           </View>
           <Feather name="chevron-right" size={18} color={colors.textSecondary} />
         </GlassSurface>
-      </Pressable>
+      </PressableScale>
     );
   }
 
   if (variant === 'compact') {
     return (
-      <Pressable
+      <PressableScale
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={cardLabel}
         accessibilityHint={getAppLanguage() === 'de' ? 'Öffnet das Barber-Profil' : 'Opens the barber profile'}
         testID={`customer-home-barber-${barber.id}`}
-      style={({ pressed }) => [styles.compactPressable, { opacity: pressed ? pressOpacity.soft : 1 }]}
+        haptic
+        style={styles.compactPressable}
       >
         <GlassSurface style={styles.compact}>
           <CardImage barber={barber} aspectRatio={1} />
@@ -197,18 +201,19 @@ export default function BarberCard({ barber, services, variant = 'wide', feature
             </View>
           </View>
         </GlassSurface>
-      </Pressable>
+      </PressableScale>
     );
   }
 
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={cardLabel}
       accessibilityHint={getAppLanguage() === 'de' ? 'Öffnet das Barber-Profil' : 'Opens the barber profile'}
       testID={`customer-home-barber-${barber.id}`}
-      style={({ pressed }) => [styles.widePressable, { opacity: pressed ? pressOpacity.soft : 1 }]}
+      haptic
+      style={styles.widePressable}
     >
       <GlassSurface style={styles.wide}>
         <CardImage barber={barber} aspectRatio={16 / 10} />
@@ -247,8 +252,13 @@ export default function BarberCard({ barber, services, variant = 'wide', feature
             ) : null}
           </View>
         </View>
+        {responseMinutes != null ? (
+          <View style={styles.wideBadge}>
+            <ResponseBadge minutes={responseMinutes} testID={`customer-barber-response-${barber.id}`} />
+          </View>
+        ) : null}
       </GlassSurface>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -278,6 +288,7 @@ const styles = StyleSheet.create({
   wideMetaRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginTop: 12, paddingHorizontal: 16, paddingBottom: 16 },
   wideMetaLeft: { flexShrink: 1, minWidth: 0 },
   wideMetaRight: { alignItems: 'flex-end' },
+  wideBadge: { paddingHorizontal: 16, paddingBottom: 14, marginTop: -4 },
   editorsPick: { fontSize: 12 },
   wideName: { fontSize: 21, marginTop: 4, flexShrink: 1 },
   wideMeta: { fontSize: 14, marginTop: 4 },

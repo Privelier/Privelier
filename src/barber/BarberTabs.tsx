@@ -1,4 +1,9 @@
-import { createRef, useState } from 'react';
+import { createRef, useCallback, useEffect, useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { usePushOpen } from '../shared/push';
+import { resumeActiveTrip } from './trip/tripService';
+import type { BarberStackParamList } from './BarberNavigator';
 import { View } from 'react-native';
 import { BlurTargetView } from 'expo-blur';
 import { getAppLanguage } from '../shared/locale';
@@ -44,6 +49,16 @@ const TAB_ICONS: Record<keyof BarberTabParamList, keyof typeof Feather.glyphMap>
 };
 
 export default function BarberTabs() {
+  const stackNavigation = useNavigation<NativeStackNavigationProp<BarberStackParamList>>();
+  // Push taps open the matching tab.
+  usePushOpen(useCallback((data) => {
+    if (data.eventType === 'message') stackNavigation.navigate('BarberTabs', { screen: 'Chats' });
+    else if (data.eventType) stackNavigation.navigate('BarberTabs', { screen: 'Requests' });
+  }, [stackNavigation]));
+  // A trip still running from before an app restart reattaches its UI state.
+  useEffect(() => {
+    void resumeActiveTrip();
+  }, []);
   const { colors, fonts } = useTheme();
   const tabBarStyle = useFloatingTabBarStyle();
   const language = getAppLanguage();

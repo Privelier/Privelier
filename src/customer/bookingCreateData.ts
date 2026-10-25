@@ -68,6 +68,8 @@ export async function insertBooking(input: {
   date: string; // 'YYYY-MM-DD'
   time: string; // 'HH:MM:SS'
   location: string;
+  /** Geocoded destination (Photon), when the address could be placed. */
+  coordinates?: { latitude: number; longitude: number } | null;
 }): Promise<InsertBookingResult> {
   const location = input.location.trim();
   if (!location) return failure('invalid_input');
@@ -89,6 +91,10 @@ export async function insertBooking(input: {
       date: input.date,
       time: input.time,
       location,
+      // Frozen after insert (migration 0049); both or neither.
+      ...(input.coordinates
+        ? { location_latitude: input.coordinates.latitude, location_longitude: input.coordinates.longitude }
+        : {}),
     })
     .select()
     .single();

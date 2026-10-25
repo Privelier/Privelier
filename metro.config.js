@@ -13,4 +13,13 @@ config.resolver.blockList = [
   toolingDirs,
 ];
 
+// Startup speed: evaluate a module only when it is first used instead of
+// all modules at launch (screens the user never opens never run). Side-effect
+// imports such as index.ts's trip task registration are unaffected.
+const baseTransformOptions = config.transformer.getTransformOptions;
+config.transformer.getTransformOptions = async (...args) => {
+  const options = await baseTransformOptions(...args);
+  return { ...options, transform: { ...options.transform, inlineRequires: true } };
+};
+
 module.exports = withNativewind(config, { inlineRem: 16 });

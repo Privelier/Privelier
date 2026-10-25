@@ -27,6 +27,15 @@ jest.mock('../../../shared/components/PrimaryButton', () => {
 });
 jest.mock('../../../shared/components/ScreenBackHeader', () => ({ ScreenBackHeader: () => null }));
 jest.mock('../../components/BookingStepIndicator', () => ({ BookingStepIndicator: () => null }));
+const mockGeocode = jest.fn();
+jest.mock('../../../shared/geocoding', () => ({ geocodeBestMatch: (...args: unknown[]) => mockGeocode(...args) }));
+const mockAskPush = jest.fn();
+jest.mock('../../../shared/push', () => ({ askForPushPermissionInContext: () => mockAskPush() }));
+jest.mock('../../components/AddressPinPreview', () => {
+  const React = jest.requireActual('react');
+  const { View } = jest.requireActual('react-native');
+  return { AddressPinPreview: ({ state }: { state: { status: string } }) => React.createElement(View, { testID: `pin-${state.status}` }) };
+});
 jest.mock('../../../theme/useTheme', () => ({
   useTheme: () => ({
     colors: { background: '#121214', surface: '#1B1B1E', border: '#333', textPrimary: '#F5F1E8', textSecondary: '#9A968C', accent: '#BFA06B' },
@@ -50,6 +59,8 @@ const CREATED = {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockGeocode.mockResolvedValue(null);
+  mockAskPush.mockResolvedValue(false);
 });
 
 it('confirms on tap and plays success feedback only after a real booking insert', async () => {
@@ -67,8 +78,37 @@ it('confirms on tap and plays success feedback only after a real booking insert'
   expect(haptics.success).toHaveBeenCalledTimes(1);
   expect(insertBooking).toHaveBeenCalledWith({
     barberId: 'barber-1', serviceId: 'service-1', date: '2026-09-28',
-    time: '12:00:00', location: 'Main Street 1',
+    time: '12:00:00', location: 'Main Street 1', coordinates: null,
   });
+  // Push is offered in context — right after the request went out.
+  expect(mockAskPush).toHaveBeenCalledTimes(1);
+});
+
+it('places the address with the street + city query and sends its coordinates with the booking', async () => {
+  const candidate = { label: 'Main Street 1, Nürnberg', latitude: 49.45, longitude: 11.07 };
+  mockGeocode.mockResolvedValue(candidate);
+  (insertBooking as jest.Mock).mockResolvedValue({ status: 'ok', booking: CREATED });
+  const withQuery = { params: { ...route.params, location: 'Main Street 1, Flat 3, Nürnberg, ring twice', geocodeQuery: 'Main Street 1, Nürnberg' } };
+  await render(<BookingConfirmScreen route={withQuery as never} navigation={navigation as never} />);
+
+  await waitFor(() => expect(screen.getByTestId('pin-found')).toBeTruthy());
+  expect(mockGeocode).toHaveBeenCalledWith('Main Street 1, Nürnberg');
+  await fireEvent.press(screen.getByTestId('customer-booking-confirm-submit'));
+  await waitFor(() => expect(screen.getByTestId('customer-booking-confirm-success')).toBeTruthy());
+  expect(insertBooking).toHaveBeenCalledWith(expect.objectContaining({
+    location: 'Main Street 1, Flat 3, Nürnberg, ring twice',
+    coordinates: candidate,
+  }));
+});
+
+it('never blocks booking when the address cannot be placed', async () => {
+  mockGeocode.mockResolvedValue(null);
+  (insertBooking as jest.Mock).mockResolvedValue({ status: 'ok', booking: CREATED });
+  await render(<BookingConfirmScreen route={route as never} navigation={navigation as never} />);
+  await waitFor(() => expect(screen.getByTestId('pin-none')).toBeTruthy());
+  await fireEvent.press(screen.getByTestId('customer-booking-confirm-submit'));
+  await waitFor(() => expect(screen.getByTestId('customer-booking-confirm-success')).toBeTruthy());
+  expect(insertBooking).toHaveBeenCalledWith(expect.objectContaining({ coordinates: null }));
 });
 
 it('does not play success feedback when the slot conflicts', async () => {

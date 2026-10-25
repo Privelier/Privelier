@@ -23,6 +23,7 @@
  * Maestro contract: customer-review-submit-screen / -back / -stars /
  * -stars-star-{1..5} / -comment / -submit / -error / -success.
  */
+import { SuccessBurst } from '../../shared/motion/SuccessBurst';
 import { getAppLanguage } from '../../shared/locale';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -35,7 +36,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { StarRatingInput } from '../../shared/components/StarRatingInput';
 import { PrimaryButton } from '../../shared/components/PrimaryButton';
@@ -110,9 +110,7 @@ export default function ReviewSubmitScreen({ route, navigation }: Props) {
         testID="customer-review-submit-screen"
       >
         <View style={styles.successWrap} testID="customer-review-submit-success">
-          <View style={[styles.successIconRing, { backgroundColor: colors.surface }]}>
-            <Feather name="check-circle" size={36} color={colors.accent} />
-          </View>
+          <SuccessBurst testID="customer-review-submit-burst" />
           <Text style={[styles.successTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
             {de ? 'Bewertung veröffentlicht' : 'Review posted'}
           </Text>
@@ -238,7 +236,6 @@ const styles = StyleSheet.create({
   footer: { paddingHorizontal: 24, paddingTop: 14, paddingBottom: 20, borderTopWidth: 0.5 },
 
   successWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, gap: 12 },
-  successIconRing: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center' },
   successTitle: { fontSize: 22, marginTop: 4 },
   successHint: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
 });

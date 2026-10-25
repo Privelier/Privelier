@@ -4,12 +4,15 @@
  * action. Replaces bare "nothing here" text so an empty list still tells
  * the person where they are and what to do next.
  */
+import { useEffect, type ReactNode } from 'react';
 import { Feather } from '@expo/vector-icons';
+import Animated, { cancelAnimation, Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { pressOpacity } from '../../theme/motion';
 import { space } from '../../theme/spacing';
 import { useTheme } from '../../theme/useTheme';
 import { useGlassStyle } from './GlassSurface';
+import { useReducedMotionPreference } from '../motion/useReducedMotionPreference';
 
 type Props = {
   icon: keyof typeof Feather.glyphMap;
@@ -20,15 +23,36 @@ type Props = {
   style?: StyleProp<ViewStyle>;
 };
 
+/**
+ * The medallion drifts a few points up and down on a slow 3.2 s breath, so
+ * an empty screen feels calm and alive rather than broken. UI-thread loop;
+ * still under reduced motion.
+ */
+function FloatingMedallion({ style, children }: { style: StyleProp<ViewStyle>; children: ReactNode }) {
+  const reduceMotion = useReducedMotionPreference();
+  const drift = useSharedValue(0);
+  useEffect(() => {
+    if (reduceMotion) return;
+    drift.set(withRepeat(withTiming(1, { duration: 1600, easing: Easing.bezier(0.45, 0, 0.55, 1) }), -1, true));
+    return () => cancelAnimation(drift);
+  }, [drift, reduceMotion]);
+  const animated = useAnimatedStyle(() => ({ transform: [{ translateY: -4 * drift.get() }] }));
+  return (
+    <Animated.View style={[style, animated]} accessible={false} importantForAccessibility="no">
+      {children}
+    </Animated.View>
+  );
+}
+
 export function EmptyState({ icon, title, body, action, testID, style }: Props) {
   const { colors, fonts } = useTheme();
   const medallion = useGlassStyle('brass');
   const actionGlass = useGlassStyle('neutral');
   return (
     <View style={[styles.wrap, style]}>
-      <View style={[styles.medallion, medallion]} accessible={false} importantForAccessibility="no">
+      <FloatingMedallion style={[styles.medallion, medallion]}>
         <Feather name={icon} size={24} color={colors.accentText} />
-      </View>
+      </FloatingMedallion>
       <Text accessibilityRole="header" style={[styles.title, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]} testID={testID}>
         {title}
       </Text>

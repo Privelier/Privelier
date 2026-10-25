@@ -13,6 +13,8 @@
  * Loads on FOCUS (not mount): returning from a conversation must show the
  * fresh last-message preview, and bottom-tab screens stay mounted.
  */
+import { listPerformance } from '../../shared/listPerformance';
+import { RevealItem } from '../../shared/motion/Reveal';
 import { getAppLanguage } from '../../shared/locale';
 import { useCallback, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
@@ -104,6 +106,7 @@ export default function ChatsScreen({ navigation }: Props) {
         <>
         {error ? <RetryNotice testID="barber-chats-error" message={error} onRetry={() => void load()} style={styles.noticeMargins} /> : null}
         <FlatList
+          {...listPerformance}
           testID="barber-chats-list"
           data={threads}
           keyExtractor={(item) => item.room.id}
@@ -125,12 +128,13 @@ export default function ChatsScreen({ navigation }: Props) {
               body={de ? 'Chats starten, sobald Kunden dich buchen.' : 'Chats open once clients book you.'}
             />
           }
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const name = item.customer?.name ?? (de ? 'Kunde' : 'Customer');
             const service = item.service?.name ?? (de ? 'Termin' : 'Booking');
             const preview = item.lastMessage?.message ?? (de ? 'Noch keine Nachrichten.' : 'No messages yet.');
             const unread = unreadRoomIds.has(item.room.id);
             return (
+              <RevealItem index={index}>
               <GlassSurface variant="card" style={styles.rowCard}>
                 <Pressable
                   onPress={() => onOpenThread(item)}
@@ -181,6 +185,7 @@ export default function ChatsScreen({ navigation }: Props) {
                 ) : null}
                 </Pressable>
               </GlassSurface>
+              </RevealItem>
             );
           }}
         />

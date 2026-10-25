@@ -94,6 +94,9 @@ export interface BookingRow {
   date: string;
   time: string;
   location: string;
+  /** Geocoded destination (migration 0049); null when it could not be placed. */
+  location_latitude?: number | null;
+  location_longitude?: number | null;
   price: number;
   duration_minutes: number;
   status: BookingStatus;

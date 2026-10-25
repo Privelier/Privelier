@@ -197,9 +197,8 @@ For the Explore/location feature's Run A (barber address entry),
 `barber-location-edit.yaml` covers the deterministic path: Studio's Location
 card opens the LocationEdit screen, the privacy consent copy renders
 (mandatory — founder decision D2), typing a well-known address produces
-geocode candidates from the REAL Mapbox API (a build without the
-`EXPO_PUBLIC_MAPBOX_TOKEN`, or a device without network, fails here — that is
-the feature genuinely broken, not flakiness), and picking a candidate fills
+geocode candidates from the REAL, keyless Photon API (a device without
+network fails here — that is the feature genuinely broken, not flakiness), and picking a candidate fills
 the input. Deliberately NOT asserted: the save itself (save-enablement is
 dirty-state-dependent and would flake on re-runs when the saved address
 already equals the picked candidate) — the save/clear write paths are pinned
@@ -228,9 +227,9 @@ covers the deterministic path: the tab loads without error, the
 state-independent chips (All, Verified) and the list/map toggle render, the
 Map toggle renders its area without error, returning to list works, and a
 chip tap re-renders cleanly. The map AREA's content is build/data-dependent
-and deliberately unasserted: the real Mapbox map (post-Mapbox dev client
-with located barbers), the map-empty state (no pins), or the map-soon state
-(pre-Mapbox dev client) — all legitimate, none an error. Also unasserted:
+and deliberately unasserted: the MapLibre map (native in dev builds, the web
+renderer in Expo Go) when located barbers exist, or the map-empty state (no
+pins) — both legitimate, neither an error. Also unasserted:
 row counts / per-chip matches (backend-dependent; the empty state is a
 legitimate filter result) and the two data-backed chips individually (they
 hide when their batched read fails — by design). New testIDs:

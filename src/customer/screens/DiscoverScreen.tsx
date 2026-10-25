@@ -34,6 +34,7 @@ import { Reveal, ScrollGlassHeader, useScrollGlass } from '../../shared/motion';
 import { GlassSurface } from '../../shared/components/GlassSurface';
 import type { BarberDirectoryRow, ServiceRow } from '../../types';
 import { listBarbersByCity, listServicesForBarberIds } from '../discoveryData';
+import { fetchBarberStats, type BarberStatsRow } from '../../shared/barberStats';
 import {
   buildDiscoverPresentation,
   deriveServiceFilters,
@@ -73,6 +74,7 @@ export default function DiscoverScreen({ navigation }: Props) {
   const [cityName, setCityName] = useState<string | null>(null);
   const [serviceArea, setServiceArea] = useState<string | null>(null);
   const [barbers, setBarbers] = useState<BarberDirectoryRow[]>([]);
+  const [statsById, setStatsById] = useState<Map<string, BarberStatsRow>>(new Map());
   const [services, setServices] = useState<ServiceRow[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasSnapshot, setHasSnapshot] = useState(false);
@@ -133,9 +135,13 @@ export default function DiscoverScreen({ navigation }: Props) {
     setBarbers(barbersResult.barbers);
     setHasSnapshot(true);
 
-    const servicesResult = await listServicesForBarberIds(
-      barbersResult.barbers.map((barber) => barber.id)
-    );
+    const barberIds = barbersResult.barbers.map((barber) => barber.id);
+    // Stats ride alongside services in parallel; they only decorate cards.
+    const [servicesResult, stats] = await Promise.all([
+      listServicesForBarberIds(barberIds),
+      fetchBarberStats(barberIds),
+    ]);
+    setStatsById(stats);
     if (servicesResult.status === 'ok') {
       setServices(servicesResult.services);
       setActiveService((current) => {
@@ -498,6 +504,7 @@ export default function DiscoverScreen({ navigation }: Props) {
                       barber={spotlight}
                       services={servicesByBarber.get(spotlight.id) ?? []}
                       variant="wide"
+                      responseMinutes={statsById.get(spotlight.id)?.median_response_minutes ?? null}
                       onPress={() => openProfile(spotlight.id)}
                     />
                   </View>

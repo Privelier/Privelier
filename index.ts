@@ -1,4 +1,7 @@
 import { registerRootComponent } from 'expo';
+// Registers the trip location task at startup: the OS may relaunch the app
+// headless to deliver a location update while the barber is on the way.
+import './src/barber/trip/tripService';
 
 import App from './App';
 

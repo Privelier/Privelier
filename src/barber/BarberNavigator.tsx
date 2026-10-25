@@ -3,7 +3,7 @@ import { stackScreenOptions } from '../shared/navigation/stackScreenOptions';
 import { useReducedMotionPreference } from '../shared/motion/useReducedMotionPreference';
 import type { NavigatorScreenParams } from '@react-navigation/native';
 import { RoleExitProvider } from '../RoleContext';
-import type { ChatRoomRow } from '../types';
+import type { BookingRow, ChatRoomRow } from '../types';
 import BarberTabs, { type BarberTabParamList } from './BarberTabs';
 import { UnreadProvider } from './UnreadContext';
 import ServicesScreen from './screens/ServicesScreen';
@@ -15,6 +15,7 @@ import BarberSettingsScreen from './screens/BarberSettingsScreen';
 import LegalDocumentScreen from '../legal/LegalDocumentScreen';
 import type { LegalDocument } from '../legal/legalConfig';
 import NotificationCenterScreen from '../shared/screens/NotificationCenterScreen';
+import TripScreen from './screens/TripScreen';
 
 export type BarberStackParamList = {
   BarberTabs: NavigatorScreenParams<BarberTabParamList> | undefined;
@@ -29,6 +30,8 @@ export type BarberStackParamList = {
   Conversation: { room: ChatRoomRow; title: string; subtitle: string | null; counterpart?: { id: string; name: string | null; profile_image: string | null } | null };
   NotificationCenter: undefined;
   Settings: undefined;
+  // "On my way" live arrival sharing for one accepted booking.
+  Trip: { booking: BookingRow; customerName: string; serviceName: string };
 };
 
 const Stack = createNativeStackNavigator<BarberStackParamList>();
@@ -50,6 +53,7 @@ export default function BarberNavigator({ onExit }: { onExit: () => void }) {
           <Stack.Screen name="Legal" component={LegalDocumentScreen} />
           <Stack.Screen name="Settings" component={BarberSettingsScreen} />
           <Stack.Screen name="Conversation" component={ConversationScreen} />
+          <Stack.Screen name="Trip" component={TripScreen} options={{ animation: reduceMotion ? 'fade' : 'slide_from_bottom' }} />
           <Stack.Screen name="NotificationCenter">
             {(props) => <NotificationCenterScreen
               role="barber"

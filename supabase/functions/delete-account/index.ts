@@ -14,6 +14,8 @@
 //
 // The service-role key exists only in this function's environment
 // (SUPABASE_SERVICE_ROLE_KEY is injected by Supabase), never in the app.
+// Deno resolves npm: specifiers at deploy time; Node's resolver cannot.
+// eslint-disable-next-line import/no-unresolved
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const BUCKETS = ['verification-docs', 'portfolio'] as const;

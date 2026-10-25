@@ -1,8 +1,9 @@
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { subscribeToBarberProfileLinks } from '../shared/profileLinks';
+import { usePushOpen } from '../shared/push';
 import type { CustomerStackParamList } from './CustomerNavigator';
-import { createRef, useEffect, useState } from 'react';
+import { createRef, useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { BlurTargetView } from 'expo-blur';
 import { getAppLanguage } from '../shared/locale';
@@ -55,6 +56,16 @@ export default function CustomerTabs() {
     () => subscribeToBarberProfileLinks((barberId) => stackNavigation.navigate('BarberProfile', { barberId })),
     [stackNavigation]
   );
+  // Push taps: trip pushes open live tracking, the rest the matching tab.
+  usePushOpen(useCallback((data) => {
+    if (data.eventType?.startsWith('trip_') && data.bookingId) {
+      stackNavigation.navigate('LiveTrip', { bookingId: data.bookingId });
+    } else if (data.eventType === 'message') {
+      stackNavigation.navigate('CustomerTabs', { screen: 'Inbox' });
+    } else if (data.eventType) {
+      stackNavigation.navigate('CustomerTabs', { screen: 'Bookings' });
+    }
+  }, [stackNavigation]));
   const { colors, fonts } = useTheme();
   const tabBarStyle = useFloatingTabBarStyle();
   const language = getAppLanguage();

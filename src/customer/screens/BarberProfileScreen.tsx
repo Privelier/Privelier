@@ -23,12 +23,14 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  View, Share } from 'react-native';
+  View,
+  Share,
+} from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -38,6 +40,9 @@ import { PortfolioTile } from '../../shared/components/PortfolioTile';
 import { StarRating } from '../../shared/components/StarRating';
 import { Avatar } from '../../shared/components/Avatar';
 import { GlassSurface } from '../../shared/components/GlassSurface';
+import { ResponseBadge } from '../../shared/components/stats/ResponseBadge';
+import { PopularTimesChart } from '../../shared/components/stats/PopularTimesChart';
+import { fetchBarberStats, type BarberStatsRow } from '../../shared/barberStats';
 import { getAppLanguage } from '../../shared/locale';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { BackButton, OVER_IMAGE_BG, OVER_IMAGE_ICON } from '../../shared/components/ScreenBackHeader';
@@ -45,7 +50,7 @@ import { listFavoriteBarberIds, setFavorite } from '../personalData';
 import { barberProfileLink } from '../../shared/profileLinks';
 import { haptics } from '../../shared/haptics';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
-import { ScrollGlassHeader, useReducedMotionPreference, useScrollGlass } from '../../shared/motion';
+import { Reveal, ScrollGlassHeader, useReducedMotionPreference, useScrollGlass } from '../../shared/motion';
 import { useTheme } from '../../theme/useTheme';
 import { numericText } from '../../theme/typography';
 import { pressOpacity } from '../../theme/motion';
@@ -143,6 +148,8 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
   const [servicesError, setServicesError] = useState<string | null>(null);
   const [portfolioError, setPortfolioError] = useState<string | null>(null);
   const [reviewsError, setReviewsError] = useState<string | null>(null);
+  // Nightly Python stats (migration 0050) — decorative: absent hides them.
+  const [stats, setStats] = useState<BarberStatsRow | null>(null);
   const [tab, setTab] = useState<TabKey>('services');
 
   const load = useCallback(async () => {
@@ -169,12 +176,14 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
     // Services, portfolio and reviews are independent secondary reads — fetch
     // in parallel; a failure in any is a tab-local error, never a whole-screen
     // one (the profile already loaded).
-    const [servicesResult, portfolioResult, reviewsResult] = await Promise.all([
+    const [servicesResult, portfolioResult, reviewsResult, statsById] = await Promise.all([
       listServicesForBarber(barberId),
       listPortfolioForBarber(barberId),
       fetchReviewsForBarber(barberId),
+      fetchBarberStats([barberId]),
     ]);
     setLoading(false);
+    setStats(statsById.get(barberId) ?? null);
     if (servicesResult.status === 'ok') {
       setServices(servicesResult.services);
     } else {
@@ -271,7 +280,14 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
         <View style={[styles.hero, { backgroundColor: colors.surface }]}>
           {barber.profile_image ? (
             <Animated.View style={[styles.heroImage, heroParallax]} testID="barber-profile-hero-parallax">
-              <Image source={{ uri: barber.profile_image }} style={styles.heroImageFill} resizeMode="cover" />
+              <Image
+                source={{ uri: barber.profile_image }}
+                style={styles.heroImageFill}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                transition={{ duration: 220, effect: 'cross-dissolve' }}
+                priority="high"
+              />
             </Animated.View>
           ) : (
             <View style={[styles.heroFallback, { paddingTop: insets.top + 64 }]}>
@@ -317,6 +333,12 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
           </View>
         </View>
 
+        {stats?.median_response_minutes != null ? (
+          <View style={styles.badgeRow}>
+            <ResponseBadge minutes={stats.median_response_minutes} testID="barber-profile-response" />
+          </View>
+        ) : null}
+
         {/* Bio + specialty chips (chips are this barber's service names). */}
         <View style={styles.bioBlock}>
           <Text style={[styles.bio, { color: colors.textPrimary, fontFamily: fonts.body }]}>
@@ -334,6 +356,17 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
             </View>
           ) : null}
         </View>
+
+        {stats?.popular_hours ? (
+          <Reveal index={1} style={styles.popularWrap}>
+            <GlassSurface style={styles.popularCard} testID="barber-profile-popular-times">
+              <Text style={[styles.popularTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+                {german ? 'Beliebte Zeiten' : 'Popular times'}
+              </Text>
+              <PopularTimesChart grid={stats.popular_hours} testID="barber-profile-popular-chart" />
+            </GlassSurface>
+          </Reveal>
+        ) : null}
 
         {/* Tab strip. */}
         <View onLayout={(event) => { servicesY.current = event.nativeEvent.layout.y; }} style={[styles.tabStrip, { borderBottomColor: colors.border }]}>
@@ -682,6 +715,10 @@ const styles = StyleSheet.create({
   favoriteWrap: { position: 'absolute', right: 24, flexDirection: 'row', gap: 12 },
   favoriteDisc: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   bioBlock: { paddingHorizontal: 24, paddingVertical: 24 },
+  badgeRow: { paddingHorizontal: 24, paddingTop: 16, marginBottom: -8 },
+  popularWrap: { paddingHorizontal: 24, paddingBottom: 24 },
+  popularCard: { padding: 18, gap: 12 },
+  popularTitle: { fontSize: 18, lineHeight: 24 },
   bio: { fontSize: 14, lineHeight: 22 },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16 },
   chip: { borderWidth: 0.5, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 },

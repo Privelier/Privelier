@@ -1,7 +1,13 @@
 import type { BookingRow } from '../types';
 import { getAppLanguage } from './locale';
 
-export type NotificationEventType = 'message' | 'new_request' | 'booking_status';
+export type NotificationEventType =
+  | 'message'
+  | 'new_request'
+  | 'booking_status'
+  | 'trip_started'
+  | 'trip_arriving'
+  | 'trip_arrived';
 export type NotificationChannelKind = 'notification-badge' | 'notifications';
 
 let notificationChannelSequence = 0;
@@ -41,6 +47,22 @@ export function notificationCopy(
     return isGerman
       ? { title: 'Neue Nachricht', body: `${name} hat dir eine Nachricht geschickt.` }
       : { title: 'New message', body: `${name} sent you a message.` };
+  }
+  // Trip events mirror notification_push_copy() in migration 0049.
+  if (row.event_type === 'trip_started') {
+    return isGerman
+      ? { title: 'Dein Barber ist unterwegs', body: `${name} ist auf dem Weg zu dir. Verfolge die Ankunft live.` }
+      : { title: 'Your barber is on the way', body: `${name} is on the way to you. Follow the arrival live.` };
+  }
+  if (row.event_type === 'trip_arriving') {
+    return isGerman
+      ? { title: 'Gleich da', body: `${name} ist in wenigen Minuten bei dir.` }
+      : { title: 'Almost there', body: `${name} will be with you in a few minutes.` };
+  }
+  if (row.event_type === 'trip_arrived') {
+    return isGerman
+      ? { title: 'Dein Barber ist da', body: `${name} ist an deiner Adresse angekommen.` }
+      : { title: 'Your barber has arrived', body: `${name} has arrived at your address.` };
   }
   if (row.event_type === 'new_request') {
     return isGerman

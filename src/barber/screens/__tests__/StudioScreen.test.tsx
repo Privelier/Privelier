@@ -234,7 +234,9 @@ describe('StudioScreen dashboard', () => {
     expect(screen.getByText('1 in the next 7 days')).toBeTruthy();
     expect(screen.getByTestId('barber-dashboard-earnings-trend')).toBeTruthy();
     expect(screen.getByTestId('barber-dashboard-rating')).toBeTruthy();
-    expect(StyleSheet.flatten(screen.getByText('€240').props.style)).toMatchObject({
+    // The booking value counts up; its accessible label is final from frame one.
+    expect(screen.getByLabelText('€240')).toBeTruthy();
+    expect(StyleSheet.flatten((await screen.findByText('€240', {}, { timeout: 3000 })).props.style)).toMatchObject({
       fontFamily: 'Inter_600SemiBold',
       fontVariant: ['lining-nums', 'tabular-nums'],
     });

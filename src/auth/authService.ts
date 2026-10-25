@@ -306,6 +306,18 @@ export async function updatePassword(password: string): Promise<PasswordUpdateRe
  * we still clear the local session so the user is signed out on this device.
  */
 export async function signOut(): Promise<void> {
+  // While the session is still valid: stop any live trip (wipes the
+  // barber's position) and detach this device's push token, so a shared
+  // phone never receives the previous user's notifications.
+  try {
+    const [{ stopAnyTripForSignOut }, { unregisterPushToken }] = await Promise.all([
+      import('../barber/trip/tripService'),
+      import('../shared/push'),
+    ]);
+    await Promise.all([stopAnyTripForSignOut(), unregisterPushToken()]);
+  } catch (raw) {
+    logAuthError('signOut.cleanup', raw);
+  }
   try {
     const { error } = await supabase.auth.signOut();
     if (error) {

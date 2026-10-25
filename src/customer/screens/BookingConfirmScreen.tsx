@@ -21,7 +21,8 @@
  *   retried blindly.
  * - a generic CustomerDataFailure: its own `.message` is shown inline.
  */
-import { useCallback, useRef, useState } from 'react';
+import { SuccessBurst } from '../../shared/motion/SuccessBurst';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -44,6 +45,9 @@ import { Reveal } from '../../shared/motion';
 import type { BookingRow } from '../../types';
 import { formatBookingWhen, formatMoney } from '../format';
 import { customerDataErrorCopy } from '../errors';
+import { geocodeBestMatch } from '../../shared/geocoding';
+import { AddressPinPreview, type AddressPinState } from '../components/AddressPinPreview';
+import { askForPushPermissionInContext } from '../../shared/push';
 import type { CustomerStackParamList } from '../CustomerNavigator';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'BookingConfirm'>;
@@ -51,7 +55,7 @@ type Props = NativeStackScreenProps<CustomerStackParamList, 'BookingConfirm'>;
 // Long enough to register as an intentional confirmation, short enough not
 // to feel like a stall — matches the "brief success state" spec.
 export default function BookingConfirmScreen({ route, navigation }: Props) {
-  const { barberId, barberName, barberImage, service, date, time, location } = route.params;
+  const { barberId, barberName, barberImage, service, date, time, location, geocodeQuery } = route.params;
   const { colors, fonts } = useTheme();
   const de = getAppLanguage() === 'de';
 
@@ -67,6 +71,19 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
   // Same-tick double-tap guard: `submitting` only disables the button after
   // the next commit, and a second insert would race the first one.
   const submittingRef = useRef(false);
+  const [pin, setPin] = useState<AddressPinState>({ status: 'loading' });
+
+  // Place the address once (free Photon geocode). Best effort: a miss never
+  // blocks the booking, it only means no live-arrival map for this one.
+  useEffect(() => {
+    let active = true;
+    void geocodeBestMatch(geocodeQuery ?? location).then((candidate) => {
+      if (active) setPin(candidate ? { status: 'found', candidate } : { status: 'none' });
+    });
+    return () => {
+      active = false;
+    };
+  }, [geocodeQuery, location]);
 
   const onConfirm = useCallback(async () => {
     if (submittingRef.current) return;
@@ -75,13 +92,23 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
     setSubmitting(true);
     setError(null);
     setConflict(false);
-    const result = await insertBooking({ barberId, serviceId: service.id, date, time, location });
+    const result = await insertBooking({
+      barberId,
+      serviceId: service.id,
+      date,
+      time,
+      location,
+      coordinates: pin.status === 'found' ? pin.candidate : null,
+    });
     submittingRef.current = false;
     setSubmitting(false);
 
     if (result.status === 'ok') {
       setCreated(result.booking);
       void haptics.success();
+      // The moment push is obviously useful: "tell me when they accept and
+      // when they are on the way". Asked once, never at app entry.
+      void askForPushPermissionInContext();
       return;
     }
     if (result.status === 'conflict') {
@@ -97,7 +124,7 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
       return;
     }
     setError(result.message);
-  }, [barberId, service.id, date, time, location, de]);
+  }, [barberId, service.id, date, time, location, pin, de]);
 
   const onPickAnotherTime = useCallback(() => {
     // Pops exactly Confirm + Location, landing back on the existing
@@ -156,9 +183,7 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
       >
         <ScrollView contentContainerStyle={styles.successWrap} testID="customer-booking-confirm-success">
           <Reveal index={0}>
-            <View style={[styles.successIconRing, { backgroundColor: colors.surface }]}>
-              <Feather name="check-circle" size={36} color={colors.accent} />
-            </View>
+            <SuccessBurst testID="customer-booking-confirm-burst" />
           </Reveal>
           <Text style={[styles.successTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
             {de ? 'Termin angefragt' : 'Booking requested'}
@@ -252,6 +277,8 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
           <SummaryRow label={de ? 'Adresse' : 'Location'} value={location} last />
         </View>
 
+        <AddressPinPreview state={pin} />
+
         <View style={[styles.priceRow, { borderTopColor: colors.border }]}>
           <Text style={[styles.priceLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>
             {de ? 'Servicepreis' : 'Service price'}
@@ -336,13 +363,6 @@ const styles = StyleSheet.create({
 
   successWrap: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 },
   successSummary: { alignSelf: 'stretch', marginTop: 8 },
-  successIconRing: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   successTitle: { fontSize: 30, lineHeight: 38, textAlign: 'center', marginTop: 4 },
   successHint: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
 });

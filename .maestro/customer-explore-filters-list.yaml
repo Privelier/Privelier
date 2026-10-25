@@ -11,8 +11,9 @@
 # - The "Available today" / "Under €100" chips individually: they only render
 #   when their backing batched read succeeded — asserted as a group via the
 #   always-present All + Verified chips plus the absence of the error notice.
-# - Anything about real map pins (no native map module until the founder's
-#   Mapbox download token + new dev-client build — see CLAUDE.md).
+# - Anything about real map pins (tile rendering is network- and
+#   renderer-dependent: native MapLibre in dev builds, the web renderer in
+#   Expo Go).
 #
 # NOT YET RUN — same tooling gap as every other flow here: no Maestro CLI on
 # the authoring machine (see .maestro/README.md). Once available:
@@ -83,8 +84,8 @@ env:
     id: "customer-explore-toggle-map"
 
 # Map side of the toggle: the map AREA always renders — its content is
-# build/data-dependent (real map when the native module + located barbers
-# exist; map-empty when no pins; map-soon on a pre-Mapbox dev client) and
+# data-dependent (the MapLibre map when located barbers exist; map-empty when
+# no pins) and
 # deliberately unasserted beyond "no error, never a crash".
 - tapOn:
     id: "customer-explore-toggle-map"

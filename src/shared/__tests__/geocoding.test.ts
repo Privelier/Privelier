@@ -1,36 +1,36 @@
 /**
- * Tests for the Mapbox forward-geocoding client (src/shared/geocoding.ts).
+ * Tests for the Photon forward-geocoding client (src/shared/geocoding.ts).
  * `fetch` is mocked throughout — no network. Covers the closed error-code
- * mapping, the [lng, lat] GeoJSON order, label preference, malformed-feature
- * skipping, and that the token never reaches a log line.
+ * mapping, the [lng, lat] GeoJSON order, label building from Photon's
+ * structured properties, malformed-feature skipping and de-duplication.
  */
-import { forwardGeocode, geocodeErrorCopy } from '../geocoding';
+import { forwardGeocode, geocodeBestMatch, photonLabel } from '../geocoding';
 
-const TOKEN = 'pk.test-token-value';
-
-function feature(overrides: {
-  coordinates?: unknown;
-  full_address?: unknown;
-  place_formatted?: unknown;
-  name?: unknown;
-}) {
-  return {
-    geometry: { coordinates: overrides.coordinates ?? [4.9041, 52.3676] },
-    properties: {
-      full_address: overrides.full_address,
-      place_formatted: overrides.place_formatted,
-      name: overrides.name,
-    },
-  };
+function feature(coordinates: unknown, properties: Record<string, unknown>) {
+  return { geometry: { coordinates }, properties };
 }
 
 function okResponse(features: unknown[]): Partial<Response> {
-  return {
-    ok: true,
-    status: 200,
-    json: async () => ({ features }),
-  };
+  return { ok: true, status: 200, json: async () => ({ features }) };
 }
+
+describe('photonLabel', () => {
+  it('builds street, postcode city and country', () => {
+    expect(photonLabel({ street: 'Hauptmarkt', housenumber: '18', postcode: '90403', city: 'Nürnberg', country: 'Deutschland' }))
+      .toBe('Hauptmarkt 18, 90403 Nürnberg, Deutschland');
+  });
+
+  it('leads with a place name that differs from the street', () => {
+    expect(photonLabel({ name: 'Neues Rathaus', street: 'Hauptmarkt', housenumber: '18', city: 'Nürnberg' }))
+      .toBe('Neues Rathaus, Hauptmarkt 18, Nürnberg');
+  });
+
+  it('falls back to town/village and to the name alone', () => {
+    expect(photonLabel({ name: 'Fürth', town: 'Fürth', country: 'Deutschland' })).toBe('Fürth, Deutschland');
+    expect(photonLabel({ name: 'Somewhere' })).toBe('Somewhere');
+    expect(photonLabel({})).toBeNull();
+  });
+});
 
 describe('forwardGeocode', () => {
   const realFetch = globalThis.fetch;
@@ -38,7 +38,6 @@ describe('forwardGeocode', () => {
   let warnSpy: jest.SpyInstance;
 
   beforeEach(() => {
-    process.env.EXPO_PUBLIC_MAPBOX_TOKEN = TOKEN;
     fetchMock = jest.fn();
     globalThis.fetch = fetchMock as unknown as typeof fetch;
     warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
@@ -46,101 +45,66 @@ describe('forwardGeocode', () => {
 
   afterEach(() => {
     globalThis.fetch = realFetch;
-    delete process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
     warnSpy.mockRestore();
   });
 
   it('resolves ok with zero candidates for a blank query, without calling fetch', async () => {
-    const result = await forwardGeocode('   ');
-    expect(result).toEqual({ status: 'ok', candidates: [] });
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it('fails with missing_token when the env var is absent, without calling fetch', async () => {
-    delete process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
-    const result = await forwardGeocode('Dam Square');
-    expect(result).toMatchObject({
-      status: 'error',
-      code: 'missing_token',
-      message: geocodeErrorCopy.missing_token,
-      retryable: false,
-    });
+    expect(await forwardGeocode('   ')).toEqual({ status: 'ok', candidates: [] });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('maps a rejected fetch to a retryable network failure', async () => {
     fetchMock.mockRejectedValue(new TypeError('Network request failed'));
-    const result = await forwardGeocode('Dam Square');
-    expect(result).toMatchObject({ status: 'error', code: 'network', retryable: true });
+    expect(await forwardGeocode('Hauptmarkt')).toMatchObject({ status: 'error', code: 'network', retryable: true });
   });
 
   it('maps a non-2xx status to bad_response', async () => {
-    fetchMock.mockResolvedValue({ ok: false, status: 401 });
-    const result = await forwardGeocode('Dam Square');
-    expect(result).toMatchObject({ status: 'error', code: 'bad_response', retryable: false });
+    fetchMock.mockResolvedValue({ ok: false, status: 503 });
+    expect(await forwardGeocode('Hauptmarkt')).toMatchObject({ status: 'error', code: 'bad_response', retryable: false });
   });
 
   it('maps an unparseable body and a missing features array to bad_response', async () => {
-    fetchMock.mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => {
-        throw new SyntaxError('bad json');
-      },
-    });
+    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => { throw new SyntaxError('bad json'); } });
     expect(await forwardGeocode('x')).toMatchObject({ status: 'error', code: 'bad_response' });
-
     fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => ({ message: 'no' }) });
     expect(await forwardGeocode('x')).toMatchObject({ status: 'error', code: 'bad_response' });
   });
 
-  it('parses candidates with GeoJSON [lng, lat] order and the label preference chain', async () => {
-    fetchMock.mockResolvedValue(
-      okResponse([
-        feature({ coordinates: [4.9041, 52.3676], full_address: 'Dam 1, Amsterdam' }),
-        feature({ coordinates: [-0.1276, 51.5072], place_formatted: 'London, England' }),
-        feature({ coordinates: [2.3522, 48.8566], name: 'Paris' }),
-      ])
-    );
-    const result = await forwardGeocode('somewhere');
-    expect(result).toEqual({
+  it('parses [lng, lat] order, skips malformed features and de-duplicates labels', async () => {
+    fetchMock.mockResolvedValue(okResponse([
+      feature([11.0772, 49.4547], { street: 'Hauptmarkt', housenumber: '18', city: 'Nürnberg' }),
+      feature([11.0773, 49.4548], { street: 'Hauptmarkt', housenumber: '18', city: 'Nürnberg' }),
+      feature('nope', { name: 'Broken' }),
+      feature([999, 12], { name: 'Out of range' }),
+      feature([11.07, 49.45], {}),
+      feature([11.0, 49.4], { name: 'Plärrer', city: 'Nürnberg' }),
+    ]));
+    expect(await forwardGeocode('somewhere')).toEqual({
       status: 'ok',
       candidates: [
-        { label: 'Dam 1, Amsterdam', latitude: 52.3676, longitude: 4.9041 },
-        { label: 'London, England', latitude: 51.5072, longitude: -0.1276 },
-        { label: 'Paris', latitude: 48.8566, longitude: 2.3522 },
+        { label: 'Hauptmarkt 18, Nürnberg', latitude: 49.4547, longitude: 11.0772 },
+        { label: 'Plärrer, Nürnberg', latitude: 49.4, longitude: 11.0 },
       ],
     });
   });
 
-  it('skips malformed features instead of failing the whole result', async () => {
-    fetchMock.mockResolvedValue(
-      okResponse([
-        feature({ coordinates: 'not-an-array', full_address: 'A' }),
-        feature({ coordinates: [999, 12], full_address: 'out of range lng' }),
-        feature({ coordinates: [4.9, 52.3] }), // no label at all
-        feature({ coordinates: [4.9041, 52.3676], full_address: 'The good one' }),
-      ])
-    );
-    const result = await forwardGeocode('somewhere');
-    expect(result).toEqual({
-      status: 'ok',
-      candidates: [{ label: 'The good one', latitude: 52.3676, longitude: 4.9041 }],
-    });
+  it('sends the trimmed query, limit, language and an optional location bias', async () => {
+    fetchMock.mockResolvedValue(okResponse([]));
+    await forwardGeocode('  Hauptmarkt 18, Nürnberg  ', { near: { latitude: 49.45212, longitude: 11.07674 } });
+    const url = fetchMock.mock.calls[0][0] as string;
+    expect(url).toMatch(/^https:\/\/photon\.komoot\.io\/api\/\?/);
+    expect(url).toContain('q=Hauptmarkt%2018%2C%20N%C3%BCrnberg');
+    expect(url).toContain('limit=5');
+    expect(url).toMatch(/lang=(de|en)/);
+    expect(url).toContain('lat=49.4521');
+    expect(url).toContain('lon=11.0767');
   });
 
-  it('sends the trimmed, URL-encoded query and never logs the token', async () => {
-    fetchMock.mockResolvedValue(okResponse([]));
-    await forwardGeocode('  Dam Square 1, Amsterdam  ');
-    const url = fetchMock.mock.calls[0][0] as string;
-    expect(url).toContain('q=Dam%20Square%201%2C%20Amsterdam');
-    expect(url).toContain('limit=5');
-
-    // Force an error path so a log line is emitted, then prove no log call
-    // ever carried the token (the URL is never logged, only the query).
-    fetchMock.mockRejectedValue(new Error('boom'));
-    await forwardGeocode('Dam Square');
-    const loggedText = warnSpy.mock.calls.map((args) => args.map(String).join(' ')).join(' ');
-    expect(loggedText).not.toContain(TOKEN);
+  it('geocodeBestMatch returns the first candidate or null', async () => {
+    fetchMock.mockResolvedValue(okResponse([feature([11.0772, 49.4547], { street: 'Hauptmarkt', city: 'Nürnberg' })]));
+    expect(await geocodeBestMatch('Hauptmarkt')).toEqual({ label: 'Hauptmarkt, Nürnberg', latitude: 49.4547, longitude: 11.0772 });
+    expect(fetchMock.mock.calls[0][0]).toContain('limit=1');
+    fetchMock.mockRejectedValue(new Error('offline'));
+    expect(await geocodeBestMatch('Hauptmarkt')).toBeNull();
   });
 });

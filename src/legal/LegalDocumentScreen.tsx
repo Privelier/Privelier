@@ -56,6 +56,6 @@ const styles = StyleSheet.create({
   back: { width: 44, height: 44, justifyContent: 'center' },
   headerTitle: { flex: 1, fontSize: 20 },
   content: { paddingHorizontal: space.xl, paddingTop: space.lg, paddingBottom: space['2xl'] },
-  draft: { fontSize: 11, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: space.lg },
+  draft: { fontSize: 12, marginBottom: space.lg },
   body: { fontSize: 16, lineHeight: 27 },
 });

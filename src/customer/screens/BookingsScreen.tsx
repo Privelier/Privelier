@@ -31,6 +31,7 @@
  *   it, and the mutation's authoritative row is re-applied after it resolves,
  *   so a stale snapshot can't flip an optimistic card backward.
  */
+import { listPerformance } from '../../shared/listPerformance';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -57,6 +58,7 @@ import { cancelBookingAsCustomer, fetchOwnBookingsView, isUpcomingBooking } from
 import { fetchOwnReviewedBookingIds } from '../reviewsData';
 import { fetchRoomForBooking } from '../inboxData';
 import { AcceptedBookingTools } from '../../shared/components/AcceptedBookingTools';
+import { LiveTripBanner, TrackLiveButton } from '../components/LiveTripEntry';
 import type { CustomerStackParamList } from '../CustomerNavigator';
 import {
   applyBookingChange,
@@ -302,6 +304,33 @@ export default function BookingsScreen() {
       counterpart: barber ? { id: barber.id, name: barber.name, profile_image: barber.profile_image } : null,
     });
   }, [barbersById, servicesById, navigation, showToast, de]);
+  // Live arrival: accepted bookings close enough to today that a barber can
+  // be on the way (the server allows trips within a day of the appointment).
+  const liveCandidates = useMemo(() => {
+    const dayMs = 24 * 60 * 60 * 1000;
+    const now = new Date().getTime();
+    return bookings
+      .filter((b) => b.status === 'accepted' && Math.abs(Date.parse(`${b.date}T${b.time}`) - now) <= dayMs)
+      .slice(0, 2);
+  }, [bookings]);
+
+  const openLiveTrip = useCallback((item: BookingRow) => {
+    setSelectedId(null);
+    const barber = barbersById.get(item.barber_id);
+    navigation.navigate('LiveTrip', {
+      bookingId: item.id,
+      context: {
+        bookingId: item.id,
+        barberId: item.barber_id,
+        barberName: barber?.name ?? 'Barber',
+        barberImage: barber?.profile_image ?? null,
+        address: item.location,
+        whenText: formatBookingWhen(item.date, item.time),
+        serviceName: servicesById.get(item.service_id)?.name ?? null,
+      },
+    });
+  }, [barbersById, servicesById, navigation]);
+
   const renderActions = (item: BookingRow) => {
     const actionable = item.status === 'pending' || item.status === 'accepted';
     const busy = inFlight[item.id] === true;
@@ -406,6 +435,9 @@ export default function BookingsScreen() {
         </Text>
       </Pressable>
     ) : null}
+    {item.status === 'accepted' ? (
+      <TrackLiveButton bookingId={item.id} barberName={barbersById.get(item.barber_id)?.name ?? 'Barber'} onOpen={() => openLiveTrip(item)} />
+    ) : null}
     <AcceptedBookingTools
       booking={item}
       calendarTitle={`${servicesById.get(item.service_id)?.name ?? (de ? 'Termin' : 'Appointment')} · ${barbersById.get(item.barber_id)?.name ?? 'Privelier'}`}
@@ -444,6 +476,7 @@ export default function BookingsScreen() {
         <>
           {error ? <RetryNotice testID="customer-bookings-error" message={error} onRetry={() => void load()} style={styles.noticeMargins} /> : null}
           <FlatList
+            {...listPerformance}
           testID="customer-bookings-list"
           data={list}
           keyExtractor={(item) => item.id}
@@ -457,6 +490,18 @@ export default function BookingsScreen() {
             />
           }
           contentContainerStyle={[styles.listContent, { paddingBottom: tabClearance }]}
+          ListHeaderComponent={liveCandidates.length > 0 ? (
+            <>
+              {liveCandidates.map((item) => (
+                <LiveTripBanner
+                  key={item.id}
+                  bookingId={item.id}
+                  barberName={barbersById.get(item.barber_id)?.name ?? 'Barber'}
+                  onOpen={() => openLiveTrip(item)}
+                />
+              ))}
+            </>
+          ) : null}
           ListEmptyComponent={
             <EmptyState
               icon={tab === 'upcoming' ? 'calendar' : 'clock'}

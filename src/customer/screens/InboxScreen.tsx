@@ -18,6 +18,8 @@
  * Loads on FOCUS (not mount): returning from a conversation must show the
  * fresh last-message preview, and bottom-tab screens stay mounted.
  */
+import { listPerformance } from '../../shared/listPerformance';
+import { RevealItem } from '../../shared/motion/Reveal';
 import { getAppLanguage } from '../../shared/locale';
 import { useCallback, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
@@ -114,6 +116,7 @@ export default function InboxScreen({ navigation }: Props) {
         <>
         {error ? <RetryNotice testID="customer-inbox-error" message={error} onRetry={() => void load()} style={styles.noticeMargins} /> : null}
         <FlatList
+          {...listPerformance}
           testID="customer-inbox-list"
           data={threads}
           keyExtractor={(item) => item.room.id}
@@ -135,13 +138,14 @@ export default function InboxScreen({ navigation }: Props) {
               body={de ? 'Gespräche beginnen, sobald du einen Barber buchst.' : 'Conversations start once you book a barber.'}
             />
           }
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const name = item.barber?.name ?? 'Barber';
             const preview =
               item.lastMessage?.message ??
               (item.service ? `${de ? 'Zu' : 'About'}: ${item.service.name}` : de ? 'Noch keine Nachrichten.' : 'No messages yet.');
             const unread = unreadRoomIds.has(item.room.id);
             return (
+              <RevealItem index={index}>
               <GlassSurface variant="card" style={styles.rowCard}>
                 <Pressable
                   onPress={() => onOpenThread(item)}
@@ -192,6 +196,7 @@ export default function InboxScreen({ navigation }: Props) {
                 ) : null}
                 </Pressable>
               </GlassSurface>
+              </RevealItem>
             );
           }}
         />

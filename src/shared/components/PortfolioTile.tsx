@@ -12,7 +12,8 @@
  * The colour-shaped surface placeholder sits UNDER the Image so a slow-loading
  * photo settles into a calm card, never a flash of nothing.
  */
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import { getPublicPortfolioUrl } from '../portfolioImages';
 import { useTheme } from '../../theme/useTheme';
@@ -54,7 +55,10 @@ export function PortfolioTile({
       <Image
         source={{ uri: getPublicPortfolioUrl(imagePath) }}
         style={styles.image}
-        resizeMode="cover"
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        recyclingKey={imagePath}
+        transition={{ duration: 200, effect: 'cross-dissolve' }}
       />
       {onDelete ? (
         <Pressable

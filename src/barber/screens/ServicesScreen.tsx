@@ -13,6 +13,7 @@
  * used on the Studio/Inbox/Account-section screens. No behavior, validation,
  * or testID changed.
  */
+import { RevealItem } from '../../shared/motion/Reveal';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
@@ -427,6 +428,7 @@ export default function ServicesScreen({ navigation }: Props) {
           </>
         }
         renderItem={({ item, index }) => (
+          <RevealItem index={index}>
           <View
             style={[styles.row, index > 0 ? { borderTopWidth: HAIRLINE, borderTopColor: colors.border } : null]}
             testID={`barber-services-row-${item.id}`}
@@ -468,6 +470,7 @@ export default function ServicesScreen({ navigation }: Props) {
               </Pressable>
             </View>
           </View>
+          </RevealItem>
         )}
       />
       <ConfirmSheet

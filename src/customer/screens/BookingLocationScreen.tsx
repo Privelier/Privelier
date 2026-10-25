@@ -106,8 +106,9 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
       date,
       time,
       location,
+      geocodeQuery: `${trimmedStreet}, ${trimmedCity}`,
     });
-  }, [navigation, barberId, barberName, barberImage, service, date, time, location, canContinue, saveForLater, savedAddresses, trimmedStreet, showToast, de]);
+  }, [navigation, barberId, barberName, barberImage, service, date, time, location, trimmedCity, canContinue, saveForLater, savedAddresses, trimmedStreet, showToast, de]);
 
   const onSubmitLastField = useCallback(() => {
     Keyboard.dismiss();

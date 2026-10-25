@@ -1,4 +1,8 @@
 import { getAppLanguage } from '../../shared/locale';
+import { QuickActions } from '../components/QuickActions';
+import { StatsInsightCard } from '../components/StatsInsightCard';
+import { AnimatedNumber } from '../../shared/motion/AnimatedNumber';
+import { fetchBarberStats, type BarberStatsRow } from '../../shared/barberStats';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
@@ -126,7 +130,7 @@ function EarningsTrend({ data, width, colors }: {
 
 function Metric({ label, value, detail, colors }: {
   label: string;
-  value: string;
+  value: number;
   detail: string;
   colors: ReturnType<typeof useTheme>['colors'];
 }) {
@@ -134,7 +138,7 @@ function Metric({ label, value, detail, colors }: {
   return (
     <View style={styles.metric}>
       <Text style={[styles.metricLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>{label}</Text>
-      <Text style={[styles.metricValue, numericText, { color: colors.textPrimary }]}>{value}</Text>
+      <AnimatedNumber value={value} style={[styles.metricValue, { color: colors.textPrimary }]} />
       <Text style={[styles.metricDetail, { color: colors.textSecondary, fontFamily: fonts.body }]}>{detail}</Text>
     </View>
   );
@@ -188,6 +192,7 @@ export default function StudioScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<BarberStatsRow | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -197,7 +202,11 @@ export default function StudioScreen({ navigation }: Props) {
         setView(null);
         return;
       }
-      const nextView = await fetchDashboardView(profileResult.profile.id);
+      const [nextView, statsById] = await Promise.all([
+        fetchDashboardView(profileResult.profile.id),
+        fetchBarberStats([profileResult.profile.id]),
+      ]);
+      setStats(statsById.get(profileResult.profile.id) ?? null);
       setName(profileResult.profile.name);
       setView(nextView);
       setError(null);
@@ -321,6 +330,10 @@ export default function StudioScreen({ navigation }: Props) {
               </View>
             </Reveal>
 
+            <View style={styles.quickActions}>
+              <QuickActions onOpen={openReadinessTarget} />
+            </View>
+
             <Reveal index={1}>
               <GlassSurface testID="barber-dashboard-analytics" style={styles.analyticsCard}>
                 {view.analytics.status === 'ok' ? (() => {
@@ -337,7 +350,7 @@ export default function StudioScreen({ navigation }: Props) {
                     </View>
 
                     <Text style={[styles.heroLabel, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Buchungswert in diesem Monat' : 'Booking value this month'}</Text>
-                    <Text style={[styles.heroValue, numericText, { color: colors.textPrimary }]}>{formatMoney(data.bookedValueMonth)}</Text>
+                    <AnimatedNumber value={data.bookedValueMonth} format={formatMoney} durationMs={900} style={[styles.heroValue, { color: colors.textPrimary }]} />
                     <Text style={[styles.heroFootnote, { color: colors.textSecondary, fontFamily: fonts.body }]}>{getAppLanguage() === 'de' ? 'Preise abgeschlossener Termine. In der App werden keine Zahlungen verarbeitet.' : 'Completed booking prices. No payments are processed in the app.'}</Text>
                     <View style={[styles.trendBlock, { borderTopColor: colors.border }]}>
                       <View style={styles.trendHeading}>
@@ -351,9 +364,9 @@ export default function StudioScreen({ navigation }: Props) {
                     </View>
 
                     <View style={[styles.metricRow, { borderTopColor: colors.border, borderBottomColor: colors.border }]}>
-                      <Metric label={isDe() ? 'Diese Woche' : 'This week'} value={`${data.completedWeek}`} detail={isDe() ? 'abgeschlossene Schnitte' : 'completed cuts'} colors={colors} />
-                      <Metric label={isDe() ? 'Diesen Monat' : 'This month'} value={`${data.completedMonth}`} detail={isDe() ? 'abgeschlossene Schnitte' : 'completed cuts'} colors={colors} />
-                      <Metric label={isDe() ? 'Gesamt' : 'All time'} value={`${data.completedAllTime}`} detail={isDe() ? 'abgeschlossene Schnitte' : 'completed cuts'} colors={colors} />
+                      <Metric label={isDe() ? 'Diese Woche' : 'This week'} value={data.completedWeek} detail={isDe() ? 'abgeschlossene Schnitte' : 'completed cuts'} colors={colors} />
+                      <Metric label={isDe() ? 'Diesen Monat' : 'This month'} value={data.completedMonth} detail={isDe() ? 'abgeschlossene Schnitte' : 'completed cuts'} colors={colors} />
+                      <Metric label={isDe() ? 'Gesamt' : 'All time'} value={data.completedAllTime} detail={isDe() ? 'abgeschlossene Schnitte' : 'completed cuts'} colors={colors} />
                     </View>
 
                     <Pressable
@@ -435,6 +448,12 @@ export default function StudioScreen({ navigation }: Props) {
                 )}
               </GlassSurface>
             </Reveal>
+
+            {stats ? (
+              <Reveal index={2} style={styles.insights}>
+                <StatsInsightCard stats={stats} />
+              </Reveal>
+            ) : null}
 
             {view.readiness.isLive === true ? null : <View testID="barber-dashboard-readiness" style={[styles.readiness, { borderTopColor: colors.border }]}>
               <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
@@ -549,6 +568,8 @@ const styles = StyleSheet.create({
   skeletonSectionRow: { width: '100%', height: 72, marginTop: space.md },
   noticeMargins: { marginTop: space.xl },
   verification: { marginTop: space.sm },
+  quickActions: { marginTop: space.lg },
+  insights: { marginTop: space.lg },
   verificationLink: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: space.sm },
   verificationText: { flex: 1, fontSize: 13, lineHeight: 19 },
   analyticsCard: { marginTop: space.lg, borderRadius: radius.md, paddingHorizontal: space.base, paddingVertical: space.lg },
