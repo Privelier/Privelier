@@ -14,7 +14,7 @@
  * recycled list row.
  */
 import type { PropsWithChildren } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import Animated, { FadeInDown, ReduceMotion } from 'react-native-reanimated';
 import { easing, reveal } from '../../theme/motion';
@@ -28,11 +28,17 @@ type Props = PropsWithChildren<{
 
 export function revealEntering(index = 0) {
   const step = Math.min(Math.max(index, 0), reveal.maxStaggerSteps);
-  return FadeInDown.duration(reveal.duration)
+  const base = FadeInDown.duration(reveal.duration)
     .delay(step * reveal.stagger)
     .easing(easing.enter)
-    .withInitialValues({ opacity: 0, transform: [{ translateY: reveal.offset }] })
     .reduceMotion(ReduceMotion.System);
+  // Web: custom initial values turn the preset into a custom keyframe, and
+  // Reanimated's web layout-animation code then pins the element with
+  // position:absolute after it finishes (rows collapse onto each other).
+  // The preset alone is safe there; native keeps the subtler 12px rise.
+  return Platform.OS === 'web'
+    ? base
+    : base.withInitialValues({ opacity: 0, transform: [{ translateY: reveal.offset }] });
 }
 
 export function Reveal({ index = 0, style, testID, children }: Props) {

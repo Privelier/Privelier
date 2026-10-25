@@ -9,6 +9,7 @@ describe('responseCopy', () => {
   it('speaks in minutes, hours, or days, and hides unknowns', () => {
     expect(responseCopy(null, false)).toBeNull();
     expect(responseCopy(4, false)).toBe('Usually replies in ~4 min');
+    expect(responseCopy(12, false)).toBe('Usually replies in ~12 min');
     expect(responseCopy(17, false)).toBe('Usually replies in ~15 min');
     expect(responseCopy(17, true)).toBe('Antwortet meist in ~15 Min.');
     expect(responseCopy(130, false)).toBe('Usually replies within 3 h');

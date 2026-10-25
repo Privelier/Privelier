@@ -17,7 +17,7 @@ import { getAppLanguage } from '../../shared/locale';
 import { GlassSurface } from '../../shared/components/GlassSurface';
 import { AnimatedNumber } from '../../shared/motion/AnimatedNumber';
 import { PopularTimesChart, clockLabel } from '../../shared/components/stats/PopularTimesChart';
-import { busiestWindow, isFastResponder, WEEKDAYS, type BarberStatsRow } from '../../shared/barberStats';
+import { busiestWindow, isFastResponder, type BarberStatsRow } from '../../shared/barberStats';
 
 export function StatsInsightCard({ stats }: { stats: BarberStatsRow }) {
   const { colors, fonts } = useTheme();
@@ -27,7 +27,7 @@ export function StatsInsightCard({ stats }: { stats: BarberStatsRow }) {
   const hasAnything = minutes != null || window != null || stats.repeat_client_rate != null;
   if (!hasAnything) return null;
 
-  const days = de ? ['Montags', 'Dienstags', 'Mittwochs', 'Donnerstags', 'Freitags', 'Samstags', 'Sonntags'] : WEEKDAYS.en.map((d) => `${d}s`);
+  const days = de ? ['Montags', 'Dienstags', 'Mittwochs', 'Donnerstags', 'Freitags', 'Samstags', 'Sonntags'] : ['Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays', 'Sundays'];
 
   return (
     <GlassSurface style={styles.card} testID="barber-dashboard-insights">

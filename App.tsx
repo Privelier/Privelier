@@ -17,7 +17,7 @@
  * phase, and each phase renders stable element types with component={} screens
  * only — navigators are never remounted by auth noise.
  */
-import { useCallback, type ReactElement } from 'react';
+import { useCallback, type ComponentType, type ReactElement } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { DarkTheme, NavigationContainer, type Theme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -117,6 +117,13 @@ function renderRoot(shell: AuthShell): ReactElement {
   }
 }
 
+// Dev-only component gallery on web (`?gallery`). `__DEV__` is false in
+// production, so the bundler drops this branch and the gallery module.
+const showGallery =
+  __DEV__ && typeof window !== 'undefined' && typeof window.location !== 'undefined' && window.location.search.includes('gallery');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const DevGallery: ComponentType = showGallery ? require('./src/dev/ComponentGallery').default : () => null;
+
 export default function App() {
   const [fontsLoaded, fontError] = useFonts(appFonts);
   const shell = useAuthShell();
@@ -139,7 +146,7 @@ export default function App() {
         <SafeAreaProvider onLayout={onLayoutRootView} style={{ flex: 1, backgroundColor: darkPalette.background }}>
           <BottomSheetModalProvider>
             <ToastProvider>
-              <NavigationContainer theme={navigationTheme}>{renderRoot(shell)}</NavigationContainer>
+              {showGallery ? <DevGallery /> : <NavigationContainer theme={navigationTheme}>{renderRoot(shell)}</NavigationContainer>}
               <OfflineBanner />
             </ToastProvider>
           </BottomSheetModalProvider>

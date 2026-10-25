@@ -43,7 +43,8 @@ export async function fetchBarberStats(barberIds: string[]): Promise<Map<string,
 export function responseCopy(minutes: number | null | undefined, de: boolean): string | null {
   if (minutes == null) return null;
   if (minutes <= 60) {
-    const rounded = minutes < 10 ? Math.max(1, minutes) : Math.round(minutes / 5) * 5;
+    // Exact under 15 min ("~12" is truer than "~10"); calmer 5-min steps above.
+    const rounded = minutes < 15 ? Math.max(1, minutes) : Math.round(minutes / 5) * 5;
     return de ? `Antwortet meist in ~${rounded} Min.` : `Usually replies in ~${rounded} min`;
   }
   if (minutes <= 24 * 60) {

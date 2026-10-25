@@ -96,6 +96,14 @@ so passwords never appear in commands or chat. Run `logout` (or `--fresh`)
 before switching roles. Do not create accounts on the shared Supabase project
 just to test.
 
+## Component gallery (no login needed)
+
+`goto '/?gallery'` on the web dev server renders `src/dev/ComponentGallery.tsx`:
+the motion/UX kit (barber card + reply badge, popular times, barber
+quick actions and insights, count-up, success burst, celebration overlay,
+live-arrival panel, empty state) with sample data. Dev-only — production
+bundles strip it. Use it to screenshot UI work when no test login is set.
+
 ## Checks
 
 ```bash
