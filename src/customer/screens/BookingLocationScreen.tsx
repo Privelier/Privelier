@@ -10,7 +10,7 @@
  * sufficient on its own.
  */
 import { useCallback, useEffect, useRef, useState, type Ref } from 'react';
-import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type TextInputInstance } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getAppLanguage } from '../../shared/locale';
@@ -39,9 +39,9 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
   const [instructions, setInstructions] = useState('');
   const [focused, setFocused] = useState<string | null>(null);
   const [touched, setTouched] = useState({ street: false, city: false });
-  const cityRef = useRef<TextInput>(null);
-  const unitRef = useRef<TextInput>(null);
-  const instructionsRef = useRef<TextInput>(null);
+  const cityRef = useRef<TextInputInstance>(null);
+  const unitRef = useRef<TextInputInstance>(null);
+  const instructionsRef = useRef<TextInputInstance>(null);
   const { showToast } = useToast();
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [saveForLater, setSaveForLater] = useState(false);
@@ -253,7 +253,7 @@ function AddressField({ label, value, onChangeText, inputRef, focused, onFocus, 
   label: string;
   value: string;
   onChangeText: (value: string) => void;
-  inputRef: Ref<TextInput>;
+  inputRef: Ref<TextInputInstance>;
   focused: boolean;
   onFocus: () => void;
   onBlur: () => void;

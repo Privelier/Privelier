@@ -4,7 +4,7 @@ import { subscribeToBarberProfileLinks } from '../shared/profileLinks';
 import { usePushOpen } from '../shared/push';
 import type { CustomerStackParamList } from './CustomerNavigator';
 import { createRef, useCallback, useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { type ViewInstance } from 'react-native';
 import { BlurTargetView } from 'expo-blur';
 import { getAppLanguage } from '../shared/locale';
 import { GlassSurface } from '../shared/components/GlassSurface';
@@ -69,7 +69,7 @@ export default function CustomerTabs() {
   const { colors, fonts } = useTheme();
   const tabBarStyle = useFloatingTabBarStyle();
   const language = getAppLanguage();
-  const [blurTargets] = useState(() => ({ Discover: createRef<View>(), Explore: createRef<View>(), Bookings: createRef<View>(), Inbox: createRef<View>(), Account: createRef<View>() }));
+  const [blurTargets] = useState(() => ({ Discover: createRef<ViewInstance>(), Explore: createRef<ViewInstance>(), Bookings: createRef<ViewInstance>(), Inbox: createRef<ViewInstance>(), Account: createRef<ViewInstance>() }));
   const labels = language === 'de' ? { Discover: 'Entdecken', Explore: 'Karte', Bookings: 'Termine', Inbox: 'Nachrichten', Account: 'Konto' } : { Discover: 'Discover', Explore: 'Explore', Bookings: 'Bookings', Inbox: 'Messages', Account: 'Account' };
 
   // Unread thread count for the Inbox badge — a real count from real read

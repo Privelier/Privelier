@@ -431,7 +431,7 @@ export default function RequestsScreen() {
               title={isDe() ? 'Noch keine Terminanfragen.' : 'No booking requests yet.'}
               body={isDe() ? 'Anfragen erscheinen hier, sobald ein Kunde dich bucht.' : 'Requests appear here the moment a client books you.'}
             />
-          ) : null}
+          ) : undefined}
           renderItem={({ item, index, section }) => {
             if (section.key === 'history' && !historyExpanded) return null;
             const service = servicesById.get(item.service_id);

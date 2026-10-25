@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { getAppLanguage } from '../../shared/locale';
-import { ActivityIndicator, StyleSheet, View, type TextInput } from 'react-native';
+import { ActivityIndicator, StyleSheet, View, type TextInputInstance } from 'react-native';
 import { updatePassword } from '../authService';
 import { signupPasswordError } from './validation';
 import { AuthScreenShell, FormTextField, Notice, PrimaryButton, ScreenHeading, TextLink } from './ui';
@@ -17,7 +17,7 @@ export default function ResetPasswordScreen({ view, onComplete, onDismiss }: {
   const [confirmationError, setConfirmationError] = useState<string | undefined>();
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const confirmationRef = useRef<TextInput>(null);
+  const confirmationRef = useRef<TextInputInstance>(null);
 
   const onSubmit = useCallback(async () => {
     const nextPasswordError = signupPasswordError(password);

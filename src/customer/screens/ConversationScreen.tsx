@@ -438,7 +438,7 @@ function ConversationRoom({ route, navigation }: Props) {
                     <Text style={styles.loadEarlierLabel}>Load earlier messages</Text>
                   </Pressable>
                 </View>
-              ) : null
+              ) : undefined
             }
             ListEmptyComponent={
               // NO manual counter-transform here: VirtualizedList composes its

@@ -18,7 +18,7 @@
  * surfaces. Reduce Transparency collapses every variant to a solid surface.
  */
 import type { PropsWithChildren, RefObject } from 'react';
-import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, View, type StyleProp, type ViewStyle, type ViewInstance } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { HAIRLINE, radius } from '../../theme/spacing';
 import { useTheme } from '../../theme/useTheme';
@@ -42,7 +42,7 @@ type Props = PropsWithChildren<{
   variant?: GlassVariant;
   /** brass: the user's own / selected surface. danger: a failed state. */
   tone?: GlassTone;
-  blurTarget?: RefObject<View | null>;
+  blurTarget?: RefObject<ViewInstance | null>;
 }>;
 
 /** Glass tokens. */

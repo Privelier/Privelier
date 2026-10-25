@@ -501,7 +501,7 @@ export default function BookingsScreen() {
                 />
               ))}
             </>
-          ) : null}
+          ) : undefined}
           ListEmptyComponent={
             <EmptyState
               icon={tab === 'upcoming' ? 'calendar' : 'clock'}

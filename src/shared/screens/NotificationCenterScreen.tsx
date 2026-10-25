@@ -98,7 +98,7 @@ export default function NotificationCenterScreen({
           <View style={styles.skeletonList} accessibilityRole="progressbar" accessibilityLabel={isGerman ? 'Benachrichtigungen werden geladen' : 'Loading notifications'}>
             {[0, 1, 2].map((item) => <View key={item} style={styles.skeletonRow}><Skeleton style={styles.skeletonDot} /><View style={styles.skeletonCopy}><Skeleton style={styles.skeletonTitle} /><Skeleton style={styles.skeletonBody} /><Skeleton style={styles.skeletonTime} /></View></View>)}
           </View>
-        ) : !error ? <View style={styles.empty}><Feather name="bell" size={24} color={colors.accent} /><Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}>{isGerman ? 'Du bist auf dem neuesten Stand.' : 'You’re all caught up.'}</Text></View> : null}
+        ) : !error ? <View style={styles.empty}><Feather name="bell" size={24} color={colors.accent} /><Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}>{isGerman ? 'Du bist auf dem neuesten Stand.' : 'You’re all caught up.'}</Text></View> : undefined}
         renderItem={({ item, index }) => {
           const copy = notificationCopy(item, (item.actor_id ? names[item.actor_id] ?? null : null));
           const icon = item.event_type === 'message' ? 'message-circle'

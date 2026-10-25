@@ -14,7 +14,7 @@
  */
 import { defaultCountry, getAppLanguage } from '../../shared/locale';
 import { useCallback, useRef, useState } from 'react';
-import { StyleSheet, Text, View, type TextInput } from 'react-native';
+import { StyleSheet, Text, View, type TextInputInstance } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { isAppleSignInSupported, signInWithProvider, signUpBarber, signUpCustomer } from '../authService';
 import { LegalConsentFields, LegalLinks } from '../../legal/LegalComponents';
@@ -64,9 +64,9 @@ export default function SignupScreen({ navigation, route }: Props) {
   const [legalAttempted, setLegalAttempted] = useState(false);
   // Focus chain for the required fields: name → email → password → city → submit
   // (optional country/phone/bio are left out of the keyboard chain).
-  const emailRef = useRef<TextInput>(null);
-  const passwordRef = useRef<TextInput>(null);
-  const cityRef = useRef<TextInput>(null);
+  const emailRef = useRef<TextInputInstance>(null);
+  const passwordRef = useRef<TextInputInstance>(null);
+  const cityRef = useRef<TextInputInstance>(null);
 
   const onSubmit = useCallback(async () => {
     const errors: FieldErrors = {

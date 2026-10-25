@@ -9,7 +9,7 @@
  */
 import { getAppLanguage } from '../../shared/locale';
 import { useCallback, useRef, useState } from 'react';
-import { StyleSheet, View, type TextInput } from 'react-native';
+import { StyleSheet, View, type TextInputInstance } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { isAppleSignInSupported, signIn, signInWithProvider } from '../authService';
 import { LegalLinks } from '../../legal/LegalComponents';
@@ -48,7 +48,7 @@ export default function LoginScreen({ navigation, route }: Props) {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [providerSubmitting, setProviderSubmitting] = useState<'google' | 'apple' | null>(null);
-  const passwordRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInputInstance>(null);
 
   const onSubmit = useCallback(async () => {
     const errors: FieldErrors = {

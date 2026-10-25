@@ -4,7 +4,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { usePushOpen } from '../shared/push';
 import { resumeActiveTrip } from './trip/tripService';
 import type { BarberStackParamList } from './BarberNavigator';
-import { View } from 'react-native';
+import { type ViewInstance } from 'react-native';
 import { BlurTargetView } from 'expo-blur';
 import { getAppLanguage } from '../shared/locale';
 import { GlassSurface } from '../shared/components/GlassSurface';
@@ -62,7 +62,7 @@ export default function BarberTabs() {
   const { colors, fonts } = useTheme();
   const tabBarStyle = useFloatingTabBarStyle();
   const language = getAppLanguage();
-  const [blurTargets] = useState(() => ({ Studio: createRef<View>(), Requests: createRef<View>(), Portfolio: createRef<View>(), Chats: createRef<View>(), Verify: createRef<View>() }));
+  const [blurTargets] = useState(() => ({ Studio: createRef<ViewInstance>(), Requests: createRef<ViewInstance>(), Portfolio: createRef<ViewInstance>(), Chats: createRef<ViewInstance>(), Verify: createRef<ViewInstance>() }));
   const labels = language === 'de' ? { Studio: 'Dashboard', Requests: 'Anfragen', Portfolio: 'Studio', Chats: 'Nachrichten', Verify: 'Verifizierung' } : { Studio: 'Dashboard', Requests: 'Requests', Portfolio: 'Studio', Chats: 'Messages', Verify: 'Verification' };
 
   // Unread thread count for the Chats badge — a real count from real read

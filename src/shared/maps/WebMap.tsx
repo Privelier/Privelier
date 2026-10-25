@@ -23,7 +23,10 @@ interface Props {
 }
 
 export const WebMap = forwardRef<WebMapHandle, Props>(function WebMap({ mapStyle, scene, onEvent, testID }, ref) {
-  const webRef = useRef<WebView>(null);
+  // react-native-webview 14 declares `class WebView<P = undefined>`, so the
+  // default props type is `WebViewProps & undefined` = never. Passing an
+  // explicit `object` restores the real props.
+  const webRef = useRef<WebView<object>>(null);
   const reduceMotion = useReducedMotionPreference();
   // The page is built once per style; scenes stream in as messages so the
   // map never reloads while the barber moves.
@@ -52,7 +55,7 @@ export const WebMap = forwardRef<WebMapHandle, Props>(function WebMap({ mapStyle
 
   return (
     <View style={styles.container} testID={testID}>
-      <WebView
+      <WebView<object>
         ref={webRef}
         source={{ html, baseUrl: 'https://tiles.openfreemap.org/' }}
         originWhitelist={['*']}

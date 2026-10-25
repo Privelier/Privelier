@@ -13,18 +13,7 @@
  * testID changed.
  */
 import { useState, type ReactNode, type Ref } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  type TextInputProps,
-} from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View, type TextInputProps, type TextInputInstance } from 'react-native';
 import { Input, InputField, InputSlot } from '../../../components/ui/input';
 import { Button, ButtonText } from '../../../components/ui/button';
 import { AuthProviderLogo } from '../../shared/components/AuthProviderLogo';
@@ -128,7 +117,7 @@ interface FormTextFieldProps {
   textContentType?: TextInputProps['textContentType'];
   // Focus-chaining: a screen forwards a ref and a submit handler so the
   // keyboard's next/go/done key advances the form without leaving the keyboard.
-  inputRef?: Ref<TextInput>;
+  inputRef?: Ref<TextInputInstance>;
   returnKeyType?: TextInputProps['returnKeyType'];
   onSubmitEditing?: () => void;
   blurOnSubmit?: boolean;

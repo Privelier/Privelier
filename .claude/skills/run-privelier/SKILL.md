@@ -5,7 +5,7 @@ description: Run, start, launch, open, screenshot or drive the Privelier Expo ap
 
 # Run Privelier
 
-One Expo SDK 57 / React Native app (Customer + Barber experiences, one Supabase
+One Expo SDK 58 / React Native app (Customer + Barber experiences, one Supabase
 backend). Windows host, Git Bash. There is **no Android AVD and no iOS
 simulator** on this machine, so there are two real surfaces:
 
@@ -47,7 +47,7 @@ npm install --prefix .claude/skills/run-privelier --no-audit --no-fund   # playw
    ```bash
    node .claude/skills/run-privelier/expo-go.mjs 8081
    ```
-   Expected: `manifest ok: Privelier (exposdk:57.0.0)`, `iOS bundle ok: 11.0 MB`
+   Expected: `manifest ok: Privelier (exposdk:58.0.0)`, `iOS bundle ok: 11.0 MB`
    (production; a development server reports ~13.9 MB), and
    `Expo Go URL: exp://192.168.1.30:8081`.
 4. Tell the founder to scan the QR with the iPhone camera, which hands the

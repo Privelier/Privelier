@@ -20,6 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
+import { AndroidImportance } from 'expo-notifications';
 import { supabase } from '../../lib/supabase';
 import { getAppLanguage } from './locale';
 import type { NotificationEventType } from './notifications';
@@ -50,12 +51,12 @@ export function configurePush(): void {
   if (Platform.OS === 'android') {
     void Notifications.setNotificationChannelAsync('default', {
       name: 'Bookings and messages',
-      importance: Notifications.AndroidImportance.DEFAULT,
+      importance: AndroidImportance.DEFAULT,
     });
     void Notifications.setNotificationChannelAsync('trip', {
       name: 'Barber arrival',
       description: 'Your barber is on the way, almost there, or has arrived.',
-      importance: Notifications.AndroidImportance.HIGH,
+      importance: AndroidImportance.HIGH,
       vibrationPattern: [0, 180, 120, 180],
       lightColor: '#BFA06B',
     });

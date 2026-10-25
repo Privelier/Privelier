@@ -116,3 +116,14 @@ jest.mock('react-native-webview', () => {
   });
   return { WebView, default: WebView };
 });
+
+// Icon/web fonts load through expo-asset's registry, which has no entries
+// under Jest (jest-expo 58 stopped stubbing it). Treat every font as loaded.
+jest.mock('expo-font', () => ({
+  isLoaded: () => true,
+  isLoading: () => false,
+  loadAsync: jest.fn(async () => undefined),
+  useFonts: () => [true, null],
+  unloadAllAsync: jest.fn(async () => undefined),
+  getLoadedFonts: () => [],
+}));

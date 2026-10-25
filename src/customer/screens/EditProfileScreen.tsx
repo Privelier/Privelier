@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, type TextInputInstance } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { fetchOwnProfile } from '../../auth/authService';
@@ -28,8 +28,8 @@ export default function EditProfileScreen({ navigation }: Props) {
   // save failure must retry the SAME edits — re-reading would overwrite them.
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const cityRef = useRef<TextInput>(null);
-  const countryRef = useRef<TextInput>(null);
+  const cityRef = useRef<TextInputInstance>(null);
+  const countryRef = useRef<TextInputInstance>(null);
 
   const load = useCallback(async () => {
     setLoading(true);

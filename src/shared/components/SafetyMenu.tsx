@@ -5,13 +5,13 @@
  * block stops new messages and booking requests in both directions — so the
  * copy describes exactly that and nothing more.
  */
+import { SheetTextInput } from './SheetTextInput';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import {
   BottomSheetBackdrop,
   BottomSheetModal,
-  BottomSheetTextInput,
   BottomSheetView,
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
@@ -153,7 +153,7 @@ export function SafetyMenu({ counterpartId, counterpartName, bookingId, testIDPr
             );
           })}
         </View>
-        <BottomSheetTextInput
+        <SheetTextInput
           value={details}
           onChangeText={(text) => setDetails(text.slice(0, REPORT_DETAILS_MAX))}
           placeholder={de ? 'Details (optional)' : 'Details (optional)'}
