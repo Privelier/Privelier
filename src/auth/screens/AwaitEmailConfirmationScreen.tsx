@@ -55,7 +55,9 @@ export default function AwaitEmailConfirmationScreen({ navigation, route }: Prop
       <Brandmark size="md" style={styles.mark} />
       <ScreenHeading
         title={de ? 'Prüfe dein Postfach' : 'Check your inbox'}
-        subtitle={de ? `Wir haben einen Bestätigungslink an ${email} gesendet. Öffne ihn, um dein Konto zu aktivieren, und melde dich dann an.` : `We’ve sent a confirmation link to ${email}. Open it to activate your account, then log in.`}
+        subtitle={de
+          ? `Wenn ${email} noch nicht registriert ist, haben wir einen Bestätigungslink gesendet. Öffne ihn, um dein Konto zu aktivieren. Hast du schon ein Konto, melde dich an oder setze dein Passwort zurück.`
+          : `If ${email} is new to Privelier, we've sent a confirmation link. Open it to activate your account. Already have an account? Log in or reset your password.`}
       />
       {feedback.kind === 'success' ? (
         <Notice kind="success" message={de ? 'Bestätigungs-E-Mail gesendet.' : 'Confirmation email sent.'} testID="auth-confirm-success" />

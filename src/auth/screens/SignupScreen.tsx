@@ -5,7 +5,8 @@
  *
  * Switches on SignUpResult:
  * - 'confirmation_email_sent' → AwaitEmailConfirmation with the email.
- * - 'email_in_use'            → inline field error + "log in instead" link.
+ *   (also for an already-registered email, so the form never reveals
+ *   which addresses have accounts).
  * - AuthFailure               → weak_password / invalid_email attach to their
  *                               field; everything else is a calm form banner.
  *
@@ -56,7 +57,6 @@ export default function SignupScreen({ navigation, route }: Props) {
   const [bio, setBio] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
-  const [emailInUse, setEmailInUse] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [providerSubmitting, setProviderSubmitting] = useState<'google' | 'apple' | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -78,7 +78,6 @@ export default function SignupScreen({ navigation, route }: Props) {
     };
     setFieldErrors(errors);
     setFormError(null);
-    setEmailInUse(false);
     setLegalAttempted(true);
     if (errors.name || errors.email || errors.password || errors.city || !termsAccepted || !adultConfirmed) {
       // The submit button sits below the fold of a long form: take the user
@@ -110,10 +109,6 @@ export default function SignupScreen({ navigation, route }: Props) {
     switch (result.status) {
       case 'confirmation_email_sent':
         navigation.navigate('AwaitEmailConfirmation', { email: result.email, role });
-        break;
-      case 'email_in_use':
-        setEmailInUse(true);
-        setFieldErrors((current) => ({ ...current, email: de ? 'Diese E-Mail-Adresse wird bereits verwendet.' : 'This email is already in use.' }));
         break;
       case 'error':
         if (result.code === 'weak_password') {
@@ -184,15 +179,6 @@ export default function SignupScreen({ navigation, route }: Props) {
         blurOnSubmit={false}
         testID="auth-signup-email"
       />
-      {emailInUse ? (
-        <View style={styles.loginInstead}>
-          <TextLink
-            label={de ? 'Stattdessen anmelden' : 'Log in instead'}
-            onPress={() => navigation.navigate('Login', { role })}
-            testID="auth-signup-login-instead"
-          />
-        </View>
-      ) : null}
       <FormTextField
         label={de ? 'Passwort' : 'Password'}
         value={password}
@@ -294,7 +280,6 @@ export default function SignupScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  loginInstead: { alignItems: 'flex-start', marginTop: -12, marginBottom: 12 },
   verifyNote: { fontSize: 13, lineHeight: 19, marginBottom: 20 },
   actions: { marginTop: 8, gap: 8 },
   providerActions: { marginTop: 24, gap: 10 },

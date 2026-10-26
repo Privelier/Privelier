@@ -241,7 +241,7 @@ describe('signUpCustomer / signUpBarber', () => {
     });
   });
 
-  it('maps the GoTrue "email_in_use" code straight through as {status: email_in_use}', async () => {
+  it('answers an already-registered email exactly like a new one (no account enumeration)', async () => {
     const { AuthApiError } = jest.requireActual('@supabase/supabase-js');
     mockAuth.signUp.mockResolvedValue({
       data: { user: null },
@@ -252,10 +252,10 @@ describe('signUpCustomer / signUpBarber', () => {
       name: 'Alex',
       city: 'Lisbon',
     });
-    expect(result).toEqual({ status: 'email_in_use' });
+    expect(result).toEqual({ status: 'confirmation_email_sent', email: 'test@example.com' });
   });
 
-  it('treats the duplicate-email obfuscation case (fake user, empty identities) as email_in_use', async () => {
+  it('keeps Supabase’s duplicate-email obfuscation (fake user, no identities) instead of undoing it', async () => {
     mockAuth.signUp.mockResolvedValue({
       data: { user: { identities: [] } },
       error: null,
@@ -265,7 +265,7 @@ describe('signUpCustomer / signUpBarber', () => {
       name: 'Alex',
       city: 'Lisbon',
     });
-    expect(result).toEqual({ status: 'email_in_use' });
+    expect(result).toEqual({ status: 'confirmation_email_sent', email: 'taken@example.com' });
   });
 });
 

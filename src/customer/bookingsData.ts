@@ -32,12 +32,16 @@ export { isUpcomingBooking } from '../shared/bookingTime';
  * maps for rendering. The bookings read failing fails the whole call; the
  * two enrichment reads degrade to empty maps instead.
  */
+/** The newest bookings only: every list read is bounded (hardening Phase 4). */
+const BOOKINGS_VIEW_LIMIT = 300;
+
 export async function fetchOwnBookingsView(): Promise<OwnBookingsViewResult> {
   const { data, error } = await supabase
     .from('bookings')
     .select('*')
     .order('date', { ascending: false })
-    .order('time', { ascending: false });
+    .order('time', { ascending: false })
+    .limit(BOOKINGS_VIEW_LIMIT);
 
   if (error) return mapPostgrestError('fetchOwnBookingsView', error);
   const bookings = (data as BookingRow[]) ?? [];
@@ -45,8 +49,8 @@ export async function fetchOwnBookingsView(): Promise<OwnBookingsViewResult> {
   const barbersById = new Map<string, BarberDirectoryRow>();
   const servicesById = new Map<string, ServiceRow>();
   if (bookings.length > 0) {
-    const barberIds = [...new Set(bookings.map((b) => b.barber_id))];
-    const serviceIds = [...new Set(bookings.map((b) => b.service_id))];
+    const barberIds = [...new Set(bookings.flatMap((b) => (b.barber_id ? [b.barber_id] : [])))];
+    const serviceIds = [...new Set(bookings.flatMap((b) => (b.service_id ? [b.service_id] : [])))];
     const [barbersResult, servicesResult] = await Promise.all([
       supabase.from('barber_directory').select('*').in('id', barberIds),
       supabase.from('services').select('*').in('id', serviceIds),

@@ -78,7 +78,7 @@ async function signUp(
   // Single write. options.data is stored as user_metadata — a prefill hint
   // for deferred provisioning ONLY, never authorization (RLS + the 0005
   // triggers are the authority).
-  const { data, error } = await supabase.auth.signUp({
+  const { error } = await supabase.auth.signUp({
     email: normalizedEmail,
     password,
     options: {
@@ -97,15 +97,14 @@ async function signUp(
       },
     },
   });
+  // A registered email must look exactly like a new one, or the signup form
+  // tells anyone which addresses have accounts. Supabase hides duplicates
+  // behind a fake user with no identities (confirmation on) or an
+  // already-registered error; both continue to "check your inbox", which
+  // also points existing users to sign-in and password reset.
   if (error) {
     const mapped = mapAuthApiError('signUp', error);
-    if (mapped.code === 'email_in_use') return { status: 'email_in_use' };
-    return mapped;
-  }
-  // With confirmation ON, Supabase obfuscates duplicate emails: it returns a
-  // fake user whose identities array is empty instead of an error.
-  if (data.user && (data.user.identities?.length ?? 0) === 0) {
-    return { status: 'email_in_use' };
+    return mapped.code === 'email_in_use' ? { status: 'confirmation_email_sent', email: normalizedEmail } : mapped;
   }
   return { status: 'confirmation_email_sent', email: normalizedEmail };
 }

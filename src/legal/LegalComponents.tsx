@@ -139,10 +139,12 @@ export function LegalConsentFields({
         {de ? (
           <Text style={[styles.consentText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
             Ich akzeptiere die {termsLink} und bestätige, die {privacyLink} zur Kenntnis genommen zu haben.
+            {' '}Beleidigende, bedrohende oder anstößige Inhalte und Verhalten dulden wir nicht; Konten, die dagegen verstoßen, werden entfernt.
           </Text>
         ) : (
           <Text style={[styles.consentText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
             I accept the {termsLink} and confirm I have read the {privacyLink} (both in German).
+            {' '}Privelier has zero tolerance for abusive, threatening or objectionable content and behaviour; accounts that break this rule are removed.
           </Text>
         )}
       </View>

@@ -50,6 +50,7 @@ beforeEach(() => {
 interface ChainableBuilder {
   select: jest.Mock;
   order: jest.Mock;
+  limit: jest.Mock;
   in: jest.Mock;
   update: jest.Mock;
   eq: jest.Mock;
@@ -61,6 +62,7 @@ function chainable(result: unknown) {
   const obj: ChainableBuilder = {
     select: jest.fn(() => obj),
     order: jest.fn(() => obj),
+    limit: jest.fn(() => obj),
     in: jest.fn(() => obj),
     update: jest.fn(() => obj),
     eq: jest.fn(() => obj),
@@ -157,7 +159,8 @@ describe('fetchOwnRequestsView', () => {
   it('returns bookings plus service and counterpart maps on the happy path', async () => {
     const b1 = booking({ id: 'bk1', service_id: 's1' });
     const b2 = booking({ id: 'bk2', service_id: 's2' });
-    const bookingsBuilder = chainable({ data: [b1, b2], error: null });
+    // The capped read returns newest first; the view hands the screen ascending order.
+    const bookingsBuilder = chainable({ data: [b2, b1], error: null });
     const servicesBuilder = chainable({
       data: [
         { id: 's1', barber_id: 'brb1', name: 'Burst fade', price: 30, duration_minutes: 25 },
@@ -179,6 +182,8 @@ describe('fetchOwnRequestsView', () => {
     expect(result.status).toBe('ok');
     if (result.status !== 'ok') return;
     expect(result.bookings).toEqual([b1, b2]);
+    expect(bookingsBuilder.order).toHaveBeenCalledWith('date', { ascending: false });
+    expect(bookingsBuilder.limit).toHaveBeenCalledWith(300);
     expect(result.servicesById.get('s1')?.name).toBe('Burst fade');
     expect(result.servicesById.get('s2')?.name).toBe('Hair + beard');
     expect(result.counterpartsByBookingId.get('bk1')).toEqual({

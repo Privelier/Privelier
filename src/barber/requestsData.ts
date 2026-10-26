@@ -49,21 +49,27 @@ interface CounterpartRpcRow extends BookingCounterpart {
  * failing fails the whole call; the service and counterpart reads degrade to
  * empty maps instead.
  */
+/** The newest bookings only: every list read is bounded (hardening Phase 4). */
+const REQUESTS_VIEW_LIMIT = 300;
+
 export async function fetchOwnRequestsView(): Promise<OwnRequestsViewResult> {
+  // Newest first so the cap drops the oldest history, then back to the
+  // ascending order the screen expects.
   const { data, error } = await supabase
     .from('bookings')
     .select('*')
-    .order('date', { ascending: true })
-    .order('time', { ascending: true });
+    .order('date', { ascending: false })
+    .order('time', { ascending: false })
+    .limit(REQUESTS_VIEW_LIMIT);
 
   if (error) return mapPostgrestError('fetchOwnRequestsView', error);
-  const bookings = (data as BookingRow[]) ?? [];
+  const bookings = ((data as BookingRow[]) ?? []).reverse();
 
   const servicesById = new Map<string, ServiceRow>();
   const counterpartsByBookingId = new Map<string, BookingCounterpart>();
 
   if (bookings.length > 0) {
-    const serviceIds = [...new Set(bookings.map((b) => b.service_id))];
+    const serviceIds = [...new Set(bookings.flatMap((b) => (b.service_id ? [b.service_id] : [])))];
     const bookingIds = bookings.map((b) => b.id);
 
     const [servicesResult, counterpartsResult] = await Promise.all([

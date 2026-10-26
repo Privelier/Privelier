@@ -26,7 +26,6 @@ export interface BarberSignUpProfileFields extends SignUpProfileFields {
  */
 export type SignUpResult =
   | { status: 'confirmation_email_sent'; email: string }
-  | { status: 'email_in_use' }
   | AuthFailure;
 
 /**
