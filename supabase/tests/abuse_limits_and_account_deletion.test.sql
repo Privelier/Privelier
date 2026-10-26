@@ -91,6 +91,49 @@ select is(tests.scalar(tests.id('a'),
   format('select count(*) from public.get_booking_counterparts(array(select %L::uuid from generate_series(1, 5000)))', tests.id('bk'))),
   '1', 'RPC id arrays are bounded and still answer');
 
+-- Caps: fill to the limit as the table owner, then one more as the user.
+insert into public.availability (barber_id, day_of_week, start_time, end_time)
+select tests.id('x'), (n % 7)::smallint, '06:00', '07:00' from generate_series(1, 59) n;
+select is(tests.run(tests.id('x'), format($$insert into public.availability (barber_id, day_of_week, start_time, end_time) values (%L, 1, '20:00', '21:00')$$, tests.id('x'))),
+  'PA002', 'a barber can have at most 60 availability windows');
+
+insert into public.barber_days_off (barber_id, day)
+select tests.id('x'), current_date + n from generate_series(10, 409) n;
+select is(tests.run(tests.id('x'), format($$insert into public.barber_days_off (barber_id, day) values (%L, current_date + 500)$$, tests.id('x'))),
+  'PA002', 'days off are capped at 400');
+
+create function tests.many_barbers(p_count integer) returns uuid[] language plpgsql as $$
+declare
+  ids uuid[] := array(select gen_random_uuid() from generate_series(1, p_count));
+begin
+  insert into auth.users (id, email) select id, id || '@test.privelier.invalid' from unnest(ids) id;
+  insert into public.users (id, name, email, role) select id, 'Filler', id || '@test.privelier.invalid', 'barber' from unnest(ids) id;
+  insert into public.barber_profile (user_id, verification_status) select id, 'approved' from unnest(ids) id;
+  return ids;
+end $$;
+insert into fx select 'b' || ord, id::text from unnest(tests.many_barbers(201)) with ordinality as t(id, ord);
+insert into public.customer_favorites (customer_id, barber_id)
+select tests.id('b'), v::uuid from fx where k ~ '^b[0-9]+$' and substr(k, 2)::integer <= 200;
+select is(tests.run(tests.id('b'), format($$insert into public.customer_favorites (customer_id, barber_id) values (%L, %L)$$, tests.id('b'), tests.id('b201'))),
+  'PA002', 'a customer can keep at most 200 favorites');
+
+select is(tests.repeat_until_refused(tests.id('a'),
+  $$insert into public.user_blocks (blocker_id, blocked_id) select tests.id('a'), tests.id('b' || ({i} + 100))$$, 31),
+  '31:PA429', 'the 31st block in an hour is refused');
+
+select is(tests.repeat_until_refused(tests.id('a'),
+  format($$insert into public.safety_events (booking_id, user_id, kind) values (%L, %L, 'sos')$$, tests.id('bk'), tests.id('a')), 31),
+  '31:PA429', 'the 31st safety event in an hour is refused');
+
+insert into storage.objects (bucket_id, name, owner)
+select 'verification-docs', tests.id('y') || '/doc-' || n || '.jpg', tests.id('y') from generate_series(1, 10) n;
+select is(tests.run(tests.id('y'), format($$insert into storage.objects (bucket_id, name, owner) values ('verification-docs', %L, %L)$$, tests.id('y') || '/doc-11.jpg', tests.id('y'))),
+  '42501', 'a barber can park at most 10 verification files');
+insert into storage.objects (bucket_id, name, owner)
+select 'portfolio', tests.id('x') || '/p-' || n || '.jpg', tests.id('x') from generate_series(1, 12) n;
+select is(tests.run(tests.id('x'), format($$insert into storage.objects (bucket_id, name, owner) values ('portfolio', %L, %L)$$, tests.id('x') || '/p-13.jpg', tests.id('x'))),
+  '42501', 'a barber can park at most 12 portfolio files');
+
 -- -------------------------------------------------------- account deletion --
 insert into public.reviews (booking_id, customer_id, barber_id, rating, comment)
 values (tests.id('done'), tests.id('a'), tests.id('x'), 4, 'Personal remark');

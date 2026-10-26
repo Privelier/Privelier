@@ -135,6 +135,41 @@ select is(tests.run(tests.id('a'), format($$insert into public.messages (chat_id
 select is(tests.scalar(tests.id('a'), format($$select (public.create_booking(%L, current_date + 7, '15:00', 'x', gen_random_uuid())).id$$, tests.id('svc_x'))), 'error:42501', 'a block stops new bookings');
 select is(tests.visible(tests.id('b'), format('select 1 from public.barber_directory where id = %L', tests.id('x'))), 1, 'paired allow: other customers still see the barber');
 
+-- ------------------------------------------------------- remaining tables --
+insert into public.customer_addresses (customer_id, label, address) values (tests.id('b'), 'Home', 'Private street 9');
+select is(tests.visible(tests.id('a'), 'select 1 from public.customer_addresses'), 0, 'saved addresses are private to their owner');
+select is(tests.visible(tests.id('b'), 'select 1 from public.customer_addresses'), 1, 'paired allow: the owner sees own addresses');
+select is(tests.run(tests.id('a'), format($$insert into public.customer_addresses (customer_id, label, address) values (%L, 'x', 'x')$$, tests.id('b'))), '42501', 'nobody saves an address for someone else');
+select is(tests.affected(tests.id('a'), 'delete from public.customer_addresses'), 0, 'nobody deletes another user''s addresses');
+
+select is(tests.run(tests.id('b'), format($$insert into public.customer_favorites (customer_id, barber_id) values (%L, %L)$$, tests.id('b'), tests.id('y'))), '42501', 'a pending barber cannot be favorited');
+select is(tests.run(tests.id('b'), format($$insert into public.customer_favorites (customer_id, barber_id) values (%L, %L)$$, tests.id('b'), tests.id('x'))), 'ok', 'paired allow: favorite an approved barber');
+select is(tests.visible(tests.id('a'), 'select 1 from public.customer_favorites'), 0, 'favorites are private to their owner');
+
+select is(tests.run(tests.id('a'), format($$insert into public.barber_days_off (barber_id, day) values (%L, current_date + 3)$$, tests.id('a'))), '42501', 'a customer cannot create days off');
+select is(tests.run(tests.id('x'), format($$insert into public.barber_days_off (barber_id, day) values (%L, current_date + 3)$$, tests.id('x'))), 'ok', 'paired allow: the barber sets a day off');
+select is(tests.run(tests.id('y'), format($$insert into public.barber_days_off (barber_id, day) values (%L, current_date + 4)$$, tests.id('x'))), '42501', 'nobody sets days off for another barber');
+
+select is(tests.visible(tests.id('a'), format('select 1 from public.barber_stats where barber_id = %L', tests.id('y'))), 0, 'a pending barber''s stats are hidden');
+select is(tests.visible(tests.id('a'), 'select 1 from public.push_tokens'), -1, 'push tokens are not readable through the API');
+select is(tests.run(tests.id('a'), 'select public.register_push_token(''ExponentPushToken[test]'', ''ios'', ''en'')'), 'ok', 'paired allow: tokens are registered through the RPC');
+select is(tests.visible(tests.id('a'), 'select 1 from public.waitlist'), 0, 'the waitlist is founders-only');
+select ok(tests.visible(tests.id('a'), 'select 1 from public.legal_current_versions') >= 1, 'signed-in users read the current legal versions');
+select is(tests.run(tests.id('a'), 'insert into public.legal_consent_history (user_id) values (gen_random_uuid())'), '42501', 'consent history is written only by the consent RPC');
+select is(tests.visible(tests.id('a'), 'select 1 from public.booking_trips'), 0, 'trips are visible only to their two participants');
+
+insert into fx select 'note', id::text from public.notifications where recipient_id = tests.id('x') limit 1;
+select is(tests.affected(tests.id('a'), format('update public.notifications set read_at = now() where id = %L', tests.id('note'))), 0, 'nobody marks another user''s notification read');
+select is(tests.affected(tests.id('x'), format('update public.notifications set read_at = now() where id = %L', tests.id('note'))), 1, 'paired allow: the recipient marks it read');
+select is(tests.run(tests.id('x'), format('update public.notifications set recipient_id = %L where id = %L', tests.id('a'), tests.id('note'))), '42501', 'a notification cannot be redirected');
+
+select is(tests.run(tests.id('b'), format($$insert into public.chat_read_state (chat_id, user_id, last_read_at) values (%L, %L, now())$$, tests.id('chat'), tests.id('b'))), '42501', 'a non-participant cannot mark a chat read');
+select is(tests.run(tests.id('x'), format($$insert into public.chat_read_state (chat_id, user_id, last_read_at) values (%L, %L, now()) on conflict (chat_id, user_id) do update set last_read_at = excluded.last_read_at$$, tests.id('chat'), tests.id('x'))), 'ok', 'paired allow: a participant marks it read');
+
+select is(tests.run(tests.id('b'), format($$insert into public.safety_events (booking_id, user_id, kind) values (%L, %L, 'sos')$$, tests.id('bk'), tests.id('b'))), '42501', 'a non-participant cannot log a safety event on a booking');
+select is(tests.run(tests.id('a'), format($$insert into public.safety_events (booking_id, user_id, kind) values (%L, %L, 'sos')$$, tests.id('bk'), tests.id('a'))), 'ok', 'paired allow: a participant can');
+select is(tests.visible(tests.id('x'), 'select 1 from public.safety_events'), 0, 'safety events are private to whoever logged them');
+
 -- ---------------------------------------------------------------- storage --
 insert into storage.objects (bucket_id, name, owner) values
   ('verification-docs', tests.id('y') || '/id.jpg', tests.id('y')),

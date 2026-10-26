@@ -138,7 +138,17 @@ Check module ownership, circular dependencies, duplicate business rules, generat
 
 ## Full-scan hardening checklist (vibe-coding, Supabase security, store readiness)
 
-When asked for a **full scan**, whole-app audit or release-readiness review, run every check below in addition to the sections above. Source: `docs/privelier-Vibecoding-goal.md` (founder hardening goal, 2026-10-26). Each item ends PASS, FAIL (with a finding) or BLOCKED (exact reason plus the founder action), with evidence in the coverage ledger. Use the repository's scripted checks first (see `docs/hardening/README.md` when present) and fall back to the catalog queries described here.
+When asked for a **full scan**, whole-app audit or release-readiness review, run every check below in addition to the sections above. Source: `docs/privelier-Vibecoding-goal.md` (founder hardening goal, 2026-10-26). Each item ends PASS, FAIL (with a finding) or BLOCKED (exact reason plus the founder action), with evidence in the coverage ledger. Run the scripted checks first (`docs/hardening/README.md` lists them), then the catalog queries described here for anything a script does not cover:
+
+- `npm run check`: typecheck, ESLint at zero warnings, Jest, knip, jscpd under 3 %, madge.
+- `npm run db:test`: pgTAP authorization matrix and abuse suites against the project, never committing (`python tools/db/supa.py test --with <new migrations> -- <suite>` for unapplied migrations).
+- `npm run db:concurrency`: the concurrent overlapping-booking proof.
+- `npm run db:pending`, `npm run db:types` (then `git diff src/database.types.ts` for drift).
+- `npm run secrets:scan`, plus gitleaks on a fresh `npx expo export` directory.
+- Supabase Security and Performance Advisors through the Management API (`/v1/projects/{ref}/advisors/security|performance`): no ERROR; every WARN fixed or justified in `docs/hardening/DECISIONS.md`.
+- `npx expo-doctor`, `npx expo install --check`, `npx expo config --type introspect` (merged permissions), `npm audit --omit=dev`.
+
+Compare against the last report (`docs/quality/*-hardening-report.md`) and the open items in `docs/hardening/FOUNDER_ACTIONS.md`; a scan reports regressions and newly closed items, not only fresh findings.
 
 **Secrets**
 - Scan the working tree, full git history and a production `npx expo export` bundle of each app with gitleaks (redacted output only).

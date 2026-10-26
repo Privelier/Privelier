@@ -1,60 +1,66 @@
 # Privelier
 
-Privelier is a premium, private marketplace for customers to book independent barbers at their own location. It is one Expo/React Native codebase with two separate experiences and navigation trees: Customer and Barber. Both use one Supabase project for Auth, Postgres, Storage, Realtime, and Row Level Security.
+Privelier is a marketplace for booking independent barbers who travel to the customer. It is one Expo / React Native codebase with two separate experiences and navigation trees, Customer and Barber, on one Supabase project (Auth, Postgres, Storage, Realtime, Row Level Security).
 
 ## Prerequisites
 
 - Node.js 20 LTS or later and npm
-- An Expo development build for native-only features (Secure Store, image picker, native MapLibre maps, background trip location and push). Expo Go still shows maps through the MapLibre GL web renderer.
-- Access to the project Supabase instance
+- An Expo development build for native-only features (Secure Store, the photo picker, native MapLibre maps, background trip location and push). Expo Go shows maps through the MapLibre GL web renderer.
+- Access to the Supabase project
+- Python 3.11 or later for the database and geo tooling in `tools/`
 
-Copy `.env.example` to `.env` and set the public runtime values. The file is gitignored.
+Copy `.env.example` to `.env` and fill in the two public values. The file is gitignored.
 
 ```powershell
 Copy-Item .env.example .env
 npm ci
 ```
 
-Never put a Supabase `service_role` key, provider secret, or private key in `.env`, Expo config, or client code. `EXPO_PUBLIC_*` values are embedded in the client: only the Supabase URL and anon key belong there. Maps (MapLibre + OpenFreeMap), address search (Photon) and routing (FOSSGIS OSRM/Valhalla) are free and keyless; see `tools/geo/README.md` for the location stack and its Python tooling.
+`EXPO_PUBLIC_*` values are compiled into the app in plain text. Only the project URL and the publishable key (`EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `sb_publishable_...`) belong there; `lib/env.ts` refuses to start with a secret or `service_role` key. Maps (MapLibre and OpenFreeMap), address search (Photon) and routing (FOSSGIS OSRM/Valhalla) need no keys; see `tools/geo/README.md`.
 
-## Run and validate
+## Run
 
 ```powershell
-npm start
+npm start            # Expo dev server
 npm run android
 npm run ios
 npm run web
-npm run lint
-npm run typecheck
-npm test -- --runInBand
+```
+
+For a native preview, install a development build on a device, run `npm start -- --dev-client` and open the Expo link. The web build is useful for navigation and layout only.
+
+## Check
+
+```powershell
+npm run check        # typecheck, lint (zero warnings), tests, knip, duplication, circular imports
+npm run db:test      # pgTAP suites against the project, inside transactions that never commit
 npx expo-doctor
 ```
 
-For the intended native preview, install a compatible development build on a physical device, run `npm start -- --dev-client`, then open the displayed Expo link. `npm run web` is useful for a quick navigation/UI preview, but it cannot validate native image selection, Secure Store, or the native MapLibre module.
+`docs/hardening/README.md` lists every check, including the database tools, the concurrency test and the secret scan. CI (`.github/workflows/quality.yml`) runs the same gate on every push and pull request. Run `bash tools/hooks/install-gitleaks-hook.sh` once per clone to scan staged changes for secrets.
 
 ## Architecture
 
-- `src/customer/` — customer discovery, booking, inbox, chat, reviews, and account UI.
-- `src/barber/` — barber studio, requests, services, availability, portfolio, chat, and verification UI.
-- `src/shared/` — cross-app, role-neutral utilities and components only.
-- `lib/supabase.ts` — the client-side Supabase anon-key client.
-- `supabase/migrations/` — forward-only schema, RLS, storage, and integrity migrations.
-- `docs/design/` — approved feature decisions. Read the matching design before changing a governed feature.
+- `src/customer/`: discovery, booking, inbox, chat, reviews and account.
+- `src/barber/`: studio, requests, services, availability, portfolio, chat, verification and live trips.
+- `src/shared/`: role-neutral components, hooks and utilities only. Customer and barber code cannot import each other (lint-enforced).
+- `src/database.types.ts`: generated from the live schema (`npm run db:types`); the Supabase client is typed with it.
+- `lib/supabase.ts`: the client, created with the publishable key.
+- `supabase/migrations/`: forward-only schema, RLS, storage and integrity migrations.
+- `supabase/tests/`: pgTAP suites, including the authorization matrix.
+- `supabase/functions/delete-account/`: the only Edge Function; it holds the secret key server-side.
+- `docs/design/`: approved feature decisions. Read the matching design before changing a governed feature.
 
-Do not merge the customer and barber navigators into a generic shared experience. Database rules, not UI checks, own authorization, booking state transitions, review eligibility, and verification protections.
+The database, not the UI, owns authorization, booking state transitions, review eligibility, verification protection, rate limits and the overlap rule. Do not weaken RLS, grants, triggers or storage policies to unblock UI work.
 
 ## Database and migrations
 
-Do not edit an applied migration. Schema changes require the repository’s schema-architect process, a new migration, live verification through Supabase, and the security gate. Keep booking state transitions exactly as documented in `AGENTS.md`; do not weaken RLS, grants, triggers, storage policies, or privacy boundaries to unblock UI work.
+Never edit an applied migration; add a new one. Dry-run it (`python tools/db/supa.py dry-run`), cover it with a pgTAP test, and apply it only with founder authorization. Booking status transitions follow `AGENTS.md` exactly.
 
-The current release blocker is server-side appointment validation: the client derives valid slots, but the database still permits raw-API bookings outside availability and overlapping variable-duration bookings. Resolve it through a dedicated booking/schema pipeline before release.
+## Release
 
-## Testing and release gates
+Release gates that need founders or devices are listed in `docs/hardening/FOUNDER_ACTIONS.md` and `AGENTS.md` (Step 18): two-device Realtime booking and chat, Maestro flows (`.maestro/`), native builds, store forms and the legacy key switch-off. Store material is in `docs/release/`.
 
-Unit and component tests run in Jest. Authored Maestro flows live in `.maestro/`; see its README for seeded-account requirements and commands. They require a real Android/iOS development build and have not all been executed on this machine.
+## Scope
 
-Release also requires founder-controlled validation that cannot be faked locally: two-session Realtime booking/chat behavior and recovery, image selection, Secure Store, native maps, live trip tracking and push on two devices, manual verification review, social OAuth provider configuration, iOS development build, and the end-to-end real-user flow.
-
-## Scope and security
-
-This MVP uses only Expo/React Native and Supabase. Payments, automated KYC/biometrics, push notifications, subscriptions, AI recommendations, and multi-country payment logic are not in scope. Verification is manual: ID and license images remain private Supabase Storage objects and founders review them in Supabase.
+Expo / React Native and Supabase only. Push notifications (Expo push) and live arrival tracking are in scope by founder decision (2026-10-25). Payments, subscriptions, automated KYC or biometrics, AI recommendations and multi-currency are not. Verification is manual: ID and licence photos stay in a private bucket and the founders review them in Supabase.
