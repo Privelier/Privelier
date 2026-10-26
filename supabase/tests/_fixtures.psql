@@ -1,0 +1,132 @@
+-- Shared fixtures for the pgTAP suites: helpers that run a statement as
+-- the real anon/authenticated role with JWT claims, and five synthetic
+-- actors (customers a and b, approved barber x, pending barber y) with a
+-- service each, availability for barber x and a past completed booking.
+-- Included with \ir from each *.test.sql inside its transaction.
+
+create schema tests;
+grant usage on schema tests to anon, authenticated;
+
+create function tests.reset() returns void language plpgsql as $$
+begin
+  perform set_config('role', 'postgres', true);
+  perform set_config('request.jwt.claims', '', true);
+  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claim.role', '', true);
+end $$;
+
+create function tests.become(p_actor uuid) returns void language plpgsql as $$
+begin
+  if p_actor is null then
+    perform set_config('request.jwt.claims', '{"role":"anon"}', true);
+    perform set_config('role', 'anon', true);
+  else
+    perform set_config('request.jwt.claims', json_build_object('sub', p_actor, 'role', 'authenticated')::text, true);
+    perform set_config('request.jwt.claim.sub', p_actor::text, true);
+    perform set_config('role', 'authenticated', true);
+  end if;
+end $$;
+
+-- 'ok' or the SQLSTATE the statement raised.
+create function tests.run(p_actor uuid, p_sql text) returns text language plpgsql as $$
+begin
+  perform tests.become(p_actor);
+  execute p_sql;
+  perform tests.reset();
+  return 'ok';
+exception when others then
+  perform tests.reset();
+  return sqlstate;
+end $$;
+
+-- Rows a DML statement touched (-1 on error).
+create function tests.affected(p_actor uuid, p_sql text) returns integer language plpgsql as $$
+declare
+  v integer;
+begin
+  perform tests.become(p_actor);
+  execute p_sql;
+  get diagnostics v = row_count;
+  perform tests.reset();
+  return v;
+exception when others then
+  perform tests.reset();
+  return -1;
+end $$;
+
+-- Rows a query returns (-1 on error).
+create function tests.visible(p_actor uuid, p_sql text) returns integer language plpgsql as $$
+declare
+  v integer;
+begin
+  perform tests.become(p_actor);
+  execute 'select count(*) from (' || p_sql || ') q' into v;
+  perform tests.reset();
+  return v;
+exception when others then
+  perform tests.reset();
+  return -1;
+end $$;
+
+create function tests.scalar(p_actor uuid, p_sql text) returns text language plpgsql as $$
+declare
+  v text;
+begin
+  perform tests.become(p_actor);
+  execute p_sql into v;
+  perform tests.reset();
+  return v;
+exception when others then
+  perform tests.reset();
+  return 'error:' || sqlstate;
+end $$;
+
+create function tests.new_user(p_role public.user_role, p_name text) returns uuid language plpgsql as $$
+declare
+  v uuid := gen_random_uuid();
+begin
+  insert into auth.users (id, email) values (v, v || '@test.privelier.invalid');
+  insert into public.users (id, name, email, role, city, country)
+  values (v, p_name, v || '@test.privelier.invalid', p_role, 'Teststadt', 'Germany');
+  if p_role = 'barber' then
+    insert into public.barber_profile (user_id, bio) values (v, 'Test bio');
+    insert into public.barber_location (user_id, address, latitude, longitude)
+    values (v, 'Teststrasse 1', 49.45, 11.08);
+  end if;
+  return v;
+end $$;
+
+create function tests.approve(p_barber uuid) returns void language plpgsql as $$
+begin
+  perform set_config('request.jwt.claim.role', 'service_role', true);
+  update public.barber_profile set verification_status = 'approved', verified = true where user_id = p_barber;
+  perform set_config('request.jwt.claim.role', '', true);
+end $$;
+
+grant execute on all functions in schema tests to anon, authenticated;
+
+create temp table fx (k text primary key, v text);
+grant all on fx to anon, authenticated;
+create function tests.id(p_key text) returns uuid language sql stable as $$ select v::uuid from fx where k = p_key $$;
+grant execute on function tests.id(text) to anon, authenticated;
+
+insert into fx values
+  ('a', tests.new_user('customer', 'Ada Customer')),
+  ('b', tests.new_user('customer', 'Ben Customer')),
+  ('x', tests.new_user('barber', 'Xavier Barber')),
+  ('y', tests.new_user('barber', 'Yusuf Pending'));
+select tests.approve(tests.id('x'));
+
+insert into public.services (barber_id, name, price, duration_minutes)
+values (tests.id('x'), 'Cut', 35, 60), (tests.id('y'), 'Cut', 30, 45);
+insert into fx select 'svc_x', id::text from public.services where barber_id = tests.id('x');
+insert into fx select 'svc_y', id::text from public.services where barber_id = tests.id('y');
+insert into public.availability (barber_id, day_of_week, start_time, end_time)
+values (tests.id('x'), extract(dow from current_date + 7)::smallint, '09:00', '18:00');
+
+-- A past, completed booking for reviews (the slot trigger refuses past times).
+alter table public.bookings disable trigger trg_validate_booking_slot;
+insert into public.bookings (customer_id, barber_id, service_id, date, time, location, status)
+values (tests.id('a'), tests.id('x'), tests.id('svc_x'), current_date - 7, '10:00', 'Somewhere 1', 'completed');
+alter table public.bookings enable trigger trg_validate_booking_slot;
+insert into fx select 'done', id::text from public.bookings where customer_id = tests.id('a') and status = 'completed';
