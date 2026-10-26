@@ -38,6 +38,7 @@ jest.mock('../../../lib/supabase', () => ({
     },
     from: jest.fn(),
     rpc: jest.fn(),
+    removeAllChannels: jest.fn(() => Promise.resolve([])),
   },
 }));
 
@@ -520,6 +521,15 @@ describe('signOut', () => {
     mockAuth.signOut.mockResolvedValueOnce({ error: null } as never);
     await expect(signOut()).resolves.toBeUndefined();
     expect(mockAuth.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('removes every realtime channel before the session ends, so nothing leaks into the next account', async () => {
+    const { supabase } = jest.requireMock('../../../lib/supabase');
+    const order: string[] = [];
+    supabase.removeAllChannels.mockImplementationOnce(() => { order.push('channels'); return Promise.resolve([]); });
+    mockAuth.signOut.mockImplementationOnce(() => { order.push('signOut'); return Promise.resolve({ error: null }); });
+    await signOut();
+    expect(order).toEqual(['channels', 'signOut']);
   });
 
   it('falls back to a local-scope sign-out when the server call errors (without throwing)', async () => {

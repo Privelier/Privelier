@@ -63,7 +63,7 @@ def load_env() -> tuple[str, str]:
                 key, _, value = line.partition("=")
                 values[key.strip()] = value.strip().strip('"').strip("'")
     url = os.environ.get("EXPO_PUBLIC_SUPABASE_URL") or values.get("EXPO_PUBLIC_SUPABASE_URL")
-    anon = os.environ.get("EXPO_PUBLIC_SUPABASE_ANON_KEY") or values.get("EXPO_PUBLIC_SUPABASE_ANON_KEY")
+    anon = os.environ.get("EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY") or values.get("EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY")
     if not url or not anon:
         sys.exit("EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY missing (.env).")
     return url.rstrip("/"), anon

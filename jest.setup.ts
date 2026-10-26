@@ -8,7 +8,7 @@
  * failure.
  */
 process.env.EXPO_PUBLIC_SUPABASE_URL ??= 'https://test.supabase.co';
-process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ??= 'test-anon-key';
+process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??= 'sb_publishable_test';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 

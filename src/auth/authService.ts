@@ -318,6 +318,8 @@ export async function signOut(): Promise<void> {
   } catch (raw) {
     logAuthError('signOut.cleanup', raw);
   }
+  // No subscription from this account may survive into the next one.
+  await supabase.removeAllChannels();
   try {
     const { error } = await supabase.auth.signOut();
     if (error) {
