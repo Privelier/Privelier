@@ -1,6 +1,6 @@
 ---
 name: privelier-engineering-skiller
-description: "Audit, debug, test, harden, and optimize Privelier's React Native/Expo apps and Supabase backend. Use for whole-app engineering reviews, confirmed bug fixes, database health, security, measured smoothness, missing essentials, and release readiness. Route visual and journey design to privelier-ui-ux-skiller."
+description: "Audit, debug, test, harden, and optimize Privelier's React Native/Expo apps and Supabase backend. Use for whole-app engineering reviews, confirmed bug fixes, database health, security, measured smoothness, missing essentials, and release readiness. A full scan also runs the vibe-coding hardening checklist (secrets, RLS/authorization matrix, overlap and integrity guards, rate limits, mobile hardening, App Store and Play compliance, clean code). Route visual and journey design to privelier-ui-ux-skiller."
 ---
 
 # Engineering and security skiller
@@ -135,6 +135,65 @@ Consider auth recovery, incomplete onboarding, empty discovery, unavailable barb
 Retain the known in-home safety, dispute resolution and refund/cancellation-fee policy gaps. Revisit them explicitly for Phase 2/3; do not silently implement live tracking, SOS, Stripe, subscriptions, push, AI recommendations, analytics, multi-currency or automated KYC as an audit repair.
 
 Check module ownership, circular dependencies, duplicate business rules, generated types, dead/unreachable code and configuration drift. Refactor only where it reduces an observed defect risk or change cost. Prefer the smallest maintainable solution for two founders. Check CI reproduces meaningful gates, both app release identities/configurations are correct, and operational diagnostics/recovery steps are usable.
+
+## Full-scan hardening checklist (vibe-coding, Supabase security, store readiness)
+
+When asked for a **full scan**, whole-app audit or release-readiness review, run every check below in addition to the sections above. Source: `docs/privelier-Vibecoding-goal.md` (founder hardening goal, 2026-10-26). Each item ends PASS, FAIL (with a finding) or BLOCKED (exact reason plus the founder action), with evidence in the coverage ledger. Use the repository's scripted checks first (see `docs/hardening/README.md` when present) and fall back to the catalog queries described here.
+
+**Secrets**
+- Scan the working tree, full git history and a production `npx expo export` bundle of each app with gitleaks (redacted output only).
+- Client code, `EXPO_PUBLIC_*`, `app.json`/`app.config.*` `extra` and `eas.json` contain only the project URL and the publishable (or legacy anon) key. Any `service_role` / `sb_secret_` value is critical and triggers a rotation step in `docs/hardening/FOUNDER_ACTIONS.md`.
+- Required env vars are validated once at startup; `.env*` is gitignored and `.env.example` holds placeholders only; the gitleaks pre-commit hook and CI step exist.
+- Track the legacy-key retirement: a build using publishable/secret keys must ship before Supabase removes legacy anon/service_role keys (late 2026).
+
+**Database authorization (live catalog queries, metadata only)**
+- Every table in an exposed schema has RLS enabled and at least one policy; no policy is `USING (true)` on private data, `TO public`, or `FOR ALL`; every UPDATE policy has `WITH CHECK`; every INSERT policy pins its ownership column (`sender_id`, `customer_id`, `barber_id`, `reporter_id`, `user_id`) to `(select auth.uid())`.
+- No authorization reads `user_metadata` / `raw_user_meta_data`; signup triggers never copy a role from metadata.
+- `anon` holds no table, sequence or function grant the logged-out experience does not need (Privelier discovery is authenticated-only).
+- Protected columns (price, status, role, `verified`, `verification_status`, reviewer fields, rating aggregates, exact coordinates) are blocked from client writes by column grants or triggers; state changes go through narrow RPCs or actor-aware triggers.
+- Views use `security_invoker = true` (or are justified, revoked from `anon`, and expose only safe columns); no materialized view is reachable by the API.
+- `SECURITY DEFINER` functions: pinned `search_path`, `EXECUTE` revoked from `anon`/`authenticated` unless intended, inputs compared with `(select auth.uid())`. `pg_graphql` stays uninstalled unless used.
+- Storage: verification bucket private with owner-path policies and no listing; every bucket has `file_size_limit` and an image-only `allowed_mime_types` (never SVG/HTML); the public portfolio bucket has no list-everything SELECT policy; object names are random UUIDs; verification signed URLs live 60 s by default.
+- Realtime: every client channel is `private: true`; `realtime.messages` policies restrict each topic to the booking's two participants; "Allow public access" is off (founder action).
+- Location privacy: no table, view, RPC or realtime payload returns a barber's exact coordinates to anyone but that barber; any client-visible distance comes from the fuzzed display point, rounded to 0.5 km.
+- Authorization matrix: actors anon, customer A, customer B, approved barber X, pending barber Y × select/insert/update/delete/RPC/download/list/channel join. Each deny has a paired allow so an empty result cannot pass. Required scenarios: self-promotion, barber self-approval, reading another barber's exact location, another booking's chat, sending as someone else, illegitimate reviews, editing price/status/rating, verification document access, any anon write. Service-role results never count.
+
+**Integrity and performance**
+- Overlapping `pending`/`accepted` bookings for one barber are impossible at the database level (`btree_gist` exclusion on a half-open `tstzrange` slot), proven by a concurrent-insert test.
+- Booking creation derives price and duration from the service row, rejects client prices, and is idempotent per customer.
+- Check constraints: rating 1–5, message 1–2000 characters after trim, positive price and duration, six-photo portfolio cap under concurrency; money in integer minor units; times as `timestamptz` or explicitly documented local date/time.
+- Deliberate `ON DELETE` behavior preserves booking, review and message history.
+- Policies use `(select auth.uid())`, `TO authenticated`, and indexed filter columns; every foreign key is indexed; list endpoints use keyset pagination with a hard page size; index changes are justified with `EXPLAIN`.
+- Generated TypeScript database types are current.
+
+**Rate limiting and DDoS cost**
+- Every user-reachable write path has a cap or limit, proven by tests: pending bookings per customer, messages per minute per sender per booking, portfolio cap, one verification in review, reports and blocks per user per hour, plus a request-level write limit (`db_pre_request`).
+- Role `statement_timeout` (anon ≤ 3 s, authenticated ≤ 8 s); every RPC enforces a maximum page size; no unbounded list endpoint.
+- Edge Functions verify the JWT and apply a per-user limit backed by a private table.
+- The client shows a calm message on 429/cap errors and never automatically retries non-idempotent writes.
+- Auth abuse items (CAPTCHA, email confirmation, OTP expiry ≤ 3600 s, auth rate limits, leaked-password protection, exact redirect URLs, MFA for org members, spend cap) are in FOUNDER_ACTIONS; the UI response is identical whether or not an email exists.
+- Portfolio and verification uploads are resized and re-encoded to bounded dimensions.
+
+**Mobile hardening**
+- Session stored with the encrypted pattern (AES key in SecureStore, ciphertext in AsyncStorage), PKCE, `detectSessionInUrl: false`, auto-refresh tied to app state.
+- Sign-out and account switch clear caches, remove every realtime channel and cancel in-flight work.
+- No `console.*` in production (lint rule plus release stripping); no tokens, addresses, phone numbers, document URLs or message text in logs.
+- Deep links and auth redirects accept only the app's own scheme and hosts, with validated parameters.
+- Image uploads use the system picker and are re-encoded so EXIF/GPS is removed, with a test that inspects the output.
+- Merged Android manifest has no `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`, `READ_EXTERNAL_STORAGE` or background location; location is when-in-use and only where used; iOS purpose strings are specific per feature.
+- Android target SDK 36, 16 KB page-size compatible native modules, edge-to-edge and predictive back; `npx expo-doctor` and `npx expo install --check` are clean or justified; OTA code signing is documented if `expo-updates` is used. No certificate pinning or root detection (recorded decision).
+
+**Store compliance**
+- In-app account deletion in both apps (typed confirmation → server-side function that cancels future bookings, removes storage and personal rows, anonymizes shared history, deletes the auth user last, idempotent) and a web deletion-request link for Google Play.
+- Reports and blocks for messages, reviews and users; a block prevents new messages and bookings and hides the barber from discovery; server-side denylist for messages and review comments; versioned terms acceptance with a zero-tolerance clause; support contact visible in Account.
+- Apple privacy manifest covers required-reason APIs; every native dependency ships its own.
+- Release docs exist: `docs/release/app-review-notes-customer.md`, `-barber.md`, `data-inventory.md`.
+- No template leftovers; the two apps have distinct names, bundle IDs, icons and audiences, and no screen of one is reachable from the other.
+
+**Clean code (de-vibe)**
+- TypeScript strict with no new `any`; ESLint at zero warnings including `no-console`, `no-floating-promises`, `no-misused-promises` and the react-hooks rules; knip (unused files/exports/deps); jscpd below 3 % duplication; no circular imports.
+- No narrating or tutorial comments, decorative banners, log-and-rethrow or swallow-and-default catch blocks, hidden fallback chains, single-use wrappers, duplicated formatters or data access, versioned names (`New`, `2`, `final`, `temp`), dead or commented-out code, TODOs, production mock data, emoji in logs or copy, or magic numbers that duplicate database limits.
+- Domain names match `docs/glossary.md`; screens over about 300 lines are split by responsibility.
 
 ## Close with verifiable results
 
