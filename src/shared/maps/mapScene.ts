@@ -10,7 +10,7 @@ import type { LngLat } from '../tracking/geo';
  * A person pin: their photo (or initials when there is none, or it fails to
  * load), their name, and an optional quiet second line such as "from €35".
  */
-export interface MapPin {
+interface MapPin {
   id: string;
   lngLat: LngLat;
   title: string;

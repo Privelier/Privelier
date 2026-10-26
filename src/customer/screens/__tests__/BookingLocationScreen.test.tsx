@@ -11,9 +11,11 @@ jest.mock('@expo/vector-icons', () => ({ Feather: () => null }));
 jest.mock('../../../shared/haptics', () => ({ haptics: { selection: jest.fn() } }));
 const mockListSaved = jest.fn();
 const mockSaveAddress = jest.fn();
+const mockDeleteSaved = jest.fn();
 jest.mock('../../personalData', () => ({
   listSavedAddresses: (...args: unknown[]) => mockListSaved(...args),
   saveAddress: (...args: unknown[]) => mockSaveAddress(...args),
+  deleteSavedAddress: (...args: unknown[]) => mockDeleteSaved(...args),
 }));
 jest.mock('../../../shared/components/ScreenBackHeader', () => ({ ScreenBackHeader: () => null }));
 jest.mock('../../components/BookingStepIndicator', () => ({ BookingStepIndicator: () => null }));
@@ -118,4 +120,29 @@ it('saves a new address only when asked, without blocking the booking', async ()
   await fireEvent.press(screen.getByTestId('customer-booking-location-continue'));
   expect(navigation.navigate).toHaveBeenCalledWith('BookingConfirm', expect.objectContaining({ location: 'Main Street 12, Berlin' }));
   expect(mockSaveAddress).toHaveBeenCalledWith('Main Street 12', 'Main Street 12, Berlin');
+});
+
+it('removes a saved address (customer-owned data) from the list and the server', async () => {
+  mockListSaved.mockResolvedValue({ status: 'ok', addresses: [{ id: 'a-1', label: 'Home', address: 'Main Street 12, Berlin' }] });
+  mockDeleteSaved.mockResolvedValue({ status: 'ok' });
+  await render(<BookingLocationScreen route={route as never} navigation={navigation as never} />);
+  await waitFor(() => expect(screen.getByTestId('customer-booking-location-saved-remove-a-1')).toBeTruthy());
+
+  await fireEvent.press(screen.getByTestId('customer-booking-location-saved-remove-a-1'));
+
+  expect(mockDeleteSaved).toHaveBeenCalledWith('a-1');
+  await waitFor(() => expect(screen.queryByTestId('customer-booking-location-saved-a-1')).toBeNull());
+  expect(navigation.navigate).not.toHaveBeenCalled();
+});
+
+it('puts the address back and says so when the removal fails', async () => {
+  mockListSaved.mockResolvedValue({ status: 'ok', addresses: [{ id: 'a-1', label: 'Home', address: 'Main Street 12, Berlin' }] });
+  mockDeleteSaved.mockResolvedValue({ status: 'error', code: 'network', message: 'offline', retryable: true });
+  await render(<BookingLocationScreen route={route as never} navigation={navigation as never} />);
+  await waitFor(() => expect(screen.getByTestId('customer-booking-location-saved-remove-a-1')).toBeTruthy());
+
+  await fireEvent.press(screen.getByTestId('customer-booking-location-saved-remove-a-1'));
+
+  await waitFor(() => expect(screen.getByTestId('customer-booking-location-saved-a-1')).toBeTruthy());
+  expect(mockShowToast).toHaveBeenCalledWith({ message: 'The address could not be removed. Try again.' });
 });

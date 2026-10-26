@@ -25,7 +25,7 @@ export { buildInboxThreads };
  * Defensive cap on the batched last-message scan. Fine while chats are
  * young (MVP scale); add real pagination when it is not.
  */
-export const MESSAGES_SCAN_LIMIT = 200;
+const MESSAGES_SCAN_LIMIT = 200;
 
 /** The signed-in customer's chat threads, assembled for the Inbox list. */
 export async function fetchOwnInboxView(): Promise<OwnInboxViewResult> {

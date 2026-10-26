@@ -34,6 +34,7 @@ import { getAppLanguage } from '../../shared/locale';
 import type { BookingRow } from '../../types';
 import { devWarn } from '../../shared/devLog';
 
+/** @public Read by the trip tests through the module registry. */
 export const TRIP_LOCATION_TASK = 'privelier-trip-location';
 const STORAGE_KEY = 'privelier.activeTrip.v1';
 const SEND_MIN_INTERVAL_MS = 5000;
@@ -92,10 +93,6 @@ export function subscribeToTrip(listener: (state: LiveTripState | null) => void)
   return () => {
     listeners.delete(listener);
   };
-}
-
-export function getActiveTripState(): LiveTripState | null {
-  return state;
 }
 
 /** Drop points closer than `minM` apart (keeps first and last). */
@@ -323,11 +320,6 @@ async function stopLocal() {
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
-
-export async function hasLocationPermission(): Promise<boolean> {
-  const { status } = await Location.getForegroundPermissionsAsync();
-  return status === 'granted';
-}
 
 export async function startTrip(booking: BookingRow): Promise<StartTripResult> {
   const permission = await Location.requestForegroundPermissionsAsync();

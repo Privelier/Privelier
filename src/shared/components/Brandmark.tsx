@@ -1,7 +1,6 @@
 import { Image, StyleSheet, View, type ImageSourcePropType, type StyleProp, type ViewStyle } from 'react-native';
 
-export type BrandmarkLockup = 'mark' | 'vertical' | 'horizontal';
-export type BrandmarkSize = 'sm' | 'md' | 'lg' | 'xl';
+type BrandmarkSize = 'sm' | 'md' | 'lg' | 'xl';
 interface BaseProps {
   size?: BrandmarkSize;
   decorative?: boolean;

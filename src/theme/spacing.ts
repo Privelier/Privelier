@@ -52,5 +52,3 @@ export const radius = {
 /** Standard hairline weight — the brand's only divider/border thickness. */
 export const HAIRLINE = 0.5;
 
-export type Space = keyof typeof space;
-export type Radius = keyof typeof radius;

@@ -19,7 +19,7 @@ export type AccountSectionKey =
   | 'privacy'
   | 'help';
 
-export const ACCOUNT_SECTIONS: Record<AccountSectionKey, { title: string; blurb: string }> = {
+const ACCOUNT_SECTIONS: Record<AccountSectionKey, { title: string; blurb: string }> = {
   privacy: {
     title: 'Privacy & security',
     blurb: 'Your exact booking address is shared only with the barber attached to that booking. Identity documents are private and reviewed manually. Privelier never uses biometric verification.',

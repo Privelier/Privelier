@@ -350,12 +350,12 @@ export interface ProfileReadiness {
  * only meaningful when `status` is `ok`; error sections carry the same safe,
  * typed failure used by the rest of the barber data layer.
  */
-export type DashboardSection<T> =
+type DashboardSection<T> =
   | { status: 'ok'; data: T }
   | BarberDataFailure;
 
 /** The portion of barber_profile the Studio dashboard may display. */
-export interface DashboardProfile {
+interface DashboardProfile {
   verification: VerificationStatus | null;
   bio: string | null;
 }

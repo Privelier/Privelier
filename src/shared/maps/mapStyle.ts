@@ -18,8 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { StyleSpecification } from '@maplibre/maplibre-react-native';
 import { devWarn } from '../devLog';
 
-export const OPENFREEMAP_DARK_URL = 'https://tiles.openfreemap.org/styles/dark';
-export const MAP_ATTRIBUTION = '© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors';
+const OPENFREEMAP_DARK_URL = 'https://tiles.openfreemap.org/styles/dark';
 
 const CACHE_KEY = 'privelier.mapStyle.v1';
 const FETCH_TIMEOUT_MS = 6000;
@@ -88,7 +87,7 @@ async function fetchBrandStyle(): Promise<StyleSpecification | null> {
   }
 }
 
-export function loadMapStyle(): Promise<StyleSpecification | null> {
+function loadMapStyle(): Promise<StyleSpecification | null> {
   if (memoryStyle) return Promise.resolve(memoryStyle);
   inflight ??= (async () => {
     try {

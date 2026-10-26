@@ -45,7 +45,7 @@ export interface TripSnapshot {
 }
 
 /** Tunables, exported so tests and the Python mirror share one source. */
-export const TRIP_TUNING = {
+const TRIP_TUNING = {
   offRouteMinM: 50,
   offRouteAccuracyMultiplier: 1.5,
   offRouteFixesNeeded: 3,

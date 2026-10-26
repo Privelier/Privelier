@@ -21,7 +21,7 @@ import { boundsOf, headingDelta, lerpLngLat, type LngLat } from '../tracking/geo
 import { Avatar } from '../components/Avatar';
 import { MAP_COLORS, safePinImageUrl, type MapEvent, type MapScene } from './mapScene';
 
-export interface NativeSceneMapHandle {
+interface NativeSceneMapHandle {
   recenter: () => void;
 }
 
@@ -52,6 +52,7 @@ const lineFeature = (coordinates: LngLat[] | null | undefined): GeoJSON.Feature 
   geometry: { type: 'LineString', coordinates: coordinates && coordinates.length > 1 ? coordinates : [] },
 });
 
+/** @public Loaded with require() by PrivelierMap, only when the native module exists. */
 export const NativeSceneMap = forwardRef<NativeSceneMapHandle, Props>(function NativeSceneMap(
   { mapStyle, scene, onEvent, testID },
   ref

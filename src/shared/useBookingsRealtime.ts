@@ -47,7 +47,7 @@ import type { BookingChangeEvent } from './bookingRealtime';
 import { devWarn } from './devLog';
 
 /** Which participant column scopes the stream to the signed-in user. */
-export type BookingFilterColumn = 'barber_id' | 'customer_id';
+type BookingFilterColumn = 'barber_id' | 'customer_id';
 
 export type UseBookingsRealtimeArgs = {
   /** `'barber_id'` in the barber app, `'customer_id'` in the customer app. */

@@ -57,7 +57,6 @@ export const typeScale = {
   caption: { fontSize: 12, lineHeight: 17 },
 } as const satisfies Record<string, Pick<TextStyle, 'fontSize' | 'lineHeight'>>;
 
-export type TypeRole = keyof typeof typeScale;
 
 /** Lining, fixed-width figures keep prices, times and dashboard values aligned. */
 export const numericText: TextStyle = {

@@ -3,7 +3,7 @@ import { bookingSlotStart, isUpcomingBooking } from '../shared/bookingTime';
 import { formatBookingWhen } from '../shared/format';
 import { byId } from '../shared/lookup';
 
-export const MAX_DISCOVER_SERVICE_FILTERS = 6;
+const MAX_DISCOVER_SERVICE_FILTERS = 6;
 
 const BRAND_MESSAGES = {
   de: [
@@ -233,7 +233,7 @@ export function selectRebookBarbers(
  * when fewer than two are rated, or when the directory is small enough that
  * the rail above already shows everyone (the section would only repeat it).
  */
-export const TOP_RATED_MIN_DIRECTORY = 4;
+const TOP_RATED_MIN_DIRECTORY = 4;
 
 export function selectTopRated(
   barbers: readonly BarberDirectoryRow[],

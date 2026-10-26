@@ -42,7 +42,7 @@ export function osmLink([lng, lat]: LngLat): string {
 }
 
 /** Last known position if permission is already granted — never prompts. */
-export async function currentPositionIfPermitted(): Promise<LngLat | null> {
+async function currentPositionIfPermitted(): Promise<LngLat | null> {
   try {
     const { status } = await Location.getForegroundPermissionsAsync();
     if (status !== 'granted') return null;

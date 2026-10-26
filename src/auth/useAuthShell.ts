@@ -28,12 +28,12 @@ import type { EnsureProfileResult, ProfilePrefill, SetupFormFields } from './typ
 import type { UsersRow } from '../types';
 
 /** What the PROVISIONING phase is currently showing. */
-export type ProvisioningView =
+type ProvisioningView =
   | { kind: 'loading' }
   | { kind: 'setup_form'; prefill: ProfilePrefill }
   | { kind: 'failure'; failure: AuthFailure };
 
-export type AuthShellState =
+type AuthShellState =
   | { phase: 'restoring' }
   | { phase: 'unauthenticated' }
   | { phase: 'provisioning'; view: ProvisioningView }

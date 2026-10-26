@@ -95,7 +95,7 @@ function periodOf(time: string): PeriodKey {
 
 
 /** The earliest verified open slot in the lookahead, or null. */
-export function firstOpenSlot(
+function firstOpenSlot(
   dates: string[],
   slotsByDate: ReadonlyMap<string, string[]>,
   unverifiedDates: ReadonlySet<string>

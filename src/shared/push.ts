@@ -38,7 +38,7 @@ export interface PushOpenData {
 let configured = false;
 
 /** Foreground presentation + Android channels. Idempotent. */
-export function configurePush(): void {
+function configurePush(): void {
   if (configured) return;
   configured = true;
   Notifications.setNotificationHandler({
@@ -102,7 +102,7 @@ async function registerToken(): Promise<boolean> {
  * Silent refresh for a signed-in user who already granted permission
  * (tokens rotate; language may have changed). Never shows a prompt.
  */
-export async function refreshPushRegistration(): Promise<void> {
+async function refreshPushRegistration(): Promise<void> {
   if (!pushSupported()) return;
   configurePush();
   const { status } = await Notifications.getPermissionsAsync();

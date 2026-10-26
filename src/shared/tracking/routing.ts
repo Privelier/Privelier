@@ -32,7 +32,7 @@ async function getJson(url: string): Promise<unknown> {
 
 const fmt = ([lng, lat]: LngLat) => `${lng.toFixed(6)},${lat.toFixed(6)}`;
 
-export async function routeOsrm(from: LngLat, to: LngLat): Promise<TripRoute> {
+async function routeOsrm(from: LngLat, to: LngLat): Promise<TripRoute> {
   const body = (await getJson(
     `${OSRM_URL}/route/v1/driving/${fmt(from)};${fmt(to)}?overview=full&geometries=polyline6&steps=false`
   )) as { code?: string; routes?: { geometry: string; distance: number; duration: number }[] };
@@ -43,7 +43,7 @@ export async function routeOsrm(from: LngLat, to: LngLat): Promise<TripRoute> {
   return { coordinates, distanceM: best.distance, durationS: best.duration, source: 'osrm' };
 }
 
-export async function routeValhalla(from: LngLat, to: LngLat): Promise<TripRoute> {
+async function routeValhalla(from: LngLat, to: LngLat): Promise<TripRoute> {
   const request = {
     locations: [
       { lon: from[0], lat: from[1] },

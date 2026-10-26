@@ -39,6 +39,7 @@
     "expo-secure-store": "~58.0.2",
     "expo-splash-screen": "~58.0.11",
     "expo-status-bar": "~58.0.4",
+    "expo-system-ui": "~58.0.6",
     "expo-task-manager": "~58.0.12",
     "expo-web-browser": "~58.0.6",
     "nativewind": "^5.0.0-preview.2",
@@ -74,6 +75,9 @@
     "eslint-config-expo": "~58.0.4",
     "jest": "~30.5.2",
     "jest-expo": "~58.0.12",
+    "jscpd": "^5.4.2",
+    "knip": "^6.43.0",
+    "madge": "^8.0.0",
     "tailwindcss": "^4.2.0",
     "test-renderer": "^1.0.0",
     "typescript": "~6.0.3"
@@ -83,7 +87,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint",
+    "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "context:bootstrap": "python3 tools/context/context.py bootstrap",
@@ -92,7 +96,14 @@
     "context:query": "python3 tools/context/context.py query",
     "context:pack": "python3 tools/context/context.py pack",
     "ui:audit": "python3 tools/ui/ui_audit.py",
-    "stats:test": "python3 tools/automation/test_barber_stats.py"
+    "stats:test": "python3 tools/automation/test_barber_stats.py",
+    "knip": "knip --no-progress",
+    "dup": "jscpd src lib --min-tokens 70 --threshold 3 --silent --ignore \"**/__tests__/**\"",
+    "circular": "madge --circular src lib App.tsx",
+    "db:test": "python tools/db/supa.py test",
+    "db:pending": "python tools/db/supa.py pending",
+    "secrets:scan": "gitleaks git . --redact --no-banner",
+    "check": "npm run typecheck && npm run lint && npm test -- --silent && npm run knip && npm run dup && npm run circular"
   },
   "private": true,
   "overrides": {

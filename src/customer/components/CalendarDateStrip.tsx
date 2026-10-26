@@ -51,7 +51,7 @@ function monthRangeLabel(dates: string[]): string {
   return `${firstMonth} ${first.getFullYear()} – ${lastMonth} ${last.getFullYear()}`;
 }
 
-export interface CalendarDateStripProps {
+interface CalendarDateStripProps {
   /** Ordered lookahead dates as `YYYY-MM-DD`; index 0 is treated as today. */
   dates: string[];
   /** Dates with no bookable slots — rendered dimmed and unpressable. */

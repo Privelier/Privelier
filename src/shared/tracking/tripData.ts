@@ -16,7 +16,7 @@ import { supabase } from '../../../lib/supabase';
 import { decodePolyline, lineLengthM, type LngLat } from './geo';
 import { devWarn } from '../devLog';
 
-export type TripStatus = 'en_route' | 'arrived' | 'ended';
+type TripStatus = 'en_route' | 'arrived' | 'ended';
 
 export interface BookingTripRow {
   booking_id: string;
@@ -43,30 +43,15 @@ export interface BookingTripRow {
 }
 
 /** A position older than this is shown as "last known", not live. */
-export const STALE_AFTER_MS = 90_000;
+const STALE_AFTER_MS = 90_000;
 
-export async function fetchTrip(bookingId: string): Promise<BookingTripRow | null> {
+async function fetchTrip(bookingId: string): Promise<BookingTripRow | null> {
   const { data, error } = await supabase.from('booking_trips').select('*').eq('booking_id', bookingId).maybeSingle();
   if (error) {
     devWarn('[tripData] fetchTrip', error);
     return null;
   }
   return (data as BookingTripRow | null) ?? null;
-}
-
-/** Live trips for a set of bookings (the Bookings list "on the way" banner). */
-export async function fetchLiveTrips(bookingIds: string[]): Promise<BookingTripRow[]> {
-  if (bookingIds.length === 0) return [];
-  const { data, error } = await supabase
-    .from('booking_trips')
-    .select('*')
-    .in('booking_id', bookingIds)
-    .neq('status', 'ended');
-  if (error) {
-    devWarn('[tripData] fetchLiveTrips', error);
-    return [];
-  }
-  return (data as BookingTripRow[]) ?? [];
 }
 
 const newer = (a: BookingTripRow | null, b: BookingTripRow) => !a || b.updated_at >= a.updated_at;

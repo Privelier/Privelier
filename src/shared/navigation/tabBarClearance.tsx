@@ -4,7 +4,7 @@ import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { space } from '../../theme/spacing';
 
 /** Height of the floating glass pill itself (icon + label + top padding). */
-export const TAB_BAR_HEIGHT = 58;
+const TAB_BAR_HEIGHT = 58;
 
 /** Side margin between the pill and the screen edges. */
 const TAB_BAR_SIDE_MARGIN = 12;

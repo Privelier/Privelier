@@ -66,4 +66,3 @@ export const reducedMotion = {
   fadeDuration: duration.fast,
 } as const;
 
-export type Duration = keyof typeof duration;

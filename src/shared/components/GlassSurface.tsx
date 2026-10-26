@@ -24,7 +24,7 @@ import { HAIRLINE, radius } from '../../theme/spacing';
 import { useTheme } from '../../theme/useTheme';
 import { useReduceTransparency } from '../motion/useReduceTransparency';
 
-export type GlassVariant = 'card' | 'navigation' | 'floating';
+type GlassVariant = 'card' | 'navigation' | 'floating';
 export type GlassTone = 'neutral' | 'brass' | 'danger';
 
 type Props = PropsWithChildren<{

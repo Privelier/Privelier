@@ -9,7 +9,7 @@ export type Role = 'customer' | 'barber';
  * Full `user_role` Postgres enum. A row fetched from `users` can carry
  * 'admin' (the founders), so reads are typed wider than writes.
  */
-export type UserRole = Role | 'admin';
+type UserRole = Role | 'admin';
 
 /** `verification_status_type` Postgres enum. */
 export type VerificationStatus = 'pending' | 'approved' | 'rejected';

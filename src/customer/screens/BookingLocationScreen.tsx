@@ -23,7 +23,7 @@ import { fetchOwnProfile } from '../../auth/authService';
 import { Feather } from '@expo/vector-icons';
 import { haptics } from '../../shared/haptics';
 import { useToast } from '../../shared/components/ToastProvider';
-import { listSavedAddresses, saveAddress, type SavedAddress } from '../personalData';
+import { deleteSavedAddress, listSavedAddresses, saveAddress, type SavedAddress } from '../personalData';
 import type { CustomerStackParamList } from '../CustomerNavigator';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'BookingLocation'>;
@@ -82,6 +82,16 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
   const goToConfirm = useCallback((chosenLocation: string) => {
     navigation.navigate('BookingConfirm', { barberId, barberName, barberImage, service, date, time, location: chosenLocation });
   }, [navigation, barberId, barberName, barberImage, service, date, time]);
+
+  // Saved addresses are the customer's own data: removable at any time.
+  const onRemoveSaved = useCallback((saved: SavedAddress) => {
+    setSavedAddresses((current) => current.filter((row) => row.id !== saved.id));
+    void deleteSavedAddress(saved.id).then((result) => {
+      if (result.status === 'ok') return;
+      setSavedAddresses((current) => (current.some((row) => row.id === saved.id) ? current : [...current, saved]));
+      showToast({ message: de ? 'Die Adresse konnte nicht entfernt werden. Versuch es erneut.' : 'The address could not be removed. Try again.' });
+    });
+  }, [showToast, de]);
 
   const onUseSaved = useCallback((saved: SavedAddress) => {
     void haptics.selection();
@@ -143,18 +153,28 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
               {de ? 'Gespeicherte Adressen' : 'Saved addresses'}
             </Text>
             {savedAddresses.map((saved) => (
-              <Pressable
-                key={saved.id}
-                onPress={() => onUseSaved(saved)}
-                accessibilityRole="button"
-                accessibilityLabel={`${de ? 'Adresse verwenden' : 'Use address'}: ${saved.address}`}
-                testID={`customer-booking-location-saved-${saved.id}`}
-                style={({ pressed }) => [styles.savedRow, { borderColor: colors.border, backgroundColor: colors.surface, opacity: pressed ? 0.85 : 1 }]}
-              >
-                <Feather name="map-pin" size={16} color={colors.accentText} />
-                <Text numberOfLines={2} style={[styles.savedText, { color: colors.textPrimary, fontFamily: fonts.body }]}>{saved.address}</Text>
-                <Feather name="chevron-right" size={18} color={colors.textSecondary} />
-              </Pressable>
+              <View key={saved.id} style={[styles.savedRow, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+                <Pressable
+                  onPress={() => onUseSaved(saved)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${de ? 'Adresse verwenden' : 'Use address'}: ${saved.address}`}
+                  testID={`customer-booking-location-saved-${saved.id}`}
+                  style={({ pressed }) => [styles.savedUse, { opacity: pressed ? 0.85 : 1 }]}
+                >
+                  <Feather name="map-pin" size={16} color={colors.accentText} />
+                  <Text numberOfLines={2} style={[styles.savedText, { color: colors.textPrimary, fontFamily: fonts.body }]}>{saved.address}</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => onRemoveSaved(saved)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${de ? 'Adresse entfernen' : 'Remove address'}: ${saved.address}`}
+                  hitSlop={6}
+                  testID={`customer-booking-location-saved-remove-${saved.id}`}
+                  style={styles.savedRemove}
+                >
+                  <Feather name="x" size={18} color={colors.textSecondary} />
+                </Pressable>
+              </View>
             ))}
             <Text style={[styles.orNew, { color: colors.textSecondary, fontFamily: fonts.body }]}>
               {de ? 'Oder gib eine neue Adresse ein:' : 'Or enter a new address:'}
@@ -286,7 +306,9 @@ function AddressField({ label, value, onChangeText, inputRef, focused, onFocus, 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   savedBlock: { marginBottom: space.base, gap: space.sm },
-  savedRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 56, borderWidth: HAIRLINE, borderRadius: 12, paddingHorizontal: space.base },
+  savedRow: { flexDirection: 'row', alignItems: 'center', minHeight: 56, borderWidth: HAIRLINE, borderRadius: 12, paddingLeft: space.base },
+  savedUse: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 56 },
+  savedRemove: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: space.xs },
   savedText: { flex: 1, fontSize: 15, lineHeight: 21 },
   orNew: { fontSize: 13, marginTop: space.sm },
   saveToggle: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 44, marginBottom: space.sm },

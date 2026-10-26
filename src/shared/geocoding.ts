@@ -24,14 +24,14 @@ export interface GeocodeCandidate {
   longitude: number;
 }
 
-export type GeocodeErrorCode = 'network' | 'bad_response';
+type GeocodeErrorCode = 'network' | 'bad_response';
 
 export type ForwardGeocodeResult =
   | { status: 'ok'; candidates: GeocodeCandidate[] }
   | { status: 'error'; code: GeocodeErrorCode; message: string; retryable: boolean };
 
 /** User-facing copy per code. Sentence case, calm, no exclamation marks. */
-export const geocodeErrorCopy: Record<GeocodeErrorCode, string> = {
+const geocodeErrorCopy: Record<GeocodeErrorCode, string> = {
   network: 'We could not reach the address service. Check your connection and try again.',
   bad_response: 'The address service had a problem. Try again in a moment.',
 };

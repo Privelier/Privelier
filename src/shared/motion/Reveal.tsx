@@ -26,7 +26,7 @@ type Props = PropsWithChildren<{
   testID?: string;
 }>;
 
-export function revealEntering(index = 0) {
+function revealEntering(index = 0) {
   const step = Math.min(Math.max(index, 0), reveal.maxStaggerSteps);
   const base = FadeInDown.duration(reveal.duration)
     .delay(step * reveal.stagger)
