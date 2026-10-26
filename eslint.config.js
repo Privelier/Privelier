@@ -16,7 +16,7 @@ const noRestrictedImports = (forbiddenGroup, message) => ({
 module.exports = defineConfig([
   expoConfig,
   {
-    ignores: ["dist/*", "supabase/functions/**", "graphify-out/**", "artifacts/**"],
+    ignores: ["dist/*", "supabase/functions/**", "graphify-out/**", "artifacts/**", ".claude/**"],
   },
   {
     // Hardening 2026-10-26: no stray logging (src/shared/devLog.ts is the
