@@ -68,6 +68,7 @@ import { GlassSurface, glass, useGlassStyle } from '../../shared/components/Glas
 import { JumpToLatestButton, JUMP_TO_LATEST_THRESHOLD } from '../../shared/components/JumpToLatestButton';
 import { Feather } from '@expo/vector-icons';
 import { SafetyMenu } from '../../shared/components/SafetyMenu';
+import { ReportSheet } from '../../shared/components/ReportSheet';
 import { MessageText } from '../../shared/components/MessageText';
 import { useSendQueue, type PendingSend } from '../../shared/useSendQueue';
 import { MAX_MESSAGE_LENGTH, MESSAGE_COUNTER_VISIBLE_AT } from '../../shared/messageLimits';
@@ -132,6 +133,7 @@ function ConversationRoom({ route, navigation }: Props) {
   const refreshQueuedRef = useRef(false);
 
   const [draft, setDraft] = useState('');
+  const [reportMessageId, setReportMessageId] = useState<string | null>(null);
   // Synchronous mirror of the draft: a same-tick double-fire of Send reads
   // '' from here and no-ops (review finding M1) — setDraft('') alone only
   // lands after the next commit.
@@ -352,7 +354,7 @@ function ConversationRoom({ route, navigation }: Props) {
           accessibilityLabel={de ? 'Zurück' : 'Back'}
           testID="customer-conversation-back"
         />
-        <Avatar id={counterpart?.id ?? room.barber_id} name={counterpart?.name ?? title} imageUrl={counterpart?.profile_image} size={44} accessible={false} testID="customer-conversation-avatar" />
+        <Avatar id={counterpart?.id ?? room.barber_id ?? room.id} name={counterpart?.name ?? title} imageUrl={counterpart?.profile_image} size={44} accessible={false} testID="customer-conversation-avatar" />
         <View style={styles.headerText}>
           <Text numberOfLines={1} style={styles.headerTitle}>
             {title}
@@ -363,12 +365,15 @@ function ConversationRoom({ route, navigation }: Props) {
             </Text>
           ) : null}
         </View>
-        <SafetyMenu
-          counterpartId={counterpart?.id ?? room.barber_id}
-          counterpartName={counterpart?.name ?? title}
-          bookingId={room.booking_id}
-          testIDPrefix="customer-conversation"
-        />
+        {/* Nobody to report or block once the other person deleted their account. */}
+        {counterpart?.id ?? room.barber_id ? (
+          <SafetyMenu
+            counterpartId={counterpart?.id ?? room.barber_id ?? ''}
+            counterpartName={counterpart?.name ?? title}
+            bookingId={room.booking_id}
+            testIDPrefix="customer-conversation"
+          />
+        ) : null}
       </GlassSurface>
 
       <KeyboardAvoidingView
@@ -495,8 +500,15 @@ function ConversationRoom({ route, navigation }: Props) {
               }
               const m = item.message;
               const own = m.sender_id === myId;
+              // Their messages can be reported (long press, or the screen
+              // reader's actions menu); a deleted sender's cannot.
+              const reportable = !own && m.sender_id !== null;
               return (
-                <View
+                <Pressable
+                  disabled={!reportable}
+                  onLongPress={() => setReportMessageId(m.id)}
+                  accessibilityActions={reportable ? [{ name: 'report', label: de ? 'Nachricht melden' : 'Report message' }] : undefined}
+                  onAccessibilityAction={(event) => { if (event.nativeEvent.actionName === 'report') setReportMessageId(m.id); }}
                   style={[styles.bubble, own ? styles.bubbleOwn : styles.bubbleTheirs, own ? ownGlass : theirGlass]}
                   testID={`customer-conversation-message-${m.id}`}
                 >
@@ -512,11 +524,21 @@ function ConversationRoom({ route, navigation }: Props) {
                       ) : null}
                     </View>
                   ) : null}
-                </View>
+                </Pressable>
               );
             }}
           />
         )}
+
+        {reportMessageId ? (
+          <ReportSheet
+            open
+            target={{ type: 'message', messageId: reportMessageId }}
+            bookingId={room?.booking_id ?? null}
+            onClose={() => setReportMessageId(null)}
+            testIDPrefix="customer-conversation-message"
+          />
+        ) : null}
 
         <JumpToLatestButton
           visible={awayFromLatest && !showSpinner && !showError}

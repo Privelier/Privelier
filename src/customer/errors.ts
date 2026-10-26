@@ -18,7 +18,10 @@ export type CustomerDataErrorCode =
   | 'conflict'
   | 'transition_rejected'
   | 'already_reviewed'
-  | 'too_many_pending';
+  | 'too_many_pending'
+  | 'rate_limited'
+  | 'blocked_language'
+  | 'limit_reached';
 
 /** The error arm shared by every discovery result union. */
 export interface CustomerDataFailure {
@@ -42,11 +45,13 @@ export const customerDataErrorCopy: Record<CustomerDataErrorCode, string> = {
   already_reviewed: 'You have already reviewed this booking.',
   too_many_pending:
     'You already have several open requests. Wait for a barber to reply, or cancel one, before sending another.',
+  rate_limited: 'That was a lot in a short time. Wait a minute, then try again.',
+  blocked_language: 'This contains language that is not allowed on Privelier. Edit it and try again.',
+  limit_reached: 'You have reached the limit for this. Remove one before adding another.',
 };
 
 const retryableCodes: ReadonlySet<CustomerDataErrorCode> = new Set(['network']);
 
-/** Build a typed failure for a known code. */
 /** German copy for the same codes. */
 export const customerDataErrorCopyDe: Record<CustomerDataErrorCode, string> = {
   forbidden: 'Das ist nicht erlaubt.',
@@ -58,6 +63,9 @@ export const customerDataErrorCopyDe: Record<CustomerDataErrorCode, string> = {
   already_reviewed: 'Du hast diesen Termin bereits bewertet.',
   too_many_pending:
     'Du hast bereits mehrere offene Anfragen. Warte auf eine Antwort oder sage eine ab, bevor du eine neue sendest.',
+  rate_limited: 'Das war viel in kurzer Zeit. Warte eine Minute und versuch es dann erneut.',
+  blocked_language: 'Das enthält Sprache, die auf Privelier nicht erlaubt ist. Bitte formuliere es um.',
+  limit_reached: 'Du hast das Limit dafür erreicht. Entferne einen Eintrag, bevor du einen neuen hinzufügst.',
 };
 
 export function failure(code: CustomerDataErrorCode): CustomerDataFailure {
@@ -103,17 +111,16 @@ const CHECK_VIOLATION = '23514';
  */
 const RAISE_EXCEPTION = 'P0001';
 /**
- * Postgres unique-violation code. NOT mapped inside mapPostgrestError below
- * — 23505 means something different depending on context: during auth
- * provisioning it signals "another writer already created this same row,
- * treat as idempotent success" (see src/auth/authService.ts), but for
- * booking creation it means two different customers raced for the same
- * barber/date/time slot (uq_bookings_barber_slot_active, migration 0009)
- * and must surface as a real, user-facing conflict. Exported so
- * insertBooking (src/customer/bookingCreateData.ts) can check it before
- * falling back to the generic mapper.
+ * Postgres unique-violation code. NOT mapped inside mapPostgrestError below:
+ * its meaning depends on the write (an idempotent retry during auth
+ * provisioning, a duplicate review), so callers check it first.
  */
 export const UNIQUE_VIOLATION = '23505';
+
+/** Server-side abuse limits (migrations 0055, 0056). */
+const RATE_LIMITED = 'PA429';
+const BLOCKED_LANGUAGE = 'PA030';
+const LIMIT_REACHED = 'PA002';
 
 /**
  * Map a PostgREST error to a typed failure and log the raw details.
@@ -132,6 +139,9 @@ export function mapPostgrestError(
   if (raw.code === RLS_DENIED) return failure('forbidden');
   if (raw.code === CHECK_VIOLATION) return failure('invalid_input');
   if (raw.code === RAISE_EXCEPTION) return failure('transition_rejected');
+  if (raw.code === RATE_LIMITED) return failure('rate_limited');
+  if (raw.code === BLOCKED_LANGUAGE) return failure('blocked_language');
+  if (raw.code === LIMIT_REACHED) return failure('limit_reached');
   const msg = (raw.message ?? '').toLowerCase();
   if (msg.includes('row-level security')) return failure('forbidden');
   if (msg.includes('network request failed') || msg.includes('failed to fetch')) {

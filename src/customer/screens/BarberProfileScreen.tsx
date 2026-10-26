@@ -59,6 +59,7 @@ import { getBarberProfile, listPortfolioForBarber, listServicesForBarber } from 
 import { fetchReviewsForBarber } from '../reviewsData';
 import { formatMoney, formatShortDate } from '../format';
 import type { CustomerStackParamList } from '../CustomerNavigator';
+import { ReportSheet } from '../../shared/components/ReportSheet';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'BarberProfile'>;
 
@@ -142,6 +143,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
   const [portfolio, setPortfolio] = useState<PortfolioRow[]>([]);
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [firstNameByReviewId, setFirstNameByReviewId] = useState<Map<string, string>>(new Map());
+  const [reportReviewId, setReportReviewId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -567,6 +569,18 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
                       <Text style={[styles.reviewDate, { color: colors.textSecondary, fontFamily: fonts.body }]}>
                         {formatShortDate(review.created_at)}
                       </Text>
+                      {review.comment ? (
+                        <Pressable
+                          onPress={() => setReportReviewId(review.id)}
+                          accessibilityRole="button"
+                          accessibilityLabel={german ? 'Bewertung melden' : 'Report review'}
+                          hitSlop={12}
+                          testID={`barber-profile-review-report-${review.id}`}
+                          style={styles.reviewReport}
+                        >
+                          <Feather name="flag" size={13} color={colors.textSecondary} />
+                        </Pressable>
+                      ) : null}
                     </View>
                     {name ? (
                       <Text style={[styles.reviewVerified, { color: colors.textSecondary, fontFamily: fonts.body }]}>
@@ -587,6 +601,15 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
         </View>
       </Animated.ScrollView>
       <ScrollGlassHeader title={barber.name} scrollY={scrollY} start={280} testID="barber-profile-glass-header" />
+
+      {reportReviewId ? (
+        <ReportSheet
+          open
+          target={{ type: 'review', reviewId: reportReviewId }}
+          onClose={() => setReportReviewId(null)}
+          testIDPrefix="barber-profile-review"
+        />
+      ) : null}
 
       {canBook && fromPrice !== null ? (
         <GlassSurface variant="floating" style={[styles.bookingDock, { paddingBottom: Math.max(insets.bottom, 16) }]} testID="barber-profile-booking-dock">
@@ -770,6 +793,7 @@ const styles = StyleSheet.create({
   reviewVerified: { fontSize: 12, marginTop: 2 },
   reviewStars: { marginTop: 10 },
   reviewDate: { fontSize: 12 },
+  reviewReport: { minWidth: 32, minHeight: 32, alignItems: 'flex-end', justifyContent: 'center', marginLeft: 4 },
   reviewComment: { fontSize: 14, lineHeight: 22, marginTop: 10 },
 
   portfolioGridSpacing: { paddingVertical: 16 },

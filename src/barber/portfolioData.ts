@@ -17,6 +17,7 @@
  * error (design D5).
  */
 import { supabase } from '../../lib/supabase';
+import { getAppLanguage } from '../shared/locale';
 import { normalizeImageForUpload } from '../shared/imageUpload';
 import { uniqueObjectName } from '../shared/objectNames';
 import type { PortfolioRow } from '../types';
@@ -117,7 +118,11 @@ export async function insertPortfolioRow(
     const msg = (error.message ?? '').toLowerCase();
     if (error.code === RAISE_EXCEPTION && msg.includes(MAX_SIX_MESSAGE)) {
       logBarberDataError('insertPortfolioRow.limit', error);
-      return failure('limit_reached');
+      return failure('limit_reached', {
+        limit_reached: getAppLanguage() === 'de'
+          ? 'Du kannst höchstens 6 Portfoliobilder haben. Lösche eines, bevor du ein neues hinzufügst.'
+          : 'You can have at most 6 portfolio images. Delete one before adding another.',
+      });
     }
     return mapPostgrestError('insertPortfolioRow', error);
   }

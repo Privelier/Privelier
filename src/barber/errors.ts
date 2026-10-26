@@ -16,7 +16,9 @@ export type BarberDataErrorCode =
   | 'network'
   | 'unknown'
   | 'transition_rejected'
-  | 'limit_reached';
+  | 'limit_reached'
+  | 'rate_limited'
+  | 'blocked_language';
 
 /** The error arm shared by every services/availability result union. */
 export interface BarberDataFailure {
@@ -37,8 +39,9 @@ export const barberDataErrorCopy: Record<BarberDataErrorCode, string> = {
   unknown: 'Something went wrong on our side. Try again in a moment.',
   transition_rejected:
     'That booking can no longer be changed that way. Refresh to see its current status.',
-  limit_reached:
-    'You can have at most 6 portfolio images. Delete one before adding another.',
+  limit_reached: 'You have reached the limit for this. Remove one before adding another.',
+  rate_limited: 'That was a lot in a short time. Wait a minute, then try again.',
+  blocked_language: 'This contains language that is not allowed on Privelier. Edit it and try again.',
 };
 
 /** German copy for the same codes. */
@@ -48,7 +51,9 @@ export const barberDataErrorCopyDe: Record<BarberDataErrorCode, string> = {
   network: 'Keine Verbindung zum Server. Prüfe deine Verbindung und versuch es erneut.',
   unknown: 'Bei uns ist etwas schiefgelaufen. Versuch es gleich noch einmal.',
   transition_rejected: 'Dieser Termin kann so nicht mehr geändert werden. Aktualisiere, um den aktuellen Stand zu sehen.',
-  limit_reached: 'Du kannst höchstens 6 Portfoliobilder haben. Lösche eines, bevor du ein neues hinzufügst.',
+  limit_reached: 'Du hast das Limit dafür erreicht. Entferne einen Eintrag, bevor du einen neuen hinzufügst.',
+  rate_limited: 'Das war viel in kurzer Zeit. Warte eine Minute und versuch es dann erneut.',
+  blocked_language: 'Das enthält Sprache, die auf Privelier nicht erlaubt ist. Bitte formuliere es um.',
 };
 
 const retryableCodes: ReadonlySet<BarberDataErrorCode> = new Set(['network']);
@@ -133,6 +138,9 @@ export function mapPostgrestError(
   if (raw.code === RLS_DENIED) return failure('forbidden', overrides);
   if (raw.code === CHECK_VIOLATION) return failure('invalid_input', overrides);
   if (raw.code === RAISE_EXCEPTION) return failure('transition_rejected', overrides);
+  if (raw.code === 'PA429') return failure('rate_limited', overrides);
+  if (raw.code === 'PA030') return failure('blocked_language', overrides);
+  if (raw.code === 'PA002') return failure('limit_reached', overrides);
   const msg = (raw.message ?? '').toLowerCase();
   if (msg.includes('row-level security')) return failure('forbidden', overrides);
   if (msg.includes('network request failed') || msg.includes('failed to fetch')) {
