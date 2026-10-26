@@ -97,15 +97,15 @@
     "context:pack": "python3 tools/context/context.py pack",
     "ui:audit": "python3 tools/ui/ui_audit.py",
     "stats:test": "python3 tools/automation/test_barber_stats.py",
-    "knip": "knip --no-progress",
     "dup": "jscpd src lib --min-tokens 70 --threshold 3 --silent --ignore \"**/__tests__/**,src/database.types.ts\"",
     "circular": "madge --circular src lib App.tsx",
     "db:test": "python tools/db/supa.py test",
     "db:pending": "python tools/db/supa.py pending",
     "secrets:scan": "gitleaks git . --redact --no-banner",
-    "check": "npm run typecheck && npm run lint && npm test -- --silent && npm run knip && npm run dup && npm run circular",
+    "check": "npm run typecheck && npm run lint && npm test -- --silent && npm run unused && npm run dup && npm run circular",
     "db:concurrency": "python tools/db/overlap_concurrency_test.py",
-    "db:types": "python tools/db/supa.py types"
+    "db:types": "python tools/db/supa.py types",
+    "unused": "knip --no-progress"
   },
   "private": true,
   "overrides": {
