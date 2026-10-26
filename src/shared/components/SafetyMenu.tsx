@@ -143,7 +143,7 @@ export function SafetyMenu({ counterpartId, counterpartName, bookingId, testIDPr
                 testID={`${testIDPrefix}-report-reason-${key}`}
                 style={[
                   styles.reason,
-                  { borderColor: selected ? colors.accent : colors.border, backgroundColor: selected ? colors.accent : 'transparent' },
+                  { borderColor: selected ? colors.accent : colors.inputBorder, backgroundColor: selected ? colors.accent : 'transparent' },
                 ]}
               >
                 <Text style={[styles.reasonText, { color: selected ? colors.onAccent : colors.textPrimary, fontFamily: fonts.bodyMedium }]}>

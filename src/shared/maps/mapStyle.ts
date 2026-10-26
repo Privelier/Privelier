@@ -44,7 +44,7 @@ const TINTS: Record<string, Record<string, unknown>> = {
   railway_transit: { 'line-color': '#24242A' },
   highway_name_other: { 'text-color': '#6F6B63', 'text-halo-color': '#121214' },
   highway_name_motorway: { 'text-color': '#7A766D', 'text-halo-color': '#121214' },
-  water_name: { 'text-color': '#4C5560', 'text-halo-color': '#0C0E11' },
+  water_name: { 'text-color': '#66717D', 'text-halo-color': '#0C0E11' },
 };
 const PLACE_LABEL = { 'text-color': '#8F8B81', 'text-halo-color': 'rgba(18,18,20,0.85)' };
 

@@ -2,6 +2,8 @@ export type Palette = {
   background: string;
   surface: string;
   border: string;
+  /** Edge of form controls (fields, checkboxes): >= 3:1 non-text contrast (WCAG 1.4.11). */
+  inputBorder: string;
   textPrimary: string;
   textSecondary: string;
   accent: string;
@@ -17,6 +19,8 @@ export const darkPalette: Palette = {
   background: '#121214',
   surface: '#1B1B1E',
   border: '#2A2A2E',
+  // 3.29:1 on background, 3.02:1 on surface — decorative hairlines keep `border`.
+  inputBorder: '#6B665E',
   textPrimary: '#F5F1E8',
   textSecondary: '#9A968C',
   accent: '#BFA06B',

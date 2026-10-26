@@ -203,7 +203,7 @@ export default function BioEditScreen({ navigation }: Props) {
                 {
                   color: colors.textPrimary,
                   backgroundColor: colors.surface,
-                  borderColor: focused ? colors.accent : colors.border,
+                  borderColor: focused ? colors.accent : colors.inputBorder,
                   fontFamily: fonts.body,
                 },
               ]}

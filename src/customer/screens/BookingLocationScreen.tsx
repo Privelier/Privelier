@@ -184,7 +184,7 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
             styles.input,
             {
               color: colors.textPrimary,
-              backgroundColor: colors.surface, borderColor: focused === 'street' ? colors.accent : colors.border,
+              backgroundColor: colors.surface, borderColor: focused === 'street' ? colors.accent : colors.inputBorder,
               fontFamily: fonts.body,
             },
           ]}
@@ -231,7 +231,7 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
           testID="customer-booking-location-save-toggle"
           style={styles.saveToggle}
         >
-          <View style={[styles.saveBox, { borderColor: saveForLater ? colors.accent : colors.border, backgroundColor: saveForLater ? colors.accent : 'transparent' }]}>
+          <View style={[styles.saveBox, { borderColor: saveForLater ? colors.accent : colors.inputBorder, backgroundColor: saveForLater ? colors.accent : 'transparent' }]}>
             {saveForLater ? <Feather name="check" size={14} color={colors.onAccent} /> : null}
           </View>
           <Text style={[styles.saveText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
@@ -276,7 +276,7 @@ function AddressField({ label, value, onChangeText, inputRef, focused, onFocus, 
         accessibilityLabel={label}
         placeholderTextColor={colors.textSecondary}
         selectionColor={colors.accent}
-        style={[styles.singleInput, { color: colors.textPrimary, backgroundColor: colors.surface, borderColor: focused ? colors.accent : colors.border, fontFamily: fonts.body }]}
+        style={[styles.singleInput, { color: colors.textPrimary, backgroundColor: colors.surface, borderColor: focused ? colors.accent : colors.inputBorder, fontFamily: fonts.body }]}
         testID={testID}
       />
     </View>

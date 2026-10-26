@@ -365,7 +365,7 @@ export default function ServicesScreen({ navigation }: Props) {
                       testID={`barber-services-duration-preset-${minutes}`}
                       style={[
                         styles.durationChip,
-                        { borderColor: selected ? colors.accent : colors.border, backgroundColor: selected ? colors.accent : 'transparent' },
+                        { borderColor: selected ? colors.accent : colors.inputBorder, backgroundColor: selected ? colors.accent : 'transparent' },
                       ]}
                     >
                       <Text style={[styles.durationChipText, numericText, { color: selected ? colors.onAccent : colors.textPrimary }]}>

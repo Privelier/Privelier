@@ -14,7 +14,7 @@
  */
 import { defaultCountry, getAppLanguage } from '../../shared/locale';
 import { useCallback, useRef, useState } from 'react';
-import { StyleSheet, Text, View, type TextInputInstance } from 'react-native';
+import { AccessibilityInfo, StyleSheet, Text, View, type TextInputInstance } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { isAppleSignInSupported, signInWithProvider, signUpBarber, signUpCustomer } from '../authService';
 import { LegalConsentFields, LegalLinks } from '../../legal/LegalComponents';
@@ -64,6 +64,7 @@ export default function SignupScreen({ navigation, route }: Props) {
   const [legalAttempted, setLegalAttempted] = useState(false);
   // Focus chain for the required fields: name → email → password → city → submit
   // (optional country/phone/bio are left out of the keyboard chain).
+  const nameRef = useRef<TextInputInstance>(null);
   const emailRef = useRef<TextInputInstance>(null);
   const passwordRef = useRef<TextInputInstance>(null);
   const cityRef = useRef<TextInputInstance>(null);
@@ -79,7 +80,19 @@ export default function SignupScreen({ navigation, route }: Props) {
     setFormError(null);
     setEmailInUse(false);
     setLegalAttempted(true);
-    if (errors.name || errors.email || errors.password || errors.city || !termsAccepted || !adultConfirmed) return;
+    if (errors.name || errors.email || errors.password || errors.city || !termsAccepted || !adultConfirmed) {
+      // The submit button sits below the fold of a long form: take the user
+      // to the first problem (focus also scrolls it into view) and tell
+      // screen readers how many items need attention.
+      const firstInvalid = errors.name ? nameRef : errors.email ? emailRef : errors.password ? passwordRef : errors.city ? cityRef : null;
+      firstInvalid?.current?.focus();
+      const count = [errors.name, errors.email, errors.password, errors.city].filter(Boolean).length
+        + (termsAccepted ? 0 : 1) + (adultConfirmed ? 0 : 1);
+      AccessibilityInfo.announceForAccessibility(
+        de ? `Bitte prüfe ${count} ${count === 1 ? 'Angabe' : 'Angaben'}.` : `Please check ${count} ${count === 1 ? 'item' : 'items'}.`
+      );
+      return;
+    }
 
     const profileFields = {
       name: name.trim(),
@@ -153,6 +166,7 @@ export default function SignupScreen({ navigation, route }: Props) {
         returnKeyType="next"
         onSubmitEditing={() => emailRef.current?.focus()}
         blurOnSubmit={false}
+        inputRef={nameRef}
         testID="auth-signup-name"
       />
       <FormTextField
