@@ -241,8 +241,11 @@ declare
   v_ip text := btrim(split_part(
     coalesce(current_setting('request.headers', true)::json ->> 'x-forwarded-for', ''), ',', 1));
 begin
+  -- Reads cannot write the counter (read-only transaction); trusted
+  -- server-side jobs (service_role) are not user traffic.
   if coalesce(current_setting('request.method', true), 'GET') in ('GET', 'HEAD', 'OPTIONS')
-     or current_setting('transaction_read_only') = 'on' then
+     or current_setting('transaction_read_only') = 'on'
+     or (select auth.role()) = 'service_role' then
     return;
   end if;
   begin
@@ -260,9 +263,10 @@ begin
 end;
 $function$;
 
+-- PostgREST calls the hook as the request's role, so every API role needs it.
 revoke all on function private.limit_api_writes() from public;
-grant usage on schema private to anon;
-grant execute on function private.limit_api_writes() to anon, authenticated;
+grant usage on schema private to anon, service_role;
+grant execute on function private.limit_api_writes() to anon, authenticated, service_role;
 
 alter role authenticator set pgrst.db_pre_request = 'private.limit_api_writes';
 notify pgrst, 'reload config';

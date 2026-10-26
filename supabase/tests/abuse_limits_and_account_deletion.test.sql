@@ -49,6 +49,37 @@ select is(tests.repeat_until_refused(tests.id('a'),
   format($$insert into public.user_reports (reporter_id, reported_id, reason) values (%L, %L, 'other')$$, tests.id('a'), tests.id('x')), 10),
   '10:PA429', 'the 11th report in an hour is refused');
 
+-- ------------------------------------------------- request write limiter --
+-- PostgREST calls private.limit_api_writes() before every request with the
+-- request method, headers and JWT claims set; reproduce that here.
+create function tests.api_writes(p_actor uuid, p_method text, p_role text, p_times integer) returns text language plpgsql as $$
+declare
+  v_state text;
+  v_detail text;
+begin
+  for i in 1..p_times loop
+    begin
+      perform set_config('request.method', p_method, true);
+      perform set_config('request.headers', '{"x-forwarded-for":"203.0.113.7, 10.0.0.1"}', true);
+      perform set_config('request.jwt.claims', json_build_object('sub', p_actor, 'role', p_role)::text, true);
+      perform private.limit_api_writes();
+    exception when others then
+      get stacked diagnostics v_state = returned_sqlstate, v_detail = pg_exception_detail;
+      perform set_config('request.jwt.claims', '', true);
+      return i || ':' || v_state || ':' || coalesce(v_detail::json ->> 'status', '');
+    end;
+  end loop;
+  perform set_config('request.jwt.claims', '', true);
+  return 'ok';
+end $$;
+select is(tests.api_writes(tests.id('b'), 'GET', 'authenticated', 300), 'ok', 'reads are never counted');
+select is(tests.api_writes(tests.id('b'), 'POST', 'authenticated', 121), '121:PGRST:429', 'the 121st write in a minute answers HTTP 429');
+select is(tests.api_writes(tests.id('x'), 'POST', 'service_role', 300), 'ok', 'trusted server jobs are not rate limited');
+select ok(exists (
+  select 1 from pg_db_role_setting s join pg_roles r on r.oid = s.setrole
+  where r.rolname = 'authenticator' and 'pgrst.db_pre_request=private.limit_api_writes' = any(s.setconfig)
+), 'PostgREST is configured to call the limiter');
+
 -- ------------------------------------------------------------------- caps --
 select is(tests.repeat_until_refused(tests.id('x'),
   format($$insert into public.services (barber_id, name, price, duration_minutes) values (%L, 'S{i}', 10, 30)$$, tests.id('x')), 40),

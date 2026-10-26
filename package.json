@@ -103,7 +103,8 @@
     "db:test": "python tools/db/supa.py test",
     "db:pending": "python tools/db/supa.py pending",
     "secrets:scan": "gitleaks git . --redact --no-banner",
-    "check": "npm run typecheck && npm run lint && npm test -- --silent && npm run knip && npm run dup && npm run circular"
+    "check": "npm run typecheck && npm run lint && npm test -- --silent && npm run knip && npm run dup && npm run circular",
+    "db:concurrency": "python tools/db/overlap_concurrency_test.py"
   },
   "private": true,
   "overrides": {

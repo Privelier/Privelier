@@ -170,6 +170,9 @@ select is((select count(*)::integer from pg_class c where c.relnamespace = 'publ
 select is((select count(*)::integer from pg_proc p where p.pronamespace = 'public'::regnamespace and p.prosecdef
            and p.proconfig is null), 0, 'every SECURITY DEFINER function pins search_path');
 select ok(not exists (select 1 from pg_extension where extname = 'pg_graphql'), 'pg_graphql is not installed');
+select is((select count(*)::integer from pg_proc where pronamespace = 'public'::regnamespace
+           and proname in ('has_role', 'is_admin', 'is_blocked_between')), 0, 'policy helpers are not served as RPC endpoints');
+select ok(has_function_privilege('authenticated', 'private.has_role(public.user_role)', 'execute'), 'policies can still evaluate their helpers');
 
 select * from finish();
 rollback;

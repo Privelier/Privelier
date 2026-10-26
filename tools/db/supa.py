@@ -59,8 +59,15 @@ def run(sql: str) -> list[dict]:
 
 
 def recorded_names() -> set[str]:
-    rows = run("select name from supabase_migrations.schema_migrations")
-    return {row["name"] for row in rows if row.get("name")}
+    rows = run("select version, name from supabase_migrations.schema_migrations")
+    return {row["name"] for row in rows if row.get("name")} | {row["version"] for row in rows}
+
+
+def is_recorded(file: pathlib.Path, names: set[str]) -> bool:
+    # Early migrations were recorded without their numeric prefix, or under
+    # their timestamp prefix as the version.
+    prefix, _, rest = file.stem.partition("_")
+    return file.stem in names or rest in names or prefix in names
 
 
 def migration_files(paths: list[str]) -> list[pathlib.Path]:
@@ -85,11 +92,14 @@ def cmd_dry_run(paths: list[str]) -> None:
 
 def cmd_apply(paths: list[str]) -> None:
     done = recorded_names()
+    latest = int(run("select coalesce(max(version), '0') as v from supabase_migrations.schema_migrations")[0]["v"])
     for file in migration_files(paths):
-        if file.stem in done:
+        if is_recorded(file, done):
             print(f"skip       {file.name} (already recorded)")
             continue
-        version = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+        # Strictly increasing even when several files apply within one second.
+        latest = max(int(datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")), latest + 1)
+        version = str(latest)
         name = file.stem.replace("'", "''")
         run(
             f"begin;\n{file.read_text(encoding='utf-8')}\n;"
@@ -101,7 +111,7 @@ def cmd_apply(paths: list[str]) -> None:
 
 def cmd_pending() -> None:
     done = recorded_names()
-    pending = [f.name for f in sorted(MIGRATIONS.glob("*.sql")) if f.stem not in done]
+    pending = [f.name for f in sorted(MIGRATIONS.glob("*.sql")) if not is_recorded(f, done)]
     print("\n".join(pending) if pending else "none")
 
 
