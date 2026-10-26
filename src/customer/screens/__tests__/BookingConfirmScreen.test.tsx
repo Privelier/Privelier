@@ -13,6 +13,8 @@ jest.mock('../../../shared/haptics', () => ({
   haptics: { confirm: jest.fn(), success: jest.fn(), warning: jest.fn() },
 }));
 jest.mock('@expo/vector-icons', () => ({ Feather: () => null }));
+const mockRandomUUID = jest.fn();
+jest.mock('expo-crypto', () => ({ randomUUID: () => mockRandomUUID() }));
 jest.mock('../../../shared/components/PrimaryButton', () => {
   const React = jest.requireActual('react');
   const { Pressable, Text } = jest.requireActual('react-native');
@@ -61,6 +63,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockGeocode.mockResolvedValue(null);
   mockAskPush.mockResolvedValue(false);
+  mockRandomUUID.mockReturnValue('attempt-key-1');
 });
 
 it('confirms on tap and plays success feedback only after a real booking insert', async () => {
@@ -77,8 +80,9 @@ it('confirms on tap and plays success feedback only after a real booking insert'
   await waitFor(() => expect(screen.getByTestId('customer-booking-confirm-success')).toBeTruthy());
   expect(haptics.success).toHaveBeenCalledTimes(1);
   expect(insertBooking).toHaveBeenCalledWith({
-    barberId: 'barber-1', serviceId: 'service-1', date: '2026-09-28',
+    serviceId: 'service-1', date: '2026-09-28',
     time: '12:00:00', location: 'Main Street 1', coordinates: null,
+    idempotencyKey: 'attempt-key-1',
   });
   // Push is offered in context — right after the request went out.
   expect(mockAskPush).toHaveBeenCalledTimes(1);
@@ -191,4 +195,20 @@ it('shows the real request timeline and opens the booking chat over Bookings', a
     ],
   }));
   expect(mockFetchRoom).toHaveBeenCalledWith('booking-1');
+});
+
+it('retries a failed attempt with the same idempotency key, so a lost response cannot double-book', async () => {
+  (insertBooking as jest.Mock)
+    .mockResolvedValueOnce({ status: 'error', code: 'network', message: 'We could not reach the server.', retryable: true })
+    .mockResolvedValueOnce({ status: 'ok', booking: CREATED });
+  mockRandomUUID.mockReturnValueOnce('attempt-key-1').mockReturnValue('a-different-key');
+  await render(<BookingConfirmScreen route={route as never} navigation={navigation as never} />);
+
+  await fireEvent.press(screen.getByTestId('customer-booking-confirm-submit'));
+  await waitFor(() => expect(insertBooking).toHaveBeenCalledTimes(1));
+  await fireEvent.press(screen.getByTestId('customer-booking-confirm-submit'));
+  await waitFor(() => expect(screen.getByTestId('customer-booking-confirm-success')).toBeTruthy());
+
+  const keys = (insertBooking as jest.Mock).mock.calls.map(([input]) => input.idempotencyKey);
+  expect(keys).toEqual(['attempt-key-1', 'attempt-key-1']);
 });

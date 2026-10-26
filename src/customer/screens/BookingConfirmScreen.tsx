@@ -13,7 +13,7 @@
  *   completed booking flow.
  * - 'conflict' / 'slot_unavailable': the slot is gone — another customer
  *   took an overlapping time (validate_booking_slot's overlap check or the
- *   uq_bookings_barber_slot_active index), or the time passed / the barber
+ *   overlap exclusion constraint), or the time passed / the barber
  *   changed availability while the customer was on this screen. Shown inline
  *   (never silently retried), with an explicit "choose another time" action
  *   that pops back to BookingDateTimeScreen; that screen's useFocusEffect
@@ -23,6 +23,7 @@
  */
 import { SuccessBurst } from '../../shared/motion/SuccessBurst';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import * as Crypto from 'expo-crypto';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -71,6 +72,9 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
   // Same-tick double-tap guard: `submitting` only disables the button after
   // the next commit, and a second insert would race the first one.
   const submittingRef = useRef(false);
+  // One key per visit to this screen: a retry after a lost response returns
+  // the booking the first attempt created (create_booking, migration 0054).
+  const [idempotencyKey] = useState(() => Crypto.randomUUID());
   const [pin, setPin] = useState<AddressPinState>({ status: 'loading' });
 
   // Place the address once (free Photon geocode). Best effort: a miss never
@@ -93,12 +97,12 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
     setError(null);
     setConflict(false);
     const result = await insertBooking({
-      barberId,
       serviceId: service.id,
       date,
       time,
       location,
       coordinates: pin.status === 'found' ? pin.candidate : null,
+      idempotencyKey,
     });
     submittingRef.current = false;
     setSubmitting(false);
@@ -124,7 +128,7 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
       return;
     }
     setError(result.message);
-  }, [barberId, service.id, date, time, location, pin, de]);
+  }, [service.id, date, time, location, pin, de, idempotencyKey]);
 
   const onPickAnotherTime = useCallback(() => {
     // Pops exactly Confirm + Location, landing back on the existing

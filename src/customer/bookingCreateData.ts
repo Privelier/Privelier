@@ -1,58 +1,41 @@
 /**
- * Booking creation. Kept separate from the
- * existing read-only src/customer/bookingsData.ts, whose own header
- * comment explicitly says creating bookings does NOT live there.
+ * Booking creation through the create_booking RPC (migration 0054).
  *
- * `price` and `status` are deliberately omitted from the insert payload:
- * - `price` is stamped server-side by a BEFORE INSERT trigger
- *   (migration 0009) that looks up services.price by service_id and
- *   unconditionally overwrites it — sending any price from the client
- *   would be pointless (overwritten) and is a hard "never do this" per the
- *   schema's own "price is a snapshot, never read live from SERVICES" rule.
- * - `status` defaults to 'pending' via the column default, and
- *   bookings_insert_customer's RLS check already requires status = 'pending'
- *   on insert, so there is nothing for the client to set.
- *
- * Authorization is RLS's job: bookings_insert_customer requires
- * customer_id = auth.uid() and the caller to hold the customer role, so
- * customer_id is read from the current session here rather than accepted
- * as a caller-supplied parameter (a caller-supplied value could otherwise
- * be spoofed and would simply be rejected by RLS, which is a worse UX than
- * catching "no session" before ever hitting the network).
- *
- * Double-booking is guarded by validate_booking_slot (migrations 0024/0025,
- * duration-aware overlap under an advisory lock) and the older
- * uq_bookings_barber_slot_active index (migration 0009). Either rejection
- * means a different customer just took an overlapping slot, and must
- * surface as a real, user-facing conflict — NOT the "23505-as-idempotent-
- * success" pattern used for auth provisioning retries (see
- * src/auth/authService.ts), which applies only when the same actor's own
- * retried request races itself.
+ * The server owns every invariant: the customer is auth.uid(), price and
+ * duration are stamped from the service row, the slot trigger refuses past,
+ * unavailable or overlapping times, and an exclusion constraint makes
+ * overlapping active bookings impossible even under concurrent requests.
+ * The caller supplies one idempotency key per booking attempt, so a double
+ * tap or a retry after a lost response returns the first booking instead of
+ * creating a second one.
  */
 import { supabase } from '../../lib/supabase';
 import type { BookingRow } from '../types';
-import { UNIQUE_VIOLATION, failure, logCustomerDataError, mapPostgrestError } from './errors';
+import { failure, logCustomerDataError, mapPostgrestError } from './errors';
 import type { InsertBookingResult } from './types';
 
-/** Postgres raise_exception — validate_booking_slot (migrations 0024/0025). */
+/** validate_booking_slot's RAISE (migrations 0024/0025). */
 const RAISE_EXCEPTION = 'P0001';
-/** enforce_pending_booking_cap (migration 0048). */
+/** bookings_no_overlapping_active_slot lost a concurrent race (0054). */
+const EXCLUSION_VIOLATION = '23P01';
+/** The service is gone or its barber is no longer approved. */
+const NO_DATA_FOUND = 'P0002';
+/** Barber unavailable on that date (0046). */
+const DAY_OFF = 'PA003';
+/** enforce_pending_booking_cap (0048). */
 const PENDING_CAP = 'PA004';
 
 /**
- * validate_booking_slot serializes same-barber/day writes with an advisory
- * lock, so a lost race now surfaces as its overlap RAISE (P0001) before the
- * unique index can fire. Its other two RAISEs mean the chosen slot went stale
- * (time passed, or the barber changed availability). The trigger has no
- * custom SQLSTATEs yet, so the message text is the only discriminator; an
- * unrecognized P0001 still falls through to the generic mapper.
+ * The slot trigger has no custom SQLSTATE for its three refusals, so the
+ * message text is the only discriminator; an unrecognized P0001 falls
+ * through to the generic mapper.
  */
 function classifySlotRejection(error: {
   code?: string | null;
   message?: string | null;
 }): 'conflict' | 'slot_unavailable' | null {
-  // Day off (migration 0046) has its own SQLSTATE.
-  if (error.code === 'PA003') return 'slot_unavailable';
+  if (error.code === EXCLUSION_VIOLATION) return 'conflict';
+  if (error.code === DAY_OFF || error.code === NO_DATA_FOUND) return 'slot_unavailable';
   if (error.code !== RAISE_EXCEPTION) return null;
   const message = (error.message ?? '').toLowerCase();
   if (message.includes('overlaps an existing active booking')) return 'conflict';
@@ -63,45 +46,29 @@ function classifySlotRejection(error: {
 }
 
 export async function insertBooking(input: {
-  barberId: string;
   serviceId: string;
   date: string; // 'YYYY-MM-DD'
   time: string; // 'HH:MM:SS'
   location: string;
   /** Geocoded destination (Photon), when the address could be placed. */
   coordinates?: { latitude: number; longitude: number } | null;
+  /** One key per booking attempt; reuse it when retrying that attempt. */
+  idempotencyKey: string;
 }): Promise<InsertBookingResult> {
   const location = input.location.trim();
   if (!location) return failure('invalid_input');
 
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError) {
-    logCustomerDataError('insertBooking.getUser', userError);
-    return failure('unknown');
-  }
-  const customerId = userData.user?.id;
-  if (!customerId) return failure('forbidden');
-
-  const { data, error } = await supabase
-    .from('bookings')
-    .insert({
-      customer_id: customerId,
-      barber_id: input.barberId,
-      service_id: input.serviceId,
-      date: input.date,
-      time: input.time,
-      location,
-      // Frozen after insert (migration 0049); both or neither.
-      ...(input.coordinates
-        ? { location_latitude: input.coordinates.latitude, location_longitude: input.coordinates.longitude }
-        : {}),
-    })
-    .select()
-    .single();
+  const { data, error } = await supabase.rpc('create_booking', {
+    p_service_id: input.serviceId,
+    p_date: input.date,
+    p_time: input.time,
+    p_location: location,
+    p_idempotency_key: input.idempotencyKey,
+    p_latitude: input.coordinates?.latitude ?? null,
+    p_longitude: input.coordinates?.longitude ?? null,
+  });
 
   if (error) {
-    if (error.code === UNIQUE_VIOLATION) return { status: 'conflict' };
-    // Open-request cap (migration 0048): 5 pending in total, 2 per barber.
     if (error.code === PENDING_CAP) return failure('too_many_pending');
     const slotOutcome = classifySlotRejection(error);
     if (slotOutcome) {
