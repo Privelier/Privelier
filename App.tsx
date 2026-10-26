@@ -44,7 +44,7 @@ import { darkPalette } from './src/theme/colors';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import '@/global.css';
 
-SplashScreen.preventAutoHideAsync();
+void SplashScreen.preventAutoHideAsync();
 
 const navigationTheme: Theme = {
   ...DarkTheme,

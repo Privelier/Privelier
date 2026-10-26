@@ -163,17 +163,18 @@ export default function LocationEditScreen({ navigation }: Props) {
       }
       setSearching(true);
       const seq = searchSeq.current;
-      searchTimer.current = setTimeout(async () => {
-        const result = await forwardGeocode(query);
-        if (seq !== searchSeq.current) return; // superseded or unmounted
-        setSearching(false);
-        setSearched(true);
-        if (result.status === 'ok') {
-          setCandidates(result.candidates);
-        } else {
-          setCandidates([]);
-          setSearchError(result.message);
-        }
+      searchTimer.current = setTimeout(() => {
+        void forwardGeocode(query).then((result) => {
+          if (seq !== searchSeq.current) return; // superseded or unmounted
+          setSearching(false);
+          setSearched(true);
+          if (result.status === 'ok') {
+            setCandidates(result.candidates);
+          } else {
+            setCandidates([]);
+            setSearchError(result.message);
+          }
+        });
       }, SEARCH_DEBOUNCE_MS);
     },
     [selected, cancelPendingSearch]

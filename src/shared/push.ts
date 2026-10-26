@@ -24,6 +24,7 @@ import { AndroidImportance } from 'expo-notifications';
 import { supabase } from '../../lib/supabase';
 import { getAppLanguage } from './locale';
 import type { NotificationEventType } from './notifications';
+import { devWarn } from './devLog';
 
 const ASKED_KEY = 'privelier.push.asked.v1';
 const TOKEN_KEY = 'privelier.push.token.v1';
@@ -86,13 +87,13 @@ async function registerToken(): Promise<boolean> {
       p_language: getAppLanguage() === 'de' ? 'de' : 'en',
     });
     if (error) {
-      if (__DEV__) console.warn('[push] register failed', error);
+      devWarn('[push] register failed', error);
       return false;
     }
     await AsyncStorage.setItem(TOKEN_KEY, data);
     return true;
   } catch (raw) {
-    if (__DEV__) console.warn('[push] token unavailable', raw);
+    devWarn('[push] token unavailable', raw);
     return false;
   }
 }
@@ -124,7 +125,7 @@ export async function askForPushPermissionInContext(): Promise<boolean> {
     const asked = await Notifications.requestPermissionsAsync();
     return asked.status === 'granted' ? registerToken() : false;
   } catch (raw) {
-    if (__DEV__) console.warn('[push] permission flow failed', raw);
+    devWarn('[push] permission flow failed', raw);
     return false;
   }
 }
@@ -137,7 +138,7 @@ export async function unregisterPushToken(): Promise<void> {
     await supabase.rpc('unregister_push_token', { p_token: token });
     await AsyncStorage.removeItem(TOKEN_KEY);
   } catch (raw) {
-    if (__DEV__) console.warn('[push] unregister failed', raw);
+    devWarn('[push] unregister failed', raw);
   }
 }
 

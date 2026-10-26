@@ -26,6 +26,7 @@ import type {
 import { supabase } from '../../lib/supabase';
 import type { ChatReadStateRow } from '../types';
 import { mergeLastReadAt } from './readReceipts';
+import { devWarn } from './devLog';
 
 export type UseReadReceiptArgs = {
   /** The chat room to watch; when falsy the channel stays closed. */
@@ -105,7 +106,7 @@ export function useReadReceipt({ roomId, myId, enabled }: UseReadReceiptArgs): R
       )
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn(`[useReadReceipt] channel ${channelName} status: ${status}`);
+          devWarn(`[useReadReceipt] channel ${channelName} status: ${status}`);
           return;
         }
         if (status === 'SUBSCRIBED') {

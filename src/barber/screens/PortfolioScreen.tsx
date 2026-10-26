@@ -147,7 +147,7 @@ export default function PortfolioScreen({ navigation }: Props) {
     let active = true;
     // Deferred via .then() (not called directly) for the same
     // react-hooks/set-state-in-effect reason as the other data screens.
-    Promise.resolve().then(() => {
+    void Promise.resolve().then(() => {
       if (active) void load();
     });
     return () => {

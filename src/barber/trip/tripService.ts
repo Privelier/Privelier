@@ -32,6 +32,7 @@ import { bearingDeg, decodePolyline, encodePolyline, haversineM, type LngLat } f
 import { fetchRoute } from '../../shared/tracking/routing';
 import { getAppLanguage } from '../../shared/locale';
 import type { BookingRow } from '../../types';
+import { devWarn } from '../../shared/devLog';
 
 export const TRIP_LOCATION_TASK = 'privelier-trip-location';
 const STORAGE_KEY = 'privelier.activeTrip.v1';
@@ -240,7 +241,7 @@ async function sendUpdate(
     p_route_source: newRoute ? newRoute.source : null,
   });
   if (error) {
-    if (__DEV__) console.warn('[trip] update failed', error);
+    devWarn('[trip] update failed', error);
     // The booking left 'accepted' (completed/cancelled elsewhere) or the day
     // passed: the server refuses; stop quietly.
     if (error.code === 'PT001' || error.code === 'PT002' || error.code === 'PT003') await stopLocal();
@@ -251,7 +252,7 @@ async function sendUpdate(
 
 TaskManager.defineTask(TRIP_LOCATION_TASK, async ({ data, error }) => {
   if (error) {
-    if (__DEV__) console.warn('[trip] location task error', error);
+    devWarn('[trip] location task error', error);
     return;
   }
   const locations = (data as { locations?: Location.LocationObject[] } | undefined)?.locations;
@@ -283,7 +284,7 @@ async function startBackgroundUpdates(): Promise<boolean> {
     });
     return true;
   } catch (raw) {
-    if (__DEV__) console.warn('[trip] background updates unavailable, using foreground watch', raw);
+    devWarn('[trip] background updates unavailable, using foreground watch', raw);
     return false;
   }
 }
@@ -373,7 +374,7 @@ export async function startTrip(booking: BookingRow): Promise<StartTripResult> {
     p_eta_seconds: initial.etaS,
   });
   if (error) {
-    if (__DEV__) console.warn('[trip] start failed', error);
+    devWarn('[trip] start failed', error);
     return { status: 'error', code: error.code?.startsWith('PT') ? 'not_allowed' : 'network' };
   }
 
@@ -403,7 +404,7 @@ export async function startTrip(booking: BookingRow): Promise<StartTripResult> {
 async function markArrived() {
   if (!trip) return;
   const { error } = await supabase.rpc('mark_trip_arrived', { p_booking_id: trip.bookingId });
-  if (error && __DEV__) console.warn('[trip] arrive failed', error);
+  if (error) devWarn('[trip] arrive failed', error);
   // Arrived: no more position updates needed. The row keeps its "arrived"
   // state until the booking is completed or the barber ends sharing.
   await stopLocationSession();
@@ -427,7 +428,7 @@ export async function arriveNow(): Promise<void> {
 export async function stopTrip(bookingId: string): Promise<void> {
   await stopLocal();
   const { error } = await supabase.rpc('end_trip', { p_booking_id: bookingId });
-  if (error && __DEV__) console.warn('[trip] end failed', error);
+  if (error) devWarn('[trip] end failed', error);
 }
 
 /** Clears the arrived summary from the screen once the barber dismisses it. */

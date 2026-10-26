@@ -164,7 +164,7 @@ export default function DiscoverScreen({ navigation }: Props) {
 
   useEffect(() => {
     let active = true;
-    Promise.resolve().then(() => {
+    void Promise.resolve().then(() => {
       if (active) void load();
     });
     return () => {

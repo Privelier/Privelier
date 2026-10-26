@@ -44,6 +44,7 @@ import type {
 import { supabase } from '../../lib/supabase';
 import type { BookingRow } from '../types';
 import type { BookingChangeEvent } from './bookingRealtime';
+import { devWarn } from './devLog';
 
 /** Which participant column scopes the stream to the signed-in user. */
 export type BookingFilterColumn = 'barber_id' | 'customer_id';
@@ -124,7 +125,7 @@ export function useBookingsRealtime({
           // implement a custom retry loop here. 'CLOSED' is deliberately not
           // treated as an error — it is what our own cleanup produces.
           hadChannelError = true;
-          console.warn(
+          devWarn(
             `[useBookingsRealtime] channel ${channelName} status: ${status}`
           );
           return;

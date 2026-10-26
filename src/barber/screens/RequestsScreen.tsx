@@ -229,7 +229,7 @@ export default function RequestsScreen() {
     onChange: onRealtimeChange,
     // A reconnect after a network blip may have dropped events — refetch the
     // baseline (idempotent merge makes this race-free; review finding F1).
-    onRecovered: load,
+    onRecovered: () => void load(),
     enabled: focused,
   });
 
@@ -311,7 +311,7 @@ export default function RequestsScreen() {
                           testID={`request-reject-${item.id}`}
                           onPress={() =>
                             confirmDestructive(isDe() ? 'Diesen Termin ablehnen?' : 'Reject this booking?', isDe() ? 'Ablehnen' : 'Reject', () =>
-                              runTransition(item, 'rejected', rejectBooking)
+                              void runTransition(item, 'rejected', rejectBooking)
                             )
                           }
                         />
@@ -332,7 +332,7 @@ export default function RequestsScreen() {
                           testID={`request-cancel-${item.id}`}
                           onPress={() =>
                             confirmDestructive(isDe() ? 'Diesen Termin stornieren?' : 'Cancel this booking?', isDe() ? 'Termin stornieren' : 'Cancel booking', () =>
-                              runTransition(item, 'cancelled', cancelBookingAsBarber)
+                              void runTransition(item, 'cancelled', cancelBookingAsBarber)
                             )
                           }
                         />

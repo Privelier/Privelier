@@ -16,6 +16,7 @@
 import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { StyleSpecification } from '@maplibre/maplibre-react-native';
+import { devWarn } from '../devLog';
 
 export const OPENFREEMAP_DARK_URL = 'https://tiles.openfreemap.org/styles/dark';
 export const MAP_ATTRIBUTION = '© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors';
@@ -80,7 +81,7 @@ async function fetchBrandStyle(): Promise<StyleSpecification | null> {
     void AsyncStorage.setItem(CACHE_KEY, JSON.stringify(style)).catch(() => undefined);
     return style;
   } catch (raw) {
-    if (__DEV__) console.warn('[mapStyle] fetch failed', raw);
+    devWarn('[mapStyle] fetch failed', raw);
     return null;
   } finally {
     clearTimeout(timer);

@@ -47,6 +47,7 @@ import {
   resolveReadMarker,
   type UnreadMessageInput,
 } from './unread';
+import { devWarn } from './devLog';
 
 /** Same cap (and documented degradation) as the inbox preview scan. */
 const MESSAGE_SCAN_CAP = 200;
@@ -109,9 +110,9 @@ export function useUnreadThreads(): UnreadState {
         { onConflict: 'chat_id,user_id' }
       )
       .then(({ error }) => {
-        if (error && __DEV__) {
-          console.warn('[unread] writeReadMarker failed', error);
-        }
+        if (error) {
+  devWarn('[unread] writeReadMarker failed', error);
+}
       });
   }, []);
 
@@ -156,12 +157,10 @@ export function useUnreadThreads(): UnreadState {
     ]);
     if (roomsResult.error || readResult.error || messagesResult.error) {
       // Best-effort: no badge beats a wrong badge or an error surface.
-      if (__DEV__) {
-        console.warn(
+      devWarn(
           '[unread] baseline load failed',
           roomsResult.error ?? readResult.error ?? messagesResult.error
         );
-      }
       return;
     }
     const messages = (messagesResult.data ?? []) as UnreadMessageInput[];
@@ -243,7 +242,7 @@ export function useUnreadThreads(): UnreadState {
       )
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn(`[useUnreadThreads] channel ${channelName} status: ${status}`);
+          devWarn(`[useUnreadThreads] channel ${channelName} status: ${status}`);
           return;
         }
         if (status === 'SUBSCRIBED') {

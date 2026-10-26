@@ -8,6 +8,7 @@
  * PostgREST/Postgres text goes to debug logging only, never to the screen.
  */
 import { getAppLanguage } from '../shared/locale';
+import { devWarn } from '../shared/devLog';
 
 /** Closed set of error codes the UI layer is allowed to switch on. */
 export type BarberDataErrorCode =
@@ -85,9 +86,7 @@ export function failure(
  * ever contains raw server text.
  */
 export function logBarberDataError(context: string, raw: unknown): void {
-  if (__DEV__) {
-    console.warn(`[barber] ${context}`, raw);
-  }
+  devWarn(`[barber] ${context}`, raw);
 }
 
 /** Minimal shape shared by PostgrestError without importing its class. */

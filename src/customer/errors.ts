@@ -8,6 +8,7 @@
  * PostgREST/Postgres text goes to debug logging only, never to the screen.
  */
 import { getAppLanguage } from '../shared/locale';
+import { devWarn } from '../shared/devLog';
 
 /** Closed set of error codes the UI layer is allowed to switch on. */
 export type CustomerDataErrorCode =
@@ -82,9 +83,7 @@ export function failure(code: CustomerDataErrorCode): CustomerDataFailure {
  * ever contains raw server text.
  */
 export function logCustomerDataError(context: string, raw: unknown): void {
-  if (__DEV__) {
-    console.warn(`[customer] ${context}`, raw);
-  }
+  devWarn(`[customer] ${context}`, raw);
 }
 
 /** Minimal shape shared by PostgrestError without importing its class. */

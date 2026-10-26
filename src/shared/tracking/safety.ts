@@ -18,6 +18,7 @@ import * as Location from 'expo-location';
 import { supabase } from '../../../lib/supabase';
 import { getAppLanguage } from '../locale';
 import type { LngLat } from './geo';
+import { devWarn } from '../devLog';
 
 const EMERGENCY_BY_REGION: Record<string, string> = {
   US: '911',
@@ -65,7 +66,7 @@ async function logSafetyEvent(bookingId: string, kind: 'sos' | 'trip_shared', po
     latitude: position?.[1] ?? null,
     longitude: position?.[0] ?? null,
   });
-  if (error && __DEV__) console.warn('[safety] log failed', error);
+  if (error) devWarn('[safety] log failed', error);
 }
 
 /**

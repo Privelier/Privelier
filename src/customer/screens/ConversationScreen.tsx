@@ -269,7 +269,7 @@ function ConversationRoom({ route, navigation }: Props) {
     onChange: onRealtimeChange,
     // A reconnect may have dropped events — refetch (idempotent merge makes
     // this race-free; lesson F1).
-    onRecovered: refreshConversation,
+    onRecovered: () => void refreshConversation(),
     enabled: focused,
   });
 

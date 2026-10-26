@@ -130,7 +130,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
 
   useEffect(() => {
     let active = true;
-    supabase.auth.getSession().then(({ data }) => {
+    void supabase.auth.getSession().then(({ data }) => {
       if (!active) return;
       const id = data.session?.user.id ?? null;
       setBarberId(id);

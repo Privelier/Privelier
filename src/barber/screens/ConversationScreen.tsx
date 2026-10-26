@@ -267,7 +267,7 @@ function ConversationRoom({ route, navigation }: Props) {
     roomId: room.id,
     onChange: onRealtimeChange,
     // Reconnect gap events are dropped, not replayed — refetch (lesson F1).
-    onRecovered: refreshConversation,
+    onRecovered: () => void refreshConversation(),
     enabled: focused,
   });
 

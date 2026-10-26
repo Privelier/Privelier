@@ -19,7 +19,7 @@ import {
 
 describe('authErrorCopy (brand voice)', () => {
   it('has no exclamation marks and is sentence case for every code', () => {
-    Object.entries(authErrorCopy).forEach(([code, copy]) => {
+    Object.entries(authErrorCopy).forEach(([, copy]) => {
       expect(copy).not.toMatch(/!/);
       // Sentence case: starts with an uppercase letter, not ALL CAPS/Title Case.
       expect(copy[0]).toMatch(/[A-Z]/);

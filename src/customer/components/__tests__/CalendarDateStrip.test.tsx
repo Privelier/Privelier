@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import CalendarDateStrip from '../CalendarDateStrip';
+import CalendarDateStrip, { densityDots } from '../CalendarDateStrip';
 import { haptics } from '../../../shared/haptics';
 
 jest.mock('../../../shared/haptics', () => ({
@@ -35,4 +35,8 @@ it('selects enabled dates with one light haptic and ignores disabled dates', asy
   await fireEvent.press(screen.getByTestId('booking-day-1'));
   expect(onSelectDate).toHaveBeenCalledTimes(1);
   expect(haptics.selection).toHaveBeenCalledTimes(1);
+});
+
+it('maps real slot counts to 0–3 dots and never shows dots for zero', () => {
+  expect([0, 1, 2, 3, 5, 6, 12].map(densityDots)).toEqual([0, 1, 1, 2, 2, 3, 3]);
 });

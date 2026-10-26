@@ -8,6 +8,7 @@
  * below its sample thresholds), so nothing here can block a screen.
  */
 import { supabase } from '../../lib/supabase';
+import { devWarn } from './devLog';
 
 export type PopularGrid = number[][]; // [weekday 0=Mon][hour 0..23], 0..1
 
@@ -28,13 +29,13 @@ export async function fetchBarberStats(barberIds: string[]): Promise<Map<string,
   try {
     const { data, error } = await supabase.from('barber_stats').select('*').in('barber_id', barberIds);
     if (error) {
-      if (__DEV__) console.warn('[barberStats]', error);
+      devWarn('[barberStats]', error);
       return out;
     }
     for (const row of (data ?? []) as BarberStatsRow[]) out.set(row.barber_id, row);
   } catch (raw) {
     // Decorative data must never reject the screen load it rides along with.
-    if (__DEV__) console.warn('[barberStats]', raw);
+    devWarn('[barberStats]', raw);
   }
   return out;
 }

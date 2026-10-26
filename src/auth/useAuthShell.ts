@@ -78,7 +78,7 @@ export function useAuthShell(): AuthShell {
   useEffect(() => {
     let active = true;
 
-    supabase.auth
+    void supabase.auth
       .getSession()
       .then(({ data }) => data.session ?? null)
       // A failed restore must never leave the app on the splash screen.
@@ -140,7 +140,7 @@ export function useAuthShell(): AuthShell {
       else if (outcome === 'expired_or_used') setAuthLinkError('expired');
       else if (outcome === 'error') setAuthLinkError('error');
     };
-    Linking.getInitialURL().then((url) => {
+    void Linking.getInitialURL().then((url) => {
       if (url) void handleUrl(url);
     });
     const subscription = Linking.addEventListener('url', ({ url }) => {
@@ -180,7 +180,7 @@ export function useAuthShell(): AuthShell {
   useEffect(() => {
     if (restoring || userId === null || profile !== null) return;
     let cancelled = false;
-    ensureProfile()
+    void ensureProfile()
       // An unexpected throw shows the retryable failure, not an endless spinner.
       .catch(() => failure('network'))
       .then((result) => {
@@ -223,7 +223,7 @@ export function useAuthShell(): AuthShell {
   useEffect(() => {
     if (profileId === null || consent.kind !== 'checking') return;
     let cancelled = false;
-    syncLegalConsent(profileId, formConsentRef.current || metadataConsent)
+    void syncLegalConsent(profileId, formConsentRef.current || metadataConsent)
       .catch(() => failure('network'))
       .then((result) => {
         if (cancelled) return;

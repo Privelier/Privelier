@@ -31,6 +31,7 @@ import type {
 import { supabase } from '../../lib/supabase';
 import type { MessageRow } from '../types';
 import type { MessageChangeEvent } from './messageRealtime';
+import { devWarn } from './devLog';
 
 export type UseMessagesRealtimeArgs = {
   /** The chat room to stream; when falsy the channel stays closed. */
@@ -96,7 +97,7 @@ export function useMessagesRealtime({
           // Log once; supabase-js auto-reconnects — no custom retry loop.
           // 'CLOSED' is deliberately not an error: it is our own cleanup.
           hadChannelError = true;
-          console.warn(
+          devWarn(
             `[useMessagesRealtime] channel ${channelName} status: ${status}`
           );
           return;

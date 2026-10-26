@@ -14,6 +14,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { decodePolyline, lineLengthM, type LngLat } from './geo';
+import { devWarn } from '../devLog';
 
 export type TripStatus = 'en_route' | 'arrived' | 'ended';
 
@@ -47,7 +48,7 @@ export const STALE_AFTER_MS = 90_000;
 export async function fetchTrip(bookingId: string): Promise<BookingTripRow | null> {
   const { data, error } = await supabase.from('booking_trips').select('*').eq('booking_id', bookingId).maybeSingle();
   if (error) {
-    if (__DEV__) console.warn('[tripData] fetchTrip', error);
+    devWarn('[tripData] fetchTrip', error);
     return null;
   }
   return (data as BookingTripRow | null) ?? null;
@@ -62,7 +63,7 @@ export async function fetchLiveTrips(bookingIds: string[]): Promise<BookingTripR
     .in('booking_id', bookingIds)
     .neq('status', 'ended');
   if (error) {
-    if (__DEV__) console.warn('[tripData] fetchLiveTrips', error);
+    devWarn('[tripData] fetchLiveTrips', error);
     return [];
   }
   return (data as BookingTripRow[]) ?? [];

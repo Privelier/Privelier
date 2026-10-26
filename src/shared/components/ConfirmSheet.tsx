@@ -29,13 +29,14 @@ export function ConfirmSheet({ open, title, message, confirmLabel, cancelLabel, 
   const confirmed = !confirmPhrase || typed.trim().toLowerCase() === confirmPhrase.word.toLowerCase();
 
   useEffect(() => {
-    if (open) {
-      setTyped('');
-      sheet.current?.present();
-    } else {
-      sheet.current?.dismiss();
-    }
+    if (open) sheet.current?.present();
+    else sheet.current?.dismiss();
   }, [open]);
+
+  const dismiss = useCallback(() => {
+    setTyped('');
+    onClose();
+  }, [onClose]);
 
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
@@ -54,7 +55,7 @@ export function ConfirmSheet({ open, title, message, confirmLabel, cancelLabel, 
       backgroundComponent={SheetGlassBackground}
       handleIndicatorStyle={{ backgroundColor: colors.accent, width: 32 }}
       backdropComponent={renderBackdrop}
-      onDismiss={onClose}
+      onDismiss={dismiss}
     >
       <BottomSheetView style={styles.content} testID={testID}>
         <Text accessibilityRole="header" style={[styles.title, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>

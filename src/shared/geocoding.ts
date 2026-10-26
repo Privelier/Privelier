@@ -15,6 +15,7 @@
  * query only, never the request URL.
  */
 import { getAppLanguage } from './locale';
+import { devWarn } from './devLog';
 
 export interface GeocodeCandidate {
   /** Human-readable address label. */
@@ -45,9 +46,7 @@ function geocodeFailure(code: GeocodeErrorCode): ForwardGeocodeResult {
 }
 
 function logGeocodeError(context: string, raw: unknown): void {
-  if (__DEV__) {
-    console.warn(`[geocoding] ${context}`, raw);
-  }
+  devWarn(`[geocoding] ${context}`, raw);
 }
 
 const PHOTON_URL = process.env.EXPO_PUBLIC_PHOTON_URL || 'https://photon.komoot.io';

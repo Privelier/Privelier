@@ -208,7 +208,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
     let active = true;
     // Deferred via .then() (not called directly) for the same
     // react-hooks/set-state-in-effect reason as DiscoverScreen.
-    Promise.resolve().then(() => {
+    void Promise.resolve().then(() => {
       if (active) void load();
     });
     return () => {

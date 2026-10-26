@@ -49,7 +49,7 @@ export default function EditProfileScreen({ navigation }: Props) {
     setCountry(result.profile.country?.trim() || defaultCountry());
   }, [de]);
 
-  useEffect(() => { Promise.resolve().then(() => void load()); }, [load]);
+  useEffect(() => { void Promise.resolve().then(() => load()); }, [load]);
 
   const save = useCallback(async () => {
     if (name.trim().length < 2 || city.trim().length < 2) {

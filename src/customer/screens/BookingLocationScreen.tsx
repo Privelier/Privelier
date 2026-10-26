@@ -62,7 +62,7 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
     // Best-effort city prefill only — never blocks the field from being
     // used, and never overwrites anything the customer has already typed
     // (the functional update below only fills an still-empty field).
-    fetchOwnProfile().then((result) => {
+    void fetchOwnProfile().then((result) => {
       if (!active || result.status !== 'ok' || !result.profile?.city) return;
       const city = result.profile.city;
       setCity((current) => (current.trim().length === 0 ? city : current));

@@ -6,6 +6,7 @@
  */
 import { supabase } from '../../lib/supabase';
 import { formatBookingWhen } from '../shared/format';
+import { devWarn } from '../shared/devLog';
 
 export interface LiveTripContext {
   bookingId: string;
@@ -24,7 +25,7 @@ export async function fetchLiveTripContext(bookingId: string): Promise<LiveTripC
     .eq('id', bookingId)
     .maybeSingle();
   if (error || !booking) {
-    if (__DEV__ && error) console.warn('[liveTripData] booking', error);
+    if (error) devWarn('[liveTripData] booking', error);
     return null;
   }
   const [barber, service] = await Promise.all([

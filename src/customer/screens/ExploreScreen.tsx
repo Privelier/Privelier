@@ -136,7 +136,7 @@ export default function ExploreScreen({ navigation }: Props) {
     let active = true;
     // Deferred via .then() (not called directly) — same
     // react-hooks/set-state-in-effect rationale as DiscoverScreen.
-    Promise.resolve().then(() => {
+    void Promise.resolve().then(() => {
       if (active) void load();
     });
     return () => {

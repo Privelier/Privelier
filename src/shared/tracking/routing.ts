@@ -12,6 +12,7 @@
  */
 import { estimateTrip, type TripRoute } from './eta';
 import { decodePolyline, type LngLat } from './geo';
+import { devWarn } from '../devLog';
 
 const OSRM_URL = process.env.EXPO_PUBLIC_OSRM_URL || 'https://routing.openstreetmap.de/routed-car';
 const VALHALLA_URL = process.env.EXPO_PUBLIC_VALHALLA_URL || 'https://valhalla1.openstreetmap.de';
@@ -68,7 +69,7 @@ export async function fetchRoute(from: LngLat, to: LngLat): Promise<TripRoute> {
     try {
       return await engine(from, to);
     } catch (raw) {
-      if (__DEV__) console.warn('[routing]', engine.name, raw);
+      devWarn('[routing]', engine.name, raw);
     }
   }
   return estimateTrip(from, to);

@@ -31,6 +31,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabase';
+import { devWarn } from './devLog';
 
 /** Minimum gap between two `typing: true` emissions. */
 export const TYPING_REFRACTORY_MS = 2500;
@@ -164,7 +165,7 @@ export function useTypingBroadcast({
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           joinedRef.current = false;
-          console.warn(`[useTypingBroadcast] channel ${channelName} status: ${status}`);
+          devWarn(`[useTypingBroadcast] channel ${channelName} status: ${status}`);
           return;
         }
         if (status === 'SUBSCRIBED') {

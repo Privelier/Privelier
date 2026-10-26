@@ -16,7 +16,30 @@ const noRestrictedImports = (forbiddenGroup, message) => ({
 module.exports = defineConfig([
   expoConfig,
   {
-    ignores: ["dist/*"],
+    ignores: ["dist/*", "supabase/functions/**", "graphify-out/**", "artifacts/**"],
+  },
+  {
+    // Hardening 2026-10-26: no stray logging (src/shared/devLog.ts is the
+    // one dev-only exit), no untyped values, and no promise whose failure
+    // is silently dropped.
+    files: ['**/*.{ts,tsx}'],
+    languageOptions: {
+      parserOptions: { projectService: true },
+    },
+    rules: {
+      'no-console': 'error',
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-floating-promises': ['error', { ignoreVoid: true }],
+      '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: { attributes: false } }],
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrors: 'none' }],
+    },
+  },
+  {
+    files: ['**/__tests__/**', '**/*.test.{ts,tsx}', 'jest.setup.ts'],
+    rules: {
+      '@typescript-eslint/no-floating-promises': 'off',
+      '@typescript-eslint/no-misused-promises': 'off',
+    },
   },
   {
     files: ['src/customer/**/*.{ts,tsx}'],

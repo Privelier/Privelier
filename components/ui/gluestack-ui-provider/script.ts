@@ -14,6 +14,8 @@ export const script = (mode: string) => {
     documentElement.classList.add(theme);
     documentElement.style.colorScheme = theme;
   } catch (e) {
+    // Vendored gluestack web theme script; runs only in the web build's <head>.
+    // eslint-disable-next-line no-console
     console.error(e);
   }
 };

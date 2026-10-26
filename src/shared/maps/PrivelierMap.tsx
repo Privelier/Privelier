@@ -18,6 +18,7 @@ import { isMapNativeAvailable } from './mapRuntime';
 import type { MapEvent, MapScene } from './mapScene';
 import { useMapStyle } from './mapStyle';
 import { WebMap, type WebMapHandle } from './WebMap';
+import { devWarn } from '../devLog';
 
 export interface PrivelierMapHandle {
   recenter: () => void;
@@ -42,7 +43,7 @@ function loadNative(): NativeComponent | null {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     nativeComponent = (require('./NativeSceneMap') as { NativeSceneMap: NativeComponent }).NativeSceneMap;
   } catch (raw) {
-    if (__DEV__) console.warn('[PrivelierMap] native map failed to load, using web fallback', raw);
+    devWarn('[PrivelierMap] native map failed to load, using web fallback', raw);
     nativeComponent = null;
   }
   return nativeComponent;

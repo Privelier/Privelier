@@ -184,7 +184,7 @@ export default function BookingsScreen() {
     onChange: onRealtimeChange,
     // A reconnect after a network blip may have dropped events — refetch the
     // baseline (idempotent merge makes this race-free; review finding F1).
-    onRecovered: load,
+    onRecovered: () => void load(),
     enabled: focused,
   });
 

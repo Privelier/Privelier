@@ -15,6 +15,7 @@ import {
   isAuthRetryableFetchError,
   isAuthWeakPasswordError,
 } from '@supabase/supabase-js';
+import { devWarn } from '../shared/devLog';
 
 /** Closed set of error codes the UI layer is allowed to switch on. */
 export type AuthErrorCode =
@@ -98,9 +99,7 @@ export function failure(code: AuthErrorCode): AuthFailure {
  * ever contains raw server text.
  */
 export function logAuthError(context: string, raw: unknown): void {
-  if (__DEV__) {
-    console.warn(`[auth] ${context}`, raw);
-  }
+  devWarn(`[auth] ${context}`, raw);
 }
 
 /** Fetch-level failures thrown by React Native's networking stack. */
