@@ -8,7 +8,9 @@ import {
   selectDailySpotlight,
   formatStartsIn,
   formatUpNextWhen,
+  selectMappableBarbers,
   selectRebookBarbers,
+  selectTopRated,
   selectUpNext,
 } from '../discoverPresentation';
 
@@ -248,5 +250,37 @@ describe('up next and book again', () => {
     expect(formatStartsIn({ date: '2026-10-14', time: '09:59:00' }, now)).toBe('Starting now');
     expect(formatStartsIn({ date: '2026-10-16', time: '10:00:00' }, now)).toBeNull();
     expect(formatStartsIn({ date: 'bad', time: 'x' }, now)).toBeNull();
+  });
+});
+
+describe('selectTopRated', () => {
+  it('returns rated barbers best first, ties by name, never unrated ones', () => {
+    const result = selectTopRated([
+      barber('a', { name: 'Zed', rating: 4.5 }),
+      barber('b', { name: 'Amir', rating: 4.5 }),
+      barber('c', { rating: 0 }),
+      barber('d', { rating: 4.9 }),
+      barber('e', { rating: 3.2 }),
+    ]);
+    expect(result.map((row) => row.id)).toEqual(['d', 'b', 'a']);
+  });
+
+  it('returns nothing when fewer than two barbers are rated', () => {
+    expect(selectTopRated([barber('a', { rating: 5 }), barber('b'), barber('c'), barber('d')])).toEqual([]);
+  });
+
+  it('returns nothing for a small directory the rail already shows in full', () => {
+    expect(selectTopRated([barber('a', { rating: 5 }), barber('b', { rating: 4 }), barber('c', { rating: 3 })])).toEqual([]);
+  });
+});
+
+describe('selectMappableBarbers', () => {
+  it('keeps only barbers with both display coordinates', () => {
+    const result = selectMappableBarbers([
+      barber('a', { display_latitude: 49.45, display_longitude: 11.08 }),
+      barber('b', { display_latitude: 49.45 }),
+      barber('c'),
+    ]);
+    expect(result.map((row) => row.id)).toEqual(['a']);
   });
 });

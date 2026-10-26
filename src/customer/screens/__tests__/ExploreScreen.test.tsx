@@ -75,8 +75,8 @@ describe('ExploreScreen map', () => {
     fireEvent.press(screen.getByTestId('customer-explore-toggle-map'));
 
     const surface = await screen.findByTestId('customer-explore-map-surface');
-    const pins = JSON.parse(surface.props.accessibilityHint) as { id: string; lngLat: number[]; label: string }[];
-    expect(pins).toEqual([expect.objectContaining({ id: 'barber-1', lngLat: [13.4, 52.52], label: 'Test Barber' })]);
+    const pins = JSON.parse(surface.props.accessibilityHint) as { id: string; lngLat: number[]; title: string; subtitle: string | null; imageUrl: string | null }[];
+    expect(pins).toEqual([expect.objectContaining({ id: 'barber-1', lngLat: [13.4, 52.52], title: 'Test', subtitle: null, imageUrl: null, accessibilityLabel: 'Test Barber' })]);
     expect(screen.queryByTestId('customer-explore-docked-card')).toBeNull();
 
     await act(async () => { mockMapEvents.current?.({ type: 'pin', id: 'barber-1' }); });

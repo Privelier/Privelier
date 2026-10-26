@@ -7,8 +7,9 @@
  * Privacy: the coordinates rendered here are ONLY the offset display pair
  * from barber_directory (an ExploreMapPin cannot even carry anything else —
  * exact coordinates never reach the customer app, structurally, per
- * migration 0019's RLS). Pins show the barber's real from-price when one is
- * known, else the barber's name — never an invented number.
+ * migration 0019's RLS). Each pin shows the barber's photo (initials when
+ * there is none), first name, and real from-price when one is known — never
+ * an invented number.
  *
  * Interaction: tap a pin -> the barber's card docks at the bottom (the
  * screen's one deliberate moment); tap the map background -> it undocks;
@@ -20,7 +21,8 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { AccessibilityInfo, Animated, Easing, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { duration } from '../../theme/motion';
 import type { BarberDirectoryRow, ServiceRow } from '../../types';
-import { formatMoney } from '../format';
+import { firstName, formatMoney } from '../format';
+import { getAppLanguage } from '../../shared/locale';
 import type { ExploreMapPin } from '../exploreData';
 import { PrivelierMap } from '../../shared/maps/PrivelierMap';
 import type { MapEvent, MapScene } from '../../shared/maps/mapScene';
@@ -40,6 +42,7 @@ export default function ExploreMapView({
   onOpenProfile,
 }: ExploreMapViewProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const de = getAppLanguage() === 'de';
 
   const scene = useMemo<MapScene>(() => ({
     camera: 'fit',
@@ -49,12 +52,16 @@ export default function ExploreMapView({
       return {
         id: pin.barberId,
         lngLat: [pin.longitude, pin.latitude],
-        label: price ?? barber?.name ?? '·',
-        accessibilityLabel: barber ? `${barber.name}${price ? `, from ${price}` : ''}` : 'Barber pin',
+        title: barber ? firstName(barber.name) : 'Barber',
+        subtitle: price ? (de ? `ab ${price}` : `from ${price}`) : null,
+        imageUrl: barber?.profile_image ?? null,
+        accessibilityLabel: barber
+          ? `${barber.name}${price ? (de ? `, ab ${price}` : `, from ${price}`) : ''}`
+          : 'Barber',
         active: pin.barberId === selectedId,
       };
     }),
-  }), [pins, barbersById, selectedId]);
+  }), [pins, barbersById, selectedId, de]);
 
   const onEvent = useCallback((event: MapEvent) => {
     if (event.type === 'pin') setSelectedId(event.id);

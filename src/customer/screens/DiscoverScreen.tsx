@@ -40,9 +40,13 @@ import {
   deriveServiceFilters,
   getDiscoverBrandMessages,
   groupServicesByBarber,
+  selectMappableBarbers,
   selectRebookBarbers,
+  selectTopRated,
   selectUpNext,
 } from '../discoverPresentation';
+import { MapTeaserCard } from '../components/MapTeaserCard';
+import { HowItWorksCard } from '../components/HowItWorksCard';
 import { firstName, timeOfDayGreeting } from '../format';
 import { fetchOwnBookingsView } from '../bookingsData';
 import type { OwnBookingsViewResult } from '../types';
@@ -221,6 +225,11 @@ export default function DiscoverScreen({ navigation }: Props) {
     () => (ownBookings ? selectRebookBarbers(ownBookings.bookings, ownBookings.barbersById) : []),
     [ownBookings]
   );
+  const mappableBarbers = useMemo(() => selectMappableBarbers(barbers), [barbers]);
+  const topRated = useMemo(() => selectTopRated(barbers), [barbers]);
+  // First-time customers (nothing upcoming, nobody to rebook) get the
+  // three-step explainer; returning customers already know the flow.
+  const showHowItWorks = ownBookings !== null && !upNext && rebookBarbers.length === 0;
   const clearFilters = useCallback(() => {
     setQuery('');
     setActiveService(null);
@@ -406,6 +415,18 @@ export default function DiscoverScreen({ navigation }: Props) {
           </Reveal>
         ) : null}
 
+        {!filtering && mappableBarbers.length > 0 ? (
+          <Reveal index={1}>
+            <View style={[styles.pad, styles.teaserWrap]}>
+              <MapTeaserCard
+                barbers={mappableBarbers}
+                cityName={cityName}
+                onOpenMap={() => navigation.navigate('Explore')}
+              />
+            </View>
+          </Reveal>
+        ) : null}
+
         {!filtering && rebookBarbers.length > 0 ? (
           <Reveal index={2}>
             <View style={styles.section}>
@@ -554,6 +575,41 @@ export default function DiscoverScreen({ navigation }: Props) {
                 </View>
               </Reveal>
             ) : null}
+
+            {topRated.length > 0 ? (
+              <Reveal index={5}>
+                <View style={[styles.pad, styles.section]} testID="customer-home-top-rated">
+                  <Text
+                    accessibilityRole="header"
+                    style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}
+                  >
+                    {de ? 'Am besten bewertet' : 'Highest rated'}
+                  </Text>
+                  <Text style={[styles.spotlightNote, { color: colors.textSecondary, fontFamily: fonts.body }]}>
+                    {de ? 'Nach echten Kundenbewertungen' : 'By real customer reviews'}
+                  </Text>
+                  <View style={styles.resultsList}>
+                    {topRated.map((barber) => (
+                      <BarberCard
+                        key={barber.id}
+                        barber={barber}
+                        services={servicesByBarber.get(barber.id) ?? []}
+                        variant="row"
+                        onPress={() => openProfile(barber.id)}
+                      />
+                    ))}
+                  </View>
+                </View>
+              </Reveal>
+            ) : null}
+
+            {showHowItWorks ? (
+              <Reveal index={6}>
+                <View style={[styles.pad, styles.section]}>
+                  <HowItWorksCard />
+                </View>
+              </Reveal>
+            ) : null}
           </>
         )}
       </Animated.ScrollView>
@@ -621,6 +677,7 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, minWidth: 0, fontSize: 14, paddingVertical: 10 },
   searchClear: { minWidth: 32, minHeight: 32, alignItems: 'center', justifyContent: 'center' },
   upNextWrap: { marginTop: space.xl },
+  teaserWrap: { marginTop: space.base },
   resultsSection: { marginTop: space.xl },
   resultsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 44 },
   clearAction: { minHeight: 44, minWidth: 44, alignItems: 'flex-end', justifyContent: 'center' },

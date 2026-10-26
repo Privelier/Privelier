@@ -226,6 +226,32 @@ export function selectRebookBarbers(
   return result;
 }
 
+/**
+ * "Highest rated": barbers with a real customer rating, best first (ties by
+ * name so the order is stable). Unrated barbers never appear. It returns []
+ * when fewer than two are rated, or when the directory is small enough that
+ * the rail above already shows everyone (the section would only repeat it).
+ */
+export const TOP_RATED_MIN_DIRECTORY = 4;
+
+export function selectTopRated(
+  barbers: readonly BarberDirectoryRow[],
+  limit = 3
+): BarberDirectoryRow[] {
+  if (barbers.length < TOP_RATED_MIN_DIRECTORY) return [];
+  const rated = barbers
+    .filter((barber) => Number.isFinite(barber.rating) && barber.rating > 0)
+    .sort((left, right) => right.rating - left.rating || left.name.localeCompare(right.name));
+  return rated.length < 2 ? [] : rated.slice(0, limit);
+}
+
+/** Directory barbers that can appear on the Explore map (display coordinates set). */
+export function selectMappableBarbers(barbers: readonly BarberDirectoryRow[]): BarberDirectoryRow[] {
+  return barbers.filter(
+    (barber) => Number.isFinite(barber.display_latitude) && Number.isFinite(barber.display_longitude)
+  );
+}
+
 function startOfDay(date: Date): number {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
 }

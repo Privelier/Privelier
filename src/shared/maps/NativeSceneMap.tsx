@@ -18,7 +18,8 @@ import { useTheme } from '../../theme/useTheme';
 import { numericText } from '../../theme/typography';
 import { useReducedMotionPreference } from '../motion/useReducedMotionPreference';
 import { boundsOf, headingDelta, lerpLngLat, type LngLat } from '../tracking/geo';
-import { MAP_COLORS, type MapEvent, type MapScene } from './mapScene';
+import { Avatar } from '../components/Avatar';
+import { MAP_COLORS, safePinImageUrl, type MapEvent, type MapScene } from './mapScene';
 
 export interface NativeSceneMapHandle {
   recenter: () => void;
@@ -34,6 +35,7 @@ interface Props {
 const PADDING = { top: 72, bottom: 260, left: 48, right: 48 };
 const USER_PAN_PAUSE_MS = 15_000;
 const GLIDE_MS = 900;
+const PIN_AVATAR = 34;
 
 function sceneBounds(scene: MapScene) {
   const points: LngLat[] = [];
@@ -175,12 +177,30 @@ export const NativeSceneMap = forwardRef<NativeSceneMapHandle, Props>(function N
                 { opacity: pressed ? 0.85 : 1 },
               ]}
             >
-              <Text
-                numberOfLines={1}
-                style={[styles.pinText, numericText, { fontFamily: fonts.bodySemiBold, color: pin.active ? colors.onAccent : colors.textPrimary }]}
-              >
-                {pin.label}
-              </Text>
+              <Avatar
+                id={pin.id}
+                name={pin.title}
+                imageUrl={safePinImageUrl(pin.imageUrl)}
+                size={PIN_AVATAR}
+                monogramFontSize={11}
+                accessible={false}
+              />
+              <View style={styles.pinTextBlock}>
+                <Text
+                  numberOfLines={1}
+                  style={[styles.pinTitle, { fontFamily: fonts.bodySemiBold, color: pin.active ? colors.onAccent : colors.textPrimary }]}
+                >
+                  {pin.title}
+                </Text>
+                {pin.subtitle ? (
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.pinSubtitle, numericText, { fontFamily: fonts.bodyMedium, color: pin.active ? colors.onAccent : colors.accentText }]}
+                  >
+                    {pin.subtitle}
+                  </Text>
+                ) : null}
+              </View>
             </Pressable>
           </Marker>
         ))}
@@ -286,16 +306,20 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#121214' },
   map: { flex: 1 },
   pin: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
     borderWidth: 0.5,
     borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    minHeight: 30,
-    maxWidth: 140,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingLeft: 4,
+    paddingRight: 12,
+    paddingVertical: 4,
+    minHeight: 44,
+    maxWidth: 180,
   },
-  pinText: { fontSize: 12 },
+  pinTextBlock: { flexShrink: 1, minWidth: 0 },
+  pinTitle: { fontSize: 12, lineHeight: 15 },
+  pinSubtitle: { fontSize: 11, lineHeight: 14 },
   destination: {
     width: 34,
     height: 34,

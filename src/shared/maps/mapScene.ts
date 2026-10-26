@@ -6,12 +6,24 @@
  */
 import type { LngLat } from '../tracking/geo';
 
+/**
+ * A person pin: their photo (or initials when there is none, or it fails to
+ * load), their name, and an optional quiet second line such as "from €35".
+ */
 export interface MapPin {
   id: string;
   lngLat: LngLat;
-  label: string;
+  title: string;
+  subtitle?: string | null;
+  imageUrl?: string | null;
   accessibilityLabel: string;
   active?: boolean;
+}
+
+/** Only https photos reach the map page; anything else falls back to initials. */
+export function safePinImageUrl(url: string | null | undefined): string | null {
+  const trimmed = url?.trim();
+  return trimmed && /^https:\/\//i.test(trimmed) ? trimmed : null;
 }
 
 export interface MapScene {
