@@ -208,19 +208,14 @@ describe('VerifyScreen', () => {
     expect(screen.getByTestId('barber-membership-payment-feedback').props.children).toMatch(/No charge has been made/);
   });
 
-  it('does nothing (no upload) when photo permission is denied', async () => {
-    mockRequestPerm.mockResolvedValue({ granted: false });
+  it('opens the system photo picker without asking for photo-library permission', async () => {
+    mockLaunchPicker.mockResolvedValue({ canceled: true });
     await renderLoaded();
 
     fireEvent.press(screen.getByTestId('barber-verify-doc-id'));
 
-    await waitFor(() => expect(mockRequestPerm).toHaveBeenCalled());
-    expect(mockLaunchPicker).not.toHaveBeenCalled();
-    expect(mockUpload).not.toHaveBeenCalled();
-    expect(mockSubmit).not.toHaveBeenCalled();
-    expect(mockShowToast).toHaveBeenCalledWith(
-      expect.objectContaining({ action: expect.objectContaining({ label: 'Settings' }) })
-    );
+    await waitFor(() => expect(mockLaunchPicker).toHaveBeenCalled());
+    expect(mockRequestPerm).not.toHaveBeenCalled();
   });
 
   it('does nothing (no upload) when the picker is canceled', async () => {

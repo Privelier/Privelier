@@ -5,15 +5,19 @@
 // private verification-docs bucket (their ID/licence files must stay intact
 // while under review). So the trusted path is:
 //   1. delete_own_account() runs AS THE CALLER (their JWT): it deletes only
-//      auth.uid(), refuses with PA001 while bookings are live, and cascades
-//      every public row in one transaction.
-//   2. Only after that commits, the service role empties the caller's
-//      folder (<uid>/...) in both buckets.
+//      auth.uid(), cancels their upcoming bookings, keeps the other party's
+//      history anonymized (migration 0057) and is rate limited per user.
+//   2. Only after that commits, the secret key empties the caller's folder
+//      (<uid>/...) in both buckets.
 // If step 2 fails the account is still gone; the leftover objects sit under
 // a uid with no auth.users row and are logged for a manual sweep.
+// Repeating the call after success is harmless: step 1 is a no-op and the
+// folders are already empty.
 //
-// The service-role key exists only in this function's environment
-// (SUPABASE_SERVICE_ROLE_KEY is injected by Supabase), never in the app.
+// Keys come from the function environment that Supabase injects, never from
+// the app. SUPABASE_PUBLISHABLE_KEYS / SUPABASE_SECRET_KEYS are JSON
+// dictionaries (new API keys); the legacy single-key variables are read only
+// until the project's legacy keys are disabled (docs/hardening/FOUNDER_ACTIONS.md).
 // Deno resolves npm: specifiers at deploy time; Node's resolver cannot.
 // eslint-disable-next-line import/no-unresolved
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -25,6 +29,17 @@ function json(status: number, body: Record<string, unknown>): Response {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+}
+
+function projectKey(dictionaryVar: string, legacyVar: string): string {
+  const dictionary = Deno.env.get(dictionaryVar);
+  if (dictionary) {
+    const key = (JSON.parse(dictionary) as Record<string, string>).default;
+    if (key) return key;
+  }
+  const legacy = Deno.env.get(legacyVar);
+  if (!legacy) throw new Error(`${dictionaryVar} is not configured`);
+  return legacy;
 }
 
 async function listOwnObjects(
@@ -48,10 +63,7 @@ Deno.serve(async (req) => {
   if (!authorization) return json(401, { error: 'unauthorized' });
 
   const url = Deno.env.get('SUPABASE_URL')!;
-  const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-  const asCaller = createClient(url, anonKey, {
+  const asCaller = createClient(url, projectKey('SUPABASE_PUBLISHABLE_KEYS', 'SUPABASE_ANON_KEY'), {
     global: { headers: { Authorization: authorization } },
     auth: { persistSession: false, autoRefreshToken: false },
   });
@@ -61,12 +73,12 @@ Deno.serve(async (req) => {
 
   const { error: rpcError } = await asCaller.rpc('delete_own_account');
   if (rpcError) {
-    if (rpcError.code === 'PA001') return json(409, { error: 'active_bookings' });
+    if (rpcError.code === 'PA429') return json(429, { error: 'rate_limited' });
     console.error('delete_own_account failed', rpcError.code);
     return json(500, { error: 'delete_failed' });
   }
 
-  const admin = createClient(url, serviceKey, {
+  const admin = createClient(url, projectKey('SUPABASE_SECRET_KEYS', 'SUPABASE_SERVICE_ROLE_KEY'), {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   for (const bucket of BUCKETS) {

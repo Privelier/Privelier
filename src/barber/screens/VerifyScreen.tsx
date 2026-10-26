@@ -118,14 +118,8 @@ export default function VerifyScreen() {
       // Belt-and-suspenders: the rows are already disabled while a doc uploads.
       if (uploadingDoc) return;
 
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) {
-        showToast({
-          message: language === 'de' ? 'Erlaube den Fotozugriff in den Einstellungen, um deine Unterlagen hochzuladen.' : 'Allow photo access in Settings to upload your documents.',
-          action: { label: language === 'de' ? 'Einstellungen' : 'Settings', onPress: () => void Linking.openSettings() },
-        });
-        return;
-      }
+      // The system photo picker needs no library permission (PHPicker on
+      // iOS, the Photo Picker on Android): the user hands over one photo.
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],

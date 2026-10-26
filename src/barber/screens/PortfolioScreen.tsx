@@ -4,8 +4,8 @@
  * square grid with an add tile (brass plus) while under the cap.
  *
  * Upload + delete:
- * - the add tile mirrors VerifyScreen's expo-image-picker usage — request
- *   media-library permission, launchImageLibraryAsync, then the strict
+ * - the add tile mirrors VerifyScreen's expo-image-picker usage: the system
+ *   photo picker (no library permission), then the strict
  *   two-step data-layer flow uploadPortfolioImage (bytes → PUBLIC bucket) then
  *   insertPortfolioRow (path → own portfolio row). A failed upload never
  *   reaches the row insert; a successful insert is reflected optimistically in
@@ -31,7 +31,6 @@ import {
   ActivityIndicator,
   Image,
   LayoutAnimation,
-  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -168,14 +167,8 @@ export default function PortfolioScreen({ navigation }: Props) {
 
     busyRef.current = true;
     try {
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) {
-        showToast({
-          message: language === 'de' ? 'Erlaube den Fotozugriff in den Einstellungen, um Bilder hinzuzufügen.' : 'Allow photo access in Settings to add portfolio images.',
-          action: { label: language === 'de' ? 'Einstellungen' : 'Settings', onPress: () => void Linking.openSettings() },
-        });
-        return;
-      }
+      // The system photo picker needs no library permission (PHPicker on
+      // iOS, the Photo Picker on Android): the user hands over one photo.
 
       const picked = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],

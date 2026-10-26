@@ -256,8 +256,10 @@ describe('PortfolioScreen', () => {
         onPress();
       });
 
-      await waitFor(() => expect(mockRequestPerm).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(mockLaunchPicker).toHaveBeenCalledTimes(1));
       await waitFor(() => expect(mockUpload).toHaveBeenCalledTimes(1));
+      // The system picker needs no photo-library permission.
+      expect(mockRequestPerm).not.toHaveBeenCalled();
       await waitFor(() => expect(mockInsert).toHaveBeenCalledTimes(1));
       // The single upload's optimistic tile is reflected (flow fully settled).
       await waitFor(() => expect(screen.getByTestId('barber-portfolio-image-p1')).toBeTruthy());

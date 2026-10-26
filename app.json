@@ -14,7 +14,35 @@
         "ITSAppUsesNonExemptEncryption": false,
         "CFBundleAllowMixedLocalizations": true
       },
-      "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "C617.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategorySystemBootTime",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "35F9.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryDiskSpace",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "E174.1"
+            ]
+          }
+        ]
+      }
     },
     "android": {
       "package": "com.privelier.app",
@@ -26,7 +54,17 @@
       "predictiveBackGestureEnabled": true,
       "blockedPermissions": [
         "android.permission.READ_CALENDAR",
-        "android.permission.WRITE_CALENDAR"
+        "android.permission.WRITE_CALENDAR",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW"
       ]
     },
     "web": {
@@ -69,7 +107,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Privelier to choose photos for your portfolio and verification documents.",
+          "photosPermission": "Privelier lets you choose photos for your portfolio and verification documents. Only the photos you pick are shared.",
           "cameraPermission": false,
           "microphonePermission": false
         }
