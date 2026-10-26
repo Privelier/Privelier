@@ -7,6 +7,7 @@
  * (users RLS is own-row-only), so
  * it passes an empty map and its threads carry `barber: null` by design.
  */
+import { byId } from './lookup';
 import type {
   BarberDirectoryRow,
   BookingRow,
@@ -55,10 +56,10 @@ export function buildInboxThreads(
     const lastMessage = lastMessageByRoom.get(room.id) ?? null;
     return {
       room,
-      barber: barbersById.get(room.barber_id) ?? null,
+      barber: byId(barbersById, room.barber_id) ?? null,
       customer: customersByBookingId.get(room.booking_id) ?? null,
       booking,
-      service: booking ? (servicesById.get(booking.service_id) ?? null) : null,
+      service: booking ? (byId(servicesById, booking.service_id) ?? null) : null,
       lastMessage,
       lastActivityIso: lastMessage?.created_at ?? booking?.date ?? null,
     };

@@ -13,7 +13,8 @@
 /** The three columns of a message the unread computation needs. */
 export interface UnreadMessageInput {
   chat_id: string;
-  sender_id: string;
+  /** Null once the sender deleted their account. */
+  sender_id: string | null;
   created_at: string;
 }
 

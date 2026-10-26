@@ -70,6 +70,7 @@ import { formatBookingWhen, formatMoney } from '../format';
 import { GlassSegmentedControl } from '../../shared/components/GlassSegmentedControl';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { useTabBarClearance } from '../../shared/navigation/tabBarClearance';
+import { byId } from '../../shared/lookup';
 
 type TabKey = 'upcoming' | 'past';
 const TABS: { key: TabKey; label: string }[] = [
@@ -249,8 +250,10 @@ export default function BookingsScreen() {
 
   const leaveReview = useCallback(
     (row: BookingRow) => {
-      const barber = barbersById.get(row.barber_id);
-      const service = servicesById.get(row.service_id);
+      // The barber deleted their account: there is nobody left to review.
+      if (!row.barber_id) return;
+      const barber = byId(barbersById, row.barber_id);
+      const service = byId(servicesById, row.service_id);
       navigation.navigate('ReviewSubmit', {
         bookingId: row.id,
         barberId: row.barber_id,
@@ -294,8 +297,8 @@ export default function BookingsScreen() {
       });
       return;
     }
-    const barber = barbersById.get(row.barber_id);
-    const service = servicesById.get(row.service_id);
+    const barber = byId(barbersById, row.barber_id);
+    const service = byId(servicesById, row.service_id);
     setSelectedId(null);
     navigation.navigate('Conversation', {
       room: result.room,
@@ -315,8 +318,9 @@ export default function BookingsScreen() {
   }, [bookings]);
 
   const openLiveTrip = useCallback((item: BookingRow) => {
+    if (!item.barber_id) return;
     setSelectedId(null);
-    const barber = barbersById.get(item.barber_id);
+    const barber = byId(barbersById, item.barber_id);
     navigation.navigate('LiveTrip', {
       bookingId: item.id,
       context: {
@@ -326,7 +330,7 @@ export default function BookingsScreen() {
         barberImage: barber?.profile_image ?? null,
         address: item.location,
         whenText: formatBookingWhen(item.date, item.time),
-        serviceName: servicesById.get(item.service_id)?.name ?? null,
+        serviceName: byId(servicesById, item.service_id)?.name ?? null,
       },
     });
   }, [barbersById, servicesById, navigation]);
@@ -421,12 +425,12 @@ export default function BookingsScreen() {
         )}
       </Pressable>
     ) : null}
-    {!actionable && barbersById.has(item.barber_id) ? (
+    {!actionable && item.barber_id && barbersById.has(item.barber_id) ? (
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={de ? 'Erneut buchen' : 'Book again'}
         testID={`booking-rebook-${item.id}`}
-        onPress={() => { setSelectedId(null); navigation.navigate('BarberProfile', { barberId: item.barber_id }); }}
+        onPress={() => { if (!item.barber_id) return; setSelectedId(null); navigation.navigate('BarberProfile', { barberId: item.barber_id }); }}
         style={({ pressed }) => [styles.secondaryButton, { borderColor: colors.border }, pressed ? styles.reviewPressed : null]}
       >
         <Feather name="repeat" size={16} color={colors.textPrimary} />
@@ -436,11 +440,11 @@ export default function BookingsScreen() {
       </Pressable>
     ) : null}
     {item.status === 'accepted' ? (
-      <TrackLiveButton bookingId={item.id} barberName={barbersById.get(item.barber_id)?.name ?? 'Barber'} onOpen={() => openLiveTrip(item)} />
+      <TrackLiveButton bookingId={item.id} barberName={byId(barbersById, item.barber_id)?.name ?? 'Barber'} onOpen={() => openLiveTrip(item)} />
     ) : null}
     <AcceptedBookingTools
       booking={item}
-      calendarTitle={`${servicesById.get(item.service_id)?.name ?? (de ? 'Termin' : 'Appointment')} · ${barbersById.get(item.barber_id)?.name ?? 'Privelier'}`}
+      calendarTitle={`${byId(servicesById, item.service_id)?.name ?? (de ? 'Termin' : 'Appointment')} · ${byId(barbersById, item.barber_id)?.name ?? 'Privelier'}`}
       testIDPrefix={`booking-tools-${item.id}`}
     />
     {rowErrors[item.id] ? <Text accessibilityRole="alert" style={{ color: colors.errorText, marginTop: 16 }}>{rowErrors[item.id]}</Text> : null}
@@ -496,7 +500,7 @@ export default function BookingsScreen() {
                 <LiveTripBanner
                   key={item.id}
                   bookingId={item.id}
-                  barberName={barbersById.get(item.barber_id)?.name ?? 'Barber'}
+                  barberName={byId(barbersById, item.barber_id)?.name ?? 'Barber'}
                   onOpen={() => openLiveTrip(item)}
                 />
               ))}
@@ -520,8 +524,8 @@ export default function BookingsScreen() {
             />
           }
           renderItem={({ item, index }) => {
-            const barber = barbersById.get(item.barber_id);
-            const service = servicesById.get(item.service_id);
+            const barber = byId(barbersById, item.barber_id);
+            const service = byId(servicesById, item.service_id);
             const cancellationQueued = queued[item.id] === true;
             const rowError = rowErrors[item.id];
             return (
@@ -533,7 +537,7 @@ export default function BookingsScreen() {
                   <Pressable accessibilityRole="button" accessibilityLabel={`${de ? 'Termindetails' : 'Appointment details'}, ${barber?.name ?? 'Barber'}, ${formatBookingWhen(item.date, item.time)}`} testID={`customer-bookings-open-${item.id}`} onPress={() => setSelectedId(item.id)} style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}>
                   <View style={styles.cardMain}>
                     <Avatar
-                      id={barber?.id ?? item.barber_id}
+                      id={barber?.id ?? item.barber_id ?? item.id}
                       name={barber?.name}
                       imageUrl={barber?.profile_image}
                       size={56}
@@ -595,7 +599,7 @@ export default function BookingsScreen() {
           />
         </>
       )}
-      {selected ? <BookingDetails booking={selected} role="customer" person={barbersById.get(selected.barber_id)?.name ?? 'Barber'} service={servicesById.get(selected.service_id)?.name ?? (de ? 'Termin' : 'Appointment')} onClose={() => setSelectedId(null)}>{renderActions(selected)}</BookingDetails> : null}
+      {selected ? <BookingDetails booking={selected} role="customer" person={byId(barbersById, selected.barber_id)?.name ?? 'Barber'} service={byId(servicesById, selected.service_id)?.name ?? (de ? 'Termin' : 'Appointment')} onClose={() => setSelectedId(null)}>{renderActions(selected)}</BookingDetails> : null}
       <ConfirmSheet
         open={confirmingBooking !== null}
         title={de ? 'Diesen Termin stornieren?' : 'Cancel this booking?'}

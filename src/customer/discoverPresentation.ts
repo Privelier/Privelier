@@ -1,6 +1,7 @@
 import type { BarberDirectoryRow, BookingRow, ServiceRow } from '../types';
 import { bookingSlotStart, isUpcomingBooking } from '../shared/bookingTime';
 import { formatBookingWhen } from '../shared/format';
+import { byId } from '../shared/lookup';
 
 export const MAX_DISCOVER_SERVICE_FILTERS = 6;
 
@@ -195,8 +196,8 @@ export function selectUpNext(
   if (!next) return null;
   return {
     booking: next,
-    barber: barbersById.get(next.barber_id) ?? null,
-    service: servicesById.get(next.service_id) ?? null,
+    barber: byId(barbersById, next.barber_id) ?? null,
+    service: byId(servicesById, next.service_id) ?? null,
     laterCount: upcoming.length - 1,
   };
 }
@@ -217,7 +218,7 @@ export function selectRebookBarbers(
   const seen = new Set<string>();
   const result: BarberDirectoryRow[] = [];
   for (const booking of completed) {
-    if (seen.has(booking.barber_id)) continue;
+    if (!booking.barber_id || seen.has(booking.barber_id)) continue;
     seen.add(booking.barber_id);
     const barber = barbersById.get(booking.barber_id);
     if (barber) result.push(barber);

@@ -88,9 +88,11 @@ export type BookingStatus = 'pending' | 'accepted' | 'rejected' | 'completed' | 
  */
 export interface BookingRow {
   id: string;
-  customer_id: string;
-  barber_id: string;
-  service_id: string;
+  /** Null once that participant deleted their account (migration 0057). */
+  customer_id: string | null;
+  barber_id: string | null;
+  /** Null once the barber deleted the service; price/duration are snapshots. */
+  service_id: string | null;
   date: string;
   time: string;
   location: string;
@@ -116,8 +118,9 @@ export interface BookingRow {
 export interface ReviewRow {
   id: string;
   booking_id: string;
-  customer_id: string;
-  barber_id: string;
+  /** Null once that person deleted their account (migration 0057). */
+  customer_id: string | null;
+  barber_id: string | null;
   rating: number;
   comment: string | null;
   created_at: string | null;
@@ -185,8 +188,9 @@ export type VerificationDocType = 'id' | 'license';
 export interface ChatRoomRow {
   id: string;
   booking_id: string;
-  customer_id: string;
-  barber_id: string;
+  /** Null once that participant deleted their account (migration 0057). */
+  customer_id: string | null;
+  barber_id: string | null;
 }
 
 /**
@@ -196,7 +200,8 @@ export interface ChatRoomRow {
 export interface MessageRow {
   id: string;
   chat_id: string;
-  sender_id: string;
+  /** Null once the sender deleted their account (migration 0057). */
+  sender_id: string | null;
   message: string;
   created_at: string;
 }

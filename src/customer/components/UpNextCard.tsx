@@ -121,7 +121,7 @@ export function UpNextCard({ upNext, onPress }: Props) {
         </Text>
 
         <View style={styles.personRow}>
-          <Avatar id={booking.barber_id} name={barberName} imageUrl={barber?.profile_image} size={40} accessible={false} />
+          <Avatar id={booking.barber_id ?? booking.id} name={barberName} imageUrl={barber?.profile_image} size={40} accessible={false} />
           <View style={styles.personText}>
             <Text numberOfLines={1} style={[typeScale.body, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>
               {serviceName ?? barberName}

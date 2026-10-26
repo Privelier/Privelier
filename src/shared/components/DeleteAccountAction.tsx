@@ -1,9 +1,9 @@
 /**
- * "Delete account" for both apps (migration 0043). A destructive row
- * opens a confirmation sheet that states exactly what is removed; the server
- * function deletes only the signed-in account and refuses while a booking is
- * pending or accepted, which is surfaced as guidance rather than an error.
- * After a successful deletion the local session is cleared via `onDeleted`.
+ * "Delete account" for both apps. The sheet states exactly what happens and
+ * needs the word DELETE (LÖSCHEN) typed before it acts. The server
+ * (delete-account Edge Function + delete_own_account, migration 0057)
+ * cancels upcoming bookings, erases the account and keeps the other
+ * person's history anonymized. After success `onDeleted` clears the session.
  */
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
@@ -60,8 +60,11 @@ export function DeleteAccountAction({ onDeleted, testID }: { onDeleted: () => vo
         open={confirming}
         title={de ? 'Konto endgültig löschen?' : 'Delete your account?'}
         message={de
-          ? 'Dein Profil, deine Termine, Chats, Bewertungen und Bilder werden dauerhaft gelöscht. Das kann nicht rückgängig gemacht werden. Offene oder bestätigte Termine musst du vorher absagen.'
-          : 'Your profile, bookings, chats, reviews and photos are permanently deleted. This cannot be undone. Pending or accepted bookings must be cancelled first.'}
+          ? 'Dein Profil, deine Fotos und Dokumente werden dauerhaft gelöscht, offene und kommende Termine werden abgesagt. Wer mit dir gebucht oder geschrieben hat, behält den Verlauf ohne deinen Namen. Das kann nicht rückgängig gemacht werden.'
+          : 'Your profile, photos and documents are permanently deleted, and pending or upcoming bookings are cancelled. People you booked or chatted with keep their history without your name. This cannot be undone.'}
+        confirmPhrase={de
+          ? { word: 'LÖSCHEN', prompt: 'Tippe LÖSCHEN, um zu bestätigen' }
+          : { word: 'DELETE', prompt: 'Type DELETE to confirm' }}
         confirmLabel={de ? 'Endgültig löschen' : 'Delete permanently'}
         cancelLabel={de ? 'Behalten' : 'Keep account'}
         destructive

@@ -81,6 +81,7 @@ import { formatBookingWhen, formatMoney } from '../../shared/format';
 import { getAppLanguage } from '../../shared/locale';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { useTabBarClearance } from '../../shared/navigation/tabBarClearance';
+import { byId } from '../../shared/lookup';
 
 /**
  * Confirm an irreversible transition before running it, matching the
@@ -356,14 +357,14 @@ export default function RequestsScreen() {
           navigation.navigate('Trip', {
             booking: item,
             customerName: counterpartsById.get(item.id)?.name ?? (language === 'de' ? 'Kunde' : 'Customer'),
-            serviceName: servicesById.get(item.service_id)?.name ?? (language === 'de' ? 'Termin' : 'Appointment'),
+            serviceName: byId(servicesById, item.service_id)?.name ?? (language === 'de' ? 'Termin' : 'Appointment'),
           });
         }}
       />
     ) : null}
     <AcceptedBookingTools
       booking={item}
-      calendarTitle={`${servicesById.get(item.service_id)?.name ?? (language === 'de' ? 'Termin' : 'Appointment')} · ${counterpartsById.get(item.id)?.name ?? (language === 'de' ? 'Kunde' : 'Customer')}`}
+      calendarTitle={`${byId(servicesById, item.service_id)?.name ?? (language === 'de' ? 'Termin' : 'Appointment')} · ${counterpartsById.get(item.id)?.name ?? (language === 'de' ? 'Kunde' : 'Customer')}`}
       showDirections
       testIDPrefix={`barber-booking-tools-${item.id}`}
     />
@@ -434,7 +435,7 @@ export default function RequestsScreen() {
           ) : undefined}
           renderItem={({ item, index, section }) => {
             if (section.key === 'history' && !historyExpanded) return null;
-            const service = servicesById.get(item.service_id);
+            const service = byId(servicesById, item.service_id);
             const counterpart = counterpartsById.get(item.id);
             const rowError = rowErrors[item.id];
             // Lead with the customer's name when known; fall back to service.
@@ -446,7 +447,7 @@ export default function RequestsScreen() {
                   <Pressable accessibilityRole="button" accessibilityLabel={`${language === 'de' ? 'Termindetails' : 'Appointment details'}, ${title}, ${formatBookingWhen(item.date, item.time)}`} testID={`barber-requests-open-${item.id}`} onPress={() => setSelectedId(item.id)} style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}>
                   <View style={styles.cardTop}>
                     <Avatar
-                      id={counterpart?.id ?? item.customer_id}
+                      id={counterpart?.id ?? item.customer_id ?? item.id}
                       name={counterpart?.name}
                       imageUrl={counterpart?.profile_image}
                       size={44}
@@ -495,7 +496,7 @@ export default function RequestsScreen() {
           />
         </>
       )}
-      {selected ? <BookingDetails booking={selected} role="barber" person={counterpartsById.get(selected.id)?.name ?? (language === 'de' ? 'Kunde' : 'Customer')} service={servicesById.get(selected.service_id)?.name ?? (language === 'de' ? 'Termin' : 'Appointment')} onClose={() => setSelectedId(null)}>{renderActions(selected)}</BookingDetails> : null}
+      {selected ? <BookingDetails booking={selected} role="barber" person={counterpartsById.get(selected.id)?.name ?? (language === 'de' ? 'Kunde' : 'Customer')} service={byId(servicesById, selected.service_id)?.name ?? (language === 'de' ? 'Termin' : 'Appointment')} onClose={() => setSelectedId(null)}>{renderActions(selected)}</BookingDetails> : null}
       <ConfirmSheet open={confirmation !== null} title={confirmation?.title ?? ''} message={language === 'de' ? 'Diese Aktion kann nicht r\u00fcckg\u00e4ngig gemacht werden.' : 'This cannot be undone.'} confirmLabel={confirmation?.label ?? ''} cancelLabel={language === 'de' ? 'Behalten' : 'Keep'} destructive testID="barber-request-confirm" onClose={() => setConfirmation(null)} onConfirm={() => { const action = confirmation?.action; setConfirmation(null); action?.(); }} />
       <CelebrationOverlay message={celebration} onDone={clearCelebration} testID="barber-requests-celebration" />
     </SafeAreaView>

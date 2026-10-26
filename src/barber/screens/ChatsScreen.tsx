@@ -144,7 +144,7 @@ export default function ChatsScreen({ navigation }: Props) {
                   style={({ pressed }) => [styles.row, pressed ? { opacity: pressOpacity.soft } : null]}
                 >
                 <Avatar
-                  id={item.customer?.id ?? item.room.customer_id}
+                  id={item.customer?.id ?? item.room.customer_id ?? item.room.id}
                   name={item.customer?.name}
                   imageUrl={item.customer?.profile_image}
                   size={48}

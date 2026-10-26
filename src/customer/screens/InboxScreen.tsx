@@ -155,7 +155,7 @@ export default function InboxScreen({ navigation }: Props) {
                   style={({ pressed }) => [styles.row, pressed ? { opacity: pressOpacity.soft } : null]}
                 >
                 <Avatar
-                  id={item.barber?.id ?? item.room.barber_id}
+                  id={item.barber?.id ?? item.room.barber_id ?? item.room.id}
                   name={item.barber?.name}
                   imageUrl={item.barber?.profile_image}
                   size={48}
