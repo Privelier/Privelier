@@ -32,6 +32,7 @@ import type {
   SubmitVerificationDocumentResult,
   UploadVerificationDocumentResult,
 } from './types';
+import type { TablesUpdate } from '../database.types';
 
 /** Private Supabase Storage bucket for ID/license images. Never public. */
 const VERIFICATION_BUCKET = 'verification-docs';
@@ -113,6 +114,14 @@ export async function uploadVerificationDocument(
 /** Postgres unique_violation — here only ever UNIQUE(user_id). */
 const UNIQUE_VIOLATION = '23505';
 
+/** Exactly one document column, typed against the table. */
+function documentPatch(
+  column: 'id_image_url' | 'license_image_url',
+  path: string
+): TablesUpdate<'verification_requests'> {
+  return column === 'id_image_url' ? { id_image_url: path } : { license_image_url: path };
+}
+
 /**
  * UPDATE the one image column on the barber's own row.
  * Resolves to `null` when no row matched, which means either "no row yet"
@@ -127,7 +136,7 @@ async function updateOwnDocumentColumn(
 ): Promise<SubmitVerificationDocumentResult | null> {
   const { data, error } = await supabase
     .from('verification_requests')
-    .update({ [column]: path })
+    .update(documentPatch(column, path))
     .eq('user_id', userId)
     .select()
     .maybeSingle();
@@ -165,7 +174,7 @@ export async function submitVerificationDocument(
 
   const { data, error } = await supabase
     .from('verification_requests')
-    .insert({ user_id: userId, [column]: path })
+    .insert({ user_id: userId, ...documentPatch(column, path) })
     .select()
     .single();
 

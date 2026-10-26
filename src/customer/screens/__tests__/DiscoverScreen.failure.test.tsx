@@ -71,6 +71,10 @@ const profile: UsersRow = {
   country: 'Germany',
   profile_image: null,
   created_at: '2026-09-21T00:00:00.000Z',
+  accepted_privacy_version: null,
+  accepted_terms_version: null,
+  adult_confirmed_at: null,
+  legal_accepted_at: null,
 };
 
 const amir: BarberDirectoryRow = {

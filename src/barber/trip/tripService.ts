@@ -229,13 +229,14 @@ async function sendUpdate(
     p_booking_id: trip.bookingId,
     p_latitude: position[1],
     p_longitude: position[0],
-    p_heading: heading,
-    p_speed_mps: speed,
-    p_accuracy_m: accuracy,
+    // Absent optional values are omitted; the RPC defaults them to null.
+    p_heading: heading ?? undefined,
+    p_speed_mps: speed ?? undefined,
+    p_accuracy_m: accuracy ?? undefined,
     p_remaining_distance_m: Math.round(snapshot.remainingM),
     p_eta_seconds: snapshot.etaS,
-    p_route_polyline: newRoute ? toPersistedRoute(newRoute).polyline : null,
-    p_route_source: newRoute ? newRoute.source : null,
+    p_route_polyline: newRoute ? toPersistedRoute(newRoute).polyline : undefined,
+    p_route_source: newRoute ? newRoute.source : undefined,
   });
   if (error) {
     devWarn('[trip] update failed', error);

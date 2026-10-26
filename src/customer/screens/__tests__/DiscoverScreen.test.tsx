@@ -84,6 +84,10 @@ const profile: UsersRow = {
   country: 'Germany',
   profile_image: null,
   created_at: '2026-09-21T00:00:00.000Z',
+  accepted_privacy_version: null,
+  accepted_terms_version: null,
+  adult_confirmed_at: null,
+  legal_accepted_at: null,
 };
 
 const barbers: BarberDirectoryRow[] = [
@@ -279,6 +283,10 @@ function booking(id: string, overrides: Partial<BookingRow>): BookingRow {
     duration_minutes: 45,
     status: 'pending',
     created_at: '2026-09-21T00:00:00.000Z',
+    idempotency_key: null,
+    location_latitude: null,
+    location_longitude: null,
+    slot: null,
     ...overrides,
   };
 }

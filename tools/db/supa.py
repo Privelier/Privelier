@@ -8,6 +8,7 @@ database tests run against the project inside explicit transactions:
   python tools/db/supa.py apply FILE...            apply + record, COMMIT
   python tools/db/supa.py pending                  migration files not yet recorded
   python tools/db/supa.py test [FILE...]           run supabase/tests/*.sql
+  python tools/db/supa.py types                    regenerate src/database.types.ts
 
 Every test file opens with BEGIN and ends with ROLLBACK, so tests create
 only synthetic rows that never commit. Needs SUPABASE_ACCESS_TOKEN (a
@@ -203,6 +204,22 @@ def cmd_test(args: list[str]) -> None:
         sys.exit(1)
 
 
+def cmd_types() -> None:
+    token = os.environ.get("SUPABASE_ACCESS_TOKEN")
+    if not token:
+        sys.exit("SUPABASE_ACCESS_TOKEN is not set")
+    request = urllib.request.Request(
+        f"https://api.supabase.com/v1/projects/{project_ref()}/types/typescript?included_schemas=public",
+        headers={"Authorization": f"Bearer {token}", "User-Agent": "privelier-tools"},
+    )
+    with urllib.request.urlopen(request, timeout=120) as response:
+        types = json.load(response)["types"]
+    out = ROOT / "src" / "database.types.ts"
+    header = "// Generated from the live database schema: `npm run db:types`. Do not edit.\n"
+    out.write_text(header + types, encoding="utf-8")
+    print(f"wrote {out.relative_to(ROOT)}")
+
+
 def main() -> None:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
@@ -219,6 +236,8 @@ def main() -> None:
         cmd_pending()
     elif command == "test":
         cmd_test(args)
+    elif command == "types":
+        cmd_types()
     else:
         sys.exit(__doc__)
 

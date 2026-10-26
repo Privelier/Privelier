@@ -20,6 +20,10 @@ function booking(overrides: Partial<BookingRow>): BookingRow {
     duration_minutes: 45,
     status: 'accepted',
     created_at: '2026-07-01T00:00:00Z',
+    idempotency_key: null,
+    location_latitude: null,
+    location_longitude: null,
+    slot: null,
     ...overrides,
   };
 }

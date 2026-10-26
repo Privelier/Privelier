@@ -48,7 +48,7 @@ const ROUTE = {
 const booking = (over: Partial<BookingRow> = {}): BookingRow => ({
   id: 'booking-1', customer_id: 'c', barber_id: 'b', service_id: 's', date: '2026-10-25', time: '14:00:00',
   location: 'Hauptmarkt 18, Nürnberg', location_latitude: DEST[1], location_longitude: DEST[0],
-  price: 30, duration_minutes: 45, status: 'accepted', created_at: '', ...over,
+  price: 30, duration_minutes: 45, status: 'accepted', created_at: '', idempotency_key: null, slot: null, ...over,
 });
 
 beforeEach(async () => {

@@ -22,6 +22,7 @@ import type {
   ListAvailabilityResult,
   UpdateAvailabilityResult,
 } from './types';
+import type { TablesUpdate } from '../database.types';
 
 /** All availability windows owned by the given barber. Public read (RLS: select_all). */
 export async function listOwnAvailability(barberId: string): Promise<ListAvailabilityResult> {
@@ -74,7 +75,7 @@ export async function updateAvailabilityWindow(
   id: string,
   patch: AvailabilityPatch
 ): Promise<UpdateAvailabilityResult> {
-  const update: Record<string, unknown> = {};
+  const update: TablesUpdate<'availability'> = {};
   if (patch.dayOfWeek !== undefined) update.day_of_week = patch.dayOfWeek;
   if (patch.specificDate !== undefined) update.specific_date = patch.specificDate;
   if (patch.startTime !== undefined) update.start_time = patch.startTime;

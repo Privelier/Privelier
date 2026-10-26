@@ -28,9 +28,11 @@ export async function fetchLiveTripContext(bookingId: string): Promise<LiveTripC
     if (error) devWarn('[liveTripData] booking', error);
     return null;
   }
+  // The barber deleted their account: there is no trip to follow.
+  if (!booking.barber_id) return null;
   const [barber, service] = await Promise.all([
     supabase.from('barber_directory').select('id, name, profile_image').eq('id', booking.barber_id).maybeSingle(),
-    supabase.from('services').select('name').eq('id', booking.service_id).maybeSingle(),
+    booking.service_id ? supabase.from('services').select('name').eq('id', booking.service_id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   return {
     bookingId,

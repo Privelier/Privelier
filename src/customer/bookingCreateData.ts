@@ -64,8 +64,8 @@ export async function insertBooking(input: {
     p_time: input.time,
     p_location: location,
     p_idempotency_key: input.idempotencyKey,
-    p_latitude: input.coordinates?.latitude ?? null,
-    p_longitude: input.coordinates?.longitude ?? null,
+    p_latitude: input.coordinates?.latitude,
+    p_longitude: input.coordinates?.longitude,
   });
 
   if (error) {

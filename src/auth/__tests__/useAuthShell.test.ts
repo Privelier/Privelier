@@ -54,6 +54,10 @@ function makeProfile(overrides: Partial<UsersRow> = {}): UsersRow {
     country: null,
     profile_image: null,
     created_at: '2026-01-01T00:00:00.000Z',
+    accepted_privacy_version: null,
+    accepted_terms_version: null,
+    adult_confirmed_at: null,
+    legal_accepted_at: null,
     ...overrides,
   };
 }

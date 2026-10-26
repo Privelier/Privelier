@@ -21,6 +21,7 @@ import type {
   ServicePatch,
   UpdateServiceResult,
 } from './types';
+import type { TablesUpdate } from '../database.types';
 
 /** All services owned by the given barber. Public read (RLS: select_all). */
 export async function listOwnServices(barberId: string): Promise<ListServicesResult> {
@@ -64,7 +65,7 @@ export async function updateService(
   serviceId: string,
   patch: ServicePatch
 ): Promise<UpdateServiceResult> {
-  const update: Record<string, unknown> = {};
+  const update: TablesUpdate<'services'> = {};
   if (patch.name !== undefined) update.name = patch.name;
   if (patch.price !== undefined) update.price = patch.price;
   if (patch.durationMinutes !== undefined) update.duration_minutes = patch.durationMinutes;

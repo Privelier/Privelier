@@ -43,7 +43,7 @@ export async function fetchOwnChatsView(): Promise<OwnChatsViewResult> {
   for (const row of (bookingsResult.data as BookingRow[]) ?? []) bookingsById.set(row.id, row);
 
   const servicesById = new Map<string, ServiceRow>();
-  const serviceIds = [...new Set([...bookingsById.values()].map((b) => b.service_id))];
+  const serviceIds = [...new Set([...bookingsById.values()].flatMap((b) => (b.service_id ? [b.service_id] : [])))];
   if (serviceIds.length > 0) {
     const servicesResult = await supabase.from('services').select('*').in('id', serviceIds);
     for (const row of (servicesResult.data as ServiceRow[]) ?? []) servicesById.set(row.id, row);

@@ -2,7 +2,7 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "entry": ["components/ui/**/*.web.{ts,tsx}"],
   "project": ["src/**/*.{ts,tsx}", "lib/**/*.ts", "components/**/*.{ts,tsx}", "App.tsx"],
-  "ignore": ["components/ui/**"],
+  "ignore": ["components/ui/**", "src/database.types.ts"],
   "ignoreBinaries": ["gitleaks"],
   "ignoreDependencies": ["react-aria", "react-stately", "tailwind-variants", "expo-updates"]
 }

@@ -44,8 +44,8 @@ describe('insertBooking', () => {
       p_time: '09:00:00',
       p_location: '123 Example Street',
       p_idempotency_key: 'key-1',
-      p_latitude: null,
-      p_longitude: null,
+      p_latitude: undefined,
+      p_longitude: undefined,
     });
   });
 

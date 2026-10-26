@@ -193,6 +193,10 @@ function row(id: string, date: string, time: string, status: BookingRow['status'
     duration_minutes: 45,
     status,
     created_at: '2026-10-01T00:00:00.000Z',
+    idempotency_key: null,
+    location_latitude: null,
+    location_longitude: null,
+    slot: null,
   };
 }
 

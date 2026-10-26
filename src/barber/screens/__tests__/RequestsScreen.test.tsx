@@ -90,6 +90,10 @@ const BOOKING: BookingRow = {
   duration_minutes: 60,
   status: 'accepted',
   created_at: '2099-09-01T12:00:00.000Z',
+  idempotency_key: null,
+  location_latitude: null,
+  location_longitude: null,
+  slot: null,
 };
 
 const SERVICE: ServiceRow = {
