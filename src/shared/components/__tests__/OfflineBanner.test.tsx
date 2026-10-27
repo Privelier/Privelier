@@ -19,6 +19,9 @@ function setNet(isConnected: boolean | null, isInternetReachable: boolean | null
 }
 
 beforeEach(() => {
+  // restoreAllMocks does not reset this spy here, and spyOn then reuses it;
+  // without a clear, the previous test's announcement leaks into the next.
+  jest.clearAllMocks();
   jest.useFakeTimers();
   jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => {});
 });

@@ -225,7 +225,8 @@ describe('StudioScreen dashboard', () => {
     expect(screen.queryByTestId('barber-dashboard-bio')).toBeNull();
 
     // Analytics show genuine server aggregates and the next accepted appointment.
-    expect(screen.getByText('2')).toBeTruthy();
+    // By label, not text: counting-up metrics pass through other numbers mid-animation.
+    expect(screen.getByLabelText('2 pending requests. View requests.')).toBeTruthy();
     expect(screen.getByText('Open requests')).toBeTruthy();
     expect(screen.getByText('Booking value this month')).toBeTruthy();
     expect(screen.getByText(/No payments are processed/)).toBeTruthy();
@@ -252,15 +253,15 @@ describe('StudioScreen dashboard', () => {
     expect(
       screen.getByTestId('barber-dashboard-readiness-services').props.accessibilityState?.disabled
     ).toBe(true);
-    fireEvent.press(screen.getByTestId('barber-dashboard-readiness-availability'));
+    await fireEvent.press(screen.getByTestId('barber-dashboard-readiness-availability'));
     expect(navigation.navigate).toHaveBeenCalledWith('Availability');
 
     // Incomplete dashboard readiness items still deep-link to their editor.
-    fireEvent.press(screen.getByTestId('barber-dashboard-readiness-bio'));
+    await fireEvent.press(screen.getByTestId('barber-dashboard-readiness-bio'));
     expect(navigation.navigate).toHaveBeenCalledWith('BioEdit');
 
     // The overview deep-links to Requests (glance only — Requests owns mutations).
-    fireEvent.press(screen.getByTestId('barber-dashboard-overview'));
+    await fireEvent.press(screen.getByTestId('barber-dashboard-overview'));
     expect(navigation.navigate).toHaveBeenCalledWith('Requests');
   });
 

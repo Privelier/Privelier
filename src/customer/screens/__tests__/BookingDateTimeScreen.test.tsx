@@ -33,6 +33,8 @@ beforeEach(() => {
   jest.mocked(listBarberAvailability).mockReset();
   jest.mocked(listBarberBusySlots).mockReset();
   jest.mocked(listBarberBusySlotsRange).mockReset();
+  // No days off unless a test says so (one test marks a Wednesday off).
+  jest.mocked(listBarberDaysOff).mockReset().mockResolvedValue(new Set());
 });
 
 it('shows neutral date and slot shapes until real availability is known', async () => {

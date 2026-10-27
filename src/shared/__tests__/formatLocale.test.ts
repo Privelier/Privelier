@@ -3,6 +3,9 @@ import { getAppLanguage } from '../locale';
 
 jest.mock('../locale', () => ({ getAppLanguage: jest.fn(() => 'de') }));
 
+// Each test starts in German; the fallback test switches to English itself.
+beforeEach(() => jest.mocked(getAppLanguage).mockReturnValue('de'));
+
 it('uses German currency, appointment dates and chat day labels together', () => {
   expect(formatMoney(35)).toBe('35\u00a0€');
   expect(formatMoney(35.5)).toBe('35,50\u00a0€');
