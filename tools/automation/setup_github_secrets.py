@@ -3,7 +3,8 @@
     py tools/automation/setup_github_secrets.py
 
 It reads your Supabase personal access token from SUPABASE_ACCESS_TOKEN,
-asks the Supabase Management API for this project's service_role key, and
+asks the Supabase Management API for this project's secret key (the new
+`sb_secret_` key; the legacy service_role JWT only as a fallback), and
 pipes it straight into `gh secret set` over stdin. The key is never printed,
 logged, written to disk or passed on a command line. Then it triggers the
 workflow once so you can watch the first run.
@@ -40,19 +41,20 @@ def main() -> int:
     )
     with urllib.request.urlopen(request, timeout=30) as response:
         keys = json.loads(response.read())
-    service = next(
-        (k.get("api_key") for k in keys if k.get("name") == "service_role" or k.get("type") == "secret"),
-        None,
-    )
-    if not service:
-        sys.exit("No service_role / secret key returned for this project.")
+    # Prefer the new secret key: the legacy service_role key is disabled in F5.
+    secret = next((k.get("api_key") for k in keys if k.get("type") == "secret" and k.get("api_key")), None)
+    secret = secret or next((k.get("api_key") for k in keys if k.get("name") == "service_role"), None)
+    if not secret:
+        sys.exit("No secret key returned for this project (Project Settings > API Keys > create a secret key).")
 
-    for name, value in (("SUPABASE_URL", f"https://{ref}.supabase.co"), ("SUPABASE_SERVICE_ROLE_KEY", service)):
+    for name, value in (("SUPABASE_URL", f"https://{ref}.supabase.co"), ("SUPABASE_SECRET_KEY", secret)):
         result = subprocess.run(["gh", "secret", "set", name, "--body", "-"], input=value, text=True, capture_output=True, cwd=REPO)
         if result.returncode != 0:
             sys.exit(f"gh secret set {name} failed: {result.stderr.strip()}")
         print(f"set {name}")
 
+    # The old secret name is no longer read by the workflow.
+    subprocess.run(["gh", "secret", "delete", "SUPABASE_SERVICE_ROLE_KEY"], cwd=REPO, capture_output=True, check=False)
     subprocess.run(["gh", "workflow", "run", "barber-stats.yml"], cwd=REPO, check=False)
     print("Triggered 'Barber stats'. Watch it with: gh run watch")
     return 0

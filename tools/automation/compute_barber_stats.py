@@ -6,7 +6,8 @@ notifications with the service_role key and upserts one aggregate row per
 barber. The statistics live in barber_stats.py (pure, unit-tested).
 
 Environment (never files) — either backend works:
-  SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY   PostgREST as service_role (GitHub Actions)
+  SUPABASE_URL + SUPABASE_SECRET_KEY         PostgREST with the sb_secret_ key (GitHub Actions);
+                                             the legacy SUPABASE_SERVICE_ROLE_KEY JWT still works
   SUPABASE_ACCESS_TOKEN                      founder's personal access token: same job via the
                                              Supabase Management API (handy locally)
 
@@ -50,7 +51,11 @@ def supabase_url() -> str:
 class Rest:
     def __init__(self, url: str, key: str):
         self.url = url
-        self.headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+        self.headers = {"apikey": key, "Content-Type": "application/json"}
+        # New sb_secret_ keys go in `apikey` only (they are not JWTs); a
+        # legacy service_role JWT is also sent as the bearer token.
+        if not key.startswith("sb_"):
+            self.headers["Authorization"] = f"Bearer {key}"
 
     def get_all(self, path: str) -> list[dict]:
         rows: list[dict] = []
@@ -124,11 +129,11 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
-    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    key = os.environ.get("SUPABASE_SECRET_KEY") or os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
     pat = os.environ.get("SUPABASE_ACCESS_TOKEN")
     if not key and not pat:
         # On a fork or before the secret exists this is a no-op, not a failure.
-        print("::notice::No SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ACCESS_TOKEN — skipping barber stats.")
+        print("::notice::No SUPABASE_SECRET_KEY, SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ACCESS_TOKEN — skipping barber stats.")
         return 0
     today = datetime.now(timezone.utc).date()
     since = (today - timedelta(days=WINDOW_DAYS + 30)).isoformat()

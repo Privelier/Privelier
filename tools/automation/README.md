@@ -25,9 +25,10 @@ appointments.
 **Runs on:**
 - **GitHub Actions** (`.github/workflows/barber-stats.yml`) at 02:17 UTC
   daily, and on demand from the Actions tab. Add the repository secrets
-  `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`; until then the job logs a
-  notice and exits cleanly.
-- **Locally**, with either `SUPABASE_SERVICE_ROLE_KEY` or your
+  `SUPABASE_URL` and `SUPABASE_SECRET_KEY` (the `sb_secret_` key; run
+  `py tools/automation/setup_github_secrets.py` once); until then the job logs
+  a notice and exits cleanly.
+- **Locally**, with either `SUPABASE_SECRET_KEY` or your
   `SUPABASE_ACCESS_TOKEN` (the Management API backend):
 
 ```bash

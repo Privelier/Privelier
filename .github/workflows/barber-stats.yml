@@ -1,7 +1,7 @@
 # Nightly barber stats (migration 0050): response times, popular times and
 # repeat-client rates for the app's trust/planning components.
 # Free on GitHub Actions; no server to run. Needs two repository secrets:
-#   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+#   SUPABASE_URL, SUPABASE_SECRET_KEY (the sb_secret_ key)
 # Without them the job logs a notice and exits successfully.
 name: Barber stats
 
@@ -31,5 +31,5 @@ jobs:
       - name: Compute and upsert barber_stats
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
         run: python tools/automation/compute_barber_stats.py
