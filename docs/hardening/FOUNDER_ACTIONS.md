@@ -34,13 +34,13 @@ Steps that need a dashboard, an account owner or a product decision. Work top to
 
 ## Supabase dashboard
 
-- [ ] **F10. Realtime: turn off "Allow public access"** (Project Settings > Realtime). The only Broadcast channel (typing) is already private; chat and booking updates use Postgres Changes, which Supabase documents as allowed on public and private channels. After switching, check on a device that chat messages, booking status and typing still arrive; switch back and report if not.
+- [ ] **F10. Realtime: turn off "Allow public access"** (Project Settings > Realtime). The only Broadcast channel (typing) is already private; chat and booking updates use Postgres Changes, which Supabase documents as allowed on public and private channels. After switching, check on a device that chat messages, booking status and typing still arrive; switch back and report if not. Founder decision 2026-10-27: do this together with a device check, not blind.
 - [ ] **F11. Auth hardening** (Authentication settings):
   - Email confirmation on; OTP and link expiry 3600 seconds or less.
   - Rate limits: lower sign-up, OTP and verification limits to what two founders expect (the default allows 360 OTPs per hour per project).
   - Leaked-password protection on (Supabase lists it as disabled; it needs the Pro plan).
   - Redirect URLs: exact entries only (`privelier://auth-callback` and the exact web URLs), no wildcards.
-  - Live values read on 2026-10-27 through the Management API: email confirmation on, email OTP expiry 3600 s, redirect allow list exactly `privelier://auth-callback`, email sends 2 per hour, OTP and verify 30 each, refresh-token rotation on, reauthentication required to change a password, password rule lower + upper + digit + symbol with minimum length 6, leaked-password protection off, CAPTCHA off. Still to decide: leaked-password protection (Pro plan) and whether to lower the OTP/verify limits further.
+  - Live values read on 2026-10-27 through the Management API: email confirmation on, email OTP expiry 3600 s, redirect allow list exactly `privelier://auth-callback`, email sends 2 per hour, OTP and verify 30 each, refresh-token rotation on, reauthentication required to change a password, password rule lower + upper + digit + symbol with minimum length 6, leaked-password protection off, CAPTCHA off. OTP and verification limits lowered to 10 per hour on 2026-10-27 (founder decision, set through the Management API). Still open: leaked-password protection (Pro plan; not taken with D25) and CAPTCHA below.
   - CAPTCHA (Cloudflare Turnstile): the app is ready. Create a Turnstile widget whose allowed hostname matches `EXPO_PUBLIC_CAPTCHA_ORIGIN` (default `privelier.app`), set `EXPO_PUBLIC_CAPTCHA_SITE_KEY` (and the origin, if different) in EAS, ship that build, and only then enable Bot protection in Supabase with the widget's secret key. Enabling it before the build ships blocks sign-in on older versions.
 - [ ] **F12. Organisation security:** MFA for every member of the Supabase organisation, remove anyone who does not need access, and set a spend cap or usage alerts.
 - [x] **F13. API max rows:** confirmed 1000 on 2026-10-27 through the Management API (every app list caps itself at 300 or fewer).
@@ -50,8 +50,8 @@ Steps that need a dashboard, an account owner or a product decision. Work top to
 
 - [x] **F15. Travel time between appointments.** Decided on 2026-10-27: 30 minutes after every active booking (decision D4, migration 0060, live).
 - [x] **F16. One app or two store listings.** Decided on 2026-10-27: one app, `com.privelier.app`, with the customer/barber choice (decision D18).
-- [ ] **F17. Content denylist.** Review and extend `private.content_denylist` (Supabase SQL editor: `insert into private.content_denylist (term) values ('...');`). Matching is whole-word, case-insensitive.
-- [ ] **F18. Safety and reports process.** Decided on 2026-10-27 (decision D24): both founders, reports within 24 hours, SOS at once; warn, then suspend, then remove. Migration 0061 (live) pushes an alert to the staff list. Remaining: each founder signs in on their phone, allows notifications, and adds their account once in the Supabase SQL editor: `insert into private.safety_staff (user_id) select id from auth.users where email = '<your email>';`
+- [x] **F17. Content denylist.** Reviewed on 2026-10-27: the current list (decision D19) stays for launch. Extend it later in `private.content_denylist` (`insert into private.content_denylist (term) values ('...');`); matching is whole-word, case-insensitive.
+- [ ] **F18. Safety and reports process.** Decided on 2026-10-27 (decision D24): both founders, reports within 24 hours, SOS at once; warn, then suspend, then remove. Migration 0061 (live) pushes an alert to the staff list. `privelier@outlook.com` was added to the staff list on 2026-10-27 (no device registered yet). Remaining: sign in with that account on a phone and allow notifications; to add the other founder later: `insert into private.safety_staff (user_id) select id from auth.users where email = '<your email>';`
 
 ## Store submission
 
