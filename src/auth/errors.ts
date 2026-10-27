@@ -16,6 +16,7 @@ import {
   isAuthWeakPasswordError,
 } from '@supabase/supabase-js';
 import { devWarn } from '../shared/devLog';
+import { isNetworkMessage, type PostgrestErrorLike } from '../shared/dataErrors';
 
 /** Closed set of error codes the UI layer is allowed to switch on. */
 export type AuthErrorCode =
@@ -69,7 +70,6 @@ const retryableCodes: ReadonlySet<AuthErrorCode> = new Set([
   'provisioning_denied',
 ]);
 
-/** Build a typed failure for a known code. */
 /** German copy for the same codes. */
 export const authErrorCopyDe: Record<AuthErrorCode, string> = {
   email_in_use: 'Diese E-Mail-Adresse wird bereits verwendet. Melde dich stattdessen an.',
@@ -105,11 +105,7 @@ export function logAuthError(context: string, raw: unknown): void {
 /** Fetch-level failures thrown by React Native's networking stack. */
 function isNetworkFailure(raw: unknown): boolean {
   if (raw instanceof TypeError) return true;
-  if (raw instanceof Error) {
-    const msg = raw.message.toLowerCase();
-    return msg.includes('network request failed') || msg.includes('failed to fetch');
-  }
-  return false;
+  return raw instanceof Error && isNetworkMessage(raw.message);
 }
 
 /**
@@ -160,12 +156,6 @@ export function mapAuthApiError(context: string, raw: unknown): AuthFailure {
   return failure('unknown');
 }
 
-/** Minimal shape shared by PostgrestError without importing its class. */
-interface PostgrestErrorLike {
-  code?: string | null;
-  message?: string | null;
-}
-
 /**
  * Map a PostgREST (supabase.from(...)) error to a typed failure and log the
  * raw details. Callers must handle 23505 (unique violation) themselves
@@ -180,8 +170,6 @@ export function mapPostgrestError(context: string, raw: PostgrestErrorLike | nul
   if (raw.code === '42501') return failure('provisioning_denied');
   const msg = (raw.message ?? '').toLowerCase();
   if (msg.includes('row-level security')) return failure('provisioning_denied');
-  if (msg.includes('network request failed') || msg.includes('failed to fetch')) {
-    return failure('network');
-  }
+  if (isNetworkMessage(msg)) return failure('network');
   return failure('unknown');
 }

@@ -1,14 +1,21 @@
 /**
- * Central mapping from PostgREST (supabase.from(...)) errors to a closed set
- * of typed codes with user-facing copy, for the barber services/availability
- * data layer.
+ * Typed errors for the barber data layer. The PostgREST classification and
+ * the copy shared with the customer app live in src/shared/dataErrors; this
+ * module adds the barber's wording, per-caller copy overrides and the
+ * Storage error mapping used by document and portfolio uploads.
  *
- * Mirrors src/auth/errors.ts: the UI only ever sees a BarberDataFailure with
- * a code from BarberDataErrorCode and calm, sentence-case copy. Raw
- * PostgREST/Postgres text goes to debug logging only, never to the screen.
+ * The UI only ever sees a BarberDataFailure with a code from
+ * BarberDataErrorCode and calm, sentence-case copy.
  */
-import { getAppLanguage } from '../shared/locale';
 import { devWarn } from '../shared/devLog';
+import {
+  buildFailure,
+  classifyPostgrestError,
+  isNetworkMessage,
+  sharedDataErrorCopy,
+  type DataFailure,
+  type PostgrestErrorLike,
+} from '../shared/dataErrors';
 
 /** Closed set of error codes the UI layer is allowed to switch on. */
 export type BarberDataErrorCode =
@@ -21,43 +28,26 @@ export type BarberDataErrorCode =
   | 'rate_limited'
   | 'blocked_language';
 
-/** The error arm shared by every services/availability result union. */
-export interface BarberDataFailure {
-  status: 'error';
-  code: BarberDataErrorCode;
-  /** User-facing copy — brand voice: sentence case, calm, no exclamation marks. */
-  message: string;
-  /** Whether simply retrying the same action can reasonably succeed. */
-  retryable: boolean;
-}
+/** The error arm shared by every barber result union. */
+export type BarberDataFailure = DataFailure<BarberDataErrorCode>;
 
 /** User-facing copy per code. Sentence case, calm, no exclamation marks. */
 export const barberDataErrorCopy: Record<BarberDataErrorCode, string> = {
-  forbidden: 'You do not have permission to do that.',
-  invalid_input:
-    'That entry is not valid. Check the values (including day, date and times) and try again.',
-  network: 'We could not reach the server. Check your connection and try again.',
-  unknown: 'Something went wrong on our side. Try again in a moment.',
-  transition_rejected:
-    'That booking can no longer be changed that way. Refresh to see its current status.',
-  limit_reached: 'You have reached the limit for this. Remove one before adding another.',
-  rate_limited: 'That was a lot in a short time. Wait a minute, then try again.',
-  blocked_language: 'This contains language that is not allowed on Privelier. Edit it and try again.',
+  ...sharedDataErrorCopy.en,
+  invalid_input: 'That entry is not valid. Check the values (including day, date and times) and try again.',
+  // P0001 here is the status-transition trigger: the booking moved out from
+  // under the barber (e.g. the customer withdrew a pending request).
+  transition_rejected: 'That booking can no longer be changed that way. Refresh to see its current status.',
 };
 
 /** German copy for the same codes. */
 export const barberDataErrorCopyDe: Record<BarberDataErrorCode, string> = {
-  forbidden: 'Das ist nicht erlaubt.',
+  ...sharedDataErrorCopy.de,
   invalid_input: 'Diese Eingabe ist nicht gültig. Prüfe die Werte (auch Tag, Datum und Uhrzeiten) und versuch es erneut.',
-  network: 'Keine Verbindung zum Server. Prüfe deine Verbindung und versuch es erneut.',
-  unknown: 'Bei uns ist etwas schiefgelaufen. Versuch es gleich noch einmal.',
   transition_rejected: 'Dieser Termin kann so nicht mehr geändert werden. Aktualisiere, um den aktuellen Stand zu sehen.',
-  limit_reached: 'Du hast das Limit dafür erreicht. Entferne einen Eintrag, bevor du einen neuen hinzufügst.',
-  rate_limited: 'Das war viel in kurzer Zeit. Warte eine Minute und versuch es dann erneut.',
-  blocked_language: 'Das enthält Sprache, die auf Privelier nicht erlaubt ist. Bitte formuliere es um.',
 };
 
-const retryableCodes: ReadonlySet<BarberDataErrorCode> = new Set(['network']);
+const copy = { en: barberDataErrorCopy, de: barberDataErrorCopyDe };
 
 /**
  * Per-caller copy overrides, keyed by code. The default copy is written for
@@ -69,63 +59,19 @@ const retryableCodes: ReadonlySet<BarberDataErrorCode> = new Set(['network']);
 export type BarberDataErrorCopyOverrides = Partial<Record<BarberDataErrorCode, string>>;
 
 /** Build a typed failure for a known code, optionally with caller copy. */
-export function failure(
-  code: BarberDataErrorCode,
-  overrides?: BarberDataErrorCopyOverrides
-): BarberDataFailure {
-  return {
-    status: 'error',
-    code,
-    message: overrides?.[code] ?? (getAppLanguage() === 'de' ? barberDataErrorCopyDe : barberDataErrorCopy)[code],
-    retryable: retryableCodes.has(code),
-  };
+export function failure(code: BarberDataErrorCode, overrides?: BarberDataErrorCopyOverrides): BarberDataFailure {
+  return buildFailure(code, copy, overrides?.[code]);
 }
 
-/**
- * Raw error details are for developers only. Nothing returned to the UI
- * ever contains raw server text.
- */
+/** Raw error details are for developers only, never returned to the UI. */
 export function logBarberDataError(context: string, raw: unknown): void {
   devWarn(`[barber] ${context}`, raw);
 }
 
-/** Minimal shape shared by PostgrestError without importing its class. */
-interface PostgrestErrorLike {
-  code?: string | null;
-  message?: string | null;
-}
-
-/** Postgres RLS/permission denial (insufficient_privilege). */
-const RLS_DENIED = '42501';
-/** Postgres check-constraint violation — e.g. chk_availability_day_or_date,
- * chk_availability_time_order, or the price/duration_minutes checks. */
-const CHECK_VIOLATION = '23514';
-/**
- * Postgres raise_exception (a bare `RAISE EXCEPTION` in a trigger/function).
- * On the barber write surfaces this only ever comes from the actor-aware
- * booking status-transition trigger (migration 0011) rejecting an illegal
- * transition or a wrong-actor attempt — services/availability writes have no
- * such trigger. Surfaced as a distinct 'transition_rejected' so the Requests
- * screen can tell the barber the booking's state moved out from under them
- * (e.g. the customer withdrew a pending request) rather than showing generic
- * error copy. The column-immutability freeze in the same trigger also raises
- * P0001, but these mutations only ever change `status`, so it is never hit.
- */
-const RAISE_EXCEPTION = 'P0001';
-
 /**
  * Map a PostgREST error to a typed failure and log the raw details.
- * - 42501 (RLS denial): a non-owner or non-barber write attempt.
- * - 23514 (check violation): an invalid day/date pairing, start >= end, or
- *   an out-of-range price/duration — surfaced as a clean validation message,
- *   never the raw Postgres constraint text.
- * - P0001 (raise_exception): the booking status-transition trigger
- *   (migration 0011) rejected an illegal transition or wrong-actor attempt —
- *   surfaced as 'transition_rejected'.
- *
- * `overrides` lets a caller replace the user-facing sentence for a code whose
- * default copy was written for a different surface (see
- * BarberDataErrorCopyOverrides). It never changes which code is returned.
+ * `overrides` replaces the user-facing sentence for a code; it never changes
+ * which code is returned.
  */
 export function mapPostgrestError(
   context: string,
@@ -133,19 +79,7 @@ export function mapPostgrestError(
   overrides?: BarberDataErrorCopyOverrides
 ): BarberDataFailure {
   logBarberDataError(context, raw);
-  if (!raw) return failure('unknown', overrides);
-  if (raw.code === RLS_DENIED) return failure('forbidden', overrides);
-  if (raw.code === CHECK_VIOLATION) return failure('invalid_input', overrides);
-  if (raw.code === RAISE_EXCEPTION) return failure('transition_rejected', overrides);
-  if (raw.code === 'PA429') return failure('rate_limited', overrides);
-  if (raw.code === 'PA030') return failure('blocked_language', overrides);
-  if (raw.code === 'PA002') return failure('limit_reached', overrides);
-  const msg = (raw.message ?? '').toLowerCase();
-  if (msg.includes('row-level security')) return failure('forbidden', overrides);
-  if (msg.includes('network request failed') || msg.includes('failed to fetch')) {
-    return failure('network', overrides);
-  }
-  return failure('unknown', overrides);
+  return failure(classifyPostgrestError(raw), overrides);
 }
 
 /** Minimal shape shared by a StorageError without importing its class. */
@@ -154,27 +88,16 @@ interface StorageErrorLike {
 }
 
 /**
- * Map a Storage (bucket) error to a typed failure and log the raw details.
- * Styled after mapPostgrestError, but storage errors carry no PostgREST
- * `code`, so we classify by message text only:
- * - 'network' / 'failed to fetch' → network (retryable).
- * - permission / unauthorized / row-level security → forbidden.
- * - anything else → unknown.
- *
- * Shared by every storage-writing barber data module (verification-document
- * upload and portfolio-image upload) — extracted here (design D7) so the
- * classification logic is defined once, never duplicated per module.
+ * Map a Storage (bucket) error to a typed failure. Storage errors carry no
+ * PostgREST `code`, so they are classified by message text only. Shared by
+ * the verification-document and portfolio uploads (design D7).
  */
 export function mapStorageError(context: string, raw: StorageErrorLike | null): BarberDataFailure {
   logBarberDataError(context, raw);
   if (!raw) return failure('unknown');
   const msg = (raw.message ?? '').toLowerCase();
-  if (msg.includes('network') || msg.includes('failed to fetch')) return failure('network');
-  if (
-    msg.includes('permission') ||
-    msg.includes('unauthorized') ||
-    msg.includes('row-level security')
-  ) {
+  if (msg.includes('network') || isNetworkMessage(msg)) return failure('network');
+  if (msg.includes('permission') || msg.includes('unauthorized') || msg.includes('row-level security')) {
     return failure('forbidden');
   }
   return failure('unknown');
