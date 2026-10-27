@@ -8,7 +8,7 @@ Steps that need a dashboard, an account owner or a product decision. Work top to
   - Local `.env` on every machine: replace `EXPO_PUBLIC_SUPABASE_ANON_KEY=...` with `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<sb_publishable_... from Supabase > Project Settings > API Keys>`. Ali's machine is already done.
   - EAS: `eas env:create --name EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY --value <sb_publishable_...> --environment production --environment preview --environment development --visibility plaintext`, then delete `EXPO_PUBLIC_SUPABASE_ANON_KEY` from EAS.
 - [x] **F2. Deploy the updated `delete-account` Edge Function.** Deployed on 2026-10-27 with Ali's approval (version 3, active, JWT verification on; an unauthenticated call returns 401).
-- [ ] **F3. Move the GitHub Actions secret off the legacy service key.** In the repository settings, set `SUPABASE_SERVICE_ROLE_KEY` (used by `barber-stats.yml`) to the new `sb_secret_...` key, or switch the job to `SUPABASE_ACCESS_TOKEN`.
+- [ ] **F3. Move the GitHub Actions secret off the legacy service key.** The code side is done: `barber-stats.yml` now reads `SUPABASE_SECRET_KEY`, the job sends an `sb_secret_` key in `apikey` only, and migration 0059 grants the job exactly the columns it reads. Remaining: with `SUPABASE_ACCESS_TOKEN` set and `gh` logged in, run `py tools/automation/setup_github_secrets.py` once (it stores the `sb_secret_` key as `SUPABASE_SECRET_KEY` without printing it, deletes the old `SUPABASE_SERVICE_ROLE_KEY` secret and triggers one run), then check the run with `gh run watch`. If the project has no secret key yet, create one first in Project Settings > API Keys.
 - [ ] **F4. Ship a build that uses the publishable key** (EAS build for both stores), and wait until it is the minimum supported version.
 - [ ] **F5. Disable the legacy `anon` and `service_role` keys** (Supabase > Project Settings > API Keys > Legacy) before Supabase removes them at the end of 2026. Do this only after F1 to F4.
 
@@ -44,14 +44,14 @@ Steps that need a dashboard, an account owner or a product decision. Work top to
   - CAPTCHA (Cloudflare Turnstile): the app is ready. Create a Turnstile widget whose allowed hostname matches `EXPO_PUBLIC_CAPTCHA_ORIGIN` (default `privelier.app`), set `EXPO_PUBLIC_CAPTCHA_SITE_KEY` (and the origin, if different) in EAS, ship that build, and only then enable Bot protection in Supabase with the widget's secret key. Enabling it before the build ships blocks sign-in on older versions.
 - [ ] **F12. Organisation security:** MFA for every member of the Supabase organisation, remove anyone who does not need access, and set a spend cap or usage alerts.
 - [x] **F13. API max rows:** confirmed 1000 on 2026-10-27 through the Management API (every app list caps itself at 300 or fewer).
-- [ ] **F14. Backups:** on 2026-10-27 the Management API listed no daily backups and point-in-time recovery off, which matches a plan without daily backups. Decide on a plan with daily backups (and PITR if wanted) before launch, then restore one backup into a scratch project once to prove it works.
+- [ ] **F14. Backups.** Decided on 2026-10-27: a free nightly encrypted `pg_dump` on GitHub Actions (`.github/workflows/db-backup.yml`, decision D25) instead of the Pro plan. Remaining: set the `SUPABASE_DB_URL` and `BACKUP_PASSPHRASE` secrets and run it once, then do the restore drill once (`docs/hardening/BACKUPS.md`).
 
 ## Product decisions
 
-- [ ] **F15. Travel time between appointments.** Bookings may now be adjacent (`11:00` right after a `10:00-11:00` one). Decide whether barbers need a buffer; it would be a new migration.
-- [ ] **F16. One app or two store listings.** The code ships one binary (`com.privelier.app`) with a customer/barber choice. The goal file asks for two apps with distinct names, bundle IDs and icons; that is a store-strategy decision (two listings, two reviews, two sets of screenshots).
+- [x] **F15. Travel time between appointments.** Decided on 2026-10-27: 30 minutes after every active booking (decision D4, migration 0060, live).
+- [x] **F16. One app or two store listings.** Decided on 2026-10-27: one app, `com.privelier.app`, with the customer/barber choice (decision D18).
 - [ ] **F17. Content denylist.** Review and extend `private.content_denylist` (Supabase SQL editor: `insert into private.content_denylist (term) values ('...');`). Matching is whole-word, case-insensitive.
-- [ ] **F18. Safety and reports process.** Decide who reads `public.user_reports` and `public.safety_events`, how fast, and what action follows (warn, suspend, remove). Store review expects reports to be acted on.
+- [ ] **F18. Safety and reports process.** Decided on 2026-10-27 (decision D24): both founders, reports within 24 hours, SOS at once; warn, then suspend, then remove. Migration 0061 (live) pushes an alert to the staff list. Remaining: each founder signs in on their phone, allows notifications, and adds their account once in the Supabase SQL editor: `insert into private.safety_staff (user_id) select id from auth.users where email = '<your email>';`
 
 ## Store submission
 
