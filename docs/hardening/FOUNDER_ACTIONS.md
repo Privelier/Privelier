@@ -55,10 +55,10 @@ Steps that need a dashboard, an account owner or a product decision. Work top to
 
 ## Store submission
 
-- [ ] **F19. Web account-deletion page.** Google Play requires a public URL where users can request deletion without the app. Publish a page on the Privelier website (form or the support address) and enter it in Play Console > Data safety.
+- [ ] **F19. Web account-deletion page.** The page is ready (`site/delete-account.html`, English and German, matching the in-app flow and decision D7) and `.github/workflows/pages.yml` publishes only `site/`. Remaining: enable Pages once (repository Settings > Pages > Source: GitHub Actions), run `gh workflow run pages.yml`, open `https://privelier.github.io/Privelier/delete-account.html`, and enter that URL in Play Console > Data safety. The page promises email requests are handled within 30 days; change it if that is not the intended commitment.
 - [ ] **F20. Publish the real legal texts** with the zero-tolerance clause for objectionable content, then bump the legal versions (see `CLAUDE.md`, "Legal consent versioning"); every user re-accepts.
 - [ ] **F21. Demo accounts for review.** Create the reviewer accounts described in `docs/release/app-review-notes-*.md` (one customer, one pre-approved barber with services and availability) and put their credentials only into App Store Connect and the Play Console.
-- [ ] **F22. App Privacy and Data safety forms** from `docs/release/data-inventory.md`.
+- [ ] **F22. App Privacy and Data safety forms.** The answers are written field by field in `docs/release/store-privacy-forms.md`. Remaining: enter them in App Store Connect and the Play Console.
 
 ## Checks that need a device or build
 
