@@ -1,260 +1,48 @@
 /**
  * Booking flow — screen 1 of 3: pick a date, then a time.
  *
- * On every focus (mount, and any time this screen regains focus after the
- * customer navigates back from Location/Confirm — see the focus-effect note
- * below), fetches the barber's full availability window set once, then
- * — per the design doc's Decision 4 cost note
- * (docs/design/step-11-12-booking-flow-design-approval.md) — fetches busy
- * slots for each of the 14-day lookahead and runs deriveAvailableSlots for
- * every one of them up front. Dates with no candidate slot before bookings
- * are subtracted skip their busy-slot call entirely (identical result, fewer
- * round-trips), and all busy intervals come
- * from ONE get_barber_busy_slots_range read (migration 0041), with the
- * per-date RPC kept only as a fallback. Every date in the lookahead is always shown; a date whose
- * computed candidate list is empty is visually disabled, never hidden.
- *
- * useFocusEffect (not a mount-only effect) is deliberate: it is what makes
- * "sent back to BookingDateTimeScreen" after a booking conflict on the
- * Confirm screen (see BookingConfirmScreen's onPickAnotherTime) actually
- * useful — the busy-slot fetch that produced the now-stale candidate list is
- * re-run rather than silently replayed. The existing selection is preserved
- * across a refetch only if it is still valid against the fresh data, so a
- * slot someone else just took quietly disappears instead of staying
- * selectable. A per-date busy-slot fetch failure degrades that one date to
- * "no slots" rather than failing the whole screen (a transient blip on one
- * of 14 calls should not block booking via the other 13 dates); only a
- * failure of the single listBarberAvailability call surfaces as the
- * page-level error notice.
- *
- * UI: the date picker is the reusable CalendarDateStrip; time slots are grouped by part of day
- * (morning / afternoon / evening) to chunk choice (Hick's Law); and the
- * current selection is echoed above the Continue bar so the customer never
- * has to hold it in their head (recognition over recall). Behaviour, data
- * flow, and every testID are unchanged.
+ * Slot loading, refetch-on-focus and selection reconciliation live in
+ * useBookingSlots. Every date in the lookahead is always shown; a date with
+ * no open slot is disabled, never hidden. Times are grouped by part of day
+ * to chunk choice, and the selection is echoed above the Continue bar so
+ * the customer never has to hold it in their head.
  */
-import { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useTheme } from '../../theme/useTheme';
-import { radius, space } from '../../theme/spacing';
-import { pressOpacity } from '../../theme/motion';
+import { Notice } from '../../shared/components/Notice';
 import { PrimaryButton } from '../../shared/components/PrimaryButton';
 import { ScreenBackHeader } from '../../shared/components/ScreenBackHeader';
-import { Notice } from '../../shared/components/Notice';
-import { Skeleton } from '../../shared/components/Skeleton';
-import { getAppLanguage } from '../../shared/locale';
-import { haptics } from '../../shared/haptics';
 import { formatBookingWhen } from '../../shared/format';
-import type { AvailabilityRow } from '../../types';
-import { listBarberAvailability, listBarberBusySlots, listBarberBusySlotsRange, listBarberDaysOff } from '../availabilityData';
-import { deriveAvailableSlots, type BusySlot } from '../../shared/slots';
-import CalendarDateStrip from '../components/CalendarDateStrip';
+import { getAppLanguage } from '../../shared/locale';
+import { space } from '../../theme/spacing';
+import { useTheme } from '../../theme/useTheme';
 import { BookingStepIndicator } from '../components/BookingStepIndicator';
+import CalendarDateStrip from '../components/CalendarDateStrip';
+import { DateTimeSkeleton, NextAvailableChip, RetryAvailability, TimeSlotGroups } from '../components/booking/DateTimeParts';
+import { useBookingSlots } from '../hooks/useBookingSlots';
 import type { CustomerStackParamList } from '../CustomerNavigator';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'BookingDateTime'>;
-
-const LOOKAHEAD_DAYS = 14;
-
-/** Ordered part-of-day buckets for grouping the time grid. */
-const PERIODS = [
-  { key: 'morning', label: 'Morning' },
-  { key: 'afternoon', label: 'Afternoon' },
-  { key: 'evening', label: 'Evening' },
-] as const;
-type PeriodKey = (typeof PERIODS)[number]['key'];
-
-interface Selection {
-  date: string | null;
-  time: string | null;
-}
-
-function toDateString(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-/** Local (not UTC) 14-day lookahead, today inclusive — see module header. */
-function buildLookaheadDates(now: Date = new Date()): string[] {
-  const dates: string[] = [];
-  for (let i = 0; i < LOOKAHEAD_DAYS; i += 1) {
-    dates.push(toDateString(new Date(now.getFullYear(), now.getMonth(), now.getDate() + i)));
-  }
-  return dates;
-}
-
-/** Morning < 12:00 ≤ Afternoon < 17:00 ≤ Evening — by the slot's start hour. */
-function periodOf(time: string): PeriodKey {
-  const hour = Number(time.slice(0, 2));
-  if (hour < 12) return 'morning';
-  if (hour < 17) return 'afternoon';
-  return 'evening';
-}
-
-
-/** The earliest verified open slot in the lookahead, or null. */
-function firstOpenSlot(
-  dates: string[],
-  slotsByDate: ReadonlyMap<string, string[]>,
-  unverifiedDates: ReadonlySet<string>
-): { date: string; time: string } | null {
-  for (const date of dates) {
-    if (unverifiedDates.has(date)) continue;
-    const first = (slotsByDate.get(date) ?? [])[0];
-    if (first) return { date, time: first };
-  }
-  return null;
-}
 
 export default function BookingDateTimeScreen({ route, navigation }: Props) {
   const { barberId, barberName, barberImage, service } = route.params;
   const { colors, fonts } = useTheme();
   const de = getAppLanguage() === 'de';
+  const slots = useBookingSlots(barberId, service.duration_minutes);
+  const { selection, setSelection, unverifiedDates, nextAvailable, error, load } = slots;
+  const retry = () => void load();
+  const hintStyle = [styles.hintText, { color: colors.textSecondary, fontFamily: fonts.body }];
+  const labelStyle = [styles.sectionLabel, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }];
 
-  const [dates] = useState<string[]>(() => buildLookaheadDates());
-  const [slotsByDate, setSlotsByDate] = useState<Map<string, string[]>>(new Map());
-  const [unverifiedDates, setUnverifiedDates] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selection, setSelection] = useState<Selection>({ date: null, time: null });
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    const availabilityResult = await listBarberAvailability(barberId);
-    if (availabilityResult.status !== 'ok') {
-      setLoading(false);
-      setError(availabilityResult.message);
-      return;
-    }
-    const windows: AvailabilityRow[] = availabilityResult.windows;
-
-    // One range read for the whole lookahead (migration 0041). If it fails
-    // (e.g. a backend without 0041), fall back to the per-date reads so a
-    // single failure still only greys out the dates it affects.
-    const [rangeResult, daysOff] = await Promise.all([
-      listBarberBusySlotsRange(barberId, dates[0], dates[dates.length - 1]),
-      listBarberDaysOff(barberId, dates[0], dates[dates.length - 1]),
-    ]);
-    const busyByDate = rangeResult.status === 'ok' ? rangeResult.byDate : null;
-
-    const entries = await Promise.all(
-      dates.map(async (date) => {
-        // A date with no candidate slot even before bookings are subtracted
-        // (no working hours, or all of today's slots have passed) cannot gain
-        // one from the busy list, so skip its network round-trip.
-        // A barber's day off offers nothing, whatever the weekly hours say.
-        if (daysOff?.has(date)) return [date, [] as string[]] as const;
-        const candidates = deriveAvailableSlots({
-          windows,
-          busy: [],
-          date,
-          durationMinutes: service.duration_minutes,
-        });
-        if (candidates.length === 0) return [date, [] as string[]] as const;
-        let busy: BusySlot[];
-        if (busyByDate) {
-          busy = busyByDate.get(date) ?? [];
-        } else {
-          const busyResult = await listBarberBusySlots(barberId, date);
-          if (busyResult.status !== 'ok') return [date, null] as const;
-          busy = busyResult.busy;
-        }
-        const slots = deriveAvailableSlots({
-          windows,
-          busy,
-          date,
-          durationMinutes: service.duration_minutes,
-        });
-        return [date, slots] as const;
-      })
-    );
-
-    const failedDates = new Set(entries.filter(([, slots]) => slots === null).map(([date]) => date));
-    const map = new Map(entries.map(([date, slots]) => [date, slots ?? []]));
-    setUnverifiedDates(failedDates);
-    setSlotsByDate(map);
-    setSelection((current) => {
-      if (!current.date) return current;
-      const freshSlots = map.get(current.date) ?? [];
-      if (freshSlots.length === 0) return { date: null, time: null };
-      if (current.time && !freshSlots.includes(current.time)) return { date: current.date, time: null };
-      return current;
-    });
-    setLoading(false);
-  }, [barberId, dates, service.duration_minutes]);
-
-  useFocusEffect(
-    useCallback(() => {
-      void load();
-    }, [load])
-  );
-
-  // Real slot counts drive the strip's density dots and the shortcut to the
-  // earliest open time; nothing is shown until availability has loaded.
-  const slotCounts = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const date of dates) {
-      if (!unverifiedDates.has(date)) map.set(date, (slotsByDate.get(date) ?? []).length);
-    }
-    return map;
-  }, [dates, slotsByDate, unverifiedDates]);
-  const nextAvailable = useMemo(
-    () => (loading ? null : firstOpenSlot(dates, slotsByDate, unverifiedDates)),
-    [loading, dates, slotsByDate, unverifiedDates]
-  );
-
-  const disabledDates = useMemo(
-    () => new Set(dates.filter((date) => unverifiedDates.has(date) || (slotsByDate.get(date) ?? []).length === 0)),
-    [dates, slotsByDate, unverifiedDates]
-  );
-
-  const allEmpty = useMemo(
-    () => !loading && !error && disabledDates.size === dates.length,
-    [loading, error, disabledDates, dates]
-  );
-
-  const selectedSlots = useMemo(
-    () => (selection.date ? (slotsByDate.get(selection.date) ?? []) : []),
-    [selection.date, slotsByDate]
-  );
-
-  /** Selected date's slots split into ordered part-of-day groups (empty groups dropped). */
-  const slotGroups = useMemo(() => {
-    return PERIODS.map((period) => ({
-      ...period,
-      slots: selectedSlots.filter((time) => periodOf(time) === period.key),
-    })).filter((group) => group.slots.length > 0);
-  }, [selectedSlots]);
-
-  const canContinue = !!selection.date && !!selection.time && !loading && !error && !unverifiedDates.has(selection.date);
-
-  const onContinue = useCallback(() => {
+  const onContinue = () => {
     if (!selection.date || !selection.time) return;
-    navigation.navigate('BookingLocation', {
-      barberId,
-      barberName,
-      barberImage,
-      service,
-      date: selection.date,
-      time: selection.time,
-    });
-  }, [navigation, barberId, barberName, barberImage, service, selection]);
+    navigation.navigate('BookingLocation', { barberId, barberName, barberImage, service, date: selection.date, time: selection.time });
+  };
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['top', 'left', 'right']}
-      testID="customer-booking-datetime-screen"
-    >
-      <ScreenBackHeader
-        onPress={() => navigation.goBack()}
-        backTestID="customer-booking-datetime-back"
-        right={<BookingStepIndicator current={1} />}
-      />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']} testID="customer-booking-datetime-screen">
+      <ScreenBackHeader onPress={() => navigation.goBack()} backTestID="customer-booking-datetime-back" right={<BookingStepIndicator current={1} />} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
@@ -264,39 +52,31 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
           {`${service.name} ${de ? 'bei' : 'with'} ${barberName}`}
         </Text>
 
-        {loading && slotsByDate.size === 0 ? (
+        {slots.loading && !slots.hasData ? (
           <DateTimeSkeleton />
-        ) : error && slotsByDate.size === 0 ? (
-          <Notice
-            message={error}
-            testID="customer-booking-datetime-error"
-            variant="error"
-            style={styles.noticeSpacing}
-          >
-            <RetryAvailability onPress={() => void load()} />
+        ) : error && !slots.hasData ? (
+          <Notice message={error} testID="customer-booking-datetime-error" variant="error" style={styles.noticeSpacing}>
+            <RetryAvailability onPress={retry} />
           </Notice>
-        ) : allEmpty ? (
+        ) : slots.allEmpty ? (
           <View style={styles.emptyWrap}>
-            <Text
-              style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}
-              testID="customer-booking-datetime-empty"
-            >
+            <Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]} testID="customer-booking-datetime-empty">
               {unverifiedDates.size > 0
                 ? de ? 'Verfügbarkeit konnte nicht geprüft werden. Bitte versuche es erneut.' : 'We could not verify availability. Try again before choosing a time.'
                 : de ? 'Aktuell keine freien Termine. Schau bald wieder vorbei.' : 'No upcoming availability. Check back soon.'}
             </Text>
             {unverifiedDates.size > 0 ? (
-              <PrimaryButton label={de ? 'Erneut versuchen' : 'Try again'} onPress={() => void load()} testID="customer-booking-datetime-retry" />
+              <PrimaryButton label={de ? 'Erneut versuchen' : 'Try again'} onPress={retry} testID="customer-booking-datetime-retry" />
             ) : null}
           </View>
         ) : (
           <>
             {error ? (
               <Notice message={error} testID="customer-booking-datetime-error" variant="error" style={styles.noticeSpacing}>
-                <RetryAvailability onPress={() => void load()} />
+                <RetryAvailability onPress={retry} />
               </Notice>
             ) : null}
-            {loading ? <Text style={[styles.hintText, { color: colors.textSecondary, fontFamily: fonts.body }]} accessibilityLiveRegion="polite">{de ? 'Verfügbarkeit wird geprüft…' : 'Checking availability…'}</Text> : null}
+            {slots.loading ? <Text style={hintStyle} accessibilityLiveRegion="polite">{de ? 'Verfügbarkeit wird geprüft…' : 'Checking availability…'}</Text> : null}
             {unverifiedDates.size > 0 ? (
               <Notice
                 message={de ? 'Einige Tage konnten nicht geprüft werden und sind vorübergehend nicht verfügbar.' : 'Some dates could not be verified and are temporarily unavailable.'}
@@ -304,116 +84,51 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
                 variant="info"
                 style={styles.noticeSpacing}
               >
-                <RetryAvailability onPress={() => void load()} />
+                <RetryAvailability onPress={retry} />
               </Notice>
             ) : null}
-            <Text style={[styles.sectionLabel, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-              {de ? 'Datum' : 'Date'}
-            </Text>
+            <Text style={labelStyle}>{de ? 'Datum' : 'Date'}</Text>
             {nextAvailable && selection.date !== nextAvailable.date ? (
-              <Pressable
-                onPress={() => {
-                  void haptics.selection();
-                  setSelection({ date: nextAvailable.date, time: nextAvailable.time });
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`${de ? 'Nächster freier Termin' : 'Next available'}: ${formatBookingWhen(nextAvailable.date, nextAvailable.time)}`}
-                testID="customer-booking-datetime-next-available"
-                style={({ pressed }) => [styles.nextAvailable, { borderColor: colors.accent, opacity: pressed ? 0.85 : 1 }]}
-              >
-                <Text style={[styles.nextAvailableText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
-                  {de ? 'Nächster freier Termin' : 'Next available'} · {formatBookingWhen(nextAvailable.date, nextAvailable.time)}
-                </Text>
-              </Pressable>
+              <NextAvailableChip date={nextAvailable.date} time={nextAvailable.time} de={de} onPress={() => setSelection(nextAvailable)} />
             ) : null}
             <CalendarDateStrip
-              dates={dates}
-              disabledDates={disabledDates}
+              dates={slots.dates}
+              disabledDates={slots.disabledDates}
               selectedDate={selection.date}
               onSelectDate={(date) => setSelection({ date, time: null })}
               testIDPrefix="customer-booking-datetime"
-              slotCounts={slotCounts}
+              slotCounts={slots.slotCounts}
             />
 
-            <Text style={[styles.sectionLabel, styles.timeLabel, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-              {de ? 'Uhrzeit' : 'Time'}
-            </Text>
-            {selection.date ? (
-              selectedSlots.length === 0 ? (
-                <Text
-                  style={[styles.hintText, { color: colors.textSecondary, fontFamily: fonts.body }]}
-                  testID="customer-booking-datetime-no-times"
-                >
-                  {de ? 'An diesem Tag sind keine Uhrzeiten mehr frei.' : 'No times left on this date.'}
-                </Text>
-              ) : (
-                slotGroups.map((group) => (
-                  <View key={group.key} style={styles.timeGroup}>
-                    <Text style={[styles.periodLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                      {de ? { morning: 'Vormittag', afternoon: 'Nachmittag', evening: 'Abend' }[group.key] : group.label}
-                    </Text>
-                    <View style={styles.slotGrid}>
-                      {group.slots.map((time) => {
-                        const active = selection.time === time;
-                        return (
-                          <Pressable
-                            key={time}
-                            onPress={() => {
-                              void haptics.selection();
-                              setSelection((current) => ({ ...current, time }));
-                            }}
-                            accessibilityRole="button"
-                            accessibilityState={{ selected: active }}
-                            accessibilityLabel={time.slice(0, 5)}
-                            testID={`customer-booking-datetime-slot-${time}`}
-                            style={({ pressed }) => [
-                              styles.slotChip,
-                              {
-                                borderWidth: active ? 0 : 0.5,
-                                borderColor: colors.border,
-                                backgroundColor: active ? colors.accent : colors.surface,
-                                opacity: pressed && !active ? pressOpacity.soft : 1,
-                                transform: [{ scale: pressed && !active ? 0.97 : 1 }],
-                              },
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.slotText,
-                                { color: active ? colors.onAccent : colors.textPrimary, fontFamily: fonts.bodyMedium },
-                              ]}
-                            >
-                              {time.slice(0, 5)}
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-                  </View>
-                ))
-              )
-            ) : (
-              <Text style={[styles.hintText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                {de ? 'Wähle einen Tag, um freie Uhrzeiten zu sehen.' : 'Pick a date to see available times.'}
+            <Text style={[labelStyle, styles.timeLabel]}>{de ? 'Uhrzeit' : 'Time'}</Text>
+            {!selection.date ? (
+              <Text style={hintStyle}>{de ? 'Wähle einen Tag, um freie Uhrzeiten zu sehen.' : 'Pick a date to see available times.'}</Text>
+            ) : slots.selectedSlots.length === 0 ? (
+              <Text style={hintStyle} testID="customer-booking-datetime-no-times">
+                {de ? 'An diesem Tag sind keine Uhrzeiten mehr frei.' : 'No times left on this date.'}
               </Text>
+            ) : (
+              <TimeSlotGroups
+                groups={slots.slotGroups}
+                selectedTime={selection.time}
+                de={de}
+                onSelect={(time) => setSelection((current) => ({ ...current, time }))}
+              />
             )}
           </>
         )}
       </ScrollView>
 
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
-        {canContinue && selection.date && selection.time ? (
-          <Text
-            style={[styles.summary, { color: colors.textSecondary, fontFamily: fonts.body }]}
-            testID="customer-booking-datetime-summary"
-          >
+        {slots.canContinue && selection.date && selection.time ? (
+          <Text style={[styles.summary, { color: colors.textSecondary, fontFamily: fonts.body }]} testID="customer-booking-datetime-summary">
             {formatBookingWhen(selection.date, selection.time)}
           </Text>
         ) : null}
         <PrimaryButton
           label={de ? 'Adresse angeben' : 'Add your address'}
           onPress={onContinue}
-          disabled={!canContinue}
+          disabled={!slots.canContinue}
           testID="customer-booking-datetime-continue"
         />
       </View>
@@ -421,69 +136,17 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
   );
 }
 
-function RetryAvailability({ onPress }: { onPress: () => void }) {
-  const { colors, fonts } = useTheme();
-  const de = getAppLanguage() === 'de';
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={getAppLanguage() === 'de' ? 'Verfügbarkeit erneut laden' : 'Retry availability'}
-      testID="customer-booking-datetime-retry-inline"
-      style={({ pressed }) => [styles.retryLink, pressed ? { opacity: pressOpacity.soft } : null]}
-    >
-      <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}>{de ? 'Erneut versuchen' : 'Try again'}</Text>
-    </Pressable>
-  );
-}
-
-function DateTimeSkeleton() {
-  return (
-    <View testID="customer-booking-datetime-loading" accessible accessibilityRole="progressbar" accessibilityLabel="Loading availability" style={styles.skeletonWrap}>
-      <Skeleton style={styles.skeletonLabel} />
-      <View style={styles.skeletonDates}>
-        {[0, 1, 2, 3].map((index) => <Skeleton key={index} style={styles.skeletonDay} />)}
-      </View>
-      <Skeleton style={styles.skeletonTimeLabel} />
-      <View style={styles.skeletonSlots}>
-        {[0, 1, 2, 3, 4, 5].map((index) => <Skeleton key={index} style={styles.skeletonSlot} />)}
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  nextAvailable: { alignSelf: 'flex-start', minHeight: 40, justifyContent: 'center', borderWidth: 0.5, borderRadius: 999, paddingHorizontal: 14, marginBottom: 14 },
-  nextAvailableText: { fontSize: 13 },
   container: { flex: 1 },
-
   scrollContent: { paddingHorizontal: space.xl, paddingTop: space.base, paddingBottom: space.xl },
   heading: { fontSize: 30, lineHeight: 38 },
   subheading: { fontSize: 15, lineHeight: 23, marginTop: 8 },
-
-  skeletonWrap: { marginTop: 28 },
-  skeletonLabel: { width: 88, height: 13, marginBottom: 16 },
-  skeletonDates: { flexDirection: 'row', gap: 10 },
-  skeletonDay: { width: 60, height: 72, borderRadius: radius.lg },
-  skeletonTimeLabel: { width: 70, height: 13, marginTop: space['3xl'], marginBottom: 16 },
-  skeletonSlots: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  skeletonSlot: { width: 72, height: 42, borderRadius: radius.lg },
   noticeSpacing: { marginTop: space.xl },
-  retryLink: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
   emptyWrap: { gap: space.base, paddingVertical: space['3xl'] },
   emptyText: { fontSize: 13, lineHeight: 19, textAlign: 'center' },
   hintText: { fontSize: 13, marginTop: space.base },
-
   sectionLabel: { fontSize: 14, lineHeight: 21, marginTop: 28, marginBottom: 14 },
   timeLabel: { marginTop: space['2xl'] },
-
-  timeGroup: { marginBottom: space.lg },
-  periodLabel: { fontSize: 14, lineHeight: 21, marginBottom: 10 },
-
-  slotGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  slotChip: { borderRadius: radius.lg, paddingHorizontal: 18, paddingVertical: space.md, minWidth: 80, minHeight: 48, justifyContent: 'center', alignItems: 'center' },
-  slotText: { fontSize: 16, fontVariant: ['tabular-nums'] },
-
   footer: { paddingHorizontal: space.xl, paddingTop: 14, paddingBottom: space.lg, borderTopWidth: 0.5 },
   summary: { fontSize: 13, textAlign: 'center', marginBottom: space.md },
 });
