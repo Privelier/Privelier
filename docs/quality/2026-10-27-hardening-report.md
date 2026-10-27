@@ -26,7 +26,7 @@ Every Definition-of-done item of `docs/privelier-Vibecoding-goal.md` is PASS, ex
 | Rate limiting | PASS | Abuse suite 35 assertions; live HTTP check that the request hook runs |
 | Mobile hardening | PASS | Encrypted session, PKCE, app-state refresh, channel cleanup, no release logging, strict deep links, picker without permission, EXIF removal |
 | Store compliance | PASS, with founder actions | Deletion, UGC controls, permissions, privacy manifest, release docs; 16 KB, web deletion page, legal texts and demo accounts are F19-F24 |
-| Clean code | PASS | `npm run check`; 15 oversized screens remain on the backlog (D22) |
+| Clean code | PASS | `npm run check` (873 tests, jscpd 1.55 %); every screen split into a data hook plus components (D22) |
 | Tests | PASS, devices BLOCKED | Jest 866, pgTAP 150, concurrency PASS; Maestro and two-device checks need devices (F25) |
 
 ## Findings
@@ -65,5 +65,4 @@ Every Definition-of-done item of `docs/privelier-Vibecoding-goal.md` is PASS, ex
 ## Not done in this run
 
 - 16 KB alignment, Maestro flows, two-device Realtime, EXIF byte check on a device: need builds or devices (F23-F25).
-- Splitting 15 screens over about 300 lines (D22, backlog).
-- CAPTCHA token in the auth calls: needs the provider choice and site key first (F11, backlog).
+- CAPTCHA is wired into sign-up, sign-in, resend and reset (Turnstile, off until `EXPO_PUBLIC_CAPTCHA_SITE_KEY` is set); turning it on needs the founder's site key and the dashboard switch (F11).
