@@ -191,7 +191,7 @@ Compare against the last report (`docs/quality/*-hardening-report.md`) and the o
 - Deep links and auth redirects accept only the app's own scheme and hosts, with validated parameters.
 - Image uploads use the system picker and are re-encoded so EXIF/GPS is removed, with a test that inspects the output.
 - Merged Android manifest has no `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`, `READ_EXTERNAL_STORAGE` or background location; location is when-in-use and only where used; iOS purpose strings are specific per feature.
-- Android target SDK 36, 16 KB page-size compatible native modules, edge-to-edge and predictive back; `npx expo-doctor` and `npx expo install --check` are clean or justified; OTA code signing is documented if `expo-updates` is used. No certificate pinning or root detection (recorded decision).
+- Android target SDK 36, 16 KB page-size compatible native modules (`py tools/android/check_16kb.py`, or with an AAB path on a real build), edge-to-edge and predictive back; `npx expo-doctor` and `npx expo install --check` are clean or justified; OTA code signing is documented if `expo-updates` is used. No certificate pinning or root detection (recorded decision).
 
 **Store compliance**
 - In-app account deletion in both apps (typed confirmation → server-side function that cancels future bookings, removes storage and personal rows, anonymizes shared history, deletes the auth user last, idempotent) and a web deletion-request link for Google Play.

@@ -14,7 +14,7 @@ Steps that need a dashboard, an account owner or a product decision. Work top to
 
 ## Credentials
 
-- [ ] **F6. Revoke an old personal access token.** A Supabase personal access token (`sbp_...`, an older one, not the current token) is stored in plain text in a saved permission rule in `.claude/settings.local.json` (line 66). The file is git-ignored and never reached git history (gitleaks clean), but revoke the token at supabase.com > Account > Access Tokens and delete that rule.
+- [ ] **F6. Revoke an old personal access token.** A Supabase personal access token (`sbp_...`, an older one, not the current token) was stored in plain text in a saved permission rule in `.claude/settings.local.json`. The file is git-ignored and never reached git history (gitleaks clean). The rule was removed on 2026-10-27; what remains is revoking the token at supabase.com > Account > Access Tokens.
 - [ ] **F7. Revoke the old Mapbox token and EAS secret.** Maps moved to MapLibre; the public Mapbox token is no longer used anywhere in code. Delete it in the Mapbox account and remove `RNMAPBOX_DOWNLOAD_TOKEN` from EAS.
 - [ ] **F8. Keep a secrets inventory** in the password manager with owner and rotation steps for each:
 
@@ -40,10 +40,11 @@ Steps that need a dashboard, an account owner or a product decision. Work top to
   - Rate limits: lower sign-up, OTP and verification limits to what two founders expect (the default allows 360 OTPs per hour per project).
   - Leaked-password protection on (Supabase lists it as disabled; it needs the Pro plan).
   - Redirect URLs: exact entries only (`privelier://auth-callback` and the exact web URLs), no wildcards.
+  - Live values read on 2026-10-27 through the Management API: email confirmation on, email OTP expiry 3600 s, redirect allow list exactly `privelier://auth-callback`, email sends 2 per hour, OTP and verify 30 each, refresh-token rotation on, reauthentication required to change a password, password rule lower + upper + digit + symbol with minimum length 6, leaked-password protection off, CAPTCHA off. Still to decide: leaked-password protection (Pro plan) and whether to lower the OTP/verify limits further.
   - CAPTCHA (Cloudflare Turnstile): the app is ready. Create a Turnstile widget whose allowed hostname matches `EXPO_PUBLIC_CAPTCHA_ORIGIN` (default `privelier.app`), set `EXPO_PUBLIC_CAPTCHA_SITE_KEY` (and the origin, if different) in EAS, ship that build, and only then enable Bot protection in Supabase with the widget's secret key. Enabling it before the build ships blocks sign-in on older versions.
 - [ ] **F12. Organisation security:** MFA for every member of the Supabase organisation, remove anyone who does not need access, and set a spend cap or usage alerts.
-- [ ] **F13. API max rows:** confirm Project Settings > API > Max rows is 1000 or lower (every app list already caps itself at 300 or fewer).
-- [ ] **F14. Backups:** confirm daily backups for the current plan, decide on point-in-time recovery, and restore one backup into a scratch project once to prove it works.
+- [x] **F13. API max rows:** confirmed 1000 on 2026-10-27 through the Management API (every app list caps itself at 300 or fewer).
+- [ ] **F14. Backups:** on 2026-10-27 the Management API listed no daily backups and point-in-time recovery off, which matches a plan without daily backups. Decide on a plan with daily backups (and PITR if wanted) before launch, then restore one backup into a scratch project once to prove it works.
 
 ## Product decisions
 
@@ -62,6 +63,6 @@ Steps that need a dashboard, an account owner or a product decision. Work top to
 ## Checks that need a device or build
 
 - [ ] **F23. GPS removal on uploads:** upload a photo with GPS to the portfolio from a device build, download it from the public URL and run `exiftool <file>`; there must be no GPS tags.
-- [ ] **F24. 16 KB page size:** build the production Android AAB and run `bundletool dump config` / `zipalign -c -P 16 -v 4` on the APKs; every `.so` must be 16 KB aligned (React Native 0.88 and Expo SDK 58 are compatible; this confirms the native map module too).
+- [x] **F24. 16 KB page size:** verified on 2026-10-27 without a full build by `py tools/android/check_16kb.py`: all 38 arm64-v8a / x86_64 libraries in the pinned prebuilt artifacts (React Native 0.88, Hermes, fbjni, SoLoader, Fresco native modules, MapLibre 13.6.1, AVIF, zstd) have 16 KB LOAD alignment; modules compiled from source get `ANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON` from the React Native Gradle plugin (NDK 27.1); AGP 9.2.1 with legacy packaging off stores them uncompressed and 16 KB zip-aligned. Rerun the script after each Expo or React Native upgrade, and once on the first production AAB: `py tools/android/check_16kb.py app-release.aab`.
 - [ ] **F25. Maestro and two-device checks:** run `.maestro/` flows and the two-session Realtime booking and chat checks on Android and iOS development builds (`AGENTS.md` Step 18).
-- [ ] **F26. Install the secret scanner locally** on each founder machine: install gitleaks, then run `bash tools/hooks/install-gitleaks-hook.sh` once per clone.
+- [ ] **F26. Install the secret scanner locally** on each founder machine: install gitleaks, then run `bash tools/hooks/install-gitleaks-hook.sh` once per clone. Ali's machine: done (gitleaks 8.30.1, hook active). The other founder's machine: open.
