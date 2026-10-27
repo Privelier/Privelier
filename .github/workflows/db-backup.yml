@@ -1,0 +1,90 @@
+# Nightly database backup (founder decision F14, 2026-10-27): a free
+# alternative to the Supabase Pro daily backups. pg_dump of the whole
+# database, encrypted with AES-256 before it leaves the runner, kept as a
+# workflow artifact for 30 days. This repository is public, so the artifact
+# is downloadable by any GitHub user: only the encrypted file is uploaded and
+# the job refuses to run with a short passphrase. Needs two repository secrets:
+#   SUPABASE_DB_URL     session pooler URI (Project Settings > Database >
+#                       Connection string > Session pooler, port 5432; the
+#                       direct host is IPv6-only and unreachable from Actions)
+#   BACKUP_PASSPHRASE   at least 32 random characters, also kept in the
+#                       password manager (without it the backups are useless)
+# Without them the job logs a notice and exits successfully.
+# Restore steps: docs/hardening/BACKUPS.md
+name: Database backup
+
+on:
+  schedule:
+    - cron: "41 1 * * *" # 01:41 UTC daily, before the stats job
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: Check secrets
+        id: check
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ] || [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "::notice::No SUPABASE_DB_URL or BACKUP_PASSPHRASE — skipping the backup."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          elif [ "${#BACKUP_PASSPHRASE}" -lt 32 ]; then
+            echo "::error::BACKUP_PASSPHRASE must be at least 32 characters; nothing was dumped."
+            exit 1
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install pg_dump 17 (matches the server)
+        if: steps.check.outputs.run == 'true'
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+          /usr/lib/postgresql/17/bin/pg_dump --version
+
+      - name: Dump and encrypt
+        if: steps.check.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          umask 077
+          stamp=$(date -u +%Y-%m-%dT%H%MZ)
+          echo "STAMP=$stamp" >> "$GITHUB_ENV"
+          # Custom format, compressed; streamed straight into gpg so no
+          # plaintext dump ever touches the disk.
+          /usr/lib/postgresql/17/bin/pg_dump "$SUPABASE_DB_URL" \
+              --format=custom --no-owner --no-privileges \
+            | gpg --batch --yes --quiet --pinentry-mode loopback \
+                --passphrase-fd 3 3<<<"$BACKUP_PASSPHRASE" \
+                --symmetric --cipher-algo AES256 \
+                --s2k-mode 3 --s2k-digest-algo SHA512 --s2k-count 65011712 \
+                --output "privelier-$stamp.dump.gpg"
+          size=$(stat -c %s "privelier-$stamp.dump.gpg")
+          if [ "$size" -lt 10240 ]; then
+            echo "::error::Encrypted dump is only $size bytes; treating it as a failed backup."
+            exit 1
+          fi
+          echo "Encrypted dump: $size bytes"
+
+      - name: Upload encrypted dump
+        if: steps.check.outputs.run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: privelier-db-${{ env.STAMP }}
+          path: privelier-*.dump.gpg
+          retention-days: 30
+          if-no-files-found: error
+          compression-level: 0
