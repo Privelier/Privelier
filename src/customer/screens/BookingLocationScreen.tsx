@@ -9,8 +9,8 @@
  * expand it to a real address, and city alone is never treated as
  * sufficient on its own.
  */
-import { useCallback, useEffect, useRef, useState, type Ref } from 'react';
-import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type TextInputInstance } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View, type TextInputInstance } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getAppLanguage } from '../../shared/locale';
@@ -19,8 +19,8 @@ import { HAIRLINE, space } from '../../theme/spacing';
 import { PrimaryButton } from '../../shared/components/PrimaryButton';
 import { ScreenBackHeader } from '../../shared/components/ScreenBackHeader';
 import { BookingStepIndicator } from '../components/BookingStepIndicator';
+import { AddressField, addressStyles, SaveForLaterToggle, SavedAddressList } from '../components/booking/AddressParts';
 import { fetchOwnProfile } from '../../auth/authService';
-import { Feather } from '@expo/vector-icons';
 import { haptics } from '../../shared/haptics';
 import { useToast } from '../../shared/components/ToastProvider';
 import { deleteSavedAddress, listSavedAddresses, saveAddress, type SavedAddress } from '../personalData';
@@ -31,7 +31,7 @@ type Props = NativeStackScreenProps<CustomerStackParamList, 'BookingLocation'>;
 export default function BookingLocationScreen({ route, navigation }: Props) {
   const de = getAppLanguage() === 'de';
   const { barberId, barberName, barberImage, service, date, time } = route.params;
-  const { colors, fonts } = useTheme();
+  const { colors, fonts, isDark } = useTheme();
 
   const [street, setStreet] = useState('');
   const [city, setCity] = useState('');
@@ -148,41 +148,10 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
         </Text>
 
         {savedAddresses.length > 0 ? (
-          <View style={styles.savedBlock} testID="customer-booking-location-saved">
-            <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-              {de ? 'Gespeicherte Adressen' : 'Saved addresses'}
-            </Text>
-            {savedAddresses.map((saved) => (
-              <View key={saved.id} style={[styles.savedRow, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-                <Pressable
-                  onPress={() => onUseSaved(saved)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${de ? 'Adresse verwenden' : 'Use address'}: ${saved.address}`}
-                  testID={`customer-booking-location-saved-${saved.id}`}
-                  style={({ pressed }) => [styles.savedUse, { opacity: pressed ? 0.85 : 1 }]}
-                >
-                  <Feather name="map-pin" size={16} color={colors.accentText} />
-                  <Text numberOfLines={2} style={[styles.savedText, { color: colors.textPrimary, fontFamily: fonts.body }]}>{saved.address}</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => onRemoveSaved(saved)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${de ? 'Adresse entfernen' : 'Remove address'}: ${saved.address}`}
-                  hitSlop={6}
-                  testID={`customer-booking-location-saved-remove-${saved.id}`}
-                  style={styles.savedRemove}
-                >
-                  <Feather name="x" size={18} color={colors.textSecondary} />
-                </Pressable>
-              </View>
-            ))}
-            <Text style={[styles.orNew, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-              {de ? 'Oder gib eine neue Adresse ein:' : 'Or enter a new address:'}
-            </Text>
-          </View>
+          <SavedAddressList addresses={savedAddresses} de={de} onUse={onUseSaved} onRemove={onRemoveSaved} />
         ) : null}
 
-        <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
+        <Text style={[addressStyles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
           {de ? 'Straße und Hausnummer' : 'Street and building'}
         </Text>
         <TextInput
@@ -199,7 +168,7 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
           accessibilityLabel={de ? 'Straße und Hausnummer' : 'Street and building'}
           selectionColor={colors.accent}
           cursorColor={colors.accent}
-          keyboardAppearance={colors.background === '#121214' ? 'dark' : 'light'}
+          keyboardAppearance={isDark ? 'dark' : 'light'}
           style={[
             styles.input,
             {
@@ -243,21 +212,7 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
       </KeyboardAvoidingView>
 
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
-        <Pressable
-          onPress={() => setSaveForLater((current) => !current)}
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: saveForLater }}
-          accessibilityLabel={de ? 'Adresse für später speichern' : 'Save this address for later'}
-          testID="customer-booking-location-save-toggle"
-          style={styles.saveToggle}
-        >
-          <View style={[styles.saveBox, { borderColor: saveForLater ? colors.accent : colors.inputBorder, backgroundColor: saveForLater ? colors.accent : 'transparent' }]}>
-            {saveForLater ? <Feather name="check" size={14} color={colors.onAccent} /> : null}
-          </View>
-          <Text style={[styles.saveText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-            {de ? 'Adresse für später speichern' : 'Save this address for later'}
-          </Text>
-        </Pressable>
+        <SaveForLaterToggle checked={saveForLater} de={de} onToggle={() => setSaveForLater((current) => !current)} />
         <PrimaryButton
           label={de ? 'Termin prüfen' : 'Continue'}
           onPress={onContinue}
@@ -269,58 +224,14 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
   );
 }
 
-function AddressField({ label, value, onChangeText, inputRef, focused, onFocus, onBlur, onSubmitEditing, returnKeyType, testID }: {
-  label: string;
-  value: string;
-  onChangeText: (value: string) => void;
-  inputRef: Ref<TextInputInstance>;
-  focused: boolean;
-  onFocus: () => void;
-  onBlur: () => void;
-  onSubmitEditing: () => void;
-  returnKeyType: 'next' | 'done';
-  testID: string;
-}) {
-  const { colors, fonts } = useTheme();
-  return (
-    <View>
-      <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>{label}</Text>
-      <TextInput
-        ref={inputRef}
-        value={value}
-        onChangeText={onChangeText}
-        onFocus={onFocus}
-        onBlur={onBlur}
-        onSubmitEditing={onSubmitEditing}
-        returnKeyType={returnKeyType}
-        accessibilityLabel={label}
-        placeholderTextColor={colors.textSecondary}
-        selectionColor={colors.accent}
-        style={[styles.singleInput, { color: colors.textPrimary, backgroundColor: colors.surface, borderColor: focused ? colors.accent : colors.inputBorder, fontFamily: fonts.body }]}
-        testID={testID}
-      />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  savedBlock: { marginBottom: space.base, gap: space.sm },
-  savedRow: { flexDirection: 'row', alignItems: 'center', minHeight: 56, borderWidth: HAIRLINE, borderRadius: 12, paddingLeft: space.base },
-  savedUse: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 56 },
-  savedRemove: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: space.xs },
-  savedText: { flex: 1, fontSize: 15, lineHeight: 21 },
-  orNew: { fontSize: 13, marginTop: space.sm },
-  saveToggle: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 44, marginBottom: space.sm },
-  saveBox: { width: 22, height: 22, borderRadius: 5, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  saveText: { fontSize: 14 },
 
   content: { flex: 1 },
   scrollContent: { paddingHorizontal: space.xl, paddingTop: space.base, paddingBottom: space.xl },
   heading: { fontSize: 24 },
   subheading: { fontSize: 15, marginTop: 6, lineHeight: 19 },
 
-  label: { fontSize: 14, marginTop: space['2xl'], marginBottom: 6, letterSpacing: 0.2 },
   input: {
     borderWidth: HAIRLINE, borderRadius: 14, paddingHorizontal: 14,
     paddingVertical: space.md,
@@ -329,7 +240,6 @@ const styles = StyleSheet.create({
     minHeight: 88,
     textAlignVertical: 'top',
   },
-  singleInput: { borderWidth: HAIRLINE, borderRadius: 14, paddingHorizontal: 14, paddingVertical: space.md, fontSize: 16, minHeight: 54 },
   validation: { fontSize: 13, lineHeight: 19, marginTop: space.base },
 
   footer: { paddingHorizontal: space.xl, paddingTop: 14, paddingBottom: space.lg, borderTopWidth: HAIRLINE },
