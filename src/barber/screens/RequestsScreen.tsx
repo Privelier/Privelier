@@ -13,6 +13,7 @@ import { BookingDetails } from '../../shared/components/BookingDetails';
 import { BookingListSkeleton } from '../../shared/components/BookingListSkeleton';
 import { ConfirmSheet } from '../../shared/components/ConfirmSheet';
 import { EmptyState } from '../../shared/components/EmptyState';
+import { LoadOlderBookings } from '../../shared/components/LoadOlderBookings';
 import { RetryNotice } from '../../shared/components/RetryNotice';
 import { getAppLanguage } from '../../shared/locale';
 import { byId } from '../../shared/lookup';
@@ -92,6 +93,15 @@ export default function RequestsScreen() {
               />
             }
             contentContainerStyle={[styles.listContent, { paddingBottom: tabClearance }]}
+            // Older pages only ever hold history, so the control sits under it.
+            ListFooterComponent={data.hasOlder && (historyExpanded || historyCount === 0) ? (
+              <LoadOlderBookings
+                loading={data.loadingOlder}
+                error={data.olderError}
+                onPress={() => void data.loadOlder()}
+                testID="barber-requests-load-older"
+              />
+            ) : undefined}
             ListEmptyComponent={bookings.length === 0 ? (
               <EmptyState
                 icon="inbox"

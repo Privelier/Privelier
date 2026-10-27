@@ -14,6 +14,7 @@ import type {
   VerificationStatus,
 } from '../types';
 import type { InboxThread } from '../shared/threads';
+import type { BookingCursor } from '../shared/bookingPagination';
 import type { BarberDataFailure } from './errors';
 
 // ---------------------------------------------------------------------------
@@ -92,6 +93,9 @@ export type OwnRequestsViewResult =
   | {
       status: 'ok';
       bookings: BookingRow[];
+      /** More bookings exist before `olderCursor` (keyset paging). */
+      hasOlder: boolean;
+      olderCursor: BookingCursor | null;
       servicesById: Map<string, ServiceRow>;
       counterpartsByBookingId: Map<string, BookingCounterpart>;
     }

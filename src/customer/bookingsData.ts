@@ -12,8 +12,9 @@
  *   for a booking whose barber/service can no longer be read.
  */
 import { supabase } from '../../lib/supabase';
+import { BOOKINGS_PAGE_SIZE, buildBookingPage, isBookingCursor, olderThanFilter, type BookingCursor } from '../shared/bookingPagination';
 import type { BarberDirectoryRow, BookingRow, ServiceRow } from '../types';
-import { mapPostgrestError } from './errors';
+import { failure, mapPostgrestError } from './errors';
 import type { CancelBookingResult, OwnBookingsViewResult } from './types';
 
 /** PostgREST code returned by `.single()` when the update matched no row. */
@@ -32,19 +33,19 @@ export { isUpcomingBooking } from '../shared/bookingTime';
  * maps for rendering. The bookings read failing fails the whole call; the
  * two enrichment reads degrade to empty maps instead.
  */
-/** The newest bookings only: every list read is bounded (hardening Phase 4). */
-const BOOKINGS_VIEW_LIMIT = 300;
-
-export async function fetchOwnBookingsView(): Promise<OwnBookingsViewResult> {
-  const { data, error } = await supabase
-    .from('bookings')
-    .select('*')
+export async function fetchOwnBookingsView(before?: BookingCursor): Promise<OwnBookingsViewResult> {
+  if (before && !isBookingCursor(before)) return failure('invalid_input');
+  // One bounded page, newest first; `before` continues strictly after it.
+  let query = supabase.from('bookings').select('*');
+  if (before) query = query.or(olderThanFilter(before));
+  const { data, error } = await query
     .order('date', { ascending: false })
     .order('time', { ascending: false })
-    .limit(BOOKINGS_VIEW_LIMIT);
+    .order('id', { ascending: false })
+    .limit(BOOKINGS_PAGE_SIZE + 1);
 
   if (error) return mapPostgrestError('fetchOwnBookingsView', error);
-  const bookings = (data as BookingRow[]) ?? [];
+  const { bookings, hasOlder, olderCursor } = buildBookingPage((data as BookingRow[]) ?? []);
 
   const barbersById = new Map<string, BarberDirectoryRow>();
   const servicesById = new Map<string, ServiceRow>();
@@ -63,7 +64,7 @@ export async function fetchOwnBookingsView(): Promise<OwnBookingsViewResult> {
     }
   }
 
-  return { status: 'ok', bookings, barbersById, servicesById };
+  return { status: 'ok', bookings, hasOlder, olderCursor, barbersById, servicesById };
 }
 
 /**

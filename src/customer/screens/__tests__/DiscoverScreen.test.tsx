@@ -14,7 +14,7 @@ jest.mock('../../../shared/components/NotificationBell', () => {
   return { NotificationBell: ({ testID }: { testID: string }) => React.createElement(Pressable, { testID }) };
 });
 jest.mock('../../bookingsData', () => ({
-  fetchOwnBookingsView: jest.fn(async () => ({ status: 'ok', bookings: [], barbersById: new Map(), servicesById: new Map() })),
+  fetchOwnBookingsView: jest.fn(async () => ({ status: 'ok', bookings: [], hasOlder: false, olderCursor: null, barbersById: new Map(), servicesById: new Map() })),
 }));
 jest.mock('../../discoveryData', () => ({
   listBarbersByCity: jest.fn(),

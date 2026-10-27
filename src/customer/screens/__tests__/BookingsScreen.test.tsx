@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { BarberDirectoryRow, BookingRow, ServiceRow } from '../../../types';
-import { cancelBookingAsCustomer, fetchOwnBookingsView } from '../../bookingsData';
+import { cancelBookingAsCustomer, fetchOwnBookingsView, isUpcomingBooking } from '../../bookingsData';
 import type { ToastOptions } from '../../../shared/components/ToastProvider';
 import { fetchOwnReviewedBookingIds } from '../../reviewsData';
 import BookingsScreen from '../BookingsScreen';
@@ -146,6 +146,8 @@ beforeEach(() => {
   mockFetchBookings.mockResolvedValue({
     status: 'ok',
     bookings: [BOOKING],
+    hasOlder: false,
+    olderCursor: null,
     barbersById: new Map([[BARBER.id, BARBER]]),
     servicesById: new Map([[SERVICE.id, SERVICE]]),
   });
@@ -293,6 +295,8 @@ describe('booking detail actions', () => {
     mockFetchBookings.mockResolvedValue({
       status: 'ok',
       bookings: [{ ...BOOKING, status: 'cancelled' }],
+      hasOlder: false,
+      olderCursor: null,
       barbersById: new Map([[BARBER.id, BARBER]]),
       servicesById: new Map([[SERVICE.id, SERVICE]]),
     });
@@ -301,4 +305,30 @@ describe('booking detail actions', () => {
     await fireEvent.press(screen.getByTestId('booking-rebook-booking-1'));
     expect(mockNavigate).toHaveBeenCalledWith('BarberProfile', { barberId: 'barber-1' });
   });
+});
+
+it('loads older past bookings from the cursor and merges them', async () => {
+  const PAST = { ...BOOKING, id: 'booking-past', date: '2020-01-05', status: 'completed' as const };
+  const OLDER = { ...BOOKING, id: 'booking-older', date: '2019-03-02', status: 'completed' as const };
+  const cursor = { date: PAST.date, time: PAST.time, id: PAST.id };
+  // This suite stubs the split to "upcoming"; here only open bookings are.
+  jest.mocked(isUpcomingBooking).mockImplementation((row) => row.status === 'pending');
+  mockFetchBookings.mockReset();
+  mockFetchBookings
+    .mockResolvedValueOnce({ status: 'ok', bookings: [BOOKING, PAST], hasOlder: true, olderCursor: cursor, barbersById: new Map([[BARBER.id, BARBER]]), servicesById: new Map([[SERVICE.id, SERVICE]]) })
+    .mockResolvedValueOnce({ status: 'ok', bookings: [OLDER], hasOlder: false, olderCursor: null, barbersById: new Map(), servicesById: new Map() });
+
+  await render(<BookingsScreen />);
+  await waitFor(() => expect(screen.getByTestId('customer-bookings-row-booking-1')).toBeTruthy());
+  // Upcoming never offers older pages.
+  expect(screen.queryByTestId('customer-bookings-load-older')).toBeNull();
+
+  await act(async () => fireEvent.press(screen.getByTestId('customer-bookings-tab-past')));
+  await act(async () => fireEvent.press(screen.getByTestId('customer-bookings-load-older')));
+
+  expect(mockFetchBookings).toHaveBeenLastCalledWith(cursor);
+  await waitFor(() => expect(screen.getByTestId('customer-bookings-row-booking-older')).toBeTruthy());
+  expect(screen.getByTestId('customer-bookings-row-booking-past')).toBeTruthy();
+  expect(screen.queryByTestId('customer-bookings-load-older')).toBeNull();
+  jest.mocked(isUpcomingBooking).mockImplementation(() => true);
 });

@@ -7,7 +7,7 @@ import DiscoverScreen from '../DiscoverScreen';
 jest.mock('../../../auth/authService', () => ({ fetchOwnProfile: jest.fn() }));
 jest.mock('../../../shared/components/NotificationBell', () => ({ NotificationBell: () => null }));
 jest.mock('../../bookingsData', () => ({
-  fetchOwnBookingsView: jest.fn(async () => ({ status: 'ok', bookings: [], barbersById: new Map(), servicesById: new Map() })),
+  fetchOwnBookingsView: jest.fn(async () => ({ status: 'ok', bookings: [], hasOlder: false, olderCursor: null, barbersById: new Map(), servicesById: new Map() })),
 }));
 jest.mock('../../discoveryData', () => ({
   listBarbersByCity: jest.fn(),

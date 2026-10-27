@@ -27,6 +27,7 @@ import { fetchRoomForBooking } from '../inboxData';
 import { CustomerBookingActions, CustomerBookingCard } from '../components/bookings/CustomerBookingCard';
 import { bookingsStyles as styles } from '../components/bookings/bookingsStyles';
 import { LiveTripBanner } from '../components/LiveTripEntry';
+import { LoadOlderBookings } from '../../shared/components/LoadOlderBookings';
 import { useCustomerBookings } from '../hooks/useCustomerBookings';
 import { formatBookingWhen } from '../format';
 import type { CustomerStackParamList } from '../CustomerNavigator';
@@ -194,6 +195,15 @@ export default function BookingsScreen() {
                 } : undefined}
               />
             }
+            // Older pages only ever hold past bookings.
+            ListFooterComponent={tab === 'past' && data.hasOlder ? (
+              <LoadOlderBookings
+                loading={data.loadingOlder}
+                error={data.olderError}
+                onPress={() => void data.loadOlder()}
+                testID="customer-bookings-load-older"
+              />
+            ) : undefined}
             renderItem={({ item, index }) => (
               <CustomerBookingCard
                 item={item}

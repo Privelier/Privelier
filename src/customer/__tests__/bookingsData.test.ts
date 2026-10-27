@@ -1,13 +1,12 @@
 /**
  * Tests for the pure Upcoming/Past split rule of the bookings data layer,
  * plus the customer cancel mutation (build-order step 13-14). The Supabase
- * client is mocked out (same approach as discoveryData.test.ts) —
- * fetchOwnBookingsView stays a thin RLS-scoped select whose behavior is
- * exercised on-device.
+ * client is mocked out (same approach as discoveryData.test.ts); the
+ * bookings read is pinned for its paging contract only.
  */
 import { supabase } from '../../../lib/supabase';
 import type { BookingRow } from '../../types';
-import { cancelBookingAsCustomer, isUpcomingBooking } from '../bookingsData';
+import { cancelBookingAsCustomer, fetchOwnBookingsView, isUpcomingBooking } from '../bookingsData';
 
 jest.mock('../../../lib/supabase', () => ({
   supabase: {
@@ -119,5 +118,50 @@ describe('cancelBookingAsCustomer', () => {
     const result = await cancelBookingAsCustomer('gone');
 
     expect(result).toEqual({ status: 'not_found' });
+  });
+});
+
+/** Awaitable read builder for the paged bookings view and its lookups. */
+function readable(result: unknown) {
+  const obj: Record<string, unknown> = {};
+  for (const name of ['select', 'or', 'order', 'limit', 'in']) obj[name] = jest.fn(() => obj);
+  obj.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) => Promise.resolve(result).then(resolve, reject);
+  return obj as Record<'select' | 'or' | 'order' | 'limit' | 'in', jest.Mock>;
+}
+
+describe('fetchOwnBookingsView', () => {
+  it('reads one page newest first with a probe row and reports older pages', async () => {
+    const rows = Array.from({ length: 301 }, (_, i) => booking({ id: `b${String(i).padStart(3, '0')}` }));
+    const bookingsBuilder = readable({ data: rows, error: null });
+    mockFrom
+      .mockReturnValueOnce(bookingsBuilder)
+      .mockReturnValueOnce(readable({ data: [], error: null }))
+      .mockReturnValueOnce(readable({ data: [], error: null }));
+
+    const result = await fetchOwnBookingsView();
+
+    if (result.status !== 'ok') throw new Error('expected ok');
+    expect(bookingsBuilder.limit).toHaveBeenCalledWith(301);
+    expect(bookingsBuilder.order).toHaveBeenCalledWith('id', { ascending: false });
+    expect(bookingsBuilder.or).not.toHaveBeenCalled();
+    expect(result.bookings).toHaveLength(300);
+    expect(result.hasOlder).toBe(true);
+    expect(result.olderCursor).toEqual({ date: '2026-07-09', time: '10:00:00', id: 'b299' });
+  });
+
+  it('continues after a cursor, and refuses a malformed one without a read', async () => {
+    const bookingsBuilder = readable({ data: [], error: null });
+    mockFrom.mockReturnValueOnce(bookingsBuilder);
+
+    const result = await fetchOwnBookingsView({ date: '2026-07-09', time: '10:00:00', id: 'b299' });
+    expect(result).toMatchObject({ status: 'ok', bookings: [], hasOlder: false, olderCursor: null });
+    expect(bookingsBuilder.or).toHaveBeenCalledWith(
+      'date.lt.2026-07-09,and(date.eq.2026-07-09,time.lt.10:00:00),and(date.eq.2026-07-09,time.eq.10:00:00,id.lt.b299)'
+    );
+
+    mockFrom.mockClear();
+    const refused = await fetchOwnBookingsView({ date: '2026-07-09', time: '10:00', id: 'b),id.gt.(0' });
+    expect(refused).toMatchObject({ status: 'error', code: 'invalid_input' });
+    expect(mockFrom).not.toHaveBeenCalled();
   });
 });

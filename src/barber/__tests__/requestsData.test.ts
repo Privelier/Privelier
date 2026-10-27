@@ -51,6 +51,7 @@ interface ChainableBuilder {
   select: jest.Mock;
   order: jest.Mock;
   limit: jest.Mock;
+  or: jest.Mock;
   in: jest.Mock;
   update: jest.Mock;
   eq: jest.Mock;
@@ -63,6 +64,7 @@ function chainable(result: unknown) {
     select: jest.fn(() => obj),
     order: jest.fn(() => obj),
     limit: jest.fn(() => obj),
+    or: jest.fn(() => obj),
     in: jest.fn(() => obj),
     update: jest.fn(() => obj),
     eq: jest.fn(() => obj),
@@ -160,6 +162,35 @@ describe('transition mutations', () => {
 });
 
 describe('fetchOwnRequestsView', () => {
+  it('continues strictly after a cursor and refuses a malformed one', async () => {
+    const bookingsBuilder = chainable({ data: [], error: null });
+    mockFrom.mockReturnValueOnce(bookingsBuilder);
+
+    const result = await fetchOwnRequestsView({ date: '2026-01-02', time: '09:30:00', id: 'bk9' });
+
+    expect(result.status).toBe('ok');
+    expect(bookingsBuilder.or).toHaveBeenCalledWith(
+      'date.lt.2026-01-02,and(date.eq.2026-01-02,time.lt.09:30:00),and(date.eq.2026-01-02,time.eq.09:30:00,id.lt.bk9)'
+    );
+    expect(bookingsBuilder.order).toHaveBeenCalledWith('id', { ascending: false });
+
+    const refused = await fetchOwnRequestsView({ date: '2026-01-02', time: '09:30', id: 'x,id.gt.0' });
+    expect(refused).toMatchObject({ status: 'error', code: 'invalid_input' });
+  });
+
+  it('reports an older page when the read overflows', async () => {
+    const rows = Array.from({ length: 301 }, (_, i) => booking({ id: `bk${String(i).padStart(3, '0')}`, service_id: null }));
+    mockFrom.mockReturnValueOnce(chainable({ data: rows, error: null })).mockReturnValueOnce(chainable({ data: [], error: null }));
+    mockRpc.mockResolvedValueOnce({ data: [], error: null });
+
+    const result = await fetchOwnRequestsView();
+
+    if (result.status !== 'ok') throw new Error('expected ok');
+    expect(result.bookings).toHaveLength(300);
+    expect(result.hasOlder).toBe(true);
+    expect(result.olderCursor?.id).toBe('bk299');
+  });
+
   it('returns bookings plus service and counterpart maps on the happy path', async () => {
     const b1 = booking({ id: 'bk1', service_id: 's1' });
     const b2 = booking({ id: 'bk2', service_id: 's2' });
@@ -187,7 +218,10 @@ describe('fetchOwnRequestsView', () => {
     if (result.status !== 'ok') return;
     expect(result.bookings).toEqual([b1, b2]);
     expect(bookingsBuilder.order).toHaveBeenCalledWith('date', { ascending: false });
-    expect(bookingsBuilder.limit).toHaveBeenCalledWith(300);
+    // One page of 300 plus a probe row that only signals an older page.
+    expect(bookingsBuilder.limit).toHaveBeenCalledWith(301);
+    expect(result.hasOlder).toBe(false);
+    expect(result.olderCursor).toBeNull();
     expect(result.servicesById.get('s1')?.name).toBe('Burst fade');
     expect(result.servicesById.get('s2')?.name).toBe('Hair + beard');
     expect(result.counterpartsByBookingId.get('bk1')).toEqual({

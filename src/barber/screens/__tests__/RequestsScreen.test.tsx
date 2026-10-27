@@ -110,6 +110,8 @@ beforeEach(() => {
   mockFetchRequests.mockResolvedValue({
     status: 'ok',
     bookings: [BOOKING],
+    hasOlder: false,
+    olderCursor: null,
     servicesById: new Map([[SERVICE.id, SERVICE]]),
     counterpartsByBookingId: new Map([
       ['booking-2', { id: 'customer-2', name: 'Mina Hassan', profile_image: null }],
@@ -140,6 +142,8 @@ describe('RequestsScreen status presentation', () => {
     mockFetchRequests.mockResolvedValueOnce({
       status: 'ok',
       bookings: [BOOKING, cancelled, todaysAppointment, pending],
+      hasOlder: false,
+      olderCursor: null,
       servicesById: new Map([[SERVICE.id, SERVICE]]),
       counterpartsByBookingId: new Map(),
     });
@@ -215,4 +219,27 @@ describe('RequestsScreen status presentation', () => {
     expect(screen.getByTestId('request-cancel-booking-2')).toBeTruthy();
     expect(screen.getByTestId('request-complete-booking-2')).toBeTruthy();
   });
+});
+
+it('loads older history from the cursor once history is open', async () => {
+  const DONE = { ...BOOKING, id: 'booking-done', date: '2020-01-05', status: 'completed' as const };
+  const OLDER = { ...BOOKING, id: 'booking-older', date: '2019-03-02', status: 'completed' as const };
+  const cursor = { date: DONE.date, time: DONE.time, id: DONE.id };
+  mockFetchRequests.mockReset();
+  mockFetchRequests
+    .mockResolvedValueOnce({ status: 'ok', bookings: [DONE, BOOKING], hasOlder: true, olderCursor: cursor, servicesById: new Map([[SERVICE.id, SERVICE]]), counterpartsByBookingId: new Map() })
+    .mockResolvedValueOnce({ status: 'ok', bookings: [OLDER], hasOlder: false, olderCursor: null, servicesById: new Map(), counterpartsByBookingId: new Map() });
+
+  await render(<RequestsScreen />);
+  await waitFor(() => expect(screen.getByTestId('barber-requests-history-toggle')).toBeTruthy());
+  // Collapsed history hides its rows, so it offers no older page either.
+  expect(screen.queryByTestId('barber-requests-load-older')).toBeNull();
+
+  await act(async () => fireEvent.press(screen.getByTestId('barber-requests-history-toggle')));
+  await act(async () => fireEvent.press(screen.getByTestId('barber-requests-load-older')));
+
+  expect(mockFetchRequests).toHaveBeenLastCalledWith(cursor);
+  await waitFor(() => expect(screen.getByTestId('barber-requests-row-booking-older')).toBeTruthy());
+  expect(screen.getByTestId('barber-requests-row-booking-done')).toBeTruthy();
+  expect(screen.queryByTestId('barber-requests-load-older')).toBeNull();
 });

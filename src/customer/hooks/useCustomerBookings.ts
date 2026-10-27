@@ -12,6 +12,10 @@
  * reason and the authoritative row is refetched. While a booking is in
  * flight the baseline refetch skips it, and the mutation's row is applied
  * after it resolves, so a stale snapshot cannot flip a card backward.
+ *
+ * PAGING: the baseline read is the newest page; "show older" fetches the
+ * next keyset page and merges it. Once older pages are loaded, a focus
+ * refetch of the first page leaves the cursor where it is.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
@@ -20,6 +24,7 @@ import { applyBookingChange, applyBookingChangeSorted, type BookingChangeEvent }
 import { useToast } from '../../shared/components/ToastProvider';
 import { useBookingsRealtime } from '../../shared/useBookingsRealtime';
 import type { BarberDirectoryRow, BookingRow, ServiceRow } from '../../types';
+import type { BookingCursor } from '../../shared/bookingPagination';
 import { cancelBookingAsCustomer, fetchOwnBookingsView } from '../bookingsData';
 import { fetchOwnReviewedBookingIds } from '../reviewsData';
 
@@ -30,6 +35,10 @@ function sortDesc(rows: BookingRow[]): BookingRow[] {
     const kb = `${b.date}T${b.time}`;
     return ka > kb ? -1 : ka < kb ? 1 : 0;
   });
+}
+
+function mergeMaps<K, V>(previous: Map<K, V>, next: Map<K, V>): Map<K, V> {
+  return next.size === 0 ? previous : new Map([...previous, ...next]);
 }
 
 function without<T>(record: Record<string, T>, key: string): Record<string, T> {
@@ -56,6 +65,12 @@ export function useCustomerBookings(de: boolean) {
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const queuedRef = useRef<Set<string>>(new Set());
   const [queued, setQueued] = useState<Record<string, boolean>>({});
+  const [hasOlder, setHasOlder] = useState(false);
+  const [olderCursor, setOlderCursor] = useState<BookingCursor | null>(null);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [olderError, setOlderError] = useState<string | null>(null);
+  const pagedOlderRef = useRef(false);
+  const loadingOlderRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -76,8 +91,13 @@ export function useCustomerBookings(de: boolean) {
       setError(result.message);
       return;
     }
-    setBarbersById(result.barbersById);
-    setServicesById(result.servicesById);
+    // Older pages keep their entries: merge, never replace.
+    setBarbersById((prev) => mergeMaps(prev, result.barbersById));
+    setServicesById((prev) => mergeMaps(prev, result.servicesById));
+    if (!pagedOlderRef.current) {
+      setHasOlder(result.hasOlder);
+      setOlderCursor(result.olderCursor);
+    }
     setBookings((prev) => {
       let next = prev;
       for (const row of result.bookings) {
@@ -90,8 +110,39 @@ export function useCustomerBookings(de: boolean) {
     // Only the completed ids the tab could show, so the round trip stays bounded.
     const completedIds = result.bookings.filter((b) => b.status === 'completed').map((b) => b.id);
     const reviewedResult = await fetchOwnReviewedBookingIds(completedIds);
-    if (reviewedResult.status === 'ok') setReviewedBookingIds(reviewedResult.reviewedBookingIds);
+    if (reviewedResult.status === 'ok') {
+      setReviewedBookingIds((prev) => new Set([...prev, ...reviewedResult.reviewedBookingIds]));
+    }
   }, []);
+
+  const loadOlder = useCallback(async () => {
+    if (loadingOlderRef.current || !olderCursor) return;
+    loadingOlderRef.current = true;
+    setLoadingOlder(true);
+    setOlderError(null);
+    const result = await fetchOwnBookingsView(olderCursor);
+    loadingOlderRef.current = false;
+    setLoadingOlder(false);
+    if (result.status !== 'ok') {
+      setOlderError(result.message);
+      return;
+    }
+    pagedOlderRef.current = true;
+    setHasOlder(result.hasOlder);
+    setOlderCursor(result.olderCursor);
+    setBarbersById((prev) => mergeMaps(prev, result.barbersById));
+    setServicesById((prev) => mergeMaps(prev, result.servicesById));
+    setBookings((prev) => {
+      let next = prev;
+      for (const row of result.bookings) next = applyBookingChange(next, { eventType: 'UPDATE', row });
+      return next === prev ? prev : sortDesc(next);
+    });
+    const completedIds = result.bookings.filter((b) => b.status === 'completed').map((b) => b.id);
+    const reviewedResult = await fetchOwnReviewedBookingIds(completedIds);
+    if (reviewedResult.status === 'ok') {
+      setReviewedBookingIds((prev) => new Set([...prev, ...reviewedResult.reviewedBookingIds]));
+    }
+  }, [olderCursor]);
 
   useFocusEffect(
     useCallback(() => {
@@ -165,5 +216,9 @@ export function useCustomerBookings(de: boolean) {
     queued,
     load,
     queueCancellation,
+    hasOlder,
+    loadingOlder,
+    olderError,
+    loadOlder,
   };
 }

@@ -13,6 +13,7 @@ import type {
 } from '../types';
 import type { InboxThread } from '../shared/threads';
 import type { BusySlot } from '../shared/slots';
+import type { BookingCursor } from '../shared/bookingPagination';
 import type { CustomerDataFailure } from './errors';
 
 // ---------------------------------------------------------------------------
@@ -68,6 +69,9 @@ export type OwnBookingsViewResult =
   | {
       status: 'ok';
       bookings: BookingRow[];
+      /** More bookings exist before `olderCursor` (keyset paging). */
+      hasOlder: boolean;
+      olderCursor: BookingCursor | null;
       barbersById: Map<string, BarberDirectoryRow>;
       servicesById: Map<string, ServiceRow>;
     }

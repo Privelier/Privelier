@@ -27,8 +27,9 @@
  * their owner), keyed by id for the cards.
  */
 import { supabase } from '../../lib/supabase';
+import { BOOKINGS_PAGE_SIZE, buildBookingPage, isBookingCursor, olderThanFilter, type BookingCursor } from '../shared/bookingPagination';
 import type { BookingRow, ServiceRow } from '../types';
-import { mapPostgrestError } from './errors';
+import { failure, mapPostgrestError } from './errors';
 import type {
   BookingCounterpart,
   OwnRequestsViewResult,
@@ -49,21 +50,22 @@ interface CounterpartRpcRow extends BookingCounterpart {
  * failing fails the whole call; the service and counterpart reads degrade to
  * empty maps instead.
  */
-/** The newest bookings only: every list read is bounded (hardening Phase 4). */
-const REQUESTS_VIEW_LIMIT = 300;
-
-export async function fetchOwnRequestsView(): Promise<OwnRequestsViewResult> {
-  // Newest first so the cap drops the oldest history, then back to the
-  // ascending order the screen expects.
-  const { data, error } = await supabase
-    .from('bookings')
-    .select('*')
+export async function fetchOwnRequestsView(before?: BookingCursor): Promise<OwnRequestsViewResult> {
+  if (before && !isBookingCursor(before)) return failure('invalid_input');
+  // One bounded page, newest first so the cap drops the oldest history;
+  // `before` continues strictly after it. Then back to the ascending order
+  // the screen expects.
+  let query = supabase.from('bookings').select('*');
+  if (before) query = query.or(olderThanFilter(before));
+  const { data, error } = await query
     .order('date', { ascending: false })
     .order('time', { ascending: false })
-    .limit(REQUESTS_VIEW_LIMIT);
+    .order('id', { ascending: false })
+    .limit(BOOKINGS_PAGE_SIZE + 1);
 
   if (error) return mapPostgrestError('fetchOwnRequestsView', error);
-  const bookings = ((data as BookingRow[]) ?? []).reverse();
+  const page = buildBookingPage((data as BookingRow[]) ?? []);
+  const bookings = page.bookings.reverse();
 
   const servicesById = new Map<string, ServiceRow>();
   const counterpartsByBookingId = new Map<string, BookingCounterpart>();
@@ -96,7 +98,7 @@ export async function fetchOwnRequestsView(): Promise<OwnRequestsViewResult> {
     }
   }
 
-  return { status: 'ok', bookings, servicesById, counterpartsByBookingId };
+  return { status: 'ok', bookings, hasOlder: page.hasOlder, olderCursor: page.olderCursor, servicesById, counterpartsByBookingId };
 }
 
 /**

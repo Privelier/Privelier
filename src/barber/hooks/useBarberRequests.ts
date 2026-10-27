@@ -12,6 +12,10 @@
  * authoritative row is re-applied (its realtime echo is a no-op); on
  * failure the card rolls back with the reason. While a booking is in flight
  * the baseline refetch skips it, so a stale snapshot cannot flip it back.
+ *
+ * PAGING: the baseline read is the newest page; "show older" fetches the
+ * next keyset page and merges it. Once older pages are loaded, a focus
+ * refetch of the first page leaves the cursor where it is.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
@@ -19,6 +23,7 @@ import { supabase } from '../../../lib/supabase';
 import { applyBookingChange, applyBookingChangeSorted, type BookingChangeEvent } from '../../shared/bookingRealtime';
 import { useBookingsRealtime } from '../../shared/useBookingsRealtime';
 import type { BookingRow, ServiceRow } from '../../types';
+import type { BookingCursor } from '../../shared/bookingPagination';
 import { sortAsc } from '../requestPresentation';
 import { fetchOwnRequestsView } from '../requestsData';
 import type { BookingCounterpart, TransitionBookingResult } from '../types';
@@ -27,6 +32,20 @@ function without<T>(record: Record<string, T>, key: string): Record<string, T> {
   const next = { ...record };
   delete next[key];
   return next;
+}
+
+function mergeMaps<K, V>(previous: Map<K, V>, next: Map<K, V>): Map<K, V> {
+  return next.size === 0 ? previous : new Map([...previous, ...next]);
+}
+
+function mergeRows(prev: BookingRow[], rows: BookingRow[], skip: ReadonlySet<string>): BookingRow[] {
+  let next = prev;
+  for (const row of rows) {
+    if (skip.has(row.id)) continue; // never flip a card mid-write
+    next = applyBookingChange(next, { eventType: 'UPDATE', row });
+  }
+  // An all-no-op snapshot keeps the same reference: no sort, no render.
+  return next === prev ? prev : sortAsc(next);
 }
 
 export function useBarberRequests(de: boolean) {
@@ -43,6 +62,12 @@ export function useBarberRequests(de: boolean) {
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const [celebration, setCelebration] = useState<string | null>(null);
   const clearCelebration = useCallback(() => setCelebration(null), []);
+  const [hasOlder, setHasOlder] = useState(false);
+  const [olderCursor, setOlderCursor] = useState<BookingCursor | null>(null);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [olderError, setOlderError] = useState<string | null>(null);
+  const pagedOlderRef = useRef(false);
+  const loadingOlderRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -63,18 +88,35 @@ export function useBarberRequests(de: boolean) {
       setError(result.message);
       return;
     }
-    setServicesById(result.servicesById);
-    setCounterpartsById(result.counterpartsByBookingId);
-    setBookings((prev) => {
-      let next = prev;
-      for (const row of result.bookings) {
-        if (inFlightRef.current.has(row.id)) continue; // never flip a card mid-write
-        next = applyBookingChange(next, { eventType: 'UPDATE', row });
-      }
-      // An all-no-op snapshot keeps the same reference: no sort, no render.
-      return next === prev ? prev : sortAsc(next);
-    });
+    // Older pages keep their entries: merge, never replace.
+    setServicesById((prev) => mergeMaps(prev, result.servicesById));
+    setCounterpartsById((prev) => mergeMaps(prev, result.counterpartsByBookingId));
+    if (!pagedOlderRef.current) {
+      setHasOlder(result.hasOlder);
+      setOlderCursor(result.olderCursor);
+    }
+    setBookings((prev) => mergeRows(prev, result.bookings, inFlightRef.current));
   }, []);
+
+  const loadOlder = useCallback(async () => {
+    if (loadingOlderRef.current || !olderCursor) return;
+    loadingOlderRef.current = true;
+    setLoadingOlder(true);
+    setOlderError(null);
+    const result = await fetchOwnRequestsView(olderCursor);
+    loadingOlderRef.current = false;
+    setLoadingOlder(false);
+    if (result.status !== 'ok') {
+      setOlderError(result.message);
+      return;
+    }
+    pagedOlderRef.current = true;
+    setHasOlder(result.hasOlder);
+    setOlderCursor(result.olderCursor);
+    setServicesById((prev) => mergeMaps(prev, result.servicesById));
+    setCounterpartsById((prev) => mergeMaps(prev, result.counterpartsByBookingId));
+    setBookings((prev) => mergeRows(prev, result.bookings, inFlightRef.current));
+  }, [olderCursor]);
 
   useFocusEffect(
     useCallback(() => {
@@ -135,5 +177,9 @@ export function useBarberRequests(de: boolean) {
     clearCelebration,
     load,
     runTransition,
+    hasOlder,
+    loadingOlder,
+    olderError,
+    loadOlder,
   };
 }
