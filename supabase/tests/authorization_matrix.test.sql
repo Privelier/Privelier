@@ -91,11 +91,21 @@ select throws_ok(
   format($$insert into public.bookings (customer_id, barber_id, service_id, date, time, location) values (%L, %L, %L, current_date + 7, '10:15', 'x')$$,
     tests.id('b'), tests.id('x'), tests.id('svc_x')),
   '23P01', null, 'the exclusion constraint refuses an overlap even when the trigger is bypassed');
-select lives_ok(
+-- Travel buffer (0060): a 10:00-11:00 booking keeps the barber free until 11:30.
+select throws_ok(
   format($$insert into public.bookings (customer_id, barber_id, service_id, date, time, location) values (%L, %L, %L, current_date + 7, '11:00', 'x')$$,
     tests.id('b'), tests.id('x'), tests.id('svc_x')),
-  'paired allow: an adjacent half-open slot [11:00, 12:00) is accepted');
+  '23P01', null, 'the constraint keeps 30 minutes of travel time after a booking');
+select lives_ok(
+  format($$insert into public.bookings (customer_id, barber_id, service_id, date, time, location) values (%L, %L, %L, current_date + 7, '11:30', 'x')$$,
+    tests.id('b'), tests.id('x'), tests.id('svc_x')),
+  'paired allow: a booking that starts when the travel time ends is accepted');
 alter table public.bookings enable trigger trg_validate_booking_slot;
+select is(tests.scalar(tests.id('b'), format(
+  $$select (public.create_booking(%L, current_date + 7, '12:45', 'x', gen_random_uuid())).id$$,
+  tests.id('svc_x'))), 'error:P0001', 'the slot trigger refuses a request inside the travel time before a booking');
+select is((select min(start_time)::text from public.get_barber_busy_slots(tests.id('x')::uuid, current_date + 7)), '09:30:00',
+  'busy slots include the travel time, so the picker never offers a refused time');
 
 -- ------------------------------------------------------------------ chat --
 insert into fx select 'chat', id::text from public.chat_rooms where booking_id = tests.id('bk');
