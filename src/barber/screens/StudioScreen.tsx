@@ -1,231 +1,46 @@
-import { getAppLanguage } from '../../shared/locale';
-import { QuickActions } from '../components/QuickActions';
-import { StatsInsightCard } from '../components/StatsInsightCard';
-import { AnimatedNumber } from '../../shared/motion/AnimatedNumber';
-import { fetchBarberStats, type BarberStatsRow } from '../../shared/barberStats';
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import Svg, { Circle, Line, Path } from 'react-native-svg';
+/**
+ * Barber Studio: greeting, verification, quick actions, performance, nightly
+ * stats and the setup checklist. Data lives in useStudioData; the sections
+ * are in components/studio.
+ */
+import { useCallback } from 'react';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { fetchOwnProfile } from '../../auth/authService';
-import { useExitRole } from '../../RoleContext';
-import { useTheme } from '../../theme/useTheme';
-import { numericText } from '../../theme/typography';
-import { HAIRLINE, radius, space } from '../../theme/spacing';
-import { pressOpacity } from '../../theme/motion';
-import { RetryNotice } from '../../shared/components/RetryNotice';
-import { Skeleton } from '../../shared/components/Skeleton';
-import { GlassSurface } from '../../shared/components/GlassSurface';
 import Animated from 'react-native-reanimated';
+import { LegalLinks } from '../../legal/LegalComponents';
+import { useExitRole } from '../../RoleContext';
+import { RetryNotice } from '../../shared/components/RetryNotice';
+import { getAppLanguage } from '../../shared/locale';
 import { Reveal, ScrollGlassHeader, useScrollGlass } from '../../shared/motion';
-import type { VerificationStatus } from '../../types';
-import { fetchDashboardView } from '../dashboardData';
-import { firstName, formatBookingWhen, formatMoney, timeOfDayGreeting } from '../../shared/format';
-import type { BarberDashboardAnalytics, DashboardView, ReadinessItem, ReadinessItemKey, ReadinessState } from '../types';
+import { useTabBarClearance } from '../../shared/navigation/tabBarClearance';
+import { useTheme } from '../../theme/useTheme';
+import { QuickActions } from '../components/QuickActions';
+import { StatsInsightCard } from '../components/StatsInsightCard';
+import { StudioAnalytics } from '../components/studio/StudioAnalytics';
+import { StudioHeader, StudioSkeleton } from '../components/studio/StudioParts';
+import { StudioReadiness, VerificationLine } from '../components/studio/StudioReadiness';
+import { studioStyles as styles } from '../components/studio/studioStyles';
+import { useStudioData } from '../hooks/useStudioData';
+import type { ReadinessItemKey } from '../types';
 import type { BarberTabParamList } from '../BarberTabs';
 import type { BarberStackParamList } from '../BarberNavigator';
-import { LegalLinks } from '../../legal/LegalComponents';
-import { NotificationBell } from '../../shared/components/NotificationBell';
-import { useTabBarClearance } from '../../shared/navigation/tabBarClearance';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<BarberTabParamList, 'Studio'>,
   NativeStackScreenProps<BarberStackParamList>
 >;
 
-const isDe = () => getAppLanguage() === 'de';
-
-/** The analytics RPC names the busiest weekday in English; German devices show it in German. */
-const GERMAN_WEEKDAYS: Record<string, string> = {
-  Monday: 'Montag', Tuesday: 'Dienstag', Wednesday: 'Mittwoch', Thursday: 'Donnerstag',
-  Friday: 'Freitag', Saturday: 'Samstag', Sunday: 'Sonntag',
-};
-
-function verificationLine(status: VerificationStatus): string {
-  switch (status) {
-    case 'approved': return isDe() ? 'Verifizierung bestätigt. Dein Profil kann in der Kundensuche erscheinen.' : 'Verification approved. Your profile can appear in customer search.';
-    case 'pending': return isDe() ? 'Deine Verifizierung wird persönlich geprüft.' : 'Verification is under manual review.';
-    case 'rejected': return isDe() ? 'Deine Verifizierung braucht deine Aufmerksamkeit.' : 'Verification needs your attention.';
-  }
-}
-
-function readinessLabel(item: ReadinessItem): string {
-  if (item.state === 'unavailable') {
-    switch (item.key) {
-      case 'services': return (isDe() ? 'Leistungen konnten nicht geprüft werden' : 'Could not check services');
-      case 'availability': return (isDe() ? 'Verfügbarkeit konnte nicht geprüft werden' : 'Could not check availability');
-      case 'location': return (isDe() ? 'Standort konnte nicht geprüft werden' : 'Could not check location');
-      case 'portfolio': return (isDe() ? 'Portfolio konnte nicht geprüft werden' : 'Could not check portfolio');
-      case 'bio': return (isDe() ? 'Bio konnte nicht geprüft werden' : 'Could not check bio');
-      case 'verification': return (isDe() ? 'Verifizierung konnte nicht geprüft werden' : 'Could not check verification');
-    }
-  }
-  switch (item.key) {
-    case 'services':
-      return item.state === 'complete' ? (isDe() ? 'Leistungen angelegt' : 'Services added') : (isDe() ? 'Leistung hinzufügen' : 'Add a service');
-    case 'availability':
-      return item.state === 'complete' ? (isDe() ? 'Verfügbarkeit festgelegt' : 'Availability set') : (isDe() ? 'Verfügbarkeit festlegen' : 'Set your availability');
-    case 'location':
-      return item.state === 'complete' ? (isDe() ? 'Standort hinzugefügt' : 'Location added') : (isDe() ? 'Standort hinzufügen' : 'Add your location');
-    case 'portfolio':
-      return item.state === 'complete' ? (isDe() ? 'Portfoliobilder hinzugefügt' : 'Portfolio photos added') : (isDe() ? 'Portfoliobilder hinzufügen' : 'Add portfolio photos');
-    case 'bio':
-      return item.state === 'complete' ? (isDe() ? 'Bio hinzugefügt' : 'Bio added') : (isDe() ? 'Kurze Bio hinzufügen' : 'Add a short bio');
-    case 'verification':
-      return item.state === 'complete'
-        ? (isDe() ? 'Verifiziert' : 'Verified')
-        : item.state === 'attention'
-          ? (isDe() ? 'Verifizierung braucht Aufmerksamkeit' : 'Verification needs attention')
-          : (isDe() ? 'Verifizierung in Prüfung' : 'Verification in review');
-  }
-}
-
-const READINESS_ICONS: Record<ReadinessState, keyof typeof Feather.glyphMap> = {
-  complete: 'check-circle',
-  incomplete: 'circle',
-  in_progress: 'clock',
-  attention: 'alert-circle',
-  unavailable: 'help-circle',
-};
-
-function EarningsTrend({ data, width, colors }: {
-  data: BarberDashboardAnalytics['weeklyTrend'];
-  width: number;
-  colors: ReturnType<typeof useTheme>['colors'];
-}) {
-  const { fonts } = useTheme();
-  const height = 100;
-  const values = data.map((point) => point.bookedValue);
-  const max = Math.max(...values, 0);
-  const coordinates = values.map((value, index) => ({
-    x: data.length < 2 ? width / 2 : 8 + (index / (data.length - 1)) * (width - 16),
-    y: max === 0 ? height - 12 : height - 12 - (value / max) * (height - 28),
-  }));
-  const path = coordinates.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
-
-  return (
-    <View testID="barber-dashboard-earnings-trend" accessibilityLabel={max === 0 ? 'No completed booking value in the last eight weeks' : `Eight week trend, peak ${formatMoney(max)}`}>
-      <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-        <Line x1={0} y1={height - 12} x2={width} y2={height - 12} stroke={colors.border} strokeWidth={1} />
-        {max > 0 ? <>
-          <Path d={path} stroke={colors.accent} strokeWidth={2.5} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          {coordinates.map((point, index) => <Circle key={index} cx={point.x} cy={point.y} r={index === coordinates.length - 1 ? 4 : 2.5} fill={colors.accent} />)}
-        </> : null}
-      </Svg>
-      <View style={styles.chartLabels}>
-        <Text style={[styles.chartLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-          {data[0]?.weekStart.slice(5) ?? ''}
-        </Text>
-        <Text style={[styles.chartLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>{getAppLanguage() === 'de' ? '8 Wochen' : '8 weeks'}</Text>
-        <Text style={[styles.chartLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>{getAppLanguage() === 'de' ? 'Jetzt' : 'Now'}</Text>
-      </View>
-    </View>
-  );
-}
-
-function Metric({ label, value, detail, colors }: {
-  label: string;
-  value: number;
-  detail: string;
-  colors: ReturnType<typeof useTheme>['colors'];
-}) {
-  const { fonts } = useTheme();
-  return (
-    <View style={styles.metric}>
-      <Text style={[styles.metricLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>{label}</Text>
-      <AnimatedNumber value={value} style={[styles.metricValue, { color: colors.textPrimary }]} />
-      <Text style={[styles.metricDetail, { color: colors.textSecondary, fontFamily: fonts.body }]}>{detail}</Text>
-    </View>
-  );
-}
-
-function SectionUnavailable({
-  label,
-  testID,
-  onRetry,
-  retrying,
-}: {
-  label: string;
-  testID: string;
-  onRetry: () => void;
-  retrying: boolean;
-}) {
-  const { colors, fonts } = useTheme();
-  return (
-    <View style={styles.unavailable} testID={testID}>
-      <Text accessibilityRole="alert" style={[styles.unavailableText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-        {isDe() ? `${label} konnte nicht geladen werden.` : `${label} could not load.`}
-      </Text>
-      {retrying ? (
-        <ActivityIndicator size="small" color={colors.accent} accessibilityLabel={isDe() ? 'Studio wird aktualisiert' : 'Refreshing studio'} />
-      ) : (
-        <Pressable
-          onPress={onRetry}
-          accessibilityRole="button"
-          accessibilityLabel={isDe() ? `${label} erneut laden` : `Retry ${label.toLowerCase()}`}
-          testID={`${testID}-retry`}
-          style={({ pressed }) => [styles.retryAction, { opacity: pressed ? pressOpacity.soft : 1 }]}
-        >
-          <Text style={[styles.retryText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
-            {isDe() ? 'Erneut versuchen' : 'Try again'}
-          </Text>
-        </Pressable>
-      )}
-    </View>
-  );
-}
-
 export default function StudioScreen({ navigation }: Props) {
   // Scroll the last row clear of the floating glass tab bar.
   const tabClearance = useTabBarClearance(32);
-  const { colors, fonts } = useTheme();
+  const { colors } = useTheme();
   const { scrollY, onScroll } = useScrollGlass();
-  const { width: windowWidth } = useWindowDimensions();
   const onSignOut = useExitRole();
-  const [name, setName] = useState<string | null>(null);
-  const [view, setView] = useState<DashboardView | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [retrying, setRetrying] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [stats, setStats] = useState<BarberStatsRow | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      const profileResult = await fetchOwnProfile();
-      if (profileResult.status === 'error' || !profileResult.profile) {
-        setError(profileResult.status === 'error' ? profileResult.message : isDe() ? 'Dein Profil konnte nicht geladen werden.' : 'Could not load your profile.');
-        setView(null);
-        return;
-      }
-      const [nextView, statsById] = await Promise.all([
-        fetchDashboardView(profileResult.profile.id),
-        fetchBarberStats([profileResult.profile.id]),
-      ]);
-      setStats(statsById.get(profileResult.profile.id) ?? null);
-      setName(profileResult.profile.name);
-      setView(nextView);
-      setError(null);
-    } catch {
-      setError(isDe() ? 'Dein Studio konnte nicht geladen werden. Versuch es erneut.' : 'Could not load your studio. Try again.');
-      setView(null);
-    } finally {
-      setLoading(false);
-      setRetrying(false);
-    }
-  }, []);
-
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
-
-  const retryDashboard = useCallback(() => {
-    if (retrying) return;
-    setRetrying(true);
-    void load();
-  }, [load, retrying]);
+  const de = getAppLanguage() === 'de';
+  const { name, view, loading, retrying, error, stats, retry } = useStudioData(de);
 
   const openReadinessTarget = useCallback(
     (key: ReadinessItemKey) => {
@@ -241,93 +56,26 @@ export default function StudioScreen({ navigation }: Props) {
     [navigation]
   );
 
-  const verification = view?.profile.status === 'ok' ? view.profile.data.verification : null;
-  const verificationText = verification
-    ? verificationLine(verification)
-    : isDe() ? 'Verifiziere dein Profil, um in der Kundensuche zu erscheinen.' : 'Verify your profile to appear in customer search.';
-
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['top', 'left', 'right']}
-      testID="barber-dashboard-screen"
-    >
-      <Animated.ScrollView
-        onScroll={onScroll}
-        scrollEventThrottle={16} contentContainerStyle={[styles.scrollContent, { paddingBottom: tabClearance }]}>
-        <View style={styles.headerRow}>
-          <View style={styles.headerText}>
-            {loading && !view ? (
-              <View style={styles.headerSkeleton}>
-                <Skeleton style={styles.skeletonGreeting} />
-                <Skeleton style={styles.skeletonName} />
-              </View>
-            ) : name ? (
-              <>
-                <Text style={[styles.greeting, { color: colors.textSecondary, fontFamily: fonts.body }]}>{timeOfDayGreeting()},</Text>
-                <Text style={[styles.name, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{firstName(name)}.</Text>
-              </>
-            ) : (
-              <Text style={[styles.name, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>Dashboard</Text>
-            )}
-          </View>
-          <NotificationBell onPress={() => navigation.navigate('NotificationCenter')} testID="barber-dashboard-notifications" />
-          <Pressable
-            onPress={() => navigation.navigate('Settings')}
-            accessibilityRole="button"
-            accessibilityLabel={getAppLanguage() === 'de' ? 'Einstellungen' : 'Settings'}
-            hitSlop={6}
-            testID="barber-dashboard-settings"
-            style={({ pressed }) => [styles.settingsButton, { opacity: pressed ? pressOpacity.soft : 1 }]}
-          >
-            <Feather name="settings" size={20} color={colors.textSecondary} />
-          </Pressable>
-          <Pressable
-            onPress={onSignOut}
-            accessibilityRole="button"
-            accessibilityLabel={isDe() ? 'Abmelden' : 'Sign out'}
-            testID="barber-dashboard-logout"
-            style={({ pressed }) => [styles.signOut, { opacity: pressed ? pressOpacity.soft : 1 }]}
-          >
-            <Feather name="log-out" size={16} color={colors.textSecondary} />
-            <Text style={[styles.signOutText, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-              {isDe() ? 'Abmelden' : 'Sign out'}
-            </Text>
-          </Pressable>
-        </View>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']} testID="barber-dashboard-screen">
+      <Animated.ScrollView onScroll={onScroll} scrollEventThrottle={16} contentContainerStyle={[styles.scrollContent, { paddingBottom: tabClearance }]}>
+        <StudioHeader
+          name={name}
+          showSkeleton={loading && !view}
+          de={de}
+          onNotifications={() => navigation.navigate('NotificationCenter')}
+          onSettings={() => navigation.navigate('Settings')}
+          onSignOut={onSignOut}
+        />
 
         {loading && !view ? (
           <StudioSkeleton />
         ) : error && !view ? (
-          <RetryNotice testID="barber-dashboard-error" message={error} onRetry={retryDashboard} style={styles.noticeMargins} />
+          <RetryNotice testID="barber-dashboard-error" message={error} onRetry={retry} style={styles.noticeMargins} />
         ) : view ? (
           <>
             <Reveal index={0}>
-              <View testID="barber-dashboard-verification" style={styles.verification}>
-                {view.profile.status === 'ok' ? (
-                  <Pressable
-                    onPress={() => navigation.navigate('Verify')}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${verificationText} View verification.`}
-                    style={({ pressed }) => [styles.verificationLink, { opacity: pressed ? pressOpacity.soft : 1 }]}
-                  >
-                    <Feather
-                      name={verification === 'approved' ? 'check-circle' : verification === 'rejected' ? 'alert-circle' : 'clock'}
-                      size={16}
-                      color={verification === 'rejected' ? colors.errorText : verification === 'approved' ? colors.accentText : colors.textSecondary}
-                    />
-                    <Text style={[styles.verificationText, {
-                      color: verification === 'rejected' ? colors.errorText : colors.textSecondary,
-                      fontFamily: fonts.body,
-                    }]}>
-                      {verificationText}
-                    </Text>
-                    <Feather name="chevron-right" size={16} color={colors.textSecondary} />
-                  </Pressable>
-                ) : (
-                  <SectionUnavailable label={isDe() ? 'Verifizierungsstatus' : 'Verification status'} testID="barber-dashboard-verification-unavailable" onRetry={retryDashboard} retrying={retrying} />
-                )}
-              </View>
+              <VerificationLine profile={view.profile} retrying={retrying} de={de} onOpen={() => navigation.navigate('Verify')} onRetry={retry} />
             </Reveal>
 
             <View style={styles.quickActions}>
@@ -335,118 +83,7 @@ export default function StudioScreen({ navigation }: Props) {
             </View>
 
             <Reveal index={1}>
-              <GlassSurface testID="barber-dashboard-analytics" style={styles.analyticsCard}>
-                {view.analytics.status === 'ok' ? (() => {
-                  const data = view.analytics.data;
-                  const chartWidth = Math.max(180, windowWidth - 104);
-                  const next = data.nextAppointment;
-                  return <>
-                    <View style={styles.analyticsHeading}>
-                      <View>
-                        <Text style={[styles.eyebrow, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Studio-Performance' : 'Studio performance'}</Text>
-                        <Text style={[styles.analyticsTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{getAppLanguage() === 'de' ? 'Deine Arbeit im Fokus' : 'Your work, in focus'}</Text>
-                      </View>
-                      <Feather name="activity" size={18} color={colors.accentText} />
-                    </View>
-
-                    <Text style={[styles.heroLabel, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Buchungswert in diesem Monat' : 'Booking value this month'}</Text>
-                    <AnimatedNumber value={data.bookedValueMonth} format={formatMoney} durationMs={900} style={[styles.heroValue, { color: colors.textPrimary }]} />
-                    <Text style={[styles.heroFootnote, { color: colors.textSecondary, fontFamily: fonts.body }]}>{getAppLanguage() === 'de' ? 'Preise abgeschlossener Termine. In der App werden keine Zahlungen verarbeitet.' : 'Completed booking prices. No payments are processed in the app.'}</Text>
-                    <View style={[styles.trendBlock, { borderTopColor: colors.border }]}>
-                      <View style={styles.trendHeading}>
-                        <Text style={[styles.trendTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Buchungswert' : 'Booked value'}</Text>
-                        <Text style={[styles.trendPeriod, { color: colors.textSecondary, fontFamily: fonts.body }]}>{getAppLanguage() === 'de' ? '8 Wochen' : '8 weeks'}</Text>
-                      </View>
-                      <EarningsTrend data={data.weeklyTrend} width={chartWidth} colors={colors} />
-                      {data.completedAllTime === 0 ? (
-                        <Text style={[styles.emptyHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>{isDe() ? 'Dein erster abgeschlossener Termin startet diese Entwicklung.' : 'Your first completed booking will start this trend.'}</Text>
-                      ) : null}
-                    </View>
-
-                    <View style={[styles.metricRow, { borderTopColor: colors.border, borderBottomColor: colors.border }]}>
-                      <Metric label={isDe() ? 'Diese Woche' : 'This week'} value={data.completedWeek} detail={isDe() ? 'abgeschlossene Schnitte' : 'completed cuts'} colors={colors} />
-                      <Metric label={isDe() ? 'Diesen Monat' : 'This month'} value={data.completedMonth} detail={isDe() ? 'abgeschlossene Schnitte' : 'completed cuts'} colors={colors} />
-                      <Metric label={isDe() ? 'Gesamt' : 'All time'} value={data.completedAllTime} detail={isDe() ? 'abgeschlossene Schnitte' : 'completed cuts'} colors={colors} />
-                    </View>
-
-                    <Pressable
-                      onPress={() => navigation.navigate('Requests')}
-                      accessibilityRole="button"
-                      accessibilityLabel={isDe() ? `${data.pendingCount} offene Anfragen. Anfragen ansehen.` : `${data.pendingCount} pending requests. View requests.`}
-                      testID="barber-dashboard-overview"
-                      style={({ pressed }) => [styles.pendingBanner, { borderColor: colors.border, opacity: pressed ? pressOpacity.soft : 1 }]}
-                    >
-                      <View style={[styles.pendingBadge, { backgroundColor: data.pendingCount > 0 ? colors.accent : colors.background }]}>
-                        <Text style={[styles.pendingBadgeValue, numericText, { color: data.pendingCount > 0 ? colors.onAccent : colors.textSecondary }]}>{data.pendingCount}</Text>
-                      </View>
-                      <View style={styles.pendingCopy}>
-                        <Text style={[styles.pendingTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{data.pendingCount === 1 ? (isDe() ? 'Offene Anfrage' : 'Open request') : (isDe() ? 'Offene Anfragen' : 'Open requests')}</Text>
-                        <Text style={[styles.pendingHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.pendingCount > 0 ? (isDe() ? 'Warten auf deine Antwort' : 'Waiting for your reply') : (isDe() ? 'Alles erledigt' : 'You’re all caught up')}</Text>
-                      </View>
-                      <Feather name="arrow-up-right" size={17} color={colors.textSecondary} />
-                    </Pressable>
-
-                    <View style={[styles.appointmentCard, { backgroundColor: colors.background }]}>
-                      <View style={styles.appointmentTopline}>
-                        <Text style={[styles.eyebrow, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'N\u00e4chster Termin' : 'Next appointment'}</Text>
-                        <Text style={[styles.upcomingText, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.upcomingCount} {isDe() ? 'in den nächsten 7 Tagen' : 'in the next 7 days'}</Text>
-                      </View>
-                      {next ? <>
-                        <Text style={[styles.appointmentName, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{next.customerName ?? next.serviceName ?? (isDe() ? 'Bestätigter Termin' : 'Confirmed appointment')}</Text>
-                        <Text style={[styles.appointmentWhen, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                          {formatBookingWhen(next.date, next.time)}{next.customerName && next.serviceName ? ` · ${next.serviceName}` : ''}
-                        </Text>
-                      </> : <Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}>{isDe() ? 'Noch nichts geplant.' : 'Nothing scheduled yet.'}</Text>}
-                    </View>
-
-                    <View style={styles.insightRow}>
-                      <View style={[styles.insightCard, { backgroundColor: colors.background }]}>
-                        <Text style={[styles.eyebrow, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Kundenstimmen' : 'Client feedback'}</Text>
-                        {data.reviewCount > 0 && data.ratingAverage !== null ? <>
-                          <Text testID="barber-dashboard-rating" style={[styles.insightValue, numericText, { color: colors.textPrimary }]}>{data.ratingAverage.toFixed(2)} <Text style={{ color: colors.accentText }}>★</Text></Text>
-                          <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{isDe()
-                            ? `${data.reviewCount} ${data.reviewCount === 1 ? 'Bewertung' : 'Bewertungen'} · ${data.repeatCustomerCount} ${data.repeatCustomerCount === 1 ? 'Stammkunde' : 'Stammkunden'}`
-                            : `${data.reviewCount} ${data.reviewCount === 1 ? 'review' : 'reviews'} · ${data.repeatCustomerCount} returning clients`}</Text>
-                        </> : <>
-                          <Text style={[styles.insightValue, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>—</Text>
-                          <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{isDe()
-                            ? `${data.repeatCustomerCount} ${data.repeatCustomerCount === 1 ? 'Stammkunde' : 'Stammkunden'} · noch keine Bewertungen`
-                            : `${data.repeatCustomerCount} returning clients · no reviews yet`}</Text>
-                        </>}
-                      </View>
-                      <View style={[styles.insightCard, { backgroundColor: colors.background }]}>
-                        <Text style={[styles.eyebrow, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Beliebtester Tag' : 'Busiest day'}</Text>
-                        {data.busiestWeekday ? <>
-                          <Text style={[styles.insightValue, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{isDe() ? (GERMAN_WEEKDAYS[data.busiestWeekday.weekday] ?? data.busiestWeekday.weekday) : data.busiestWeekday.weekday}</Text>
-                          <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{data.busiestWeekday.completedCuts} {isDe() ? (data.busiestWeekday.completedCuts === 1 ? 'abgeschlossener Schnitt' : 'abgeschlossene Schnitte') : 'completed cuts'}</Text>
-                        </> : <Text style={[styles.insightCaption, { color: colors.textSecondary, fontFamily: fonts.body }]}>{isDe() ? 'Erscheint nach deinem ersten abgeschlossenen Termin.' : 'Will appear after your first completed booking.'}</Text>}
-                      </View>
-                    </View>
-
-                    <View style={[styles.serviceInsight, { borderTopColor: colors.border }]}>
-                      <View style={styles.trendHeading}>
-                        <Text style={[styles.trendTitle, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{getAppLanguage() === 'de' ? 'Beliebte Leistungen' : 'Top services'}</Text>
-                        <Text style={[styles.trendPeriod, { color: colors.textSecondary, fontFamily: fonts.body }]}>{getAppLanguage() === 'de' ? 'abgeschlossen' : 'completed'}</Text>
-                      </View>
-                      {data.topServices.length > 0 ? data.topServices.map((service, index) => (
-                        <View key={`${service.name}-${index}`} style={[styles.serviceRank, index > 0 ? { borderTopColor: colors.border, borderTopWidth: 0.5 } : null]}>
-                          <Text style={[styles.serviceRankNumber, numericText, { color: colors.accentText }]}>{String(index + 1).padStart(2, '0')}</Text>
-                          <Text numberOfLines={1} style={[styles.serviceRankName, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{service.name}</Text>
-                          <Text style={[styles.serviceRankCount, numericText, { color: colors.textSecondary }]}>{service.completedCuts} · {formatMoney(service.bookedValue)}</Text>
-                        </View>
-                      )) : <Text style={[styles.emptyHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>{isDe() ? 'Deine erfolgreichsten Leistungen erscheinen hier.' : 'Your best-performing services will appear here.'}</Text>}
-                    </View>
-                  </>;
-                })() : (
-                  <>
-                    <View style={styles.analyticsHeading}>
-                      <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{isDe() ? 'Studio-Leistung' : 'Studio performance'}</Text>
-                      <Feather name="activity" size={18} color={colors.accentText} />
-                    </View>
-                    <SectionUnavailable label={isDe() ? 'Studio-Auswertung' : 'Studio analytics'} testID="barber-dashboard-overview-unavailable" onRetry={retryDashboard} retrying={retrying} />
-                  </>
-                )}
-              </GlassSurface>
+              <StudioAnalytics analytics={view.analytics} retrying={retrying} de={de} onRetry={retry} onOpenRequests={() => navigation.navigate('Requests')} />
             </Reveal>
 
             {stats ? (
@@ -455,173 +92,15 @@ export default function StudioScreen({ navigation }: Props) {
               </Reveal>
             ) : null}
 
-            {view.readiness.isLive === true ? null : <View testID="barber-dashboard-readiness" style={[styles.readiness, { borderTopColor: colors.border }]}>
-              <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-                {isDe() ? 'Studio einrichten' : 'Studio setup'}
-              </Text>
-              <Text style={[styles.readinessStatus, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                {view.readiness.isLive === null
-                  ? `${view.readiness.completeCount} confirmed complete; ${view.readiness.unavailableCount} unavailable`
-                  : `${view.readiness.completeCount} of ${view.readiness.total} complete`}
-              </Text>
-              {view.readiness.unavailableCount > 0 ? (
-                <SectionUnavailable label={isDe() ? 'Einige Einrichtungsdetails' : 'Some setup details'} testID="barber-dashboard-readiness-unavailable" onRetry={retryDashboard} retrying={retrying} />
-              ) : null}
-              <View style={styles.meter} accessible={false} importantForAccessibility="no-hide-descendants">
-                {view.readiness.items.map((item) => (
-                  <View
-                    key={item.key}
-                    style={[styles.meterSegment, { backgroundColor: item.state === 'complete' ? colors.accent : colors.border }]}
-                  />
-                ))}
-              </View>
-              <View style={styles.readinessItems}>
-                {view.readiness.items.map((item, index) => {
-                  const done = item.state === 'complete';
-                  return (
-                    <Pressable
-                      key={item.key}
-                      onPress={done ? undefined : () => openReadinessTarget(item.key)}
-                      disabled={done}
-                      accessibilityRole={done ? 'text' : 'button'}
-                      accessibilityState={{ disabled: done }}
-                      accessibilityLabel={readinessLabel(item)}
-                      testID={`barber-dashboard-readiness-${item.key}`}
-                      style={({ pressed }) => [
-                        styles.readinessRow,
-                        {
-                          borderBottomWidth: index === view.readiness.items.length - 1 ? 0 : HAIRLINE,
-                          borderColor: colors.border,
-                          opacity: pressed && !done ? pressOpacity.soft : 1,
-                        },
-                      ]}
-                    >
-                      <Feather
-                        name={READINESS_ICONS[item.state]}
-                        size={17}
-                        color={item.state === 'attention' ? colors.errorText : colors.textSecondary}
-                      />
-                      <Text style={[styles.readinessLabel, {
-                        color: done ? colors.textSecondary : colors.textPrimary,
-                        fontFamily: done ? fonts.body : fonts.bodyMedium,
-                      }]}>
-                        {readinessLabel(item)}
-                      </Text>
-                      {done ? null : <Feather name="chevron-right" size={16} color={colors.textSecondary} />}
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>}
+            {view.readiness.isLive === true ? null : (
+              <StudioReadiness readiness={view.readiness} retrying={retrying} de={de} onOpenItem={openReadinessTarget} onRetry={retry} />
+            )}
 
             <LegalLinks includeAll testIDPrefix="barber-studio-legal" />
           </>
         ) : null}
       </Animated.ScrollView>
-      <ScrollGlassHeader title={'Studio'} scrollY={scrollY} start={56} testID="barber-dashboard-glass-header" />
+      <ScrollGlassHeader title="Studio" scrollY={scrollY} start={56} testID="barber-dashboard-glass-header" />
     </SafeAreaView>
   );
 }
-
-function StudioSkeleton() {
-  const { colors } = useTheme();
-  return (
-    <View testID="barber-dashboard-loading" accessible accessibilityRole="progressbar" accessibilityLabel="Loading studio" style={styles.studioSkeleton}>
-      <Skeleton style={styles.skeletonVerification} />
-      <View style={[styles.skeletonAnalyticsCard, { borderColor: colors.border }]}>
-        <Skeleton style={styles.skeletonAnalyticsLabel} />
-        <Skeleton style={styles.skeletonAnalyticsValue} />
-        <Skeleton style={styles.skeletonChart} />
-      </View>
-      <View style={styles.skeletonMetrics}>
-        <Skeleton style={styles.skeletonMetric} />
-        <Skeleton style={styles.skeletonMetric} />
-      </View>
-      <Skeleton style={styles.skeletonSectionTitle} />
-      <Skeleton style={styles.skeletonSectionRow} />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  settingsButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  container: { flex: 1 },
-  scrollContent: { paddingHorizontal: space.xl, paddingTop: space.xl, paddingBottom: space['2xl'] },
-  headerRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: space.sm },
-  headerText: { flexGrow: 1, flexShrink: 1, minWidth: 160 },
-  greeting: { fontSize: 13, lineHeight: 20 },
-  name: { fontSize: 30, lineHeight: 38, marginTop: space.xs },
-  signOut: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.xs },
-  signOutText: { fontSize: 13 },
-  headerSkeleton: { gap: space.sm },
-  skeletonGreeting: { width: 110, height: 15 },
-  skeletonName: { width: 150, height: 31 },
-  studioSkeleton: { marginTop: space.lg },
-  skeletonVerification: { width: '80%', height: 18 },
-  skeletonAnalyticsCard: { marginTop: space.lg, borderWidth: HAIRLINE, borderRadius: radius.md, padding: space.base, gap: space.md },
-  skeletonAnalyticsLabel: { width: '60%', height: 14 },
-  skeletonAnalyticsValue: { width: 145, height: 44 },
-  skeletonChart: { width: '100%', height: 90 },
-  skeletonMetrics: { flexDirection: 'row', gap: space.sm, marginTop: space.lg },
-  skeletonMetric: { flex: 1, height: 82 },
-  skeletonSectionTitle: { width: '55%', height: 22, marginTop: space['2xl'] },
-  skeletonSectionRow: { width: '100%', height: 72, marginTop: space.md },
-  noticeMargins: { marginTop: space.xl },
-  verification: { marginTop: space.sm },
-  quickActions: { marginTop: space.lg },
-  insights: { marginTop: space.lg },
-  verificationLink: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  verificationText: { flex: 1, fontSize: 13, lineHeight: 19 },
-  analyticsCard: { marginTop: space.lg, borderRadius: radius.md, paddingHorizontal: space.base, paddingVertical: space.lg },
-  analyticsHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.lg },
-  analyticsTitle: { fontSize: 23, lineHeight: 30, marginTop: space.xs },
-  heroLabel: { fontSize: 13, lineHeight: 19 },
-  heroValue: { fontSize: 40, lineHeight: 50, fontVariant: ['tabular-nums'], marginTop: space.xs },
-  heroFootnote: { fontSize: 13, lineHeight: 20, marginTop: space.xs },
-  trendBlock: { marginTop: space.lg, paddingTop: space.md, borderTopWidth: HAIRLINE },
-  trendHeading: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs, justifyContent: 'space-between', alignItems: 'center', marginBottom: space.xs },
-  trendTitle: { fontSize: 14, lineHeight: 20 },
-  trendPeriod: { fontSize: 13, lineHeight: 20 },
-  chartLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: -space.xs },
-  chartLabel: { fontSize: 12, lineHeight: 18 },
-  emptyHint: { fontSize: 12, lineHeight: 18, marginTop: space.sm },
-  metricRow: { flexDirection: 'row', borderTopWidth: HAIRLINE, borderBottomWidth: HAIRLINE, paddingVertical: space.md, marginTop: space.md },
-  metric: { flex: 1, minWidth: 0, paddingHorizontal: space.xs },
-  metricLabel: { fontSize: 13, lineHeight: 20 },
-  metricValue: { fontSize: 24, lineHeight: 31, fontVariant: ['tabular-nums'], marginTop: space.xs },
-  metricDetail: { fontSize: 12, lineHeight: 18 },
-  pendingBanner: { minHeight: 68, flexDirection: 'row', alignItems: 'center', gap: space.md, borderWidth: HAIRLINE, borderRadius: radius.sm, paddingHorizontal: space.md, marginTop: space.md },
-  pendingBadge: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: 19 },
-  pendingBadgeValue: { fontSize: 18 },
-  pendingCopy: { flex: 1 },
-  pendingTitle: { fontSize: 14, lineHeight: 21 },
-  pendingHint: { fontSize: 12, lineHeight: 18 },
-  appointmentCard: { marginTop: space.md, borderRadius: radius.sm, paddingHorizontal: space.md, paddingVertical: space.md },
-  appointmentTopline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm },
-  eyebrow: { fontSize: 12, lineHeight: 18 },
-  appointmentName: { fontSize: 19, lineHeight: 26, marginTop: space.md },
-  appointmentWhen: { fontSize: 13, lineHeight: 20, marginTop: space.xs },
-  emptyText: { fontSize: 13, lineHeight: 20, marginTop: space.md },
-  upcomingText: { fontSize: 13, lineHeight: 20 },
-  insightRow: { flexDirection: 'row', gap: space.sm, marginTop: space.md },
-  insightCard: { flex: 1, minHeight: 114, borderRadius: radius.sm, padding: space.md },
-  insightValue: { fontSize: 24, lineHeight: 31, marginTop: space.md },
-  insightCaption: { fontSize: 13, lineHeight: 20, marginTop: space.xs },
-  serviceInsight: { marginTop: space.lg, paddingTop: space.md, borderTopWidth: HAIRLINE },
-  serviceRank: { minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
-  serviceRankNumber: { width: 24, fontSize: 14 },
-  serviceRankName: { flex: 1, fontSize: 13 },
-  serviceRankCount: { fontSize: 13 },
-  sectionTitle: { fontSize: 19, lineHeight: 26 },
-  readiness: { marginTop: space.xl, paddingTop: space.lg, borderTopWidth: HAIRLINE },
-  readinessStatus: { fontSize: 13, lineHeight: 20, marginTop: space.xs },
-  meter: { flexDirection: 'row', gap: space.xs, marginTop: space.base },
-  meterSegment: { flex: 1, height: 3, borderRadius: 1.5 },
-  readinessItems: { marginTop: space.sm },
-  readinessRow: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
-  readinessLabel: { flex: 1, fontSize: 14, lineHeight: 21 },
-  unavailable: { paddingVertical: space.sm },
-  unavailableText: { fontSize: 13, lineHeight: 20 },
-  retryAction: { minHeight: 44, alignSelf: 'flex-start', justifyContent: 'center' },
-  retryText: { fontSize: 13 },
-});
