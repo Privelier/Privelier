@@ -19,6 +19,7 @@ import {
   ScreenHeading,
   SecondaryButton,
 } from './ui';
+import { useCaptcha } from '../components/CaptchaField';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'AwaitEmailConfirmation'>;
 
@@ -33,17 +34,21 @@ export default function AwaitEmailConfirmationScreen({ navigation, route }: Prop
   const [resending, setResending] = useState(false);
   const [feedback, setFeedback] = useState<ResendFeedback>({ kind: 'none' });
 
+  const captcha = useCaptcha('auth-confirm-captcha');
+
   const onResend = useCallback(async () => {
+    if (!captcha.ready) return;
     setResending(true);
     setFeedback({ kind: 'none' });
-    const result = await resendConfirmation(email);
+    const result = await resendConfirmation(email, captcha.token);
     setResending(false);
+    captcha.reset();
     if (result.status === 'sent') {
       setFeedback({ kind: 'success' });
     } else {
       setFeedback({ kind: 'error', message: result.message });
     }
-  }, [email]);
+  }, [email, captcha]);
 
   return (
     <AuthScreenShell testID="auth-confirm-screen">
@@ -65,6 +70,7 @@ export default function AwaitEmailConfirmationScreen({ navigation, route }: Prop
       {feedback.kind === 'error' ? (
         <Notice kind="error" message={feedback.message} testID="auth-confirm-error" />
       ) : null}
+      {captcha.field}
       <View style={styles.actions}>
         <PrimaryButton
           label={de ? 'Zurück zur Anmeldung' : 'Back to log in'}
@@ -76,6 +82,7 @@ export default function AwaitEmailConfirmationScreen({ navigation, route }: Prop
           label={de ? 'Link erneut senden' : 'Send the link again'}
           onPress={onResend}
           loading={resending}
+          disabled={!captcha.ready}
           testID="auth-confirm-resend"
         />
       </View>

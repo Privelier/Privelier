@@ -25,6 +25,7 @@ import {
   ScreenHeading,
   TextLink,
 } from './ui';
+import { useCaptcha } from '../components/CaptchaField';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
@@ -49,6 +50,7 @@ export default function LoginScreen({ navigation, route }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [providerSubmitting, setProviderSubmitting] = useState<'google' | 'apple' | null>(null);
   const passwordRef = useRef<TextInputInstance>(null);
+  const captcha = useCaptcha('auth-login-captcha');
 
   const onSubmit = useCallback(async () => {
     const errors: FieldErrors = {
@@ -57,11 +59,12 @@ export default function LoginScreen({ navigation, route }: Props) {
     };
     setFieldErrors(errors);
     setFormError(null);
-    if (errors.email || errors.password) return;
+    if (errors.email || errors.password || !captcha.ready) return;
 
     setSubmitting(true);
-    const result = await signIn(email, password, role);
+    const result = await signIn(email, password, role, captcha.token);
     setSubmitting(false);
+    captcha.reset();
 
     switch (result.status) {
       case 'signed_in':
@@ -80,7 +83,7 @@ export default function LoginScreen({ navigation, route }: Props) {
         setFormError(result.message);
         break;
     }
-  }, [email, password, navigation, role]);
+  }, [email, password, navigation, role, captcha]);
 
   const onProviderPress = useCallback(async (provider: 'google' | 'apple') => {
     setFormError(null);
@@ -137,12 +140,13 @@ export default function LoginScreen({ navigation, route }: Props) {
         onSubmitEditing={onSubmit}
         testID="auth-login-password"
       />
+      {captcha.field}
       <View style={styles.actions}>
         <PrimaryButton
           label={de ? 'Anmelden' : 'Log in'}
           onPress={onSubmit}
           loading={submitting}
-          disabled={providerSubmitting !== null}
+          disabled={providerSubmitting !== null || !captcha.ready}
           testID="auth-login-submit"
         />
         <TextLink

@@ -40,7 +40,7 @@ Steps that need a dashboard, an account owner or a product decision. Work top to
   - Rate limits: lower sign-up, OTP and verification limits to what two founders expect (the default allows 360 OTPs per hour per project).
   - Leaked-password protection on (Supabase lists it as disabled; it needs the Pro plan).
   - Redirect URLs: exact entries only (`privelier://auth-callback` and the exact web URLs), no wildcards.
-  - CAPTCHA: choose Cloudflare Turnstile or hCaptcha and enable it for sign-up, sign-in and password reset. The app does not send a CAPTCHA token yet; enabling CAPTCHA before that code ships blocks sign-in (backlog item "Wire CAPTCHA").
+  - CAPTCHA (Cloudflare Turnstile): the app is ready. Create a Turnstile widget whose allowed hostname matches `EXPO_PUBLIC_CAPTCHA_ORIGIN` (default `privelier.app`), set `EXPO_PUBLIC_CAPTCHA_SITE_KEY` (and the origin, if different) in EAS, ship that build, and only then enable Bot protection in Supabase with the widget's secret key. Enabling it before the build ships blocks sign-in on older versions.
 - [ ] **F12. Organisation security:** MFA for every member of the Supabase organisation, remove anyone who does not need access, and set a spend cap or usage alerts.
 - [ ] **F13. API max rows:** confirm Project Settings > API > Max rows is 1000 or lower (every app list already caps itself at 300 or fewer).
 - [ ] **F14. Backups:** confirm daily backups for the current plan, decide on point-in-time recovery, and restore one backup into a scratch project once to prove it works.

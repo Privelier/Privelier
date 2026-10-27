@@ -32,6 +32,7 @@ import {
   ScreenHeading,
   TextLink,
 } from './ui';
+import { useCaptcha } from '../components/CaptchaField';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Signup'>;
 
@@ -69,6 +70,8 @@ export default function SignupScreen({ navigation, route }: Props) {
   const passwordRef = useRef<TextInputInstance>(null);
   const cityRef = useRef<TextInputInstance>(null);
 
+  const captcha = useCaptcha('auth-signup-captcha');
+
   const onSubmit = useCallback(async () => {
     const errors: FieldErrors = {
       name: requiredText(name, de ? 'Gib deinen Namen ein.' : 'Enter your name.'),
@@ -102,8 +105,9 @@ export default function SignupScreen({ navigation, route }: Props) {
 
     setSubmitting(true);
     const result = isBarber
-      ? await signUpBarber(email, password, { ...profileFields, bio: optionalText(bio) })
-      : await signUpCustomer(email, password, profileFields);
+      ? await signUpBarber(email, password, { ...profileFields, bio: optionalText(bio) }, captcha.token)
+      : await signUpCustomer(email, password, profileFields, captcha.token);
+    captcha.reset();
     setSubmitting(false);
 
     switch (result.status) {
@@ -120,7 +124,7 @@ export default function SignupScreen({ navigation, route }: Props) {
         }
         break;
     }
-  }, [name, email, password, city, country, phone, bio, isBarber, navigation, role, termsAccepted, adultConfirmed, de]);
+  }, [name, email, password, city, country, phone, bio, isBarber, navigation, role, termsAccepted, adultConfirmed, de, captcha]);
 
   const onProviderPress = useCallback(async (provider: 'google' | 'apple') => {
     setFormError(null);
@@ -255,12 +259,13 @@ export default function SignupScreen({ navigation, route }: Props) {
         adultError={legalAttempted && !adultConfirmed ? (de ? 'Bitte bestätige, dass du mindestens 18 bist.' : 'You must confirm that you are at least 18.') : undefined}
         testIDPrefix="auth-signup"
       />
+      {captcha.field}
       <View style={styles.actions}>
         <PrimaryButton
           label={de ? 'Konto erstellen' : 'Create account'}
           onPress={onSubmit}
           loading={submitting}
-          disabled={providerSubmitting !== null}
+          disabled={providerSubmitting !== null || !captcha.ready}
           testID="auth-signup-submit"
         />
         <TextLink

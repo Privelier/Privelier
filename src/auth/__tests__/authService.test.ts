@@ -884,3 +884,26 @@ describe('syncLegalConsent', () => {
     await expect(syncLegalConsent('u-1', false)).resolves.toBe('required');
   });
 });
+
+// ---------------------------------------------------------------------------
+// CAPTCHA tokens (Supabase Auth bot protection)
+// ---------------------------------------------------------------------------
+
+describe('captcha tokens', () => {
+  it('forwards the single-use token on sign-up, sign-in, resend and password reset', async () => {
+    mockAuth.signUp.mockResolvedValue({ data: { user: { identities: [{}] } }, error: null } as never);
+    mockAuth.signInWithPassword.mockResolvedValue({ data: {}, error: { message: 'Invalid login credentials', status: 400 } } as never);
+    mockAuth.resend.mockResolvedValue({ data: {}, error: null } as never);
+    mockAuth.resetPasswordForEmail.mockResolvedValue({ data: {}, error: null } as never);
+
+    await signUpCustomer('a@example.com', 'password123', { name: 'Alex', city: 'Lisbon' }, 'tok-1');
+    await signIn('a@example.com', 'password123', 'customer', 'tok-2');
+    await resendConfirmation('a@example.com', 'tok-3');
+    await requestPasswordReset('a@example.com', 'tok-4');
+
+    expect(mockAuth.signUp.mock.calls[0][0]).toMatchObject({ options: { captchaToken: 'tok-1' } });
+    expect(mockAuth.signInWithPassword.mock.calls[0][0]).toMatchObject({ options: { captchaToken: 'tok-2' } });
+    expect(mockAuth.resend.mock.calls[0][0]).toMatchObject({ options: { captchaToken: 'tok-3' } });
+    expect(mockAuth.resetPasswordForEmail.mock.calls[0][1]).toMatchObject({ captchaToken: 'tok-4' });
+  });
+});

@@ -65,7 +65,8 @@ interface ProvisionFields {
 async function signUp(
   email: string,
   password: string,
-  metadata: ProvisionFields
+  metadata: ProvisionFields,
+  captchaToken?: string
 ): Promise<SignUpResult> {
   if (!hasStableAuthRedirect()) return failure('development_build_required');
   const normalizedEmail = email.trim();
@@ -83,6 +84,7 @@ async function signUp(
     password,
     options: {
       emailRedirectTo: getEmailRedirectTo(),
+      captchaToken,
       data: {
         name: normalizedMetadata.name,
         role: normalizedMetadata.role,
@@ -112,17 +114,19 @@ async function signUp(
 export function signUpCustomer(
   email: string,
   password: string,
-  fields: SignUpProfileFields
+  fields: SignUpProfileFields,
+  captchaToken?: string
 ): Promise<SignUpResult> {
-  return signUp(email, password, { role: 'customer', ...fields });
+  return signUp(email, password, { role: 'customer', ...fields }, captchaToken);
 }
 
 export function signUpBarber(
   email: string,
   password: string,
-  fields: BarberSignUpProfileFields
+  fields: BarberSignUpProfileFields,
+  captchaToken?: string
 ): Promise<SignUpResult> {
-  return signUp(email, password, { role: 'barber', ...fields });
+  return signUp(email, password, { role: 'barber', ...fields }, captchaToken);
 }
 
 // ---------------------------------------------------------------------------
@@ -139,11 +143,17 @@ async function signOutOnRoleMismatch(expectedRole: Role): Promise<Role | null> {
   return data.role;
 }
 
-export async function signIn(email: string, password: string, expectedRole?: Role): Promise<SignInResult> {
+export async function signIn(
+  email: string,
+  password: string,
+  expectedRole?: Role,
+  captchaToken?: string
+): Promise<SignInResult> {
   const normalizedEmail = email.trim();
   const { error } = await supabase.auth.signInWithPassword({
     email: normalizedEmail,
     password,
+    options: { captchaToken },
   });
   if (error) {
     const mapped = mapAuthApiError('signIn', error);
@@ -274,21 +284,22 @@ export async function signInWithProvider(
   }
 }
 
-export async function resendConfirmation(email: string): Promise<ResendConfirmationResult> {
+export async function resendConfirmation(email: string, captchaToken?: string): Promise<ResendConfirmationResult> {
   if (!hasStableAuthRedirect()) return failure('development_build_required');
   const { error } = await supabase.auth.resend({
     type: 'signup',
     email: email.trim(),
-    options: { emailRedirectTo: getEmailRedirectTo() },
+    options: { emailRedirectTo: getEmailRedirectTo(), captchaToken },
   });
   if (error) return mapAuthApiError('resendConfirmation', error);
   return { status: 'sent' };
 }
 
-export async function requestPasswordReset(email: string): Promise<PasswordResetRequestResult> {
+export async function requestPasswordReset(email: string, captchaToken?: string): Promise<PasswordResetRequestResult> {
   if (!hasStableAuthRedirect()) return failure('development_build_required');
   const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
     redirectTo: getEmailRedirectTo(),
+    captchaToken,
   });
   if (error) return mapAuthApiError('requestPasswordReset', error);
   return { status: 'sent' };
