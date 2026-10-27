@@ -1,285 +1,100 @@
 /**
- * Customer Bookings tab — rebuild of the prototype's customer.bookings route
- * with LIVE status updates.
- *
- * Serif header, Upcoming/Past tab strip, and booking cards (barber image +
- * name + status label, service, "Wed 8 Jul · 14:30", price, location). Real
- * data end to end via fetchOwnBookingsView (RLS scopes the read to the
- * signed-in customer's own rows).
- *
- * REALTIME: we subscribe on `customer_id`, so an accept / reject / cancel the
- * barber performs appears here live — the row's status changes and it
- * re-buckets between Upcoming and Past automatically (isUpcomingBooking keys
- * off status + slot).
- *
- * The customer can also CANCEL their own booking while it is still actionable
- * (pending OR accepted — both allowed by the actor-aware trigger, migration
- * 0011). Terminal statuses (rejected/completed/cancelled) show no action.
- *
- * FOCUS + RECONCILIATION (the flakiness-critical part):
- * - The channel is gated on focus, not mount (bottom-tab screens stay
- *   mounted). useFocusEffect flips `focused` true — opening the channel BEFORE
- *   the baseline refetch, so nothing is missed in the gap window.
- * - Both the refetched snapshot and every streamed event fold through
- *   applyBookingChange (idempotent upsert-by-id); we re-sort date/time DESC
- *   after each merge (matching the fetch order the Upcoming/Past useMemo
- *   expects).
- * - Cancellation starts a five-second undo window. Only after it closes do we
- *   apply status='cancelled' optimistically and send the request. On failure
- *   we restore the card, show the reason, and refetch the authoritative row.
- * - Clobber guard: while a booking id is in-flight the baseline refetch SKIPS
- *   it, and the mutation's authoritative row is re-applied after it resolves,
- *   so a stale snapshot can't flip an optimistic card backward.
+ * Customer Bookings tab: Upcoming / Past, live status updates, cancellation
+ * with undo, reviews, chat, live trips and rebooking. Data, realtime and
+ * cancellation live in useCustomerBookings; the card and its actions are in
+ * components/bookings.
  */
 import { listPerformance } from '../../shared/listPerformance';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { FlatList, RefreshControl, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { supabase } from '../../../lib/supabase';
 import { useTheme } from '../../theme/useTheme';
-import { numericText } from '../../theme/typography';
-import { radius, space } from '../../theme/spacing';
-import { pressOpacity } from '../../theme/motion';
 import { RetryNotice } from '../../shared/components/RetryNotice';
 import { BookingDetails } from '../../shared/components/BookingDetails';
-import { GlassSurface } from '../../shared/components/GlassSurface';
-import { Reveal } from '../../shared/motion';
 import { getAppLanguage } from '../../shared/locale';
-import { StatusPill } from '../../shared/components/StatusPill';
-import { Avatar } from '../../shared/components/Avatar';
 import { BookingListSkeleton } from '../../shared/components/BookingListSkeleton';
 import { ConfirmSheet } from '../../shared/components/ConfirmSheet';
 import { useToast } from '../../shared/components/ToastProvider';
-import type { BarberDirectoryRow, BookingRow, ServiceRow } from '../../types';
-import { cancelBookingAsCustomer, fetchOwnBookingsView, isUpcomingBooking } from '../bookingsData';
-import { fetchOwnReviewedBookingIds } from '../reviewsData';
-import { fetchRoomForBooking } from '../inboxData';
-import { AcceptedBookingTools } from '../../shared/components/AcceptedBookingTools';
-import { LiveTripBanner, TrackLiveButton } from '../components/LiveTripEntry';
-import type { CustomerStackParamList } from '../CustomerNavigator';
-import {
-  applyBookingChange,
-  applyBookingChangeSorted,
-  type BookingChangeEvent,
-} from '../../shared/bookingRealtime';
-import { useBookingsRealtime } from '../../shared/useBookingsRealtime';
-import { formatBookingWhen, formatMoney } from '../format';
 import { GlassSegmentedControl } from '../../shared/components/GlassSegmentedControl';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { useTabBarClearance } from '../../shared/navigation/tabBarClearance';
 import { byId } from '../../shared/lookup';
+import type { BookingRow } from '../../types';
+import { isUpcomingBooking } from '../bookingsData';
+import { fetchRoomForBooking } from '../inboxData';
+import { CustomerBookingActions, CustomerBookingCard } from '../components/bookings/CustomerBookingCard';
+import { bookingsStyles as styles } from '../components/bookings/bookingsStyles';
+import { LiveTripBanner } from '../components/LiveTripEntry';
+import { useCustomerBookings } from '../hooks/useCustomerBookings';
+import { formatBookingWhen } from '../format';
+import type { CustomerStackParamList } from '../CustomerNavigator';
 
 type TabKey = 'upcoming' | 'past';
-const TABS: { key: TabKey; label: string }[] = [
-  { key: 'upcoming', label: 'Upcoming' },
-  { key: 'past', label: 'Past' },
-];
-
-/** Bookings render newest-first: sort by (date, time) descending. */
-function sortDesc(rows: BookingRow[]): BookingRow[] {
-  return [...rows].sort((a, b) => {
-    const ka = `${a.date}T${a.time}`;
-    const kb = `${b.date}T${b.time}`;
-    return ka > kb ? -1 : ka < kb ? 1 : 0;
-  });
-}
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export default function BookingsScreen() {
   // Scroll the last row clear of the floating glass tab bar.
   const tabClearance = useTabBarClearance(32);
   const { colors, fonts } = useTheme();
   const de = getAppLanguage() === 'de';
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const { showToast } = useToast();
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
-
-  const [bookings, setBookings] = useState<BookingRow[]>([]);
-  const [barbersById, setBarbersById] = useState<Map<string, BarberDirectoryRow>>(new Map());
-  const [servicesById, setServicesById] = useState<Map<string, ServiceRow>>(new Map());
-  // Which of the shown completed bookings the customer has already reviewed —
-  // best-effort enrichment (a failed read leaves it empty; the card then offers
-  // "Leave a review", and a duplicate post is caught server-side as
-  // already_reviewed, so nothing is double-written).
-  const [reviewedBookingIds, setReviewedBookingIds] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>('upcoming');
-
-  const [userId, setUserId] = useState<string | null>(null);
-  const [focused, setFocused] = useState(false);
-
-  // Per-card action state — `inFlightRef` guards the refetch merge; `inFlight`
-  // drives the card's spinner/disabled rendering.
-  const inFlightRef = useRef<Set<string>>(new Set());
-  const [inFlight, setInFlight] = useState<Record<string, boolean>>({});
-  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
-  const queuedRef = useRef<Set<string>>(new Set());
-  const [queued, setQueued] = useState<Record<string, boolean>>({});
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [confirmingBooking, setConfirmingBooking] = useState<BookingRow | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    void supabase.auth.getSession().then(({ data }) => {
-      if (active) setUserId(data.session?.user.id ?? null);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    const result = await fetchOwnBookingsView();
-    setLoading(false);
-    if (result.status === 'ok') {
-      setBarbersById(result.barbersById);
-      setServicesById(result.servicesById);
-      setBookings((prev) => {
-        let next = prev;
-        for (const row of result.bookings) {
-          if (inFlightRef.current.has(row.id)) continue; // don't clobber optimistic cards
-          next = applyBookingChange(next, { eventType: 'UPDATE', row });
-        }
-        // An all-no-op snapshot (the common refocus/recovery case) keeps the
-        // same reference — no sort, no re-render.
-        return next === prev ? prev : sortDesc(next);
-      });
-
-      // Which completed bookings already have a review — drives the "Leave a
-      // review" vs "Reviewed" card state. Scoped to just the completed ids the
-      // tab could show, so the round trip stays bounded. Enrichment only: a
-      // failure leaves the prior set (defaults to empty on first load).
-      const completedIds = result.bookings
-        .filter((b) => b.status === 'completed')
-        .map((b) => b.id);
-      const reviewedResult = await fetchOwnReviewedBookingIds(completedIds);
-      if (reviewedResult.status === 'ok') {
-        setReviewedBookingIds(reviewedResult.reviewedBookingIds);
-      }
-    } else {
-      setError(result.message);
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      // Open the channel before the refetch; tear it down on blur.
-      setFocused(true);
-      void load();
-      return () => setFocused(false);
-    }, [load])
-  );
-
-  const onRealtimeChange = useCallback((event: BookingChangeEvent) => {
-    setBookings((prev) => applyBookingChangeSorted(prev, event, sortDesc));
-  }, []);
-
-  useBookingsRealtime({
-    filterColumn: 'customer_id',
-    filterValue: userId,
-    onChange: onRealtimeChange,
-    // A reconnect after a network blip may have dropped events — refetch the
-    // baseline (idempotent merge makes this race-free; review finding F1).
-    onRecovered: () => void load(),
-    enabled: focused,
-  });
-
-  const cancelBooking = useCallback(async (row: BookingRow) => {
-    if (inFlightRef.current.has(row.id)) return; // guard double-taps
-    inFlightRef.current.add(row.id);
-    setInFlight((p) => ({ ...p, [row.id]: true }));
-    setRowErrors((p) => {
-      const n = { ...p };
-      delete n[row.id];
-      return n;
-    });
-
-    // Optimistic: show cancelled immediately (this re-buckets to Past).
-    setBookings((prev) =>
-      applyBookingChangeSorted(prev, { eventType: 'UPDATE', row: { ...row, status: 'cancelled' } }, sortDesc)
-    );
-
-    const result = await cancelBookingAsCustomer(row.id);
-
-    inFlightRef.current.delete(row.id);
-    setInFlight((p) => {
-      const n = { ...p };
-      delete n[row.id];
-      return n;
-    });
-
-    if (result.status === 'ok') {
-      setBookings((prev) =>
-        applyBookingChangeSorted(prev, { eventType: 'UPDATE', row: result.booking }, sortDesc)
-      );
-    } else {
-      // Roll back to the prior row and surface the reason inline.
-      setBookings((prev) => applyBookingChangeSorted(prev, { eventType: 'UPDATE', row }, sortDesc));
-      const message =
-        result.status === 'not_found'
-          ? (de ? 'Dieser Termin wurde nicht mehr gefunden. Aktualisiere, um den aktuellen Stand zu sehen.' : 'That booking could no longer be found. Refresh to see its current status.')
-          : result.message;
-      setRowErrors((p) => ({ ...p, [row.id]: message }));
-      void load();
-    }
-  }, [load, de]);
-
-  const queueCancellation = useCallback((row: BookingRow) => {
-    if (queuedRef.current.has(row.id) || inFlightRef.current.has(row.id)) return;
-    queuedRef.current.add(row.id);
-    setQueued((previous) => ({ ...previous, [row.id]: true }));
-    showToast({
-      message: de ? 'Stornierung vorgemerkt' : 'Booking cancellation pending',
-      durationMs: 5000,
-      action: { label: de ? 'Rückgängig' : 'Undo', onPress: () => {} },
-      onClose: (reason) => {
-        queuedRef.current.delete(row.id);
-        setQueued((previous) => {
-          const next = { ...previous };
-          delete next[row.id];
-          return next;
-        });
-        if (reason !== 'action') void cancelBooking(row);
-      },
-    });
-  }, [cancelBooking, showToast, de]);
-
-  const leaveReview = useCallback(
-    (row: BookingRow) => {
-      // The barber deleted their account: there is nobody left to review.
-      if (!row.barber_id) return;
-      const barber = byId(barbersById, row.barber_id);
-      const service = byId(servicesById, row.service_id);
-      navigation.navigate('ReviewSubmit', {
-        bookingId: row.id,
-        barberId: row.barber_id,
-        barberName: barber?.name ?? 'your barber',
-        serviceName: service?.name ?? 'your appointment',
-      });
-    },
-    [navigation, barbersById, servicesById]
-  );
+  const data = useCustomerBookings(de);
+  const { bookings, barbersById, servicesById, loading, error, load } = data;
 
   const list = useMemo(() => {
     const now = new Date();
     const upcoming = tab === 'upcoming';
     const filtered = bookings.filter((b) => isUpcomingBooking(b, now) === upcoming);
-    // Past shows newest first (fetch order); Upcoming reads soonest-first.
+    // Past shows newest first (fetch order); Upcoming reads soonest first.
     return upcoming ? [...filtered].reverse() : filtered;
   }, [bookings, tab]);
 
-  const showSkeleton = loading && bookings.length === 0;
-  const showError = error !== null && bookings.length === 0;
+  // Accepted bookings close enough to now that the barber can be on the way
+  // (the server allows trips within a day of the appointment).
+  const liveCandidates = useMemo(() => {
+    const now = new Date().getTime();
+    return bookings
+      .filter((b) => b.status === 'accepted' && Math.abs(Date.parse(`${b.date}T${b.time}`) - now) <= DAY_MS)
+      .slice(0, 2);
+  }, [bookings]);
 
-  const selected = bookings.find((row) => row.id === selectedId);
+  const leaveReview = useCallback((row: BookingRow) => {
+    // The barber deleted their account: there is nobody left to review.
+    if (!row.barber_id) return;
+    navigation.navigate('ReviewSubmit', {
+      bookingId: row.id,
+      barberId: row.barber_id,
+      barberName: byId(barbersById, row.barber_id)?.name ?? 'your barber',
+      serviceName: byId(servicesById, row.service_id)?.name ?? 'your appointment',
+    });
+  }, [navigation, barbersById, servicesById]);
 
-  // "Message barber": the room already exists (created with the booking), so
-  // this only resolves it. A synchronous ref blocks a double tap from pushing
-  // two conversation screens while the lookup is in flight.
+  const openLiveTrip = useCallback((item: BookingRow) => {
+    if (!item.barber_id) return;
+    setSelectedId(null);
+    const barber = byId(barbersById, item.barber_id);
+    navigation.navigate('LiveTrip', {
+      bookingId: item.id,
+      context: {
+        bookingId: item.id,
+        barberId: item.barber_id,
+        barberName: barber?.name ?? 'Barber',
+        barberImage: barber?.profile_image ?? null,
+        address: item.location,
+        whenText: formatBookingWhen(item.date, item.time),
+        serviceName: byId(servicesById, item.service_id)?.name ?? null,
+      },
+    });
+  }, [barbersById, servicesById, navigation]);
+
+  // The room already exists (created with the booking); this only resolves
+  // it. A synchronous ref stops a double tap from opening two conversations.
   const openingChatRef = useRef(false);
   const [openingChat, setOpeningChat] = useState(false);
   const messageBarber = useCallback(async (row: BookingRow) => {
@@ -307,156 +122,13 @@ export default function BookingsScreen() {
       counterpart: barber ? { id: barber.id, name: barber.name, profile_image: barber.profile_image } : null,
     });
   }, [barbersById, servicesById, navigation, showToast, de]);
-  // Live arrival: accepted bookings close enough to today that a barber can
-  // be on the way (the server allows trips within a day of the appointment).
-  const liveCandidates = useMemo(() => {
-    const dayMs = 24 * 60 * 60 * 1000;
-    const now = new Date().getTime();
-    return bookings
-      .filter((b) => b.status === 'accepted' && Math.abs(Date.parse(`${b.date}T${b.time}`) - now) <= dayMs)
-      .slice(0, 2);
-  }, [bookings]);
 
-  const openLiveTrip = useCallback((item: BookingRow) => {
-    if (!item.barber_id) return;
-    setSelectedId(null);
-    const barber = byId(barbersById, item.barber_id);
-    navigation.navigate('LiveTrip', {
-      bookingId: item.id,
-      context: {
-        bookingId: item.id,
-        barberId: item.barber_id,
-        barberName: barber?.name ?? 'Barber',
-        barberImage: barber?.profile_image ?? null,
-        address: item.location,
-        whenText: formatBookingWhen(item.date, item.time),
-        serviceName: byId(servicesById, item.service_id)?.name ?? null,
-      },
-    });
-  }, [barbersById, servicesById, navigation]);
-
-  const renderActions = (item: BookingRow) => {
-    const actionable = item.status === 'pending' || item.status === 'accepted';
-    const busy = inFlight[item.id] === true;
-    const cancellationQueued = queued[item.id] === true;
-    return <>
-                {actionable ? (
-                  cancellationQueued ? (
-                    <Text
-                      testID={`customer-bookings-row-undo-window-${item.id}`}
-                      accessibilityLiveRegion="polite"
-                      style={[styles.reviewedText, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}
-                    >
-                      {de ? 'Stornierung vorgemerkt · unten rückgängig machen' : 'Cancellation pending · Undo below'}
-                    </Text>
-                  ) : busy ? (
-                    <ActivityIndicator
-                      size="small"
-                      color={colors.accent}
-                      style={styles.cardSpinner}
-                      testID={`customer-bookings-row-busy-${item.id}`}
-                      accessible
-                      accessibilityLabel={de ? 'Termin wird storniert' : 'Cancelling booking'}
-                      accessibilityLiveRegion="polite"
-                    />
-                  ) : (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={de ? 'Termin stornieren' : 'Cancel booking'}
-                      testID={`booking-cancel-${item.id}`}
-                      onPress={() => { setSelectedId(null); setConfirmingBooking(item); }}
-                      style={({ pressed }) => [
-                        styles.cancelButton,
-                        { borderColor: colors.error },
-                        pressed ? styles.cancelPressed : null,
-                      ]}
-                    >
-                      <Text style={[styles.cancelText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-                        {de ? 'Termin stornieren' : 'Cancel booking'}
-                      </Text>
-                    </Pressable>
-                  )
-                ) : item.status === 'completed' ? (
-                  reviewedBookingIds.has(item.id) ? (
-                    <View style={styles.reviewedRow} testID={`customer-bookings-reviewed-${item.id}`}>
-                      <Feather name="check" size={13} color={colors.textSecondary} />
-                      <Text style={[styles.reviewedText, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-                        {de ? 'Bewertet' : 'Reviewed'}
-                      </Text>
-                    </View>
-                  ) : (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={de ? 'Bewertung schreiben' : 'Leave a review'}
-                      testID={`booking-review-${item.id}`}
-                      onPress={() => { setSelectedId(null); leaveReview(item); }}
-                      style={({ pressed }) => [
-                        styles.reviewButton,
-                        { borderColor: colors.accent },
-                        pressed ? styles.reviewPressed : null,
-                      ]}
-                    >
-                      <Text style={[styles.reviewText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
-                        {de ? 'Bewertung schreiben' : 'Leave a review'}
-                      </Text>
-                    </Pressable>
-                  )
-                ) : null}
-
-    {item.status !== 'rejected' && item.status !== 'cancelled' ? (
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={de ? 'Barber schreiben' : 'Message barber'}
-        accessibilityState={{ busy: openingChat, disabled: openingChat }}
-        disabled={openingChat}
-        testID={`booking-message-${item.id}`}
-        onPress={() => void messageBarber(item)}
-        style={({ pressed }) => [styles.secondaryButton, { borderColor: colors.border }, pressed ? styles.reviewPressed : null]}
-      >
-        {openingChat ? (
-          <ActivityIndicator size="small" color={colors.accent} />
-        ) : (
-          <>
-            <Feather name="message-circle" size={16} color={colors.textPrimary} />
-            <Text style={[styles.reviewText, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>
-              {de ? 'Barber schreiben' : 'Message barber'}
-            </Text>
-          </>
-        )}
-      </Pressable>
-    ) : null}
-    {!actionable && item.barber_id && barbersById.has(item.barber_id) ? (
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={de ? 'Erneut buchen' : 'Book again'}
-        testID={`booking-rebook-${item.id}`}
-        onPress={() => { if (!item.barber_id) return; setSelectedId(null); navigation.navigate('BarberProfile', { barberId: item.barber_id }); }}
-        style={({ pressed }) => [styles.secondaryButton, { borderColor: colors.border }, pressed ? styles.reviewPressed : null]}
-      >
-        <Feather name="repeat" size={16} color={colors.textPrimary} />
-        <Text style={[styles.reviewText, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>
-          {de ? 'Erneut buchen' : 'Book again'}
-        </Text>
-      </Pressable>
-    ) : null}
-    {item.status === 'accepted' ? (
-      <TrackLiveButton bookingId={item.id} barberName={byId(barbersById, item.barber_id)?.name ?? 'Barber'} onOpen={() => openLiveTrip(item)} />
-    ) : null}
-    <AcceptedBookingTools
-      booking={item}
-      calendarTitle={`${byId(servicesById, item.service_id)?.name ?? (de ? 'Termin' : 'Appointment')} · ${byId(barbersById, item.barber_id)?.name ?? 'Privelier'}`}
-      testIDPrefix={`booking-tools-${item.id}`}
-    />
-    {rowErrors[item.id] ? <Text accessibilityRole="alert" style={{ color: colors.errorText, marginTop: 16 }}>{rowErrors[item.id]}</Text> : null}
-    </>;
-  };
+  const selected = bookings.find((row) => row.id === selectedId);
+  const showSkeleton = loading && bookings.length === 0;
+  const showError = error !== null && bookings.length === 0;
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['top', 'left', 'right']}
-      testID="customer-bookings-screen"
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']} testID="customer-bookings-screen">
       <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
         {de ? 'Deine Termine' : 'Your appointments'}
       </Text>
@@ -465,11 +137,10 @@ export default function BookingsScreen() {
         style={styles.tabStrip}
         value={tab}
         onChange={setTab}
-        segments={TABS.map(({ key, label }) => ({
-          key,
-          label: de ? (key === 'upcoming' ? 'Demn\u00e4chst' : 'Vergangene') : label,
-          testID: `customer-bookings-tab-${key}`,
-        }))}
+        segments={[
+          { key: 'upcoming' as const, label: de ? 'Demnächst' : 'Upcoming', testID: 'customer-bookings-tab-upcoming' },
+          { key: 'past' as const, label: de ? 'Vergangene' : 'Past', testID: 'customer-bookings-tab-past' },
+        ]}
       />
 
       {showSkeleton ? (
@@ -481,125 +152,91 @@ export default function BookingsScreen() {
           {error ? <RetryNotice testID="customer-bookings-error" message={error} onRetry={() => void load()} style={styles.noticeMargins} /> : null}
           <FlatList
             {...listPerformance}
-          testID="customer-bookings-list"
-          data={list}
-          keyExtractor={(item) => item.id}
-          refreshControl={
-            <RefreshControl
-              refreshing={loading && bookings.length > 0}
-              onRefresh={() => void load()}
-              progressViewOffset={12}
-              tintColor={colors.accent}
-              colors={[colors.accent]}
-            />
-          }
-          contentContainerStyle={[styles.listContent, { paddingBottom: tabClearance }]}
-          ListHeaderComponent={liveCandidates.length > 0 ? (
-            <>
-              {liveCandidates.map((item) => (
-                <LiveTripBanner
-                  key={item.id}
-                  bookingId={item.id}
-                  barberName={byId(barbersById, item.barber_id)?.name ?? 'Barber'}
-                  onOpen={() => openLiveTrip(item)}
-                />
-              ))}
-            </>
-          ) : undefined}
-          ListEmptyComponent={
-            <EmptyState
-              icon={tab === 'upcoming' ? 'calendar' : 'clock'}
-              testID="customer-bookings-empty"
-              title={tab === 'upcoming'
-                ? (de ? 'Noch keine anstehenden Termine.' : 'No upcoming appointments yet.')
-                : (de ? 'Noch keine vergangenen Termine.' : 'No past appointments yet.')}
-              body={tab === 'upcoming'
-                ? (de ? 'Wähle einen Barber und eine Zeit – er kommt zu dir.' : 'Pick a barber and a time, and they come to you.')
-                : (de ? 'Abgeschlossene Termine erscheinen hier.' : 'Finished appointments appear here.')}
-              action={tab === 'upcoming' ? {
-                label: de ? 'Barber finden' : 'Find a barber',
-                onPress: () => navigation.navigate('CustomerTabs', { screen: 'Discover' }),
-                testID: 'customer-bookings-empty-discover',
-              } : undefined}
-            />
-          }
-          renderItem={({ item, index }) => {
-            const barber = byId(barbersById, item.barber_id);
-            const service = byId(servicesById, item.service_id);
-            const cancellationQueued = queued[item.id] === true;
-            const rowError = rowErrors[item.id];
-            return (
-              <Reveal index={Math.min(index, 5)}>
-                <GlassSurface
-                  style={styles.card}
-                  testID={`customer-bookings-row-${item.id}`}
-                >
-                  <Pressable accessibilityRole="button" accessibilityLabel={`${de ? 'Termindetails' : 'Appointment details'}, ${barber?.name ?? 'Barber'}, ${formatBookingWhen(item.date, item.time)}`} testID={`customer-bookings-open-${item.id}`} onPress={() => setSelectedId(item.id)} style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}>
-                  <View style={styles.cardMain}>
-                    <Avatar
-                      id={barber?.id ?? item.barber_id ?? item.id}
-                      name={barber?.name}
-                      imageUrl={barber?.profile_image}
-                      size={56}
-                      accessible={false}
-                      testID={`customer-bookings-avatar-${item.id}`}
-                    />
-                    <View style={styles.cardInfo}>
-                      <View style={styles.cardTitleRow}>
-                        <Text
-                          numberOfLines={1}
-                          style={[styles.cardName, { color: colors.textPrimary, fontFamily: fonts.bodySemiBold }]}
-                        >
-                          {barber?.name ?? 'Barber'}
-                        </Text>
-                        <StatusPill
-                          status={item.status}
-                          testID={`customer-bookings-status-${item.id}`}
-                        />
-                      </View>
-                      <Text
-                        numberOfLines={1}
-                        style={[styles.cardMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}
-                      >
-                        {service?.name ?? (de ? 'Leistung' : 'Service')}
-                      </Text>
-                      <Text style={[styles.cardMeta, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                        {formatBookingWhen(item.date, item.time)}
-                      </Text>
-                    </View>
-                    <Text style={[styles.cardPrice, numericText, { color: colors.textPrimary }]}>
-                      {formatMoney(item.price)}
-                    </Text>
-                  </View>
-                  <Text
-                    numberOfLines={1}
-                    style={[styles.cardLocation, { color: colors.textSecondary, fontFamily: fonts.body }]}
-                  >
-                    {item.location}
-                  </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 }}><Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium, fontSize: 13 }}>{de ? 'Details ansehen' : 'View details'}</Text><Feather name="arrow-up-right" size={16} color={colors.accentText} /></View>
-                  </Pressable>
-
-                  {cancellationQueued ? <Text testID={`customer-bookings-row-undo-window-${item.id}`} style={[styles.reviewedText, { color: colors.textSecondary, fontFamily: fonts.body }]}>{de ? 'Stornierung vorgemerkt' : 'Cancellation pending'}</Text> : null}
-                  {rowError ? (
-                    <View
-                      style={[styles.rowError, { borderTopColor: colors.border }]}
-                      accessibilityRole="alert"
-                      testID={`customer-bookings-row-error-${item.id}`}
-                    >
-                      <Text style={[styles.rowErrorText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-                        {rowError}
-                      </Text>
-                    </View>
-                  ) : null}
-                </GlassSurface>
-              </Reveal>
-            );
-          }}
+            testID="customer-bookings-list"
+            data={list}
+            keyExtractor={(item) => item.id}
+            refreshControl={
+              <RefreshControl
+                refreshing={loading && bookings.length > 0}
+                onRefresh={() => void load()}
+                progressViewOffset={12}
+                tintColor={colors.accent}
+                colors={[colors.accent]}
+              />
+            }
+            contentContainerStyle={[styles.listContent, { paddingBottom: tabClearance }]}
+            ListHeaderComponent={liveCandidates.length > 0 ? (
+              <>
+                {liveCandidates.map((item) => (
+                  <LiveTripBanner
+                    key={item.id}
+                    bookingId={item.id}
+                    barberName={byId(barbersById, item.barber_id)?.name ?? 'Barber'}
+                    onOpen={() => openLiveTrip(item)}
+                  />
+                ))}
+              </>
+            ) : undefined}
+            ListEmptyComponent={
+              <EmptyState
+                icon={tab === 'upcoming' ? 'calendar' : 'clock'}
+                testID="customer-bookings-empty"
+                title={tab === 'upcoming'
+                  ? (de ? 'Noch keine anstehenden Termine.' : 'No upcoming appointments yet.')
+                  : (de ? 'Noch keine vergangenen Termine.' : 'No past appointments yet.')}
+                body={tab === 'upcoming'
+                  ? (de ? 'Wähle einen Barber und eine Zeit – er kommt zu dir.' : 'Pick a barber and a time, and they come to you.')
+                  : (de ? 'Abgeschlossene Termine erscheinen hier.' : 'Finished appointments appear here.')}
+                action={tab === 'upcoming' ? {
+                  label: de ? 'Barber finden' : 'Find a barber',
+                  onPress: () => navigation.navigate('CustomerTabs', { screen: 'Discover' }),
+                  testID: 'customer-bookings-empty-discover',
+                } : undefined}
+              />
+            }
+            renderItem={({ item, index }) => (
+              <CustomerBookingCard
+                item={item}
+                index={index}
+                barber={byId(barbersById, item.barber_id)}
+                service={byId(servicesById, item.service_id)}
+                cancellationQueued={data.queued[item.id] === true}
+                rowError={data.rowErrors[item.id]}
+                de={de}
+                onOpen={() => setSelectedId(item.id)}
+              />
+            )}
           />
         </>
       )}
-      {selected ? <BookingDetails booking={selected} role="customer" person={byId(barbersById, selected.barber_id)?.name ?? 'Barber'} service={byId(servicesById, selected.service_id)?.name ?? (de ? 'Termin' : 'Appointment')} onClose={() => setSelectedId(null)}>{renderActions(selected)}</BookingDetails> : null}
+      {selected ? (
+        <BookingDetails
+          booking={selected}
+          role="customer"
+          person={byId(barbersById, selected.barber_id)?.name ?? 'Barber'}
+          service={byId(servicesById, selected.service_id)?.name ?? (de ? 'Termin' : 'Appointment')}
+          onClose={() => setSelectedId(null)}
+        >
+          <CustomerBookingActions
+            item={selected}
+            barber={byId(barbersById, selected.barber_id)}
+            service={byId(servicesById, selected.service_id)}
+            busy={data.inFlight[selected.id] === true}
+            cancellationQueued={data.queued[selected.id] === true}
+            reviewed={data.reviewedBookingIds.has(selected.id)}
+            openingChat={openingChat}
+            rowError={data.rowErrors[selected.id]}
+            de={de}
+            onCancel={() => { setSelectedId(null); setConfirmingBooking(selected); }}
+            onReview={() => { setSelectedId(null); leaveReview(selected); }}
+            onMessage={() => void messageBarber(selected)}
+            onRebook={selected.barber_id && barbersById.has(selected.barber_id)
+              ? () => { if (!selected.barber_id) return; setSelectedId(null); navigation.navigate('BarberProfile', { barberId: selected.barber_id }); }
+              : null}
+            onTrack={() => openLiveTrip(selected)}
+          />
+        </BookingDetails>
+      ) : null}
       <ConfirmSheet
         open={confirmingBooking !== null}
         title={de ? 'Diesen Termin stornieren?' : 'Cancel this booking?'}
@@ -612,69 +249,9 @@ export default function BookingsScreen() {
         onConfirm={() => {
           const row = confirmingBooking;
           setConfirmingBooking(null);
-          if (row) queueCancellation(row);
+          if (row) data.queueCancellation(row);
         }}
       />
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.sm,
-    minHeight: 48,
-    marginTop: space.md,
-    borderWidth: 0.5,
-    borderRadius: radius.md,
-    paddingHorizontal: space.base,
-  },
-  container: { flex: 1 },
-  heading: { fontSize: 30, marginTop: 24, paddingHorizontal: 24 },
-  tabStrip: { marginHorizontal: space.xl, marginTop: space.lg },
-
-  noticeMargins: { marginTop: space.xl, marginHorizontal: space.xl },
-  emptyText: { fontSize: 13, textAlign: 'center', paddingVertical: 40 },
-
-  listContent: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 32 },
-  card: { borderWidth: 0.5, borderRadius: radius.sm, padding: 16, marginBottom: 12 },
-  cardMain: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  cardInfo: { flex: 1, minWidth: 0 },
-  cardTitleRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space.sm },
-  cardName: { fontSize: 16, flexShrink: 1 },
-  cardMeta: { fontSize: 14, marginTop: 3 },
-  cardPrice: { fontSize: 14 },
-  cardLocation: { fontSize: 14, marginTop: 12 },
-
-  cardSpinner: { marginTop: 16, alignSelf: 'flex-start' },
-  cancelButton: {
-    marginTop: 16,
-    borderWidth: 0.5,
-    borderRadius: radius.sm,
-    paddingVertical: 14,
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelPressed: { opacity: pressOpacity.firm },
-  cancelText: { fontSize: 14 },
-
-  reviewButton: {
-    marginTop: 16,
-    borderWidth: 0.5,
-    borderRadius: radius.sm,
-    paddingVertical: 14,
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  reviewText: { fontSize: 14 },
-  reviewPressed: { opacity: pressOpacity.soft },
-  reviewedRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16 },
-  reviewedText: { fontSize: 12, letterSpacing: 0.5 },
-
-  rowError: { marginTop: 12, borderTopWidth: 0.5, paddingTop: 12 },
-  rowErrorText: { fontSize: 12 },
-});
