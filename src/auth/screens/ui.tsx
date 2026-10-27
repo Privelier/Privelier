@@ -9,26 +9,24 @@
  * serif, back navigation switched to the icon-circle button, and form inputs
  * switched from boxed fields to hairline-underline fields (brass on focus) —
  * matching the pattern already applied to Studio/Inbox/Account-section and
- * the barber Services/Availability screens. No behavior, validation, or
- * testID changed.
+ * the barber Services/Availability screens.
  */
-import { useState, type ReactNode, type Ref } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View, type TextInputProps, type TextInputInstance } from 'react-native';
-import { Input, InputField, InputSlot } from '../../../components/ui/input';
-import { Button, ButtonText } from '../../../components/ui/button';
-import { AuthProviderLogo } from '../../shared/components/AuthProviderLogo';
+import type { ReactNode } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/useTheme';
-import { radius, space } from '../../theme/spacing';
+import { space } from '../../theme/spacing';
 import { typeScale } from '../../theme/typography';
 import { Notice as SharedNotice } from '../../shared/components/Notice';
 import { BackButton } from '../../shared/components/ScreenBackHeader';
-import { getAppLanguage } from '../../shared/locale';
 
 // PrimaryButton is now the shared canonical CTA — re-exported so existing auth
 // call sites (label/onPress/testID/loading/disabled) are unchanged, and they
 // inherit the shared behaviour (full opacity while loading, soft press dim).
 export { PrimaryButton } from '../../shared/components/PrimaryButton';
+// The text field and the secondary/link/OAuth buttons live in auth/components.
+export { FormTextField } from '../components/FormTextField';
+export { OAuthButton, SecondaryButton, TextLink } from '../components/AuthButtons';
 
 // ---------------------------------------------------------------------------
 // Screen shell — safe area + keyboard avoidance + tap-to-dismiss scroll
@@ -95,277 +93,6 @@ const shellStyles = StyleSheet.create({
   title: { ...typeScale.title1, marginBottom: space.sm },
   subtitle: typeScale.bodyLarge,
   backLink: { alignSelf: 'flex-start' },
-});
-
-// ---------------------------------------------------------------------------
-// Text field with label, error, helper and secure show/hide toggle
-// ---------------------------------------------------------------------------
-
-interface FormTextFieldProps {
-  label: string;
-  value: string;
-  onChangeText: (text: string) => void;
-  testID: string;
-  error?: string;
-  helper?: string;
-  optional?: boolean;
-  secure?: boolean;
-  multiline?: boolean;
-  autoCapitalize?: TextInputProps['autoCapitalize'];
-  keyboardType?: TextInputProps['keyboardType'];
-  autoComplete?: TextInputProps['autoComplete'];
-  textContentType?: TextInputProps['textContentType'];
-  // Focus-chaining: a screen forwards a ref and a submit handler so the
-  // keyboard's next/go/done key advances the form without leaving the keyboard.
-  inputRef?: Ref<TextInputInstance>;
-  returnKeyType?: TextInputProps['returnKeyType'];
-  onSubmitEditing?: () => void;
-  blurOnSubmit?: boolean;
-}
-
-export function FormTextField({
-  label,
-  value,
-  onChangeText,
-  testID,
-  error,
-  helper,
-  optional = false,
-  secure = false,
-  multiline = false,
-  autoCapitalize,
-  keyboardType,
-  autoComplete,
-  textContentType,
-  inputRef,
-  returnKeyType,
-  onSubmitEditing,
-  blurOnSubmit,
-}: FormTextFieldProps) {
-  const { colors, fonts } = useTheme();
-  const de = getAppLanguage() === 'de';
-  const [hidden, setHidden] = useState(true);
-  const [focused, setFocused] = useState(false);
-
-  return (
-    <View style={fieldStyles.field}>
-      <View style={fieldStyles.labelRow}>
-        <Text style={[fieldStyles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-          {label}
-        </Text>
-        {optional ? (
-          <Text style={[fieldStyles.optional, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-            optional
-          </Text>
-        ) : null}
-      </View>
-      <Input
-        className="rounded-xl"
-        style={[
-          fieldStyles.inputRow,
-          {
-            backgroundColor: colors.surface,
-            borderColor: error ? colors.error : focused ? colors.accent : colors.inputBorder,
-          },
-        ]}
-        isDisabled={false}
-      >
-        <InputField
-          ref={inputRef as unknown as Ref<TextInputProps>}
-          style={[fieldStyles.input, multiline && fieldStyles.inputMultiline, { color: colors.textPrimary, fontFamily: fonts.body }]}
-          value={value}
-          onChangeText={onChangeText}
-          secureTextEntry={secure && hidden}
-          multiline={multiline}
-          placeholderTextColor={colors.textSecondary}
-          // Extend the label with the error so VoiceOver surfaces the invalid
-          // state when the field is focused (iOS has no live-region equivalent).
-          accessibilityLabel={error ? `${label}, ${error}` : label}
-          testID={testID}
-          autoCapitalize={autoCapitalize}
-          keyboardType={keyboardType}
-          autoComplete={autoComplete}
-          textContentType={textContentType}
-          returnKeyType={returnKeyType}
-          onSubmitEditing={onSubmitEditing}
-          blurOnSubmit={blurOnSubmit}
-          autoCorrect={false}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-        />
-        {secure ? (
-          <InputSlot
-            onPress={() => setHidden((current) => !current)}
-            accessibilityLabel={de ? (hidden ? 'Passwort anzeigen' : 'Passwort ausblenden') : hidden ? 'Show password' : 'Hide password'}
-            className="min-h-11 min-w-11"
-          >
-            <Text style={[fieldStyles.toggle, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>
-              {de ? (hidden ? 'Anzeigen' : 'Ausblenden') : hidden ? 'Show' : 'Hide'}
-            </Text>
-          </InputSlot>
-        ) : null}
-      </Input>
-      {error ? (
-        <Text
-          testID={`${testID}-error`}
-          accessibilityLiveRegion="polite"
-          style={[fieldStyles.meta, { color: colors.errorText, fontFamily: fonts.body }]}
-        >
-          {error}
-        </Text>
-      ) : helper ? (
-        <Text style={[fieldStyles.meta, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-          {helper}
-        </Text>
-      ) : null}
-    </View>
-  );
-}
-
-const fieldStyles = StyleSheet.create({
-  field: { marginBottom: 20 },
-  labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  label: { ...typeScale.body, letterSpacing: 0 },
-  optional: typeScale.caption,
-  inputRow: {
-    minHeight: 56,
-    borderRadius: 14,
-    borderWidth: 0.5,
-    paddingHorizontal: space.base,
-  },
-  input: { flex: 1, fontSize: typeScale.bodyLarge.fontSize, paddingVertical: 10 },
-  inputMultiline: { minHeight: 96, textAlignVertical: 'top' },
-  toggle: { ...typeScale.body, marginLeft: space.md },
-  meta: { ...typeScale.secondary, marginTop: 6 },
-});
-
-// ---------------------------------------------------------------------------
-// Buttons and links
-// ---------------------------------------------------------------------------
-
-interface ButtonProps {
-  label: string;
-  onPress: () => void;
-  testID: string;
-  loading?: boolean;
-  disabled?: boolean;
-}
-
-export function SecondaryButton({ label, onPress, testID, loading = false, disabled = false }: ButtonProps) {
-  const { colors, fonts } = useTheme();
-  const inactive = disabled || loading;
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={inactive}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled: inactive, busy: loading }}
-      testID={testID}
-      style={({ pressed }) => [
-        buttonStyles.secondary,
-        {
-          backgroundColor: colors.surface,
-          borderColor: colors.border,
-          opacity: inactive ? 0.6 : pressed ? 0.85 : 1,
-        },
-      ]}
-    >
-      {loading ? (
-        <ActivityIndicator size="small" color={colors.textPrimary} />
-      ) : (
-        <Text
-          style={[buttonStyles.secondaryLabel, { color: colors.textPrimary, fontFamily: fonts.bodySemiBold }]}
-        >
-          {label}
-        </Text>
-      )}
-    </Pressable>
-  );
-}
-
-export function TextLink({ label, onPress, testID, disabled = false }: ButtonProps) {
-  const { colors, fonts } = useTheme();
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityRole="link"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled }}
-      hitSlop={8}
-      testID={testID}
-      style={({ pressed }) => [buttonStyles.link, { opacity: pressed || disabled ? 0.7 : 1 }]}
-    >
-      <Text style={[buttonStyles.linkLabel, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
-export function OAuthButton({
-  provider,
-  onPress,
-  testID,
-  loading = false,
-  disabled = false,
-}: {
-  provider: 'google' | 'apple';
-  onPress: () => void;
-  testID: string;
-  loading?: boolean;
-  disabled?: boolean;
-}) {
-  const { colors, fonts } = useTheme();
-  const inactive = disabled || loading;
-  const label = provider === 'google' ? 'Continue with Google' : 'Continue with Apple';
-  return (
-    <Button
-      onPress={onPress}
-      isDisabled={inactive}
-      variant="outline"
-      size="lg"
-      className="rounded-full"
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled: inactive, busy: loading }}
-      testID={testID}
-      style={[buttonStyles.oauth, { backgroundColor: colors.surface, borderColor: colors.border }]}
-    >
-      {loading ? <ActivityIndicator size="small" color={colors.textPrimary} /> : (
-        <>
-          <AuthProviderLogo provider={provider} size={18} color={colors.textPrimary} />
-          <ButtonText style={[buttonStyles.oauthLabel, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>{label}</ButtonText>
-        </>
-      )}
-    </Button>
-  );
-}
-
-const buttonStyles = StyleSheet.create({
-  secondary: {
-    borderRadius: radius.pill,
-    borderWidth: 0.5,
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 52,
-  },
-  secondaryLabel: { fontSize: typeScale.bodyLarge.fontSize },
-  oauth: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.sm,
-    borderRadius: radius.pill,
-    borderWidth: 0.5,
-    paddingVertical: 16,
-    minHeight: 52,
-  },
-  oauthLabel: { fontSize: typeScale.bodyLarge.fontSize },
-  link: { alignSelf: 'center', paddingVertical: 8 },
-  linkLabel: typeScale.body,
 });
 
 // ---------------------------------------------------------------------------
