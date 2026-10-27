@@ -1,4 +1,4 @@
-import { ratingDistribution } from '../BarberProfileScreen';
+import { ratingDistribution } from '../../components/barberProfile/ProfileTabs';
 
 jest.mock('../../../../lib/supabase', () => ({ supabase: {} }));
 

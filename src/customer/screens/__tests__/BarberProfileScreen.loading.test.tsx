@@ -14,6 +14,11 @@ jest.mock('../../discoveryData', () => ({
 }));
 jest.mock('../../reviewsData', () => ({ fetchReviewsForBarber: jest.fn() }));
 jest.mock('../../../../lib/supabase', () => ({ supabase: {} }));
+jest.mock('../../../shared/components/ReportSheet', () => {
+  const React = jest.requireActual('react');
+  const { Text } = jest.requireActual('react-native');
+  return { ReportSheet: ({ target }: { target: { reviewId: string } }) => React.createElement(Text, { testID: 'report-sheet' }, target.reviewId) };
+});
 jest.mock('@expo/vector-icons', () => ({ Feather: () => null, Ionicons: () => null, MaterialCommunityIcons: () => null }));
 jest.mock('../../../shared/components/ScreenBackHeader', () => ({
   BackButton: () => null,
@@ -80,4 +85,35 @@ it('does not offer a booking or starting price when no services exist', async ()
   await render(<BarberProfileScreen route={{ params: { barberId: 'barber-1' } } as never} navigation={{ goBack: jest.fn() } as never} />);
   await screen.findByTestId('barber-profile-services-empty');
   expect(screen.queryByTestId('barber-profile-booking-dock')).toBeNull();
+});
+
+it('shows the review summary, a real distribution, and a report action on written reviews', async () => {
+  const barber = { id: 'barber-1', name: 'Ada', city: 'Berlin', country: 'DE', rating: 4.5, profile_image: null, bio: 'Calm fades' };
+  const reviews = [
+    { id: 'r-1', booking_id: 'b-1', customer_id: 'c-1', barber_id: barber.id, rating: 5, comment: 'Great cut', created_at: '2026-10-01T10:00:00Z' },
+    { id: 'r-2', booking_id: 'b-2', customer_id: null, barber_id: barber.id, rating: 4, comment: null, created_at: '2026-10-02T10:00:00Z' },
+  ];
+  jest.mocked(getBarberProfile).mockResolvedValue({ status: 'ok', barber } as never);
+  jest.mocked(listServicesForBarber).mockResolvedValue({ status: 'ok', services: [] });
+  jest.mocked(listPortfolioForBarber).mockResolvedValue({ status: 'ok', images: [] });
+  jest.mocked(fetchReviewsForBarber).mockResolvedValue({ status: 'ok', reviews, firstNameByReviewId: new Map([['r-1', 'Nora']]) } as never);
+  await render(<BarberProfileScreen route={{ params: { barberId: barber.id } } as never} navigation={{ goBack: jest.fn() } as never} />);
+
+  await fireEvent.press(await screen.findByTestId('barber-profile-tab-reviews'));
+  expect(screen.getByTestId('barber-profile-rating-distribution').props.accessibilityLabel).toBe('5 stars: 1, 4 stars: 1, 3 stars: 0, 2 stars: 0, 1 stars: 0');
+  expect(screen.getByText('Nora')).toBeTruthy();
+  expect(screen.queryByTestId('barber-profile-review-report-r-2')).toBeNull();
+  await fireEvent.press(screen.getByTestId('barber-profile-review-report-r-1'));
+  expect(screen.getByTestId('report-sheet').props.children).toBe('r-1');
+});
+
+it('keeps a failed reviews read local to its tab', async () => {
+  jest.mocked(getBarberProfile).mockResolvedValue({ status: 'ok', barber: { id: 'barber-1', name: 'Ada', rating: 0 } } as never);
+  jest.mocked(listServicesForBarber).mockResolvedValue({ status: 'ok', services: [] });
+  jest.mocked(listPortfolioForBarber).mockResolvedValue({ status: 'ok', images: [] });
+  jest.mocked(fetchReviewsForBarber).mockResolvedValue({ status: 'error', message: 'Reviews could not load.' } as never);
+  await render(<BarberProfileScreen route={{ params: { barberId: 'barber-1' } } as never} navigation={{ goBack: jest.fn() } as never} />);
+  await screen.findByTestId('barber-profile-services-empty');
+  await fireEvent.press(screen.getByTestId('barber-profile-tab-reviews'));
+  expect(screen.getByTestId('barber-profile-reviews-error')).toBeTruthy();
 });

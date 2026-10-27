@@ -1,221 +1,63 @@
 /**
- * Barber profile detail — visual rebuild of the prototype's
- * customer.barber.$id route: full-bleed hero (profile image under the status
- * bar, name + verified badge + meta overlaid on a flat scrim), bio with
- * service-name chips, and a Services / Portfolio / Reviews tab strip.
+ * Barber profile: full-bleed hero, bio with service chips, and a Services /
+ * Portfolio / Reviews tab strip. Data lives in useBarberProfileData; the
+ * sections are in components/barberProfile.
  *
- * Uses the discovery data layer (getBarberProfile +
- * listServicesForBarber); rendering differences from the prototype are all
- * data-honesty ones:
- * - services have no description column → name + "N min · €X" only;
- * - the per-row Book button navigates into the booking flow
- *   (BookingDateTime -> BookingLocation -> BookingConfirm), carrying
- *   barberId/barberName/the full service row forward so those screens never
- *   need to re-fetch what is already loaded here;
- * - Portfolio (step 17) and Reviews (step 18) tabs render honest empty
- *   states, not the prototype's mock grids/distribution bars;
- * - no distance/years-experience lines (no such data).
+ * Rendering stays data-honest: services show name, duration and price only
+ * (no description column), there are no distance or experience lines, and
+ * empty tabs say so. The per-row Book button carries the barber and the
+ * full service row into the booking flow so it never re-fetches them.
  *
  * Maestro contract preserved: barber-profile-screen / -back / -loading /
  * -error / -not-found / -rating / -services-error / -services-empty /
- * -service-{id} / -portfolio-placeholder. Services is the default tab, so
- * the flow's service assertions hold without extra taps.
+ * -service-{id} / -portfolio-placeholder.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  Share,
-} from 'react-native';
-import { Image } from 'expo-image';
+import { useCallback, useRef, useState } from 'react';
+import { Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { PortfolioGrid } from '../../shared/components/PortfolioGrid';
-import { PortfolioTile } from '../../shared/components/PortfolioTile';
-import { StarRating } from '../../shared/components/StarRating';
-import { Avatar } from '../../shared/components/Avatar';
-import { GlassSurface } from '../../shared/components/GlassSurface';
-import { ResponseBadge } from '../../shared/components/stats/ResponseBadge';
-import { PopularTimesChart } from '../../shared/components/stats/PopularTimesChart';
-import { fetchBarberStats, type BarberStatsRow } from '../../shared/barberStats';
-import { getAppLanguage } from '../../shared/locale';
-import { Skeleton } from '../../shared/components/Skeleton';
-import { BackButton, OVER_IMAGE_BG, OVER_IMAGE_ICON } from '../../shared/components/ScreenBackHeader';
-import { listFavoriteBarberIds, setFavorite } from '../personalData';
-import { barberProfileLink } from '../../shared/profileLinks';
-import { haptics } from '../../shared/haptics';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
-import { Reveal, ScrollGlassHeader, useReducedMotionPreference, useScrollGlass } from '../../shared/motion';
-import { useTheme } from '../../theme/useTheme';
-import { numericText } from '../../theme/typography';
-import { pressOpacity } from '../../theme/motion';
-import type { BarberDirectoryRow, PortfolioRow, ReviewRow, ServiceRow } from '../../types';
-import { getBarberProfile, listPortfolioForBarber, listServicesForBarber } from '../discoveryData';
-import { fetchReviewsForBarber } from '../reviewsData';
-import { formatMoney, formatShortDate } from '../format';
-import type { CustomerStackParamList } from '../CustomerNavigator';
 import { ReportSheet } from '../../shared/components/ReportSheet';
+import { BackButton } from '../../shared/components/ScreenBackHeader';
+import { getAppLanguage } from '../../shared/locale';
+import { ScrollGlassHeader, useReducedMotionPreference, useScrollGlass } from '../../shared/motion';
+import { useTheme } from '../../theme/useTheme';
+import type { ServiceRow } from '../../types';
+import { BarberProfileSkeleton, BookingDock, HeroButtons } from '../components/barberProfile/ProfileChrome';
+import { ProfileAbout, ProfileHero } from '../components/barberProfile/ProfileHero';
+import { PortfolioTab, ProfileTabStrip, ReviewsTab, ServicesTab, type ProfileTab } from '../components/barberProfile/ProfileTabs';
+import { HERO_PARALLAX_HEIGHT, profileStyles as styles } from '../components/barberProfile/profileStyles';
+import { useBarberProfileData } from '../hooks/useBarberProfileData';
+import type { CustomerStackParamList } from '../CustomerNavigator';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'BarberProfile'>;
-
-type TabKey = 'services' | 'portfolio' | 'reviews';
-const TABS: { key: TabKey; label: string }[] = [
-  { key: 'services', label: 'Services' },
-  { key: 'portfolio', label: 'Portfolio' },
-  { key: 'reviews', label: 'Reviews' },
-];
-
-// Text overlaid on the hero image sits on a flat dark scrim, so its color is
-// fixed regardless of theme (same approach as the Discover trending tiles).
-// HERO_TEXT/HERO_SCRIM are the shared ScreenBackHeader over-image constants
-// (renamed on import — see that file for why this is the one shared source).
-const HERO_TEXT = OVER_IMAGE_ICON;
-const HERO_TEXT_DIM = 'rgba(245,241,232,0.72)';
-/** Reference height for the pull-down stretch (the hero's min height). */
-const HERO_PARALLAX_HEIGHT = 340;
-const HERO_SCRIM = OVER_IMAGE_BG;
-
-/** Count of each 5→1 star rating among loaded reviews, with its share. */
-export function ratingDistribution(reviews: readonly { rating: number }[]): { stars: number; count: number; share: number }[] {
-  const total = reviews.length;
-  return [5, 4, 3, 2, 1].map((stars) => {
-    const count = reviews.filter((review) => review.rating === stars).length;
-    return { stars, count, share: total === 0 ? 0 : count / total };
-  });
-}
-
-function reviewCountLabel(count: number, german: boolean): string {
-  if (german) return count === 1 ? '1 Bewertung' : `${count} Bewertungen`;
-  return count === 1 ? '1 review' : `${count} reviews`;
-}
 
 export default function BarberProfileScreen({ route, navigation }: Props) {
   const { barberId } = route.params;
   const { colors, fonts } = useTheme();
   const insets = useSafeAreaInsets();
+  const german = getAppLanguage() === 'de';
   const scrollRef = useRef<Animated.ScrollView>(null);
   const servicesY = useRef(0);
-  const german = getAppLanguage() === 'de';
   const { scrollY, onScroll } = useScrollGlass();
-  // Saved-barber state: null until known, so the heart never shows a guess.
-  const [favorite, setFavoriteState] = useState<boolean | null>(null);
-  const favoriteBusyRef = useRef(false);
-  useEffect(() => {
-    let active = true;
-    void listFavoriteBarberIds().then((result) => {
-      if (active && result.status === 'ok') setFavoriteState(result.ids.has(barberId));
-    });
-    return () => { active = false; };
-  }, [barberId]);
-  const toggleFavorite = useCallback(async () => {
-    if (favorite === null || favoriteBusyRef.current) return;
-    favoriteBusyRef.current = true;
-    const next = !favorite;
-    setFavoriteState(next); // optimistic; reverted below if the write fails
-    void haptics.selection();
-    const result = await setFavorite(barberId, next);
-    favoriteBusyRef.current = false;
-    if (result.status !== 'ok') setFavoriteState(!next);
-  }, [favorite, barberId]);
+  const [tab, setTab] = useState<ProfileTab>('services');
+  const [reportReviewId, setReportReviewId] = useState<string | null>(null);
+  const data = useBarberProfileData(barberId);
+  const { barber, services, servicesError } = data;
+
   const reduceMotion = useReducedMotionPreference();
-  // Parallax hero, computed on the UI thread from the shared scroll offset:
-  // the photo drifts at 40% of scroll speed inside the clipped hero and, on
-  // an iOS pull-down, scales up slightly. Reduce Motion keeps the image
-  // fixed to the content.
+  // Parallax, on the UI thread: the photo drifts at 40% of scroll speed and,
+  // on an iOS pull-down, scales up slightly. Reduce Motion keeps it fixed.
   const heroParallax = useAnimatedStyle(() => {
     if (reduceMotion) return { transform: [{ translateY: 0 }, { scale: 1 }] };
     const y = scrollY.value;
     return {
-      transform: [
-        { translateY: y > 0 ? y * 0.4 : 0 },
-        { scale: y < 0 ? 1 + -y / HERO_PARALLAX_HEIGHT : 1 },
-      ],
+      transform: [{ translateY: y > 0 ? y * 0.4 : 0 }, { scale: y < 0 ? 1 + -y / HERO_PARALLAX_HEIGHT : 1 }],
     };
   });
 
-  const [barber, setBarber] = useState<BarberDirectoryRow | null>(null);
-  const [services, setServices] = useState<ServiceRow[]>([]);
-  const [portfolio, setPortfolio] = useState<PortfolioRow[]>([]);
-  const [reviews, setReviews] = useState<ReviewRow[]>([]);
-  const [firstNameByReviewId, setFirstNameByReviewId] = useState<Map<string, string>>(new Map());
-  const [reportReviewId, setReportReviewId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [servicesError, setServicesError] = useState<string | null>(null);
-  const [portfolioError, setPortfolioError] = useState<string | null>(null);
-  const [reviewsError, setReviewsError] = useState<string | null>(null);
-  // Nightly Python stats (migration 0050) — decorative: absent hides them.
-  const [stats, setStats] = useState<BarberStatsRow | null>(null);
-  const [tab, setTab] = useState<TabKey>('services');
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setNotFound(false);
-    setServicesError(null);
-    setPortfolioError(null);
-    setReviewsError(null);
-
-    const profileResult = await getBarberProfile(barberId);
-    if (profileResult.status === 'error') {
-      setLoading(false);
-      setError(profileResult.message);
-      return;
-    }
-    if (profileResult.status === 'not_found') {
-      setLoading(false);
-      setNotFound(true);
-      return;
-    }
-    setBarber(profileResult.barber);
-
-    // Services, portfolio and reviews are independent secondary reads — fetch
-    // in parallel; a failure in any is a tab-local error, never a whole-screen
-    // one (the profile already loaded).
-    const [servicesResult, portfolioResult, reviewsResult, statsById] = await Promise.all([
-      listServicesForBarber(barberId),
-      listPortfolioForBarber(barberId),
-      fetchReviewsForBarber(barberId),
-      fetchBarberStats([barberId]),
-    ]);
-    setLoading(false);
-    setStats(statsById.get(barberId) ?? null);
-    if (servicesResult.status === 'ok') {
-      setServices(servicesResult.services);
-    } else {
-      setServicesError(servicesResult.message);
-    }
-    if (portfolioResult.status === 'ok') {
-      setPortfolio(portfolioResult.images);
-    } else {
-      setPortfolioError(portfolioResult.message);
-    }
-    if (reviewsResult.status === 'ok') {
-      setReviews(reviewsResult.reviews);
-      setFirstNameByReviewId(reviewsResult.firstNameByReviewId);
-    } else {
-      setReviewsError(reviewsResult.message);
-    }
-  }, [barberId]);
-
-  useEffect(() => {
-    let active = true;
-    // Deferred via .then() (not called directly) for the same
-    // react-hooks/set-state-in-effect reason as DiscoverScreen.
-    void Promise.resolve().then(() => {
-      if (active) void load();
-    });
-    return () => {
-      active = false;
-    };
-  }, [load]);
-
+  const goBack = useCallback(() => navigation.goBack(), [navigation]);
   const onBook = useCallback(
     (service: ServiceRow) => {
       if (!barber) return;
@@ -224,38 +66,23 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
     [navigation, barber]
   );
 
-  const goBack = useCallback(() => navigation.goBack(), [navigation]);
-
-  // Loading / error / not-found render without the hero, with a plain header
-  // that keeps the back affordance and its testID.
-  if (loading || error || notFound) {
+  // Loading, error and not-found render without the hero, with a plain
+  // header that keeps the back affordance and its testID.
+  if (data.loading || data.error || data.notFound) {
     return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['top', 'left', 'right']}
-        testID="barber-profile-screen"
-      >
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']} testID="barber-profile-screen">
         <View style={styles.plainHeader}>
           <BackButton onPress={goBack} testID="barber-profile-back" tone="surface" />
         </View>
-        {loading ? (
+        {data.loading ? (
           <BarberProfileSkeleton />
-        ) : error ? (
-          <View
-            testID="barber-profile-error"
-            accessibilityRole="alert"
-            style={[styles.notice, { borderColor: colors.error, backgroundColor: colors.surface }]}
-          >
-            <Text style={[styles.noticeText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>
-              {error}
-            </Text>
+        ) : data.error ? (
+          <View testID="barber-profile-error" accessibilityRole="alert" style={[styles.notice, { borderColor: colors.error, backgroundColor: colors.surface }]}>
+            <Text style={[styles.noticeText, { color: colors.errorText, fontFamily: fonts.bodyMedium }]}>{data.error}</Text>
           </View>
         ) : (
-          <Text
-            style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}
-            testID="barber-profile-not-found"
-          >
-            {german ? 'Dieser Barber ist nicht mehr verf\u00fcgbar.' : 'This barber is no longer available.'}
+          <Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.body }]} testID="barber-profile-not-found">
+            {german ? 'Dieser Barber ist nicht mehr verfügbar.' : 'This barber is no longer available.'}
           </Text>
         )}
       </SafeAreaView>
@@ -266,537 +93,58 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
 
   const canBook = !servicesError && services.length > 0;
   const fromPrice = canBook ? Math.min(...services.map((service) => service.price)) : null;
-  const chips = services.slice(0, 4).map((s) => s.name);
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['left', 'right']}
-      testID="barber-profile-screen"
-    >
-      {/* The hero image bleeds under the status bar; light icons read best
-          over photography. The no-image fallback keeps the global "auto". */}
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['left', 'right']} testID="barber-profile-screen">
+      {/* Light status icons read best over photography; the no-image
+          fallback keeps the global "auto". */}
       {barber.profile_image ? <StatusBar style="light" /> : null}
-      <Animated.ScrollView onScroll={onScroll} scrollEventThrottle={16} ref={scrollRef} contentContainerStyle={{ paddingBottom: 32 }}>
-        {/* Hero — image bleeds under the status bar like the prototype. */}
-        <View style={[styles.hero, { backgroundColor: colors.surface }]}>
-          {barber.profile_image ? (
-            <Animated.View style={[styles.heroImage, heroParallax]} testID="barber-profile-hero-parallax">
-              <Image
-                source={{ uri: barber.profile_image }}
-                style={styles.heroImageFill}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-                transition={{ duration: 220, effect: 'cross-dissolve' }}
-                priority="high"
-              />
-            </Animated.View>
-          ) : (
-            <View style={[styles.heroFallback, { paddingTop: insets.top + 64 }]}>
-              <View style={[styles.monogramFrame, { borderColor: colors.border }]}>
-                <Avatar id={barber.id} name={barber.name} size={88} testID="barber-profile-monogram" />
-              </View>
-            </View>
-          )}
-          <View style={[styles.heroTitleBlock, { backgroundColor: barber.profile_image ? HERO_SCRIM : colors.surface }]}>
-            <View style={styles.nameRow}>
-              <Text style={[styles.heroName, { fontFamily: fonts.headingMedium, color: barber.profile_image ? HERO_TEXT : colors.textPrimary }]}>
-                {barber.name}
-              </Text>
-              <MaterialCommunityIcons name="check-decagram" size={18} color={colors.accent} />
-            </View>
-            <View style={styles.heroMetaRow}>
-              <Feather name="map-pin" size={11} color={barber.profile_image ? HERO_TEXT_DIM : colors.textSecondary} />
-              <Text style={[styles.heroMeta, { fontFamily: fonts.body, color: barber.profile_image ? HERO_TEXT_DIM : colors.textSecondary }]}>
-                {[barber.city, barber.country].filter(Boolean).join(', ') || (german ? 'Ort noch nicht angegeben' : 'Location not set')}
-              </Text>
-              <Text style={[styles.heroMeta, { fontFamily: fonts.body, color: barber.profile_image ? HERO_TEXT_DIM : colors.textSecondary }]}>·</Text>
-              {barber.rating > 0 ? (
-                <View
-                  style={styles.heroRating}
-                  testID="barber-profile-rating"
-                  accessibilityLabel={`Rating ${barber.rating.toFixed(1)} out of 5`}
-                >
-                  <Ionicons name="star" size={11} color={colors.accent} />
-                  <Text style={[styles.heroMeta, numericText, { color: barber.profile_image ? HERO_TEXT_DIM : colors.textSecondary }]}>
-                    {barber.rating.toFixed(1)}
-                  </Text>
-                </View>
-              ) : (
-                <Text
-                  style={[styles.heroMeta, { fontFamily: fonts.body, color: barber.profile_image ? HERO_TEXT_DIM : colors.textSecondary }]}
-                  testID="barber-profile-rating"
-                  accessibilityLabel={german ? 'Noch keine Bewertungen' : 'No ratings yet'}
-                >
-                  {german ? 'Noch keine Bewertungen' : 'No ratings yet'}
-                </Text>
-              )}
-            </View>
-          </View>
-        </View>
-
-        {stats?.median_response_minutes != null ? (
-          <View style={styles.badgeRow}>
-            <ResponseBadge minutes={stats.median_response_minutes} testID="barber-profile-response" />
-          </View>
-        ) : null}
-
-        {/* Bio + specialty chips (chips are this barber's service names). */}
-        <View style={styles.bioBlock}>
-          <Text style={[styles.bio, { color: colors.textPrimary, fontFamily: fonts.body }]}>
-            {barber.bio?.trim() || (german ? 'Dieser Barber hat noch keine Beschreibung hinzugef\u00fcgt.' : 'This barber has not added a bio yet.')}
-          </Text>
-          {chips.length > 0 ? (
-            <View style={styles.chipsRow}>
-              {chips.map((chip) => (
-                <View key={chip} style={[styles.chip, { borderColor: colors.border }]}>
-                  <Text style={[styles.chipText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                    {chip}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          ) : null}
-        </View>
-
-        {stats?.popular_hours ? (
-          <Reveal index={1} style={styles.popularWrap}>
-            <GlassSurface style={styles.popularCard} testID="barber-profile-popular-times">
-              <Text style={[styles.popularTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-                {german ? 'Beliebte Zeiten' : 'Popular times'}
-              </Text>
-              <PopularTimesChart grid={stats.popular_hours} testID="barber-profile-popular-chart" />
-            </GlassSurface>
-          </Reveal>
-        ) : null}
-
-        {/* Tab strip. */}
-        <View onLayout={(event) => { servicesY.current = event.nativeEvent.layout.y; }} style={[styles.tabStrip, { borderBottomColor: colors.border }]}>
-          {TABS.map(({ key, label }) => {
-            const active = tab === key;
-            return (
-              <Pressable
-                key={key}
-                onPress={() => setTab(key)}
-                accessibilityRole="tab"
-                accessibilityLabel={german ? ({ services: 'Leistungen', portfolio: 'Portfolio', reviews: 'Bewertungen' })[key] : label}
-                accessibilityState={{ selected: active }}
-                testID={`barber-profile-tab-${key}`}
-                style={({ pressed }) => [
-                  styles.tabButton,
-                  active ? { borderBottomColor: colors.accent } : null,
-                  pressed ? { opacity: pressOpacity.soft } : null,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.tabLabel,
-                    { fontFamily: fonts.bodyMedium },
-                    { color: active ? colors.accentText : colors.textSecondary },
-                  ]}
-                >
-                  {german ? ({ services: 'Leistungen', portfolio: 'Portfolio', reviews: 'Bewertungen' })[key] : label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
+      <Animated.ScrollView onScroll={onScroll} scrollEventThrottle={16} ref={scrollRef} contentContainerStyle={styles.scrollContent}>
+        <ProfileHero barber={barber} topInset={insets.top} parallax={heroParallax} german={german} />
+        <ProfileAbout barber={barber} chips={services.slice(0, 4).map((service) => service.name)} stats={data.stats} german={german} />
+        <ProfileTabStrip tab={tab} onChange={setTab} onLayoutY={(y) => { servicesY.current = y; }} german={german} />
         <View style={styles.tabContent}>
           {tab === 'services' ? (
-            servicesError ? (
-              <Text
-                style={[styles.stateText, { color: colors.errorText, fontFamily: fonts.body }]}
-                accessibilityRole="alert"
-                testID="barber-profile-services-error"
-              >
-                {servicesError}
-              </Text>
-            ) : services.length === 0 ? (
-              <Text
-                style={[styles.stateText, { color: colors.textSecondary, fontFamily: fonts.body }]}
-                testID="barber-profile-services-empty"
-              >
-                {german ? 'Dieser Barber hat noch keine Leistungen hinzugef\u00fcgt.' : 'This barber has not added any services yet.'}
-              </Text>
-            ) : (
-              services.map((service, index) => (
-                <View
-                  key={service.id}
-                  style={[styles.serviceRow, index > 0 ? { borderTopWidth: 0.5, borderTopColor: colors.border } : null]}
-                  testID={`barber-profile-service-${service.id}`}
-                >
-                  <View style={styles.serviceInfo}>
-                    <Text style={[styles.serviceName, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-                      {service.name}
-                    </Text>
-                    <Text style={[styles.serviceMeta, numericText, { color: colors.textSecondary }]}>
-                      {`${service.duration_minutes} min · ${formatMoney(service.price)}`}
-                    </Text>
-                  </View>
-                  <Pressable
-                    onPress={() => onBook(service)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${german ? 'Buchen' : 'Book'} ${service.name}`}
-                    testID={`barber-profile-book-${service.id}`}
-                    style={({ pressed }) => [
-                      styles.bookButton,
-                      { backgroundColor: colors.accent, opacity: pressed ? pressOpacity.firm : 1 },
-                    ]}
-                  >
-                    <Text style={[styles.bookButtonText, { color: colors.onAccent, fontFamily: fonts.bodyMedium }]}>
-                      {german ? 'Buchen' : 'Book'}
-                    </Text>
-                  </Pressable>
-                </View>
-              ))
-            )
+            <ServicesTab services={services} error={servicesError} german={german} onBook={onBook} />
           ) : tab === 'portfolio' ? (
-            portfolioError ? (
-              <Text
-                style={[styles.stateText, { color: colors.errorText, fontFamily: fonts.body }]}
-                accessibilityRole="alert"
-                testID="barber-profile-portfolio-error"
-              >
-                {portfolioError}
-              </Text>
-            ) : portfolio.length === 0 ? (
-              <View style={styles.portfolioEmpty} testID="barber-profile-portfolio-placeholder">
-                {/* Muted, never brass — an empty portfolio is a calm state,
-                    not a call to action on someone else's profile. */}
-                <Feather name="image" size={22} color={colors.border} />
-                <Text style={[styles.portfolioEmptyText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                  {german ? 'Noch keine Portfoliofotos.' : 'No portfolio to show yet.'}
-                </Text>
-              </View>
-            ) : (
-              <PortfolioGrid style={styles.portfolioGridSpacing}>
-                {portfolio.map((img) => (
-                  <PortfolioTile
-                    key={img.id}
-                    imagePath={img.image_url}
-                    testID={`barber-profile-portfolio-image-${img.id}`}
-                  />
-                ))}
-              </PortfolioGrid>
-            )
-          ) : reviewsError ? (
-            <Text
-              style={[styles.stateText, { color: colors.errorText, fontFamily: fonts.body }]}
-              accessibilityRole="alert"
-              testID="barber-profile-reviews-error"
-            >
-              {reviewsError}
-            </Text>
-          ) : reviews.length === 0 ? (
-            <View testID="barber-profile-reviews-empty">
-              <Text
-                style={[styles.reviewsRating, styles.reviewsRatingEmpty, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}
-              >
-                {german ? 'Neu' : 'New'}
-              </Text>
-              {/* A muted 5-outline row so the empty and populated states share a
-                  silhouette — reads as "scale awaiting ratings", not "zero". */}
-              <StarRating rating={0} size={16} style={styles.reviewsEmptyStars} />
-              <Text style={[styles.stateText, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                {german ? 'Bewertungen erscheinen nach den ersten abgeschlossenen Terminen.' : 'Reviews arrive after the first completed bookings.'}
-              </Text>
-            </View>
+            <PortfolioTab portfolio={data.portfolio} error={data.portfolioError} german={german} />
           ) : (
-            <View testID="barber-profile-reviews-list">
-              {/* Aggregate header: the average (barber_profile.rating,
-                  server-owned) with a star row and the count. One clean
-                  screen-reader announcement via the accessible container. */}
-              <View
-                style={[styles.reviewsSummary, { borderBottomColor: colors.border }]}
-                accessible
-                accessibilityRole="image"
-                accessibilityLabel={`${barber.rating.toFixed(1)} ${german ? 'von 5' : 'out of 5'}, ${reviewCountLabel(reviews.length, german)}`}
-              >
-                <Text style={[styles.reviewsRating, numericText, { color: colors.textPrimary }]}>
-                  {barber.rating.toFixed(1)}
-                </Text>
-                <View style={styles.reviewsSummaryMeta}>
-                  {/* Legible empty tone here so the full 5-point scale shows. */}
-                  <StarRating rating={barber.rating} size={16} emptyColor={colors.textSecondary} />
-                  <Text style={[styles.reviewsCount, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                    {reviewCountLabel(reviews.length, german)}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Breakdown from the loaded review rows (all of them; the
-                  read is not paginated), so every bar is a real count. */}
-              <View
-                style={styles.distribution}
-                accessible
-                accessibilityLabel={ratingDistribution(reviews)
-                  .map(({ stars, count }) => `${stars} ${german ? 'Sterne' : 'stars'}: ${count}`)
-                  .join(', ')}
-                testID="barber-profile-rating-distribution"
-              >
-                {ratingDistribution(reviews).map(({ stars, count, share }) => (
-                  <View key={stars} style={styles.distributionRow}>
-                    <Text style={[styles.distributionLabel, numericText, { color: colors.textSecondary }]}>{stars}</Text>
-                    <View style={[styles.distributionTrack, { backgroundColor: colors.border }]}>
-                      <View style={[styles.distributionFill, { width: `${Math.round(share * 100)}%`, backgroundColor: colors.accent }]} />
-                    </View>
-                    <Text style={[styles.distributionCount, numericText, { color: colors.textSecondary }]}>{count}</Text>
-                  </View>
-                ))}
-              </View>
-
-              {reviews.map((review, index) => {
-                const name = firstNameByReviewId.get(review.id);
-                return (
-                  <View
-                    key={review.id}
-                    style={[
-                      styles.reviewRow,
-                      index > 0 ? { borderTopWidth: 0.5, borderTopColor: colors.border } : null,
-                    ]}
-                    testID={`barber-profile-review-${review.id}`}
-                  >
-                    {/* Person leads (name + recency), then the brass star row,
-                        then prose — an editorial, trust-building review card. */}
-                    <View style={styles.reviewHead}>
-                      <Text
-                        numberOfLines={1}
-                        style={[styles.reviewName, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}
-                      >
-                        {name ?? (german ? 'Verifizierter Termin' : 'Verified booking')}
-                      </Text>
-                      <Text style={[styles.reviewDate, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                        {formatShortDate(review.created_at)}
-                      </Text>
-                      {review.comment ? (
-                        <Pressable
-                          onPress={() => setReportReviewId(review.id)}
-                          accessibilityRole="button"
-                          accessibilityLabel={german ? 'Bewertung melden' : 'Report review'}
-                          hitSlop={12}
-                          testID={`barber-profile-review-report-${review.id}`}
-                          style={styles.reviewReport}
-                        >
-                          <Feather name="flag" size={13} color={colors.textSecondary} />
-                        </Pressable>
-                      ) : null}
-                    </View>
-                    {name ? (
-                      <Text style={[styles.reviewVerified, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-                        {german ? 'Verifizierter Termin' : 'Verified booking'}
-                      </Text>
-                    ) : null}
-                    <StarRating rating={review.rating} size={14} style={styles.reviewStars} />
-                    {review.comment ? (
-                      <Text style={[styles.reviewComment, { color: colors.textPrimary, fontFamily: fonts.body }]}>
-                        {review.comment}
-                      </Text>
-                    ) : null}
-                  </View>
-                );
-              })}
-            </View>
+            <ReviewsTab
+              barber={barber}
+              reviews={data.reviews}
+              firstNameByReviewId={data.firstNameByReviewId}
+              error={data.reviewsError}
+              german={german}
+              onReport={setReportReviewId}
+            />
           )}
         </View>
       </Animated.ScrollView>
       <ScrollGlassHeader title={barber.name} scrollY={scrollY} start={280} testID="barber-profile-glass-header" />
 
       {reportReviewId ? (
-        <ReportSheet
-          open
-          target={{ type: 'review', reviewId: reportReviewId }}
-          onClose={() => setReportReviewId(null)}
-          testIDPrefix="barber-profile-review"
-        />
+        <ReportSheet open target={{ type: 'review', reviewId: reportReviewId }} onClose={() => setReportReviewId(null)} testIDPrefix="barber-profile-review" />
       ) : null}
 
       {canBook && fromPrice !== null ? (
-        <GlassSurface variant="floating" style={[styles.bookingDock, { paddingBottom: Math.max(insets.bottom, 16) }]} testID="barber-profile-booking-dock">
-          <Text style={[styles.dockPrice, numericText, { color: colors.textPrimary }]}>
-            {german ? 'Ab' : 'From'} {formatMoney(fromPrice)}
-          </Text>
-          <Pressable
-            testID="barber-profile-choose-service"
-            accessibilityRole="button"
-            accessibilityLabel={german ? 'Leistung zum Buchen ausw\u00e4hlen' : 'Choose a service to book'}
-            onPress={() => {
-              setTab('services');
-              scrollRef.current?.scrollTo({ y: servicesY.current, animated: false });
-            }}
-            style={({ pressed }) => [styles.dockButton, { backgroundColor: colors.accent, opacity: pressed ? pressOpacity.firm : 1 }]}
-          >
-            <Text style={[styles.bookButtonText, { fontFamily: fonts.bodyMedium, color: colors.onAccent }]}>
-              {german ? 'Leistung w\u00e4hlen' : 'Choose service'}
-            </Text>
-            <Feather name="arrow-right" size={18} color={colors.onAccent} />
-          </Pressable>
-        </GlassSurface>
+        <BookingDock
+          fromPrice={fromPrice}
+          bottomInset={insets.bottom}
+          german={german}
+          onChooseService={() => {
+            setTab('services');
+            scrollRef.current?.scrollTo({ y: servicesY.current, animated: false });
+          }}
+        />
       ) : null}
-      {/* Back button floats over the hero, clear of the status bar. */}
-      <View style={[styles.backWrap, { top: insets.top + 8 }]}>
-        <BackButton onPress={goBack} testID="barber-profile-back" tone="overImage" />
-      </View>
-      <View style={[styles.favoriteWrap, { top: insets.top + 8 }]}>
-        <Pressable
-          onPress={() => void Share.share({
-            message: german
-              ? `${barber.name} auf Privelier: ${barberProfileLink(barber.id)}`
-              : `${barber.name} on Privelier: ${barberProfileLink(barber.id)}`,
-          })}
-          accessibilityRole="button"
-          accessibilityLabel={german ? 'Profil teilen' : 'Share profile'}
-          hitSlop={12}
-          testID="barber-profile-share"
-          style={({ pressed }) => [styles.favoriteDisc, { backgroundColor: OVER_IMAGE_BG, opacity: pressed ? pressOpacity.soft : 1 }]}
-        >
-          <Feather name="share" size={16} color={OVER_IMAGE_ICON} />
-        </Pressable>
-        <Pressable
-          onPress={() => void toggleFavorite()}
-          disabled={favorite === null}
-          accessibilityRole="button"
-          accessibilityLabel={favorite
-            ? german ? 'Aus gespeicherten Barbern entfernen' : 'Remove from saved barbers'
-            : german ? 'Barber speichern' : 'Save barber'}
-          accessibilityState={{ selected: favorite === true, disabled: favorite === null }}
-          hitSlop={12}
-          testID="barber-profile-favorite"
-          style={({ pressed }) => [styles.favoriteDisc, { backgroundColor: OVER_IMAGE_BG, opacity: pressed ? pressOpacity.soft : 1 }]}
-        >
-          <Ionicons name={favorite ? 'heart' : 'heart-outline'} size={17} color={favorite ? colors.accent : OVER_IMAGE_ICON} />
-        </Pressable>
-      </View>
+      <HeroButtons
+        barber={barber}
+        topInset={insets.top}
+        favorite={data.favorite}
+        german={german}
+        onBack={goBack}
+        onToggleFavorite={() => void data.toggleFavorite()}
+      />
     </SafeAreaView>
   );
 }
-
-function BarberProfileSkeleton() {
-  return (
-    <ScrollView testID="barber-profile-loading" accessible accessibilityRole="progressbar" accessibilityLabel="Loading barber profile" contentContainerStyle={styles.profileSkeleton}>
-      <Skeleton style={styles.skeletonHero} />
-      <Skeleton style={styles.skeletonName} />
-      <Skeleton style={styles.skeletonMeta} />
-      <Skeleton style={styles.skeletonBio} />
-      <View style={styles.skeletonTabs}>
-        {[0, 1, 2].map((index) => <Skeleton key={index} style={styles.skeletonTab} />)}
-      </View>
-      {[0, 1].map((index) => (
-        <View key={index} style={styles.skeletonService}>
-          <Skeleton style={styles.skeletonServiceName} />
-          <Skeleton style={styles.skeletonServiceMeta} />
-        </View>
-      ))}
-    </ScrollView>
-  );
-}
-
-const styles = StyleSheet.create({
-  distribution: { paddingVertical: 16, gap: 6 },
-  distributionRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  distributionLabel: { width: 12, fontSize: 12, textAlign: 'right' },
-  distributionTrack: { flex: 1, height: 4, borderRadius: 2, overflow: 'hidden' },
-  distributionFill: { height: 4, borderRadius: 2 },
-  distributionCount: { width: 24, fontSize: 12, textAlign: 'right' },
-  container: { flex: 1 },
-
-  bookingDock: { borderRadius: 0, paddingHorizontal: 24, paddingTop: 16, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12 },
-  dockPrice: { fontSize: 17, flexGrow: 1 },
-  dockButton: { minHeight: 48, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 12 },
-  plainHeader: { paddingHorizontal: 24, paddingTop: 12 },
-  profileSkeleton: { paddingBottom: 32 },
-  skeletonHero: { height: 320, width: '100%', borderRadius: 0 },
-  skeletonName: { width: '65%', height: 29, marginHorizontal: 24, marginTop: 24 },
-  skeletonMeta: { width: '45%', height: 13, marginHorizontal: 24, marginTop: 12 },
-  skeletonBio: { width: '82%', height: 48, marginHorizontal: 24, marginTop: 32 },
-  skeletonTabs: { flexDirection: 'row', gap: 16, paddingHorizontal: 24, marginTop: 30 },
-  skeletonTab: { flex: 1, height: 18 },
-  skeletonService: { marginHorizontal: 24, marginTop: 24, gap: 10 },
-  skeletonServiceName: { width: '58%', height: 18 },
-  skeletonServiceMeta: { width: '38%', height: 12 },
-  notice: { borderWidth: 0.5, borderRadius: 8, padding: 12, marginTop: 24, marginHorizontal: 24 },
-  noticeText: { fontSize: 14 },
-  emptyText: { fontSize: 14, textAlign: 'center', marginTop: 48, paddingHorizontal: 24 },
-
-  hero: { minHeight: 340, overflow: 'hidden' },
-  heroImage: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  heroImageFill: { width: '100%', height: '100%' },
-  heroFallback: { alignItems: 'center', paddingBottom: 28 },
-  monogramFrame: { padding: 10, borderRadius: 60, borderWidth: 0.5 },
-  heroTitleBlock: {
-    marginTop: 'auto',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-  },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  heroName: { fontSize: 28, color: HERO_TEXT, flexShrink: 1 },
-  heroMetaRow: { flexWrap: 'wrap', flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
-  heroMeta: { fontSize: 12, color: HERO_TEXT_DIM },
-  heroRating: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-
-  backWrap: { position: 'absolute', left: 24 },
-  favoriteWrap: { position: 'absolute', right: 24, flexDirection: 'row', gap: 12 },
-  favoriteDisc: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  bioBlock: { paddingHorizontal: 24, paddingVertical: 24 },
-  badgeRow: { paddingHorizontal: 24, paddingTop: 16, marginBottom: -8 },
-  popularWrap: { paddingHorizontal: 24, paddingBottom: 24 },
-  popularCard: { padding: 18, gap: 12 },
-  popularTitle: { fontSize: 18, lineHeight: 24 },
-  bio: { fontSize: 14, lineHeight: 22 },
-  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16 },
-  chip: { borderWidth: 0.5, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 },
-  chipText: { fontSize: 12 },
-
-  tabStrip: {
-    flexDirection: 'row',
-    gap: 24,
-    paddingHorizontal: 24,
-    borderBottomWidth: 0.5,
-  },
-  tabButton: {
-    minHeight: 48,
-    justifyContent: 'center',
-    paddingBottom: 12,
-    marginBottom: -0.5,
-    borderBottomWidth: 1,
-    borderBottomColor: 'transparent',
-  },
-  tabLabel: { fontSize: 14 },
-
-  tabContent: { paddingHorizontal: 24, paddingVertical: 8 },
-  stateText: { fontSize: 13, paddingVertical: 16 },
-
-  serviceRow: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16 },
-  serviceInfo: { flex: 1, minWidth: 0 },
-  serviceName: { fontSize: 18 },
-  serviceMeta: { fontSize: 12, marginTop: 6 },
-  bookButton: { borderRadius: 8, paddingHorizontal: 16, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  bookButtonText: { fontSize: 14 },
-
-  // lineHeight 44 trims Playfair's leading slack so the big number optically
-  // centres against the 16px stars + count in the summary row.
-  reviewsRating: { fontSize: 40, lineHeight: 44 },
-  reviewsRatingEmpty: { marginTop: 8 },
-  reviewsEmptyStars: { marginTop: 10, marginBottom: 4 },
-  reviewsSummary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    paddingBottom: 20,
-    borderBottomWidth: 0.5,
-  },
-  reviewsSummaryMeta: { gap: 6 },
-  reviewsCount: { fontSize: 12 },
-  reviewRow: { paddingVertical: 16 },
-  reviewHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  reviewName: { fontSize: 14, flex: 1, minWidth: 0 },
-  reviewVerified: { fontSize: 12, marginTop: 2 },
-  reviewStars: { marginTop: 10 },
-  reviewDate: { fontSize: 12 },
-  reviewReport: { minWidth: 32, minHeight: 32, alignItems: 'flex-end', justifyContent: 'center', marginLeft: 4 },
-  reviewComment: { fontSize: 14, lineHeight: 22, marginTop: 10 },
-
-  portfolioGridSpacing: { paddingVertical: 16 },
-  portfolioEmpty: { alignItems: 'center', gap: 12, paddingVertical: 48 },
-  portfolioEmptyText: { fontSize: 13 },
-});
