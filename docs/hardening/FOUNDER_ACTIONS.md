@@ -7,7 +7,7 @@ Steps that need a dashboard, an account owner or a product decision. Work top to
 - [ ] **F1. Rename the client key everywhere.** The app reads `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and refuses to start without it (`lib/env.ts`).
   - Local `.env` on every machine: replace `EXPO_PUBLIC_SUPABASE_ANON_KEY=...` with `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<sb_publishable_... from Supabase > Project Settings > API Keys>`. Ali's machine is already done.
   - EAS: `eas env:create --name EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY --value <sb_publishable_...> --environment production --environment preview --environment development --visibility plaintext`, then delete `EXPO_PUBLIC_SUPABASE_ANON_KEY` from EAS.
-- [ ] **F2. Deploy the updated `delete-account` Edge Function.** `npx supabase functions deploy delete-account --project-ref <ref>` (needs `SUPABASE_ACCESS_TOKEN`). The deployed copy still works with the new database function, but only the new one reads the new key dictionaries and returns 429 on the deletion limit.
+- [x] **F2. Deploy the updated `delete-account` Edge Function.** Deployed on 2026-10-27 with Ali's approval (version 3, active, JWT verification on; an unauthenticated call returns 401).
 - [ ] **F3. Move the GitHub Actions secret off the legacy service key.** In the repository settings, set `SUPABASE_SERVICE_ROLE_KEY` (used by `barber-stats.yml`) to the new `sb_secret_...` key, or switch the job to `SUPABASE_ACCESS_TOKEN`.
 - [ ] **F4. Ship a build that uses the publishable key** (EAS build for both stores), and wait until it is the minimum supported version.
 - [ ] **F5. Disable the legacy `anon` and `service_role` keys** (Supabase > Project Settings > API Keys > Legacy) before Supabase removes them at the end of 2026. Do this only after F1 to F4.
