@@ -2,140 +2,48 @@
  * Booking flow — screen 3 of 3: itemized summary + the real booking write.
  *
  * service.price is a client-side preview only — the authoritative price is
- * stamped server-side by a BEFORE INSERT trigger that reads services.price
- * at insert time (see docs/design/step-11-12-booking-flow-design-approval.md,
- * Section 0), so this reads as a summary, not a guaranteed-final total
- * (in practice the two always match, since the trigger reads the same row).
+ * stamped server-side at insert time (docs/design/step-11-12-booking-flow-
+ * design-approval.md, Section 0). The write and its result arms live in
+ * useBookingRequest.
  *
- * insertBooking's three-arm result is handled distinctly:
- * - 'ok': persistent request summary; the user resets the customer stack to
- *   CustomerTabs → Bookings so back-navigation can never return into a
- *   completed booking flow.
- * - 'conflict' / 'slot_unavailable': the slot is gone — another customer
- *   took an overlapping time (validate_booking_slot's overlap check or the
- *   overlap exclusion constraint), or the time passed / the barber
- *   changed availability while the customer was on this screen. Shown inline
- *   (never silently retried), with an explicit "choose another time" action
- *   that pops back to BookingDateTimeScreen; that screen's useFocusEffect
- *   re-fetches busy slots on regaining focus, so the dead slot cannot be
- *   retried blindly.
- * - a generic CustomerDataFailure: its own `.message` is shown inline.
+ * On success the customer resets the stack to CustomerTabs → Bookings so
+ * back-navigation can never return into a completed booking flow. On a
+ * conflict, "choose another time" pops back to BookingDateTime, whose focus
+ * effect re-fetches busy slots so the dead slot cannot be retried blindly.
  */
-import { SuccessBurst } from '../../shared/motion/SuccessBurst';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import * as Crypto from 'expo-crypto';
+import { useCallback, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { PrimaryButton } from '../../shared/components/PrimaryButton';
 import { Notice } from '../../shared/components/Notice';
+import { PrimaryButton } from '../../shared/components/PrimaryButton';
 import { ScreenBackHeader } from '../../shared/components/ScreenBackHeader';
-import { getAppLanguage } from '../../shared/locale';
-import { haptics } from '../../shared/haptics';
-import { useTheme } from '../../theme/useTheme';
-import { numericText } from '../../theme/typography';
-import { radius, space } from '../../theme/spacing';
-import { pressOpacity } from '../../theme/motion';
-import { BookingStepIndicator } from '../components/BookingStepIndicator';
-import { insertBooking } from '../bookingCreateData';
-import { fetchRoomForBooking } from '../inboxData';
-import { StatusTimeline } from '../../shared/components/BookingDetails';
 import { useToast } from '../../shared/components/ToastProvider';
-import { Reveal } from '../../shared/motion';
-import type { BookingRow } from '../../types';
+import { getAppLanguage } from '../../shared/locale';
+import { pressOpacity } from '../../theme/motion';
+import { space } from '../../theme/spacing';
+import { numericText } from '../../theme/typography';
+import { useTheme } from '../../theme/useTheme';
+import { AddressPinPreview } from '../components/AddressPinPreview';
+import { BookingStepIndicator } from '../components/BookingStepIndicator';
+import { BookingSuccess, BookingSummary } from '../components/booking/BookingSummary';
 import { formatBookingWhen, formatMoney } from '../format';
-import { customerDataErrorCopy } from '../errors';
-import { geocodeBestMatch } from '../../shared/geocoding';
-import { AddressPinPreview, type AddressPinState } from '../components/AddressPinPreview';
-import { askForPushPermissionInContext } from '../../shared/push';
+import { useBookingRequest } from '../hooks/useBookingRequest';
+import { fetchRoomForBooking } from '../inboxData';
 import type { CustomerStackParamList } from '../CustomerNavigator';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'BookingConfirm'>;
 
-// Long enough to register as an intentional confirmation, short enough not
-// to feel like a stall — matches the "brief success state" spec.
 export default function BookingConfirmScreen({ route, navigation }: Props) {
   const { barberId, barberName, barberImage, service, date, time, location, geocodeQuery } = route.params;
   const { colors, fonts } = useTheme();
   const de = getAppLanguage() === 'de';
-
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // The authoritative inserted row: its price snapshot, id and status drive
-  // the success state, so nothing on it is a client-side guess.
-  const [created, setCreated] = useState<BookingRow | null>(null);
+  const { showToast } = useToast();
+  const request = useBookingRequest({ serviceId: service.id, date, time, location, geocodeQuery }, de);
+  const { created, submitting, error, conflict } = request;
   const [openingChat, setOpeningChat] = useState(false);
   const openingChatRef = useRef(false);
-  const { showToast } = useToast();
-  const [conflict, setConflict] = useState(false);
-  // Same-tick double-tap guard: `submitting` only disables the button after
-  // the next commit, and a second insert would race the first one.
-  const submittingRef = useRef(false);
-  // One key per visit to this screen: a retry after a lost response returns
-  // the booking the first attempt created (create_booking, migration 0054).
-  const [idempotencyKey] = useState(() => Crypto.randomUUID());
-  const [pin, setPin] = useState<AddressPinState>({ status: 'loading' });
-
-  // Place the address once (free Photon geocode). Best effort: a miss never
-  // blocks the booking, it only means no live-arrival map for this one.
-  useEffect(() => {
-    let active = true;
-    void geocodeBestMatch(geocodeQuery ?? location).then((candidate) => {
-      if (active) setPin(candidate ? { status: 'found', candidate } : { status: 'none' });
-    });
-    return () => {
-      active = false;
-    };
-  }, [geocodeQuery, location]);
-
-  const onConfirm = useCallback(async () => {
-    if (submittingRef.current) return;
-    submittingRef.current = true;
-    void haptics.confirm();
-    setSubmitting(true);
-    setError(null);
-    setConflict(false);
-    const result = await insertBooking({
-      serviceId: service.id,
-      date,
-      time,
-      location,
-      coordinates: pin.status === 'found' ? pin.candidate : null,
-      idempotencyKey,
-    });
-    submittingRef.current = false;
-    setSubmitting(false);
-
-    if (result.status === 'ok') {
-      setCreated(result.booking);
-      void haptics.success();
-      // The moment push is obviously useful: "tell me when they accept and
-      // when they are on the way". Asked once, never at app entry.
-      void askForPushPermissionInContext();
-      return;
-    }
-    if (result.status === 'conflict') {
-      void haptics.warning();
-      setConflict(true);
-      setError(de ? 'Diese Uhrzeit wurde gerade von jemand anderem gebucht. Wähle eine andere Uhrzeit.' : customerDataErrorCopy.conflict);
-      return;
-    }
-    if (result.status === 'slot_unavailable') {
-      void haptics.warning();
-      setConflict(true);
-      setError(de ? 'Diese Uhrzeit ist nicht mehr verfügbar. Wähle eine andere Uhrzeit.' : 'That time is no longer available. Pick another time.');
-      return;
-    }
-    setError(result.message);
-  }, [service.id, date, time, location, pin, de, idempotencyKey]);
-
-  const onPickAnotherTime = useCallback(() => {
-    // Pops exactly Confirm + Location, landing back on the existing
-    // BookingDateTime instance and re-focusing it (see that screen's
-    // useFocusEffect for the resulting busy-slot refetch).
-    navigation.pop(2);
-  }, [navigation]);
+  const details = { barberName, serviceName: service.name, date, time, location };
 
   const onMessageBarber = useCallback(async () => {
     if (!created || openingChatRef.current) return;
@@ -171,74 +79,23 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
     });
   }, [created, navigation, showToast, de, barberId, barberName, barberImage, service.name, date, time]);
 
-  const onViewBookings = useCallback(() => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'CustomerTabs', params: { screen: 'Bookings' } }],
-    });
-  }, [navigation]);
-
   if (created !== null) {
     return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['top', 'left', 'right']}
-        testID="customer-booking-confirm-screen"
-      >
-        <ScrollView contentContainerStyle={styles.successWrap} testID="customer-booking-confirm-success">
-          <Reveal index={0}>
-            <SuccessBurst testID="customer-booking-confirm-burst" />
-          </Reveal>
-          <Text style={[styles.successTitle, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-            {de ? 'Termin angefragt' : 'Booking requested'}
-          </Text>
-          <Text style={[styles.successHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-            {de ? `Deine Anfrage wurde an ${barberName} gesendet. Dein Barber muss den Termin noch bestätigen.` : `Your request was sent to ${barberName}. Your barber still needs to accept the appointment.`}
-          </Text>
-          <Reveal index={2}>
-            <View style={[styles.summary, styles.successSummary, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-              <SummaryRow label="Barber" value={barberName} />
-              <SummaryRow label={de ? 'Leistung' : 'Service'} value={service.name} />
-              <SummaryRow label={de ? 'Termin' : 'When'} value={formatBookingWhen(date, time)} />
-              <SummaryRow label={de ? 'Adresse' : 'Location'} value={location} />
-              <SummaryRow label={de ? 'Preis' : 'Price'} value={formatMoney(created.price)} last />
-            </View>
-          </Reveal>
-          <Reveal index={3}>
-            <View style={styles.successTimeline}>
-              <StatusTimeline status={created.status} role="customer" />
-            </View>
-          </Reveal>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={de ? 'Barber schreiben' : 'Message barber'}
-            accessibilityState={{ busy: openingChat, disabled: openingChat }}
-            disabled={openingChat}
-            onPress={() => void onMessageBarber()}
-            testID="customer-booking-confirm-message"
-            style={({ pressed }) => [styles.secondaryAction, { borderColor: colors.border }, pressed ? { opacity: pressOpacity.soft } : null]}
-          >
-            <Feather name="message-circle" size={16} color={colors.textPrimary} />
-            <Text style={[styles.secondaryActionText, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}>
-              {de ? 'Barber schreiben' : 'Message barber'}
-            </Text>
-          </Pressable>
-          <PrimaryButton
-            label={de ? 'Meine Buchungen' : 'View bookings'}
-            onPress={onViewBookings}
-            testID="customer-booking-confirm-view-bookings"
-          />
-        </ScrollView>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']} testID="customer-booking-confirm-screen">
+        <BookingSuccess
+          booking={created}
+          details={details}
+          de={de}
+          openingChat={openingChat}
+          onMessage={() => void onMessageBarber()}
+          onViewBookings={() => navigation.reset({ index: 0, routes: [{ name: 'CustomerTabs', params: { screen: 'Bookings' } }] })}
+        />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['top', 'left', 'right']}
-      testID="customer-booking-confirm-screen"
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']} testID="customer-booking-confirm-screen">
       <ScreenBackHeader
         onPress={() => navigation.goBack()}
         backTestID="customer-booking-confirm-back"
@@ -247,49 +104,31 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
       />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
-          {de ? 'Deine Anfrage prüfen' : 'Review your request'}
-        </Text>
+        <Text style={[styles.heading, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>{de ? 'Deine Anfrage prüfen' : 'Review your request'}</Text>
 
         {error ? (
-          <Notice
-            message={error}
-            testID="customer-booking-confirm-error"
-            variant="error"
-            style={styles.noticeSpacing}
-          >
+          <Notice message={error} testID="customer-booking-confirm-error" variant="error" style={styles.noticeSpacing}>
             {conflict ? (
               <Pressable
-                onPress={onPickAnotherTime}
+                // Pops Confirm + Location, landing back on BookingDateTime.
+                onPress={() => navigation.pop(2)}
                 accessibilityRole="button"
                 accessibilityLabel={de ? 'Andere Uhrzeit wählen' : 'Choose another time'}
                 testID="customer-booking-confirm-pick-another-time"
                 style={({ pressed }) => [styles.noticeLink, pressed ? { opacity: pressOpacity.soft } : null]}
               >
-                <Text style={[styles.noticeLinkText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>
-                  {de ? 'Andere Uhrzeit wählen' : 'Choose another time'}
-                </Text>
+                <Text style={[styles.noticeLinkText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}>{de ? 'Andere Uhrzeit wählen' : 'Choose another time'}</Text>
               </Pressable>
             ) : null}
           </Notice>
         ) : null}
 
-        <View style={[styles.summary, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-          <SummaryRow label="Barber" value={barberName} />
-          <SummaryRow label={de ? 'Leistung' : 'Service'} value={service.name} />
-          <SummaryRow label={de ? 'Termin' : 'When'} value={formatBookingWhen(date, time)} />
-          <SummaryRow label={de ? 'Adresse' : 'Location'} value={location} last />
-        </View>
-
-        <AddressPinPreview state={pin} />
+        <BookingSummary details={details} de={de} />
+        <AddressPinPreview state={request.pin} />
 
         <View style={[styles.priceRow, { borderTopColor: colors.border }]}>
-          <Text style={[styles.priceLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-            {de ? 'Servicepreis' : 'Service price'}
-          </Text>
-          <Text style={[styles.priceValue, numericText, { color: colors.textPrimary }]}>
-            {formatMoney(service.price)}
-          </Text>
+          <Text style={[styles.priceLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>{de ? 'Servicepreis' : 'Service price'}</Text>
+          <Text style={[styles.priceValue, numericText, { color: colors.textPrimary }]}>{formatMoney(service.price)}</Text>
         </View>
         <Text style={[styles.priceHint, { color: colors.textSecondary, fontFamily: fonts.body }]}>
           {de ? 'Bezahlung direkt beim Barber. Der Preis wird beim Senden der Anfrage bestätigt.' : 'Pay your barber directly. The price is confirmed when your request is sent.'}
@@ -299,7 +138,7 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
         <PrimaryButton
           label={de ? 'Termin anfragen' : 'Request booking'}
-          onPress={onConfirm}
+          onPress={request.submit}
           loading={submitting}
           disabled={conflict}
           testID="customer-booking-confirm-submit"
@@ -309,64 +148,16 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
   );
 }
 
-function SummaryRow({ label, value, last = false }: { label: string; value: string; last?: boolean }) {
-  const { colors, fonts } = useTheme();
-  return (
-    <View style={[styles.summaryRow, last ? null : { borderBottomWidth: 0.5, borderBottomColor: colors.border }]}>
-      <Text style={[styles.summaryLabel, { color: colors.textSecondary, fontFamily: fonts.body }]}>{label}</Text>
-      <Text
-        style={[styles.summaryValue, { color: colors.textPrimary, fontFamily: fonts.bodyMedium }]}
-      >
-        {value}
-      </Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  successTimeline: { alignSelf: 'stretch', marginBottom: space.lg },
-  secondaryAction: {
-    alignSelf: 'stretch',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.sm,
-    minHeight: 52,
-    borderWidth: 0.5,
-    borderRadius: radius.md,
-    marginBottom: space.md,
-  },
-  secondaryActionText: { fontSize: 15 },
   container: { flex: 1 },
-
   scrollContent: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 24 },
   heading: { fontSize: 30, lineHeight: 38 },
-
   noticeSpacing: { marginTop: space.lg },
   noticeLink: { marginTop: space.sm, minHeight: 44, justifyContent: 'center' },
   noticeLinkText: { fontSize: 13 },
-
-  summary: { borderWidth: 0.5, borderRadius: radius.lg, marginTop: 28 },
-  summaryRow: { gap: space.xs, padding: 16 },
-  summaryLabel: { fontSize: 13 },
-  summaryValue: { fontSize: 16, lineHeight: 24 },
-
-  priceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 24,
-    paddingTop: 20,
-    borderTopWidth: 0.5,
-  },
+  priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, paddingTop: 20, borderTopWidth: 0.5 },
   priceLabel: { fontSize: 13 },
   priceValue: { fontSize: 22 },
   priceHint: { fontSize: 14, marginTop: 8, lineHeight: 21 },
-
   footer: { paddingHorizontal: 24, paddingTop: 14, paddingBottom: 20, borderTopWidth: 0.5 },
-
-  successWrap: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 },
-  successSummary: { alignSelf: 'stretch', marginTop: 8 },
-  successTitle: { fontSize: 30, lineHeight: 38, textAlign: 'center', marginTop: 4 },
-  successHint: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
 });
