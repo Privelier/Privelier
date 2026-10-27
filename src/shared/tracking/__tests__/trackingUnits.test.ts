@@ -6,7 +6,7 @@ import { notificationCopy, type NotificationRow } from '../../notifications';
 import { emergencyNumber, osmLink } from '../safety';
 import { encodePolyline } from '../geo';
 import { useTripView, type BookingTripRow } from '../tripData';
-import { isTripWindow } from '../../../barber/screens/RequestsScreen';
+import { isTripWindow } from '../../../barber/requestPresentation';
 
 jest.mock('../../../../lib/supabase', () => ({ supabase: {} }));
 jest.mock('expo-localization', () => ({ getLocales: () => [{ regionCode: 'DE' }] }));

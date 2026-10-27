@@ -2,7 +2,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { StyleSheet } from 'react-native';
 import type { BookingRow, ServiceRow } from '../../../types';
 import { cancelBookingAsBarber, fetchOwnRequestsView } from '../../requestsData';
-import RequestsScreen, { buildRequestSections } from '../RequestsScreen';
+import RequestsScreen from '../RequestsScreen';
+import { buildRequestSections } from '../../requestPresentation';
 
 jest.mock('../../../shared/components/ToastProvider', () => ({ useToast: () => ({ showToast: jest.fn() }) }));
 jest.mock('../../../shared/components/ConfirmSheet', () => {

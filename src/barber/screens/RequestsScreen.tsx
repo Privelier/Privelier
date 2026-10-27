@@ -1,385 +1,68 @@
 /**
- * Barber Requests tab — rebuild of the prototype's barber.requests route with
- * LIVE status transitions.
- *
- * A serif header + subtitle and booking-request cards (serif title, slot line,
- * location, price + status label). Real data end to end via
- * fetchOwnRequestsView (RLS scopes bookings to the signed-in barber); the four
- * status-transition mutations (accept / reject / complete / cancel) are
- * authorized server-side by the actor-aware trigger (migration 0011) — this
- * screen never re-checks a transition client-side, it only optimistically
- * predicts the outcome and reconciles.
- *
- * Actions per state (authoritative state machine only):
- * - pending  -> Accept (primary, brass) + Reject
- * - accepted -> Mark complete + Cancel
- * - rejected / completed / cancelled -> terminal, no actions.
- *
- * Cards lead with the CUSTOMER's real name + photo when the
- * get_booking_counterparts RPC (migration 0012) returned one; otherwise they
- * fall back to the service name (the RPC is best-effort — a failure leaves the
- * map empty rather than failing the whole view).
- *
- * REALTIME + FOCUS RECONCILIATION (the flakiness-critical part):
- * - The channel is gated on focus, not mount: bottom-tab screens stay mounted,
- *   so a mount-gated channel would leak across tab switches. useFocusEffect
- *   flips `focused` true (opening the channel via useBookingsRealtime) BEFORE
- *   kicking off the baseline refetch, so any write that lands in the gap
- *   between "subscription active" and "snapshot returned" also arrives on the
- *   stream — nothing is missed.
- * - BOTH the refetched snapshot and every streamed event fold through
- *   applyBookingChange (idempotent upsert-by-id); overlap is harmless, no dedup
- *   logic. We re-sort date/time ASC (soonest first) after every merge.
- * - Optimistic action: on tap we apply the predicted row locally at once and
- *   mark the card in-flight; on success we re-apply the authoritative returned
- *   row (a no-op vs. its realtime echo); on failure we roll the card back to
- *   its prior row and surface the error inline.
- * - Clobber guard: while a booking id is in-flight, the baseline refetch SKIPS
- *   it (so a stale snapshot cannot flip an optimistic card backward mid-write),
- *   and the mutation's authoritative row is re-applied AFTER it resolves — so
- *   even a snapshot that raced past the write converges to the correct status.
+ * Barber Requests tab: requests grouped as Needs action / Today / Upcoming /
+ * History, with live status and accept, reject, complete and cancel. Data,
+ * realtime and transitions live in useBarberRequests; grouping rules in
+ * requestPresentation; the card and its actions in components/requests.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, SectionList, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { RefreshControl, SectionList, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { supabase } from '../../../lib/supabase';
-import { useTheme } from '../../theme/useTheme';
-import { numericText } from '../../theme/typography';
-import { HAIRLINE, radius, space } from '../../theme/spacing';
-import { pressOpacity } from '../../theme/motion';
-import { RetryNotice } from '../../shared/components/RetryNotice';
-import { StatusPill } from '../../shared/components/StatusPill';
 import { BookingDetails } from '../../shared/components/BookingDetails';
-import { ConfirmSheet } from '../../shared/components/ConfirmSheet';
-import { Reveal } from '../../shared/motion';
-import { AcceptedBookingTools } from '../../shared/components/AcceptedBookingTools';
-import { OnMyWayButton } from '../components/OnMyWayButton';
-import { CelebrationOverlay } from '../../shared/motion/CelebrationOverlay';
-import type { BarberStackParamList } from '../BarberNavigator';
-import { GlassSurface } from '../../shared/components/GlassSurface';
-import { Avatar } from '../../shared/components/Avatar';
 import { BookingListSkeleton } from '../../shared/components/BookingListSkeleton';
-import type { Palette } from '../../theme/colors';
-import type { BookingCounterpart, TransitionBookingResult } from '../types';
-import type { BookingRow, ServiceRow } from '../../types';
-import {
-  acceptBooking,
-  cancelBookingAsBarber,
-  completeBooking,
-  fetchOwnRequestsView,
-  rejectBooking,
-} from '../requestsData';
-import {
-  applyBookingChange,
-  applyBookingChangeSorted,
-  type BookingChangeEvent,
-} from '../../shared/bookingRealtime';
-import { useBookingsRealtime } from '../../shared/useBookingsRealtime';
-import { formatBookingWhen, formatMoney } from '../../shared/format';
-import { getAppLanguage } from '../../shared/locale';
+import { ConfirmSheet } from '../../shared/components/ConfirmSheet';
 import { EmptyState } from '../../shared/components/EmptyState';
-import { useTabBarClearance } from '../../shared/navigation/tabBarClearance';
+import { RetryNotice } from '../../shared/components/RetryNotice';
+import { getAppLanguage } from '../../shared/locale';
 import { byId } from '../../shared/lookup';
+import { CelebrationOverlay } from '../../shared/motion/CelebrationOverlay';
+import { useTabBarClearance } from '../../shared/navigation/tabBarClearance';
+import { useTheme } from '../../theme/useTheme';
+import type { BookingRow } from '../../types';
+import { HistoryToggle, RequestActions, RequestCard, SectionHeader } from '../components/requests/RequestCard';
+import { useRequestsStyles } from '../components/requests/requestsStyles';
+import { useBarberRequests } from '../hooks/useBarberRequests';
+import { buildRequestSections, isHistory, localDateKey, type RequestSection } from '../requestPresentation';
+import { acceptBooking, cancelBookingAsBarber, completeBooking, rejectBooking } from '../requestsData';
+import type { BarberStackParamList } from '../BarberNavigator';
 
-/**
- * Confirm an irreversible transition before running it, matching the
- * destructive-action convention shared across the Barber app (the ConfirmSheet
- * with a keep + destructive option). Accept / Mark complete are not destructive
- * and stay one-tap.
- */
-const isDe = () => getAppLanguage() === 'de';
-
-/** Requests read soonest-first: sort by (date, time) ascending. */
-function sortAsc(rows: BookingRow[]): BookingRow[] {
-  return [...rows].sort((a, b) => {
-    const ka = `${a.date}T${a.time}`;
-    const kb = `${b.date}T${b.time}`;
-    return ka < kb ? -1 : ka > kb ? 1 : 0;
-  });
-}
-
-type RequestSection = { key: 'needs-action' | 'today' | 'upcoming' | 'history'; title: string; data: BookingRow[] };
-
-function localDateKey(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
-export function buildRequestSections(bookings: BookingRow[], today: string, language = getAppLanguage()): RequestSection[] {
-  const sorted = sortAsc(bookings);
-  const needsAction = sorted.filter((row) => row.status === 'pending');
-  const accepted = sorted.filter((row) => row.status === 'accepted');
-  const history = sorted
-    .filter((row) => row.status === 'rejected' || row.status === 'completed' || row.status === 'cancelled')
-    .reverse();
-  const result: RequestSection[] = [];
-  if (needsAction.length) result.push({ key: 'needs-action', title: language === 'de' ? 'Aktion nötig' : 'Needs action', data: needsAction });
-  const todaysBookings = accepted.filter((row) => row.date === today);
-  const upcoming = accepted.filter((row) => row.date !== today);
-  if (todaysBookings.length) result.push({ key: 'today', title: language === 'de' ? 'Heute' : 'Today', data: todaysBookings });
-  if (upcoming.length) result.push({ key: 'upcoming', title: language === 'de' ? 'Demnächst' : 'Upcoming', data: upcoming });
-  if (history.length) result.push({ key: 'history', title: language === 'de' ? 'Verlauf' : 'History', data: history });
-  return result;
-}
-
-/**
- * "On my way" is offered from 12 h before the slot until its scheduled end:
- * early enough for a long drive, never for a booking days away (the server
- * independently refuses trips more than a day from the appointment).
- */
-export function isTripWindow(booking: Pick<BookingRow, 'date' | 'time' | 'duration_minutes'>, now = Date.now()): boolean {
-  const start = Date.parse(`${booking.date}T${booking.time}`);
-  if (Number.isNaN(start)) return false;
-  return now >= start - 12 * 60 * 60 * 1000 && now <= start + booking.duration_minutes * 60 * 1000;
-}
+type Confirmation = { title: string; label: string; action: () => void };
 
 export default function RequestsScreen() {
   // Scroll the last row clear of the floating glass tab bar.
   const tabClearance = useTabBarClearance(32);
   const { colors } = useTheme();
-  const styles = useStyles(colors);
-  const language = getAppLanguage();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const styles = useRequestsStyles(colors);
+  const de = getAppLanguage() === 'de';
   const navigation = useNavigation<NativeStackNavigationProp<BarberStackParamList>>();
-  const [celebration, setCelebration] = useState<string | null>(null);
-  const clearCelebration = useCallback(() => setCelebration(null), []);
-  const [confirmation, setConfirmation] = useState<{ title: string; label: string; action: () => void } | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
+  const data = useBarberRequests(de);
+  const { bookings, servicesById, counterpartsById, loading, error, load, runTransition } = data;
+
+  const today = localDateKey(new Date());
+  const sections = useMemo(() => buildRequestSections(bookings, today), [bookings, today]);
+  const historyCount = bookings.filter(isHistory).length;
+  const selected = bookings.find((row) => row.id === selectedId);
+  const serviceNameOf = (row: BookingRow) => byId(servicesById, row.service_id)?.name ?? (de ? 'Termin' : 'Appointment');
+  const customerNameOf = (row: BookingRow) => counterpartsById.get(row.id)?.name ?? (de ? 'Kunde' : 'Customer');
+
+  // Reject and Cancel cannot be undone, so they are confirmed first.
   const confirmDestructive = (title: string, label: string, action: () => void) => {
     setSelectedId(null);
     setConfirmation({ title, label, action });
   };
 
-  const [bookings, setBookings] = useState<BookingRow[]>([]);
-  const [servicesById, setServicesById] = useState<Map<string, ServiceRow>>(new Map());
-  const [counterpartsById, setCounterpartsById] = useState<Map<string, BookingCounterpart>>(
-    new Map()
-  );
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const [userId, setUserId] = useState<string | null>(null);
-  const [focused, setFocused] = useState(false);
-
-  // Per-card action state. `inFlightRef` is the source of truth the baseline
-  // refetch reads to avoid clobbering an optimistic card; `inFlight` state
-  // drives the card's spinner/disabled rendering.
-  const inFlightRef = useRef<Set<string>>(new Set());
-  const [inFlight, setInFlight] = useState<Record<string, boolean>>({});
-  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
-  const [historyExpanded, setHistoryExpanded] = useState(false);
-
-  const today = localDateKey(new Date());
-  const sections = useMemo(
-    () => buildRequestSections(bookings, today),
-    [bookings, today]
-  );
-
-  useEffect(() => {
-    let active = true;
-    void supabase.auth.getSession().then(({ data }) => {
-      if (active) setUserId(data.session?.user.id ?? null);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    const result = await fetchOwnRequestsView();
-    setLoading(false);
-    if (result.status === 'ok') {
-      setServicesById(result.servicesById);
-      setCounterpartsById(result.counterpartsByBookingId);
-      setBookings((prev) => {
-        let next = prev;
-        for (const row of result.bookings) {
-          // Don't let a snapshot flip a card that is mid-write backward.
-          if (inFlightRef.current.has(row.id)) continue;
-          next = applyBookingChange(next, { eventType: 'UPDATE', row });
-        }
-        // An all-no-op snapshot (the common refocus/recovery case) keeps the
-        // same reference — no sort, no re-render.
-        return next === prev ? prev : sortAsc(next);
-      });
-    } else {
-      setError(result.message);
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      // Open the channel (focused -> enabled) BEFORE the refetch so no event
-      // is missed in the gap window; tear it down on blur.
-      setFocused(true);
-      void load();
-      return () => setFocused(false);
-    }, [load])
-  );
-
-  const onRealtimeChange = useCallback((event: BookingChangeEvent) => {
-    setBookings((prev) => applyBookingChangeSorted(prev, event, sortAsc));
-  }, []);
-
-  useBookingsRealtime({
-    filterColumn: 'barber_id',
-    filterValue: userId,
-    onChange: onRealtimeChange,
-    // A reconnect after a network blip may have dropped events — refetch the
-    // baseline (idempotent merge makes this race-free; review finding F1).
-    onRecovered: () => void load(),
-    enabled: focused,
-  });
-
-  const runTransition = useCallback(
-    async (
-      row: BookingRow,
-      nextStatus: BookingRow['status'],
-      mutate: (id: string) => Promise<TransitionBookingResult>
-    ) => {
-      if (inFlightRef.current.has(row.id)) return; // guard double-taps
-      inFlightRef.current.add(row.id);
-      setInFlight((p) => ({ ...p, [row.id]: true }));
-      setRowErrors((p) => {
-        const n = { ...p };
-        delete n[row.id];
-        return n;
-      });
-
-      // Optimistic: show the predicted status immediately.
-      setBookings((prev) =>
-        applyBookingChangeSorted(prev, { eventType: 'UPDATE', row: { ...row, status: nextStatus } }, sortAsc)
-      );
-
-      const result = await mutate(row.id);
-
-      inFlightRef.current.delete(row.id);
-      setInFlight((p) => {
-        const n = { ...p };
-        delete n[row.id];
-        return n;
-      });
-
-      if (result.status === 'ok') {
-        // Re-apply the authoritative row — corrects any stale refetch that
-        // raced past the write; the realtime echo then reconciles to a no-op.
-        setBookings((prev) =>
-          applyBookingChangeSorted(prev, { eventType: 'UPDATE', row: result.booking }, sortAsc)
-        );
-        if (nextStatus === 'accepted') setCelebration(isDe() ? 'Termin bestätigt' : 'Booking accepted');
-        else if (nextStatus === 'completed') setCelebration(isDe() ? 'Gut gemacht' : 'Nicely done');
-      } else {
-        // Roll the card back to its prior state and surface the reason inline.
-        setBookings((prev) => applyBookingChangeSorted(prev, { eventType: 'UPDATE', row }, sortAsc));
-        const message =
-          result.status === 'not_found'
-            ? (isDe() ? 'Dieser Termin wurde nicht mehr gefunden. Aktualisiere, um den aktuellen Stand zu sehen.' : 'That booking could no longer be found. Refresh to see its current status.')
-            : result.message;
-        setRowErrors((p) => ({ ...p, [row.id]: message }));
-      }
-    },
-    []
-  );
-
   const showSkeleton = loading && bookings.length === 0;
   const showError = error !== null && bookings.length === 0;
 
-  const selected = bookings.find((row) => row.id === selectedId);
-  const renderActions = (item: BookingRow) => {
-    const busy = inFlight[item.id] === true;
-    return <>
-                {item.status === 'pending' || item.status === 'accepted' ? (
-                  <View style={styles.actions} testID={`barber-requests-actions-${item.id}`}>
-                    {busy ? (
-                      <ActivityIndicator
-                        size="small"
-                        color={colors.accent}
-                        style={styles.actionSpinner}
-                        testID={`barber-requests-row-busy-${item.id}`}
-                        accessible
-                        accessibilityLabel={isDe() ? 'Termin wird aktualisiert' : 'Updating booking'}
-                        accessibilityLiveRegion="polite"
-                      />
-                    ) : item.status === 'pending' ? (
-                      <>
-                        <ActionButton
-                          styles={styles}
-                          variant="secondary"
-                          label={isDe() ? 'Ablehnen' : 'Reject'}
-                          testID={`request-reject-${item.id}`}
-                          onPress={() =>
-                            confirmDestructive(isDe() ? 'Diesen Termin ablehnen?' : 'Reject this booking?', isDe() ? 'Ablehnen' : 'Reject', () =>
-                              void runTransition(item, 'rejected', rejectBooking)
-                            )
-                          }
-                        />
-                        <ActionButton
-                          styles={styles}
-                          variant="primary"
-                          label={isDe() ? 'Annehmen' : 'Accept'}
-                          testID={`request-accept-${item.id}`}
-                          onPress={() => runTransition(item, 'accepted', acceptBooking)}
-                        />
-                      </>
-                    ) : (
-                      <>
-                        <ActionButton
-                          styles={styles}
-                          variant="secondary"
-                          label={isDe() ? 'Stornieren' : 'Cancel'}
-                          testID={`request-cancel-${item.id}`}
-                          onPress={() =>
-                            confirmDestructive(isDe() ? 'Diesen Termin stornieren?' : 'Cancel this booking?', isDe() ? 'Termin stornieren' : 'Cancel booking', () =>
-                              void runTransition(item, 'cancelled', cancelBookingAsBarber)
-                            )
-                          }
-                        />
-                        <ActionButton
-                          styles={styles}
-                          variant="success"
-                          label={isDe() ? 'Als erledigt markieren' : 'Mark complete'}
-                          testID={`request-complete-${item.id}`}
-                          onPress={() => runTransition(item, 'completed', completeBooking)}
-                        />
-                      </>
-                    )}
-                  </View>
-                ) : null}
-
-    {rowErrors[item.id] ? <Text accessibilityRole="alert" style={{ color: colors.errorText, marginTop: 16 }}>{rowErrors[item.id]}</Text> : null}
-    {item.status === 'accepted' && isTripWindow(item) ? (
-      <OnMyWayButton
-        bookingId={item.id}
-        onPress={() => {
-          setSelectedId(null);
-          navigation.navigate('Trip', {
-            booking: item,
-            customerName: counterpartsById.get(item.id)?.name ?? (language === 'de' ? 'Kunde' : 'Customer'),
-            serviceName: byId(servicesById, item.service_id)?.name ?? (language === 'de' ? 'Termin' : 'Appointment'),
-          });
-        }}
-      />
-    ) : null}
-    <AcceptedBookingTools
-      booking={item}
-      calendarTitle={`${byId(servicesById, item.service_id)?.name ?? (language === 'de' ? 'Termin' : 'Appointment')} · ${counterpartsById.get(item.id)?.name ?? (language === 'de' ? 'Kunde' : 'Customer')}`}
-      showDirections
-      testIDPrefix={`barber-booking-tools-${item.id}`}
-    />
-    </>;
-  };
-
   return (
-    <SafeAreaView
-      style={styles.container}
-      edges={['top', 'left', 'right']}
-      testID="barber-requests-screen"
-    >
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']} testID="barber-requests-screen">
       <View style={styles.header}>
-        <Text style={styles.heading}>{language === 'de' ? 'Deine Anfragen' : 'Your requests'}</Text>
-        <Text style={styles.subtitle}>{isDe() ? 'Terminanfragen deiner Kunden.' : 'Booking requests from your clients.'}</Text>
+        <Text style={styles.heading}>{de ? 'Deine Anfragen' : 'Your requests'}</Text>
+        <Text style={styles.subtitle}>{de ? 'Terminanfragen deiner Kunden.' : 'Booking requests from your clients.'}</Text>
       </View>
 
       {showSkeleton ? (
@@ -390,218 +73,81 @@ export default function RequestsScreen() {
         <>
           {error ? <RetryNotice testID="barber-requests-error" message={error} onRetry={() => void load()} style={styles.noticeMargins} /> : null}
           <SectionList<BookingRow, RequestSection>
-          testID="barber-requests-list"
-          sections={sections}
-          extraData={historyExpanded}
-          keyExtractor={(item) => item.id}
-          renderSectionHeader={({ section }) => section.key === 'history' ? (
-            <Pressable
-              onPress={() => setHistoryExpanded((expanded) => !expanded)}
-              accessibilityRole="button"
-              accessibilityLabel={language === 'de'
-                ? `${bookings.filter((row) => row.status === 'cancelled' || row.status === 'completed' || row.status === 'rejected').length} Termine im Verlauf ${historyExpanded ? 'ausblenden' : 'anzeigen'}`
-                : `${historyExpanded ? 'Hide' : 'Show'} ${bookings.filter((row) => row.status === 'cancelled' || row.status === 'completed' || row.status === 'rejected').length} history bookings`}
-              accessibilityState={{ expanded: historyExpanded }}
-              testID="barber-requests-history-toggle"
-              style={styles.historyToggle}
-            >
-              <Text style={styles.sectionTitle}>{language === 'de' ? 'Verlauf' : 'History'}</Text>
-              <Text style={styles.sectionCount}>{bookings.filter((row) => row.status === 'cancelled' || row.status === 'completed' || row.status === 'rejected').length}</Text>
-              <Text style={styles.historyAction}>{language === 'de' ? historyExpanded ? 'Ausblenden' : 'Anzeigen' : historyExpanded ? 'Hide' : 'Show'}</Text>
-            </Pressable>
-          ) : (
-            <View style={styles.sectionHeader} testID={`barber-requests-section-${section.key}`}>
-              <Text style={styles.sectionTitle}>{section.title}</Text>
-              <Text style={styles.sectionCount}>{section.data.length}</Text>
-            </View>
-          )}
-          refreshControl={
-            <RefreshControl
-              refreshing={loading && bookings.length > 0}
-              onRefresh={() => void load()}
-              progressViewOffset={12}
-              tintColor={colors.accent}
-              colors={[colors.accent]}
-            />
-          }
-          contentContainerStyle={[styles.listContent, { paddingBottom: tabClearance }]}
-          ListEmptyComponent={bookings.length === 0 ? (
-            <EmptyState
-              icon="inbox"
-              testID="barber-requests-empty"
-              title={isDe() ? 'Noch keine Terminanfragen.' : 'No booking requests yet.'}
-              body={isDe() ? 'Anfragen erscheinen hier, sobald ein Kunde dich bucht.' : 'Requests appear here the moment a client books you.'}
-            />
-          ) : undefined}
-          renderItem={({ item, index, section }) => {
-            if (section.key === 'history' && !historyExpanded) return null;
-            const service = byId(servicesById, item.service_id);
-            const counterpart = counterpartsById.get(item.id);
-            const rowError = rowErrors[item.id];
-            // Lead with the customer's name when known; fall back to service.
-            const title = counterpart?.name ?? service?.name ?? (isDe() ? 'Termin' : 'Booking');
-            const subline = counterpart ? service?.name ?? (isDe() ? 'Leistung' : 'Service') : formatBookingWhen(item.date, item.time);
-            return (
-              <Reveal index={Math.min(index, 5)}>
-                <GlassSurface style={styles.card} testID={`barber-requests-row-${item.id}`}>
-                  <Pressable accessibilityRole="button" accessibilityLabel={`${language === 'de' ? 'Termindetails' : 'Appointment details'}, ${title}, ${formatBookingWhen(item.date, item.time)}`} testID={`barber-requests-open-${item.id}`} onPress={() => setSelectedId(item.id)} style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}>
-                  <View style={styles.cardTop}>
-                    <Avatar
-                      id={counterpart?.id ?? item.customer_id ?? item.id}
-                      name={counterpart?.name}
-                      imageUrl={counterpart?.profile_image}
-                      size={44}
-                      accessible={false}
-                      testID={`barber-requests-avatar-${item.id}`}
-                    />
-                    <View style={styles.cardInfo}>
-                      <Text numberOfLines={1} style={styles.cardTitle}>
-                        {title}
-                      </Text>
-                      <Text numberOfLines={1} style={styles.cardMeta}>
-                        {subline}
-                      </Text>
-                      {counterpart ? (
-                        <Text style={styles.cardMeta}>{formatBookingWhen(item.date, item.time)}</Text>
-                      ) : null}
-                      <Text numberOfLines={1} style={styles.cardMeta}>
-                        {item.location}
-                      </Text>
-                    </View>
-                    <View style={styles.cardRight}>
-                      <Text style={[styles.cardPrice, numericText]}>{formatMoney(item.price)}</Text>
-                      <StatusPill
-                        status={item.status}
-                        testID={`barber-requests-status-${item.id}`}
-                        style={styles.cardStatus}
-                      />
-                    </View>
-                  </View>
-
-                  <Text style={{ color: colors.accentText, fontSize: 13, marginTop: 16 }}>{language === 'de' ? 'Details ansehen' : 'View details'}</Text>
-                  </Pressable>
-                  {rowError ? (
-                    <View
-                      style={styles.rowError}
-                      accessibilityRole="alert"
-                      testID={`barber-requests-row-error-${item.id}`}
-                    >
-                      <Text style={styles.rowErrorText}>{rowError}</Text>
-                    </View>
-                  ) : null}
-                </GlassSurface>
-              </Reveal>
-            );
-          }}
+            testID="barber-requests-list"
+            sections={sections}
+            extraData={historyExpanded}
+            keyExtractor={(item) => item.id}
+            renderSectionHeader={({ section }) => section.key === 'history' ? (
+              <HistoryToggle styles={styles} count={historyCount} expanded={historyExpanded} de={de} onToggle={() => setHistoryExpanded((expanded) => !expanded)} />
+            ) : (
+              <SectionHeader styles={styles} sectionKey={section.key} title={section.title} count={section.data.length} />
+            )}
+            refreshControl={
+              <RefreshControl
+                refreshing={loading && bookings.length > 0}
+                onRefresh={() => void load()}
+                progressViewOffset={12}
+                tintColor={colors.accent}
+                colors={[colors.accent]}
+              />
+            }
+            contentContainerStyle={[styles.listContent, { paddingBottom: tabClearance }]}
+            ListEmptyComponent={bookings.length === 0 ? (
+              <EmptyState
+                icon="inbox"
+                testID="barber-requests-empty"
+                title={de ? 'Noch keine Terminanfragen.' : 'No booking requests yet.'}
+                body={de ? 'Anfragen erscheinen hier, sobald ein Kunde dich bucht.' : 'Requests appear here the moment a client books you.'}
+              />
+            ) : undefined}
+            renderItem={({ item, index, section }) => section.key === 'history' && !historyExpanded ? null : (
+              <RequestCard
+                styles={styles}
+                item={item}
+                index={index}
+                service={byId(servicesById, item.service_id)}
+                counterpart={counterpartsById.get(item.id)}
+                rowError={data.rowErrors[item.id]}
+                de={de}
+                onOpen={() => setSelectedId(item.id)}
+              />
+            )}
           />
         </>
       )}
-      {selected ? <BookingDetails booking={selected} role="barber" person={counterpartsById.get(selected.id)?.name ?? (language === 'de' ? 'Kunde' : 'Customer')} service={byId(servicesById, selected.service_id)?.name ?? (language === 'de' ? 'Termin' : 'Appointment')} onClose={() => setSelectedId(null)}>{renderActions(selected)}</BookingDetails> : null}
-      <ConfirmSheet open={confirmation !== null} title={confirmation?.title ?? ''} message={language === 'de' ? 'Diese Aktion kann nicht r\u00fcckg\u00e4ngig gemacht werden.' : 'This cannot be undone.'} confirmLabel={confirmation?.label ?? ''} cancelLabel={language === 'de' ? 'Behalten' : 'Keep'} destructive testID="barber-request-confirm" onClose={() => setConfirmation(null)} onConfirm={() => { const action = confirmation?.action; setConfirmation(null); action?.(); }} />
-      <CelebrationOverlay message={celebration} onDone={clearCelebration} testID="barber-requests-celebration" />
+      {selected ? (
+        <BookingDetails booking={selected} role="barber" person={customerNameOf(selected)} service={serviceNameOf(selected)} onClose={() => setSelectedId(null)}>
+          <RequestActions
+            styles={styles}
+            item={selected}
+            busy={data.inFlight[selected.id] === true}
+            rowError={data.rowErrors[selected.id]}
+            serviceName={serviceNameOf(selected)}
+            customerName={customerNameOf(selected)}
+            de={de}
+            onReject={() => confirmDestructive(de ? 'Diesen Termin ablehnen?' : 'Reject this booking?', de ? 'Ablehnen' : 'Reject', () => void runTransition(selected, 'rejected', rejectBooking))}
+            onAccept={() => void runTransition(selected, 'accepted', acceptBooking)}
+            onCancel={() => confirmDestructive(de ? 'Diesen Termin stornieren?' : 'Cancel this booking?', de ? 'Termin stornieren' : 'Cancel booking', () => void runTransition(selected, 'cancelled', cancelBookingAsBarber))}
+            onComplete={() => void runTransition(selected, 'completed', completeBooking)}
+            onOnMyWay={() => {
+              setSelectedId(null);
+              navigation.navigate('Trip', { booking: selected, customerName: customerNameOf(selected), serviceName: serviceNameOf(selected) });
+            }}
+          />
+        </BookingDetails>
+      ) : null}
+      <ConfirmSheet
+        open={confirmation !== null}
+        title={confirmation?.title ?? ''}
+        message={de ? 'Diese Aktion kann nicht rückgängig gemacht werden.' : 'This cannot be undone.'}
+        confirmLabel={confirmation?.label ?? ''}
+        cancelLabel={de ? 'Behalten' : 'Keep'}
+        destructive
+        testID="barber-request-confirm"
+        onClose={() => setConfirmation(null)}
+        onConfirm={() => { const action = confirmation?.action; setConfirmation(null); action?.(); }}
+      />
+      <CelebrationOverlay message={data.celebration} onDone={data.clearCelebration} testID="barber-requests-celebration" />
     </SafeAreaView>
   );
-}
-
-type ActionVariant = 'primary' | 'secondary' | 'success';
-
-function ActionButton({
-  styles,
-  variant,
-  label,
-  testID,
-  onPress,
-}: {
-  styles: ReturnType<typeof useStyles>;
-  variant: ActionVariant;
-  label: string;
-  testID: string;
-  onPress: () => void;
-}) {
-  const shape =
-    variant === 'primary'
-      ? styles.actionPrimary
-      : variant === 'success'
-        ? styles.actionSuccess
-        : styles.actionSecondary;
-  const text =
-    variant === 'primary'
-      ? styles.actionPrimaryText
-      : variant === 'success'
-        ? styles.actionSuccessText
-        : styles.actionSecondaryText;
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      testID={testID}
-      onPress={onPress}
-      style={({ pressed }) => [styles.actionButton, shape, pressed ? styles.actionPressed : null]}
-    >
-      <Text style={text}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function useStyles(colors: Palette) {
-  const { fonts } = useTheme();
-  return StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
-    header: { paddingHorizontal: space.xl, marginTop: space.xl },
-    heading: { fontSize: 30, color: colors.textPrimary, fontFamily: fonts.headingMedium },
-    subtitle: { fontSize: 14, marginTop: 4, color: colors.textSecondary, fontFamily: fonts.body },
-
-    noticeMargins: { marginTop: space.xl, marginHorizontal: space.xl },
-
-    listContent: { paddingHorizontal: space.xl, paddingTop: space.xl, paddingBottom: space['2xl'] },
-    sectionHeader: { minHeight: 36, flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.md, marginBottom: space.sm },
-    sectionTitle: { color: colors.textPrimary, fontSize: 16, fontFamily: fonts.bodyMedium },
-    sectionCount: { minWidth: 22, color: colors.textSecondary, fontSize: 14, fontFamily: fonts.body, textAlign: 'center' },
-    historyToggle: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.xl, borderTopWidth: HAIRLINE, borderColor: colors.border },
-    historyAction: { marginLeft: 'auto', color: colors.accentText, fontSize: 14, fontFamily: fonts.bodyMedium },
-    empty: { alignItems: 'center', paddingVertical: 40 },
-    emptyText: { fontSize: 13, color: colors.textSecondary, fontFamily: fonts.body },
-    emptyHint: { fontSize: 14, marginTop: 6, color: colors.textSecondary, fontFamily: fonts.body },
-
-    card: {
-      padding: space.base,
-      marginBottom: space.md,
-    },
-    cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
-    cardInfo: { flex: 1, minWidth: 0 },
-    cardTitle: { fontSize: 18, color: colors.textPrimary, fontFamily: fonts.bodySemiBold },
-    cardMeta: { fontSize: 14, marginTop: 4, color: colors.textSecondary, fontFamily: fonts.body },
-    cardRight: { alignItems: 'flex-end', flexShrink: 1, maxWidth: '45%' },
-    cardPrice: { fontSize: 14, color: colors.textPrimary, fontFamily: fonts.body },
-    cardStatus: {
-      marginTop: space.xs,
-      alignSelf: 'flex-end',
-    },
-
-    actions: { flexDirection: 'row', gap: space.md, marginTop: space.base, alignItems: 'center' },
-    actionSpinner: { paddingVertical: space.md },
-    actionButton: {
-      flex: 1,
-      borderRadius: radius.sm,
-      paddingVertical: space.base,
-      minHeight: 44,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    actionPressed: { opacity: pressOpacity.firm },
-    actionPrimary: { backgroundColor: colors.accent },
-    actionPrimaryText: { fontSize: 14, color: colors.onAccent, fontFamily: fonts.bodySemiBold },
-    actionSecondary: { borderWidth: HAIRLINE, borderColor: colors.error },
-    actionSecondaryText: { fontSize: 14, color: colors.errorText, fontFamily: fonts.bodyMedium },
-    actionSuccess: { borderWidth: HAIRLINE, borderColor: colors.success },
-    actionSuccessText: { fontSize: 14, color: colors.successText, fontFamily: fonts.bodyMedium },
-
-    rowError: {
-      marginTop: space.md,
-      borderTopWidth: HAIRLINE,
-      borderTopColor: colors.border,
-      paddingTop: space.md,
-    },
-    rowErrorText: { fontSize: 14, color: colors.errorText, fontFamily: fonts.bodyMedium },
-  });
 }
