@@ -22,8 +22,8 @@ npm ci
 
 ```powershell
 npm start            # Expo dev server
-npm run android
-npm run ios
+npm run android      # build and install the development build (expo run:android)
+npm run ios          # same for iOS (expo run:ios, macOS only)
 npm run web
 ```
 
