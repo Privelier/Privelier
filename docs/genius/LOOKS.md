@@ -124,3 +124,119 @@ keine neue native Abhängigkeit, kein Standort.
 | L4 | Reichweite eines Wunsches | gleiche Stadt / Umkreis in km | gleiche Stadt (passt zur heutigen Suche) |
 | L5 | Haarstruktur als Filter | ja nach rechtlicher Prüfung / nein | erst prüfen |
 | L6 | Look-Treffer sichtbar ab | 5 / 10 bewerteten Terminen | 5 |
+
+Neue Entscheidungen aus Prüfung und Bau (L7 bis L17): docs/genius/MORNING.md, Abschnitt 4.
+
+## 10. Was gebaut wurde (Nachtschicht 2026-10-28, Branch `night/2026-10-28`)
+
+Alles liegt hinter dem Schalter `looks`. Ohne Schalter liefern alle
+Look-Funktionen nichts oder 42501, und die App zeigt nichts Neues. pgTAP-Tests
+und Maestro-Flows sind geschrieben, aber **nicht ausgeführt** (kein lokales
+Postgres, keine Schreibzugriffe auf die Live-Datenbank in der Nacht).
+
+| Scheibe | Migration | Was | Commit |
+|---|---|---|---|
+| S1 | 0062_feature_flags | `private.feature_flags`, `private.feature_flag_users`, `private.flag_enabled`, `public.my_feature_flags`, Hook `useFeatureFlag` | f6797c7 |
+| S2 | 0063_looks_proof_and_match, 0064_looks_reports_and_notifications | Beweis-Look (Barber hält fest, Kunde bestätigt und willigt ein), Look-Treffer, Stil-Statistik mit Mindestanzahl, Meldungen, Benachrichtigung `look_confirm`, Kontolöschung räumt Look-Fotos auf | 7ee903c |
+| S3 | 0065_looks_feed_and_reference | Feed in Discover (nur Kunden, gleiche Stadt), Look-Detail mit Beweiskette, "Diesen Look" in die normale Buchung, Referenz für den Barber | f256166 |
+| S4 | 0066_looks_search | `match_look` (Beweis im Stil, frei im Fenster, gleiche Stadt, nie ein Ort), privater Bucket `look-references`, Referenzfoto für den gebuchten Barber, "Um HH:MM buchen" direkt zur Adresse | f981a85 |
+| S5 | 0067_looks_wishes_and_offers | Wunsch als Rückfallweg (`create_wish`, `cancel_wish`, `wish_offers`, `accept_offer`), Angebote der Barber (`open_wishes`, `offer_for_wish`, `withdraw_offer`), Benachrichtigungen ohne Buchung (`look_wish`, `look_offer`), Meldungen für Wunsch und Angebot | 984ecd7 |
+| S6 | 0068_looks_pass | Look-Pass (`my_looks`): Wunsch und Ergebnis nebeneinander, "Diesen Look wieder" | af36bb9 |
+| Nachtrag | keine | Stil-Statistik "Deine Looks" im Studio des Barbers (stand in Abschnitt 6, war in S2 nicht gebaut) | 4aab115 |
+
+Bildschirme: Kunde `LookConfirm`, `LookDetail`, `LookSearch`, `LookWishes`,
+`LookPass`, Leiste "Echte Looks" in Discover, Look-Frage auf dem
+Bewertungs-Screen. Barber `LookCapture` (aus abgeschlossenen Terminen),
+`LookWishes` (aus "Anfragen"), Referenz-Hinweis im Termin-Detail, Karte
+"Deine Looks" im Studio.
+
+Nicht gebaut (bewusst): Haarstruktur-Filter (L5), Kamera in der App (L8),
+Aufräum-Job für ungenutzte Referenzfotos (L11), Gesichter (L1).
+
+Maestro-Flows: `.maestro/barber-look-capture.yaml`,
+`customer-look-confirm.yaml`, `customer-look-feed-book.yaml`,
+`customer-look-search.yaml`, `customer-look-wish.yaml`,
+`barber-look-wish-offer.yaml`, `customer-look-pass.yaml`.
+
+## 11. So schaltest du es ein
+
+Alle Befehle aus dem Repo-Ordner, mit `SUPABASE_ACCESS_TOKEN` in der
+Umgebung (tools/db/supa.py). Die sieben Dateien in genau dieser Reihenfolge:
+
+```
+supabase/migrations/0062_feature_flags.sql
+supabase/migrations/0063_looks_proof_and_match.sql
+supabase/migrations/0064_looks_reports_and_notifications.sql
+supabase/migrations/0065_looks_feed_and_reference.sql
+supabase/migrations/0066_looks_search.sql
+supabase/migrations/0067_looks_wishes_and_offers.sql
+supabase/migrations/0068_looks_pass.sql
+```
+
+1. Stand prüfen: `python tools/db/supa.py pending` muss genau diese sieben
+   Dateien zeigen. Zeigt es mehr oder weniger, erst klären.
+2. Trockenlauf (eine Transaktion, danach ROLLBACK):
+   `python tools/db/supa.py dry-run <die sieben Dateien>`
+3. pgTAP-Tests, jeweils zurückgerollt. Der genaue Befehl steht im Kopf jeder
+   Datei: `supabase/tests/feature_flags.test.sql`,
+   `looks_proof_and_match.test.sql`, `looks_feed_and_reference.test.sql`,
+   `looks_search.test.sql`, `looks_wishes.test.sql`, `looks_pass.test.sql`.
+   Danach `authorization_matrix.test.sql` und
+   `abuse_limits_and_account_deletion.test.sql` mit
+   `--with <die sieben Dateien>`.
+4. Anwenden, erst wenn alles grün ist:
+   `python tools/db/supa.py apply <die sieben Dateien>`
+   Jede Datei läuft in eigener Transaktion und wird unter ihrem Dateinamen in
+   `supabase_migrations.schema_migrations` eingetragen.
+5. Danach: Supabase Advisors (Security) prüfen,
+   `python tools/db/supa.py types` (oder `npm run db:types`) und die Aufrufe
+   über `src/shared/untypedRpc.ts` auf `supabase.rpc` umstellen (P11).
+6. Edge Function `delete-account` neu deployen
+   (`npx supabase functions deploy delete-account` oder im Dashboard), sonst
+   bleiben Look-Fotos und Referenzfotos gelöschter Konten liegen.
+7. Schalter nur für euch (SQL-Editor). Die beiden Testkonten decken Barber
+   und Kunde ab; Alis E-Mail ergänzen:
+
+```sql
+insert into private.feature_flag_users (flag_key, user_id)
+select 'looks', id from auth.users
+where email in ('taha.metwally@outlook.de', 'titoacerlap@gmail.com', '<Alis E-Mail>')
+on conflict do nothing;
+
+-- Kontrolle: wer hat den Schalter?
+select u.email
+from private.feature_flag_users f
+join auth.users u on u.id = f.user_id
+where f.flag_key = 'looks';
+```
+
+8. Die App komplett schließen und neu öffnen, oder in Expo neu laden (kein
+   neuer Build nötig). Die App merkt sich den Schalter pro Konto, solange sie
+   läuft; Ab- und wieder Anmelden mit demselben Konto reicht nicht.
+
+Wieder aus, sofort und ohne Rollback:
+
+```sql
+delete from private.feature_flag_users where flag_key = 'looks';
+update private.feature_flags set enabled_for_all = false where key = 'looks';
+```
+
+Für alle einschalten erst, wenn die Datenschutzerklärung Look-Fotos und
+Referenzfotos nennt und der Einwilligungstext freigegeben ist (Version in
+`private.looks_settings.consent_version`):
+
+```sql
+update private.feature_flags set enabled_for_all = true where key = 'looks';
+```
+
+Einstellungen ohne Migration ändern (Beispiele):
+
+```sql
+update private.looks_settings set min_feedback_for_rate = 10;   -- L6
+update private.looks_settings set wish_valid_hours = 24;        -- L13
+update private.looks_settings set wish_notify_barbers = 10;     -- L14
+```
+
+Komplett zurück: die Dateien in `supabase/rollbacks/` in umgekehrter
+Reihenfolge (0068 bis 0062), jede Datei nennt ihre Datenfolgen. Vorher die
+Buckets `looks` und `look-references` im Dashboard leeren.

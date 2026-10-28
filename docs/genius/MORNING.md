@@ -25,14 +25,24 @@ Details: docs/genius/LOOKS_REVIEW.md
 | C S1 Feature-Schalter | fertig, Tests grün | f6797c7 |
 | C S2 Beweis-Look und Look-Treffer | fertig, Tests grün | 7ee903c |
 | C S3 Looks-Feed, Look-Detail, "Diesen Look" | fertig, Tests grün | f256166 |
-| C S4 Look-Suche mit sofortigen Treffern | fertig, Tests grün | siehe `git log` ("Looks S4") |
-| C S5 Look-Wunsch und Angebote | fertig, Tests grün | siehe `git log` ("Looks S5") |
-| C S6 Look-Pass | fertig, Tests grün | siehe `git log` ("Looks S6") |
+| C S4 Look-Suche mit sofortigen Treffern | fertig, Tests grün | f981a85 |
+| C S5 Look-Wunsch und Angebote | fertig, Tests grün | 984ecd7 |
+| C S6 Look-Pass | fertig, Tests grün | af36bb9 |
+| Nachtrag: Stil-Statistik "Deine Looks" im Studio (stand in LOOKS.md, war nicht gebaut) | fertig, Tests grün | 4aab115 |
+| LOOKS.md: was gebaut wurde und wie du es einschaltest (Abschnitte 10 und 11) | fertig | siehe `git log` ("switch Looks on") |
 
 "Tests grün" heißt: Typecheck, Lint, knip, jscpd und madge ohne Fehler, Jest
-ohne einen einzigen neuen Fehler gegenüber der Baseline. Die pgTAP-Tests sind
+ohne einen einzigen neuen Fehler gegenüber der Baseline (zuletzt 1001 Tests,
+davon 60 bekannte Locale-Fehler). Die pgTAP-Tests sind
 geschrieben, aber **nicht ausgeführt** (kein lokales Postgres, siehe Abschnitt 3b).
-Die Maestro-Flows sind geschrieben, aber **nicht ausgeführt**.
+Die Maestro-Flows sind geschrieben, aber **nicht ausgeführt**. Nichts davon
+wurde auf einem Handy geprüft.
+
+Nebenbei repariert: In S4 und S5 wurden einzelne Look-Fotos (eigenes Foto in
+der Suche, Referenzfoto beim Barber, Wunschfoto) nur etwa ein Viertel breit
+dargestellt; sie füllen jetzt die halbe Breite wie im Raster. Die Leiste
+"Echte Looks" zeigt Suche und Look-Pass jetzt auch, wenn es in der Stadt noch
+keine Looks gibt (bei einem Ladefehler bleibt sie weiter verborgen).
 
 ## 3. Was du freigeben musst, in dieser Reihenfolge
 
@@ -54,20 +64,19 @@ Danach Pull Request `night/2026-10-28` nach `main`, CI läuft dort mit englische
 | 0064_looks_reports_and_notifications | **Ändert bestehende Objekte**: CHECK-Constraints von `notifications` und `user_reports`, ersetzt `notification_push_copy` und `private.resolve_report_target` (bestehende Texte identisch, nur ergänzt), neuer Trigger auf `looks` | mittel: berührt die Benachrichtigungen aller Nutzer; die bestehenden Fälle sind unverändert übernommen | supabase/rollbacks/0064_looks_reports_and_notifications.sql (löscht look_confirm-Benachrichtigungen, behält Look-Meldungen als Nutzer-Meldungen) |
 | 0065_looks_feed_and_reference | Neue Tabelle `look_references` (welcher Look zu welcher Buchung), Funktionen `looks_feed` und `attach_look_reference`, ersetzt `private.can_view_look_photo` (veröffentlichte Looks für Kunden sichtbar) | niedrig bis mittel: erweitert die Foto-Sicht auf veröffentlichte Looks, nur für Kunden mit Schalter, gleiche Stadt, nie über eine Blockierung | supabase/rollbacks/0065_looks_feed_and_reference.sql (löscht nur die Look-Verweise, Buchungen bleiben) |
 | 0066_looks_search | Neue Spalte `look_references.photo_path`, zwei Einstellungen in `private.looks_settings`, neuer **privater** Bucket `look-references` (10 MB, nur Bilder) mit drei Storage-Policies, Funktion `match_look`, `attach_look_reference` bekommt das optionale Foto (alte Version wird ersetzt) | mittel: neue Storage-Policies; der gebuchte Barber sieht das Referenzfoto nur, solange die Anfrage offen oder angenommen ist | supabase/rollbacks/0066_looks_search.sql (vor 0065 zurückrollen; Bucket vorher im Dashboard leeren) |
-
 | 0067_looks_wishes_and_offers | Neue Tabellen `look_wishes`, `look_wish_offers`, 7 neue Funktionen. **Ändert bestehende Objekte**: `notifications.booking_id` wird nullable, neue Spalte `look_wish_id`, neue Prüfregel "jedes bisherige Ereignis braucht weiter seine Buchung", Ereignisse `look_wish` und `look_offer`; ersetzt `notification_push_copy` (bestehende Texte identisch), `private.resolve_report_target` (um Wunsch und Angebot ergänzt) und `private.can_view_reference_photo` | mittel bis hoch: berührt die Benachrichtigungstabelle aller Nutzer. Beide Apps vertragen jetzt `booking_id = null`; Wunsch-Benachrichtigungen bekommen nur Nutzer mit Schalter, auf einem **alten App-Stand** sähen sie "Termin aktualisiert" und landen beim Tippen in "Termine" | supabase/rollbacks/0067_looks_wishes_and_offers.sql (vor 0066 zurückrollen; löscht Wünsche, Angebote und Wunsch-Benachrichtigungen, Buchungen bleiben) |
-
 | 0068_looks_pass | Neue Lesefunktion `my_looks` (keine Tabelle) | niedrig: nur Lesen, nur eigene Looks, nur mit Schalter | supabase/rollbacks/0068_looks_pass.sql (vor 0067 zurückrollen) |
 
 Vorgehen (Befehle aus `tools/db/supa.py`, brauchen `SUPABASE_ACCESS_TOKEN`). `<alle>` steht für die sieben Dateien in dieser Reihenfolge:
 `supabase/migrations/0062_feature_flags.sql supabase/migrations/0063_looks_proof_and_match.sql supabase/migrations/0064_looks_reports_and_notifications.sql supabase/migrations/0065_looks_feed_and_reference.sql supabase/migrations/0066_looks_search.sql supabase/migrations/0067_looks_wishes_and_offers.sql supabase/migrations/0068_looks_pass.sql`
 
+0. Stand prüfen: `python tools/db/supa.py pending` muss genau diese sieben Dateien zeigen.
 1. Trockenlauf, alles in einer Transaktion, danach ROLLBACK:
    `python tools/db/supa.py dry-run <alle>`
 2. pgTAP-Tests (ebenfalls zurückgerollt), jede Datei einzeln. Der genaue Befehl steht im Kopf jeder Testdatei (jede Scheibe ist gegen ihren eigenen Migrationsstand geschrieben):
    `supabase/tests/feature_flags.test.sql` (0062), `looks_proof_and_match.test.sql` (0062 bis 0064), `looks_feed_and_reference.test.sql` (0062 bis 0065), `looks_search.test.sql` (0062 bis 0066), `looks_wishes.test.sql` (0062 bis 0067), `looks_pass.test.sql` (0062 bis 0068).
    Danach die bestehenden Suiten mit `--with <alle>`: `authorization_matrix.test.sql` und `abuse_limits_and_account_deletion.test.sql`. Die Looks-Tests der früheren Scheiben wurden nie gegen den vollen Stand 0062 bis 0068 geprüft; einmal mit `--with <alle>` laufen lassen zeigt, ob eine spätere Scheibe eine frühere Annahme verändert
-3. Erst wenn alles grün ist: anwenden, in dieser Reihenfolge, mit demselben Namen wie die Datei (AGENTS.md-Protokoll), danach `get_advisors` (security) und `npm run db:types`.
+3. Erst wenn alles grün ist: `python tools/db/supa.py apply <alle>` (jede Datei in eigener Transaktion, eingetragen unter ihrem Dateinamen, AGENTS.md-Protokoll), danach `get_advisors` (security) und `npm run db:types`.
 4. Edge Function `delete-account` neu deployen (sonst bleiben Look-Fotos und Referenzfotos gelöschter Konten im Speicher liegen, unsichtbar, aber gespeichert).
 
 ### c) Feature-Schalter einschalten
@@ -81,11 +90,17 @@ where email in ('taha.metwally@outlook.de', 'titoacerlap@gmail.com', '<Alis E-Ma
 on conflict do nothing;
 ```
 
+Danach die App komplett schließen und neu öffnen (oder in Expo neu laden):
+die App merkt sich den Schalter pro Konto, solange sie läuft.
+
 Wieder aus: `delete from private.feature_flag_users where flag_key = 'looks';`
 
 **Vor echten Nutzern** (`enabled_for_all = true`): Datenschutzerklärung um
-Look-Fotos ergänzen und den Einwilligungstext freigeben (Version
-`looks-placeholder-1` in `private.looks_settings.consent_version`).
+Look-Fotos und Referenzfotos ergänzen und den Einwilligungstext freigeben
+(Version `looks-placeholder-1` in `private.looks_settings.consent_version`).
+
+Alles zusammen mit Kontroll-Abfrage und Einstellungen: docs/genius/LOOKS.md,
+Abschnitt 11.
 
 ## 4. Entscheidungen
 
@@ -130,6 +145,7 @@ Development Build reicht, `npm start` lädt den neuen JavaScript-Stand.
 | Angebot machen (S5) | Barber mit bestätigtem Look im Stil | Push "Look-Wunsch in deiner Stadt", Anfragen: "Look-Wünsche in deiner Stadt", Service, Beginn, Notiz, "Angebot senden". Ein belegter Beginn zeigt "Zu dieser Zeit bist du nicht frei" |
 | Angebot buchen (S5) | Kunde | Push "Neues Angebot für deinen Look", Angebot mit Preis und Notiz, "Um HH:MM buchen" führt zur Adresse, danach normale Anfrage; der Wunsch steht auf "Gebucht" |
 | Look-Pass (S6) | Kunde mit bestätigtem Look | Discover, Leiste "Echte Looks": "Dein Look-Pass", Wunsch und Ergebnis nebeneinander, "Diesen Look wieder" führt zu Datum und Uhrzeit beim selben Barber |
+| Deine Looks (Studio) | Barber | Studio zeigt die Karte "Deine Looks": bestätigte Looks pro Stil, "Quote folgt" bis genug Bewertungen da sind |
 | Kontolöschung | Testkunde | Look verschwindet (Dateien und Referenzfotos erst nach Neu-Deploy der Edge Function) |
 
 ## 6. Wichtig vor dem Start
@@ -139,7 +155,18 @@ des alten Anon-Keys (docs/hardening/FOUNDER_ACTIONS.md, F1), sonst startet sie n
 
 ## 7. Wo es weitergeht
 
-Siehe docs/genius/PROGRESS.md, Abschnitt "In progress".
+Der Nachtplan ist abgearbeitet: S1 bis S6 und die Abschlussdoku sind
+committet. Der nächste Schritt liegt bei dir, in dieser Reihenfolge:
+
+| # | Schritt | Wer |
+|---|---|---|
+| 1 | Beide Branches pushen (Abschnitt 3a), Pull Request, CI abwarten (dort laufen die 60 Locale-Tests grün) | Taha |
+| 2 | pgTAP-Tests der sieben Migrationen laufen lassen (Abschnitt 3b, Schritte 0 bis 2). Schlägt einer fehl: Datei und Fehlermeldung an die nächste Sitzung geben, nichts anwenden | Taha |
+| 3 | Migrationen anwenden, `delete-account` neu deployen, Typen neu erzeugen | Taha |
+| 4 | Schalter für euch einschalten und die Tests aus Abschnitt 5 am Handy durchgehen | Taha und Ali |
+| 5 | Nächste Code-Sitzung: `src/shared/untypedRpc.ts` durch die erzeugten Typen ersetzen, `tsconfig.json` um `artifacts/` ergänzen, über L11 (Aufräum-Job) und L17 entscheiden | nächste Sitzung |
+
+Stand für eine neue Sitzung: docs/genius/PROGRESS.md.
 
 ## 8. Was du sonst wissen musst
 

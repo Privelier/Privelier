@@ -87,14 +87,25 @@ Resume point for the next session. Updated after every item.
   failure). No migration. Gate: 1001 jest tests, 0 new failures. Commit: see
   git log ("look stats in the Studio").
 
+- Final docs: LOOKS.md sections 10 (what was built, per slice and commit)
+  and 11 (how to switch it on: pending check, dry-run, pgTAP, apply the
+  seven files in order, advisors, types, delete-account deploy, flag SQL for
+  the two test accounts plus Ali's e-mail placeholder, off switch, settings,
+  rollback order). MORNING.md final pass (commits, apply command, app restart
+  note, next steps table). Commit: see git log ("switch Looks on").
+
 ## In progress
 
-- Final: LOOKS.md "what was built and how to switch it on" (exact SQL in
-  order, flag for Taha and Ali), then the final MORNING.md pass.
+- Nothing. NIGHT_SHIFT.md parts A to D are done.
 
-## Next
+## Next (needs Taha, see MORNING.md section 7)
 
-- Nothing else in NIGHT_SHIFT.md after that.
+- Push both branches, run the pgTAP files (never executed), apply 0062 to
+  0068, redeploy delete-account, regenerate types, switch the flag on for
+  the founders, phone tests.
+- Next code session: replace src/shared/untypedRpc.ts with generated types,
+  exclude artifacts/ in tsconfig.json, decide L11 and L17.
+- Ali's e-mail for the flag SQL is unknown here; it stays a placeholder.
 
 ## Check baseline (2026-10-28, origin/main 501f7f2, this machine)
 
