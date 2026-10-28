@@ -1,0 +1,60 @@
+src/auth/__tests__/errors.test.ts :: failure() › builds a typed failure with the matching copy and retryable flag
+src/barber/__tests__/errors.test.ts :: failure() › builds a typed failure with the matching copy and retryable flag
+src/barber/__tests__/portfolioData.test.ts :: insertPortfolioRow › maps the max-6 trigger (P0001 + 'more than 6 portfolio images') to limit_reached
+src/barber/screens/__tests__/BioEditScreen.test.tsx :: BioEditScreen › emphasises the character counter only in the last 50 characters
+src/barber/screens/__tests__/BioEditScreen.test.tsx :: BioEditScreen › guards an abandoning back tap, but never after a successful save
+src/barber/screens/__tests__/BioEditScreen.test.tsx :: BioEditScreen › shows no clear hint when there was no bio to begin with
+src/barber/screens/__tests__/BioEditScreen.test.tsx :: BioEditScreen › treats clearing an existing bio as a removal save, not a destructive act
+src/barber/screens/__tests__/ConversationScreen.test.tsx :: Barber ConversationScreen history pagination › uses the oldest cursor once and merges earlier messages without moving the viewport
+src/barber/screens/__tests__/ConversationScreen.test.tsx :: Barber message receipts › shows a two-check sent receipt on every own message before it has been read
+src/barber/screens/__tests__/ConversationScreen.test.tsx :: Barber message receipts › shows one neutral check for a message that failed to send
+src/barber/screens/__tests__/ConversationScreen.test.tsx :: Barber message receipts › shows two brass checks when the customer has read the latest message
+src/barber/screens/__tests__/LocationEditScreen.test.tsx :: LocationEditScreen › guards an unsaved address draft and lets a successful save leave
+src/barber/screens/__tests__/LocationEditScreen.test.tsx :: LocationEditScreen › seeds from a saved location and saves an explicit clear when the field is emptied
+src/barber/screens/__tests__/PortfolioScreen.test.tsx :: PortfolioScreen › delete-reconcile › re-inserts the tile in its sorted position when the delete fails
+src/barber/screens/__tests__/PortfolioScreen.test.tsx :: PortfolioScreen › max-6 gate › surfaces the server 'limit_reached' failure message when the insert is rejected at the cap
+src/barber/screens/__tests__/PortfolioScreen.test.tsx :: PortfolioScreen › upload → insert ordering › NEVER inserts a row when the upload fails
+src/barber/screens/__tests__/RequestsScreen.test.tsx :: RequestsScreen status presentation › renders the booking state through an accessible semantic pill
+src/barber/screens/__tests__/RequestsScreen.test.tsx :: RequestsScreen status presentation › shows content-shaped placeholders without an empty-state flash on first load
+src/barber/screens/__tests__/StudioScreen.test.tsx :: StudioScreen dashboard › does not turn a failed section into an empty state and retries it
+src/barber/screens/__tests__/StudioScreen.test.tsx :: StudioScreen dashboard › gives a new barber a calm analytics empty state
+src/barber/screens/__tests__/StudioScreen.test.tsx :: StudioScreen dashboard › prioritizes bookings, preserves dashboard routes, and shows confirmed readiness
+src/barber/screens/__tests__/VerifyScreen.test.tsx :: VerifyScreen › shows membership methods and clearly avoids claiming an unconfigured discount or payment
+src/customer/__tests__/discoverPresentation.test.ts :: up next and book again › labels today and tomorrow by calendar day, not by hours away
+src/customer/__tests__/errors.test.ts :: failure() › builds a typed failure with the matching copy and retryable flag
+src/customer/__tests__/format.test.ts :: formatBookingWhen › formats a bookings date/time pair
+src/customer/__tests__/format.test.ts :: formatMoney › keeps fractional cents exactly, never rounding
+src/customer/__tests__/format.test.ts :: formatMoney › renders whole euros without decimals
+src/customer/__tests__/format.test.ts :: timeOfDayGreeting › hour 0 → Good morning
+src/customer/__tests__/format.test.ts :: timeOfDayGreeting › hour 11 → Good morning
+src/customer/__tests__/format.test.ts :: timeOfDayGreeting › hour 12 → Good afternoon
+src/customer/__tests__/format.test.ts :: timeOfDayGreeting › hour 17 → Good afternoon
+src/customer/__tests__/format.test.ts :: timeOfDayGreeting › hour 18 → Good evening
+src/customer/__tests__/format.test.ts :: timeOfDayGreeting › hour 23 → Good evening
+src/customer/screens/__tests__/AccountScreen.test.tsx :: AccountScreen avatar integration › replaces the neutral loading disc with the signed-in member monogram
+src/customer/screens/__tests__/BarberProfileScreen.loading.test.tsx :: shows the review summary, a real distribution, and a report action on written reviews
+src/customer/screens/__tests__/BookingConfirmScreen.test.tsx :: confirms on tap and plays success feedback only after a real booking insert
+src/customer/screens/__tests__/BookingConfirmScreen.test.tsx :: explains a stale slot and routes back to time selection
+src/customer/screens/__tests__/BookingConfirmScreen.test.tsx :: offers another time instead of cancellation copy when a slot race is lost
+src/customer/screens/__tests__/BookingConfirmScreen.test.tsx :: shows the real request timeline and opens the booking chat over Bookings
+src/customer/screens/__tests__/BookingDateTimeScreen.test.tsx :: shows neutral date and slot shapes until real availability is known
+src/customer/screens/__tests__/BookingsScreen.test.tsx :: BookingsScreen status presentation › keeps open details connected to realtime status changes
+src/customer/screens/__tests__/BookingsScreen.test.tsx :: BookingsScreen status presentation › renders the booking state through an accessible semantic pill
+src/customer/screens/__tests__/BookingsScreen.test.tsx :: BookingsScreen status presentation › shows content-shaped placeholders without an empty-state flash on first load
+src/customer/screens/__tests__/BookingsScreen.test.tsx :: BookingsScreen status presentation › waits for the undo window before sending cancellation
+src/customer/screens/__tests__/BookingsScreen.test.tsx :: booking detail actions › explains a missing room instead of navigating
+src/customer/screens/__tests__/BookingsScreen.test.tsx :: booking detail actions › shows the customer hint and a truthful pending timeline
+src/customer/screens/__tests__/ConversationScreen.test.tsx :: Customer ConversationScreen history pagination › loads earlier history once, resets cursors between rooms, and preserves recovery
+src/customer/screens/__tests__/ConversationScreen.test.tsx :: Customer message receipts › shows a two-check sent receipt on every own message before it has been read
+src/shared/__tests__/notifications.test.ts :: notificationCopy › describes new messages and requests without exposing message text
+src/shared/components/__tests__/MessageReceipt.test.tsx :: MessageReceipt › uses one neutral check to identify a retryable unsent message
+src/shared/components/__tests__/MessageReceipt.test.tsx :: MessageReceipt › uses two brass checks when the counterpart read the message
+src/shared/components/__tests__/MessageReceipt.test.tsx :: MessageReceipt › uses two neutral checks for a sent, unread message
+src/shared/components/__tests__/StarRating.test.tsx :: StarRatingInput (picker) › announces the current value on the group
+src/shared/components/__tests__/StatusPill.test.tsx :: StatusPill › allows the capsule and label to grow with Dynamic Type
+src/shared/components/__tests__/StatusPill.test.tsx :: StatusPill › renders accepted with its semantic tone
+src/shared/components/__tests__/StatusPill.test.tsx :: StatusPill › renders cancelled with its semantic tone
+src/shared/components/__tests__/StatusPill.test.tsx :: StatusPill › renders completed with its semantic tone
+src/shared/components/__tests__/StatusPill.test.tsx :: StatusPill › renders pending with its semantic tone
+src/shared/components/__tests__/StatusPill.test.tsx :: StatusPill › renders rejected with its semantic tone
+src/shared/tracking/__tests__/trackingUnits.test.ts :: isTripWindow › opens 12 h before the slot and closes at its scheduled end

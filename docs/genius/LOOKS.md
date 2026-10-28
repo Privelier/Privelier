@@ -57,33 +57,41 @@ Für den Barber ist jeder bestätigte Look direkt Geld wert: Er wird in Feed
 und Suche weiter oben gezeigt. Deshalb macht er die 20 Sekunden nach jedem
 Termin freiwillig.
 
-## 5. Warum es das so nicht gibt (von Claude Code per Webrecherche zu prüfen)
+## 5. Warum es das so nicht gibt (per Webrecherche geprüft am 2026-10-28)
+
+Quellen und Details in docs/genius/LOOKS_REVIEW.md Abschnitt 5. Drei
+Aussagen der ersten Fassung waren zu stark und sind korrigiert.
 
 | Gibt es schon | Gibt es nicht |
 |---|---|
-| Portfolios bei Booksy, Fresha, Treatwell | Fotos, die an einen abgeschlossenen Termin gebunden **und** vom Kunden bestätigt sind |
-| Sternebewertungen | Eine gemessene Quote, wie oft der gewünschte Look getroffen wurde |
-| Barber-Suche nach Name, Ort, Preis | Suche nach Look, gefiltert auf nachgewiesenes Können **und** freie Zeit bei dir zu Hause |
-| Instagram als Schaufenster | Instagram-Look zeigen und direkt den Barber buchen, der ihn beweisbar kann |
+| Portfolios bei Booksy, Fresha, Treatwell; bei Fresha mit Service-Verknüpfung und "Jetzt buchen" direkt am Bild | Fotos, die der Barber zu einem abgeschlossenen Termin festhält **und** die der Kunde als "mein Schnitt" bestätigt, nach Stil erfasst |
+| Kundenfotos in Bewertungen nach dem Termin (Booksy, laut Drittanbietern) | Diese Fotos als Beweis für Suche und Ranking pro Stil |
+| Sternebewertungen, "verifizierte" Bewertungen (theCut, Treatwell) | Eine gemessene Quote, wie oft der gewünschte Look getroffen wurde (nirgends gefunden) |
+| Suche nach Stil (theCut), Ranking nach getaggten Fotos (StyleSeat) | Suche nach Look, gefiltert auf nachgewiesenes Können **und** freie Zeit **und** Termin bei dir zu Hause |
+| Vom Portfoliobild direkt buchen (Fresha) | Den Barber buchen, der genau diesen Stil nachweislich bei echten Kunden getroffen hat |
 
-## 6. Was sich im Code ändert (alles zusätzlich)
+## 6. Was sich im Code ändert (alles zusätzlich, verbessert nach der Prüfung)
+
+Die Begründung jeder Änderung gegenüber der ersten Fassung steht in
+docs/genius/LOOKS_REVIEW.md (Kürzel X, R, P in Klammern).
 
 | Bereich | Neu |
 |---|---|
-| Schalter | `feature_flags`, `feature_flag_users`, `my_feature_flags()`. Fehlt die Funktion oder der Schalter, bleibt alles aus |
-| Stil-Kategorien | Feste Liste `look_styles` (zum Beispiel Skin Fade, Low Fade, Taper, Buzz, Crop, Mullet, Scissor Cut, Bart-Kontur, Bart voll), gepflegt per Migration, nicht von Nutzern änderbar |
-| Looks | `looks` (Buchung, Barber, Kunde, Stile, Status Entwurf / bestätigt / veröffentlicht / zurückgezogen, Zeitpunkte der Bestätigung und Einwilligung mit Version), `look_photos` (bis 3), privater Bucket `looks`, kurzlebige signierte Links |
-| Look-Treffer | `look_feedback` (eine pro abgeschlossener Buchung, nur vom Kunden dieser Buchung, genau / fast / nein) |
-| Referenz | `look_references`, privater Bucket `look-references`: sichtbar nur für den Kunden und den Barber der Buchung, bei Wünschen für die passenden Barber, solange der Wunsch offen ist |
-| Wünsche | `look_wishes` (Stile, Zeitfenster, Stadt, grobe Lage, Ablauf nach 48 h oder bei Fensterbeginn), `look_wish_offers` (Barber, Zeitvorschlag im Fenster, Service, Notiz bis 280 Zeichen) |
-| Funktionen | `confirm_look`, `withdraw_look`, `looks_feed`, `barber_look_stats` (mit Mindestanzahl), `match_look` (nur Barber-IDs, Beweis-Anzahl, Entfernungsstufe, nie exakte Lage), `create_wish`, `offer_for_wish`, `accept_offer` (erzeugt über den bestehenden Buchungsweg eine normale Buchung) |
-| Bestehendes erweitern | Meldungen (0056) um Look, Wunsch, Angebot; Sperrliste für Notizen; Limits (0055); Benachrichtigungstypen; **Kontolöschung (0057)** löscht Fotos, Referenzen, Wünsche und zieht Looks zurück; Blockieren gilt auch für Feed, Suche und Wünsche |
-| Fotos | Bestehendes EXIF-Entfernen, Größen- und Typ-Grenzen, Obergrenzen pro Buchung |
-| Screens Barber | Ergebnis festhalten (nach "Abschließen"), Wünsche in der Nähe, Angebot senden, Stil-Statistik im Studio |
-| Screens Kunde | Feed in Discover, Look-Detail mit Beweiskette, "Diesen Look", Look-Suche, Wunsch senden, Angebote vergleichen, Bestätigung "Ist das dein Schnitt?", Look-Pass |
+| Schalter | `private.feature_flags`, `private.feature_flag_users` (nicht per API erreichbar, P1), `public.my_feature_flags()`, `private.flag_enabled(key)`. Fehlt die Funktion oder der Schalter, bleibt alles aus. **Der Server prüft den Schalter in jeder Look-Funktion und Look-Policy selbst** (X1) |
+| Einstellungen | `private.looks_settings` (eine Zeile): Mindestanzahl Look-Treffer (5, L6), Entwurf gültig (14 Tage, L10), Wunsch-Laufzeit (48 h), maximale Fensterlänge, Limits. Änderbar per SQL ohne Migration |
+| Stil-Kategorien | Feste Liste `look_styles` (Skin Fade, Low Fade, Taper, Buzz, Crop, Mullet, Scissor Cut, Bart-Kontur, Bart voll) mit deutschem und englischem Namen, gepflegt per Migration, nicht von Nutzern änderbar |
+| Looks | `looks` (Buchung, Barber, Kunde, Service, Stile, Status `draft` / `confirmed` / `published` / `declined` / `withdrawn` (P2), Zeitpunkte der Bestätigung und Einwilligung mit Version `looks-placeholder-1`, Bestätigung "kein Gesicht" durch den Barber (R3)), `look_photos` (bis 3, mit Lock, P6), privater Bucket `looks` (10 MB, nur Bilder, X4), kurzlebige signierte Links mit eigener Lese-Policy (X5) |
+| Look-Treffer | `look_feedback` (eine pro abgeschlossener Buchung, nur vom Kunden dieser Buchung, genau / fast / nein). **Den Stil wählt der Kunde**, nicht der Barber (X6). Nur "genau" zählt als Treffer (L7) |
+| Referenz | `look_references`, privater Bucket `look-references`: sichtbar nur für den Kunden und den Barber der Buchung, bei Wünschen für die passenden Barber, solange der Wunsch offen ist. Wird erst **nach** der erfolgreichen Buchung angehängt (R5) |
+| Wünsche | `look_wishes` (Stil, Zeitfenster an einem Tag, Stadt aus dem Profil, **keine grobe Lage** (R1), Ablauf nach 48 h oder bei Fensterbeginn, beim Lesen berechnet (P9)), `look_wish_offers` (Barber, Zeitvorschlag im Fenster, Service, Notiz bis 280 Zeichen mit Sperrliste) |
+| Funktionen | `create_look_draft`, `add_look_photo`, `submit_look`, `respond_to_look`, `withdraw_look`, `submit_look_feedback`, `barber_look_stats` (mit Mindestanzahl), `looks_feed`, `look_detail`, `attach_look_reference`, `match_look` (Barber, Beweis-Anzahl, Quote, erste freie Zeit, **keine Entfernung**, nie Lage, R1), `create_wish`, `offer_for_wish`, `accept_offer(offer, booking)` (verknüpft eine über `create_booking` erzeugte normale Buchung, P10), `my_looks` |
+| Bestehendes erweitern | Meldungen (0056) um Look, Wunsch, Angebot; Sperrliste für Notizen; Limits (0055); Benachrichtigungstypen (für Wünsche wird `notifications.booking_id` nullable, X2); **Kontolöschung**: Zeilen per Kaskade, Dateien über die erweiterte Edge Function delete-account (X3, neu deployen); Blockieren gilt auch für Entwürfe, Feed, Suche und Wünsche |
+| Fotos | Bestehendes EXIF-Entfernen (`normalizeImageForUpload`, P7), Größen- und Typ-Grenzen, Obergrenzen pro Look und pro Barber-Ordner, Systemfoto-Auswahl ohne Kamera-Berechtigung (P8) |
+| Screens Barber | Ergebnis festhalten (im Termin-Detail nach "Abschließen"), Wünsche in der Stadt, Angebot senden, Stil-Statistik im Studio |
+| Screens Kunde | Feed in Discover, Look-Detail mit Beweiskette, "Diesen Look", Look-Suche, Wunsch senden, Angebote vergleichen, Bestätigung "Ist das dein Schnitt?", Look-Treffer auf dem Bewertungs-Screen, Look-Pass |
 
 Keine neuen Buchungsstatus, keine KI, keine Zahlungen, keine Gesichtserkennung,
-keine neue native Abhängigkeit.
+keine neue native Abhängigkeit, kein Standort.
 
 ## 7. Restrisiken nach der Kritik
 
