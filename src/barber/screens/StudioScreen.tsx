@@ -13,12 +13,14 @@ import Animated from 'react-native-reanimated';
 import { LegalLinks } from '../../legal/LegalComponents';
 import { useExitRole } from '../../RoleContext';
 import { RetryNotice } from '../../shared/components/RetryNotice';
+import { useFeatureFlag } from '../../shared/featureFlags';
 import { getAppLanguage } from '../../shared/locale';
 import { Reveal, ScrollGlassHeader, useScrollGlass } from '../../shared/motion';
 import { useTabBarClearance } from '../../shared/navigation/tabBarClearance';
 import { useTheme } from '../../theme/useTheme';
 import { QuickActions } from '../components/QuickActions';
 import { StatsInsightCard } from '../components/StatsInsightCard';
+import { LookStatsCard } from '../components/looks/LookStatsCard';
 import { StudioAnalytics } from '../components/studio/StudioAnalytics';
 import { StudioHeader, StudioSkeleton } from '../components/studio/StudioParts';
 import { StudioReadiness, VerificationLine } from '../components/studio/StudioReadiness';
@@ -41,6 +43,7 @@ export default function StudioScreen({ navigation }: Props) {
   const onSignOut = useExitRole();
   const de = getAppLanguage() === 'de';
   const { name, view, loading, retrying, error, stats, retry } = useStudioData(de);
+  const looksOn = useFeatureFlag('looks');
 
   const openReadinessTarget = useCallback(
     (key: ReadinessItemKey) => {
@@ -89,6 +92,12 @@ export default function StudioScreen({ navigation }: Props) {
             {stats ? (
               <Reveal index={2} style={styles.insights}>
                 <StatsInsightCard stats={stats} />
+              </Reveal>
+            ) : null}
+
+            {looksOn ? (
+              <Reveal index={3} style={styles.insights}>
+                <LookStatsCard de={de} />
               </Reveal>
             ) : null}
 

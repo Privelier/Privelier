@@ -80,6 +80,13 @@ Resume point for the next session. Updated after every item.
   flow customer-look-pass.yaml. Gate: 998 jest tests, 0 new failures.
   Commit: see git log ("Looks S6").
 
+- Gap found while writing LOOKS.md: section 6 lists "Stil-Statistik im
+  Studio" for barbers, never built (barber_look_stats was used only on the
+  customer look detail). Added LookStatsCard in the Studio behind the flag
+  (proof per style, exact-hit rate once revealed, nudge when empty, hidden on
+  failure). No migration. Gate: 1001 jest tests, 0 new failures. Commit: see
+  git log ("look stats in the Studio").
+
 ## In progress
 
 - Final: LOOKS.md "what was built and how to switch it on" (exact SQL in
