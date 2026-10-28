@@ -19,7 +19,11 @@ import type { LegalDocument } from '../legal/legalConfig';
 import NotificationCenterScreen from '../shared/screens/NotificationCenterScreen';
 import LiveTripScreen from './screens/LiveTripScreen';
 import LookConfirmScreen from './screens/LookConfirmScreen';
+import LookDetailScreen from './screens/LookDetailScreen';
 import type { LiveTripContext } from './liveTripData';
+
+/** Looks S3: the look a booking is made for, attached after creation. */
+export type LookReferenceParam = { lookId: string; style: string };
 
 export type CustomerStackParamList = {
   CustomerTabs: NavigatorScreenParams<CustomerTabParamList> | undefined;
@@ -34,7 +38,7 @@ export type CustomerStackParamList = {
   // getBarberProfile call on the Confirm screen's summary. barberImage rides
   // along the same way so the chat opened from Confirm shows the barber's
   // photo, as it does when opened from Inbox or Bookings.
-  BookingDateTime: { barberId: string; barberName: string; barberImage?: string | null; service: ServiceRow };
+  BookingDateTime: { barberId: string; barberName: string; barberImage?: string | null; service: ServiceRow; lookReference?: LookReferenceParam };
   BookingLocation: {
     barberId: string;
     barberName: string;
@@ -42,6 +46,7 @@ export type CustomerStackParamList = {
     service: ServiceRow;
     date: string;
     time: string;
+    lookReference?: LookReferenceParam;
   };
   BookingConfirm: {
     barberId: string;
@@ -53,6 +58,7 @@ export type CustomerStackParamList = {
     location: string;
     /** Street + city only (no flat number or door notes) for an accurate pin. */
     geocodeQuery?: string;
+    lookReference?: LookReferenceParam;
   };
   // Chat: the Inbox thread row carries the room
   // plus its already-loaded display context so the conversation screen
@@ -78,6 +84,8 @@ export type CustomerStackParamList = {
   // Looks S2: "Is this your cut?" for the look a barber captured on one of
   // the client's completed bookings (opened from the look_confirm event).
   LookConfirm: { bookingId: string };
+  // Looks S3: one published look with its proof chain (from the Discover rail).
+  LookDetail: { lookId: string };
 };
 
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
@@ -121,6 +129,7 @@ export default function CustomerNavigator({ onExit }: { onExit: () => void }) {
           <Stack.Screen name="ReviewSubmit" component={ReviewSubmitScreen} />
           <Stack.Screen name="LiveTrip" component={LiveTripScreen} options={{ animation: reduceMotion ? 'fade' : 'slide_from_bottom' }} />
           <Stack.Screen name="LookConfirm" component={LookConfirmScreen} />
+          <Stack.Screen name="LookDetail" component={LookDetailScreen} />
         </Stack.Navigator>
       </UnreadProvider>
     </RoleExitProvider>

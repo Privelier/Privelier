@@ -28,13 +28,21 @@ Resume point for the next session. Updated after every item.
   flows. Gate: tsc/lint/knip/jscpd/madge green, jest 942 tests, 0 new
   failures. Commit: see git log ("Looks S2").
 
+- C S3 feed, look detail, "This look": 0065 + rollback + pgTAP, looks_feed
+  (customers only, same city, published, approved, no block, no client
+  identity), attach_look_reference after create_booking, Discover rail with
+  labelled portfolio fill, LookDetail screen with proof chain and hit rate,
+  lookReference threaded through BookingDateTime/Location/Confirm (absent =
+  unchanged flow), barber reference note, Maestro flow. Gate: 955 jest tests,
+  0 new failures.
+
 ## In progress
 
-- C S3 feed, look detail, "This look" with reference: 0065 + rollback
-  written (not committed). Next: pgTAP test, data layer (looks_feed,
-  attach_look_reference), Discover rail, LookDetail screen, param threading
-  through BookingDateTime/Location/Confirm, barber sees the reference in the
-  booking details, Maestro flow.
+- C S4 look search: 0066 + rollback written (match_look, look-references
+  bucket, attach_look_reference with photo). Next: pgTAP test, data layer,
+  LookSearch screen (style, day, window, optional photo, instant matches,
+  book straight into the address step), entry from the Discover rail,
+  Maestro flow.
 
 ## Next
 

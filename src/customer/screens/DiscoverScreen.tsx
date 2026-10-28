@@ -14,11 +14,13 @@ import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Animated from 'react-native-reanimated';
 import { Notice } from '../../shared/components/Notice';
+import { useFeatureFlag } from '../../shared/featureFlags';
 import { getAppLanguage } from '../../shared/locale';
 import { Reveal, ScrollGlassHeader, useScrollGlass } from '../../shared/motion';
 import { useTabBarClearance } from '../../shared/navigation/tabBarClearance';
 import { useTheme } from '../../theme/useTheme';
 import { BrandCarousel } from '../components/discover/BrandCarousel';
+import { LooksFeedRail } from '../components/looks/LooksFeedRail';
 import { DiscoverBrowse, DiscoverEmpty, DiscoverResults, DiscoverSkeleton } from '../components/discover/DiscoverDirectory';
 import { DiscoverGreeting, DiscoverSearch } from '../components/discover/DiscoverIntro';
 import { discoverStyles as styles } from '../components/discover/discoverStyles';
@@ -52,6 +54,7 @@ export default function DiscoverScreen({ navigation }: Props) {
   const [query, setQuery] = useState('');
   const onFocus = useCallback((listener: () => void) => navigation.addListener('focus', listener), [navigation]);
   const data = useDiscoverData({ de, onFocus });
+  const looksOn = useFeatureFlag('looks');
   const { barbers, services, activeService, setActiveService, ownBookings, cityName, loading, hasSnapshot, error, missingCity, load } = data;
 
   const servicesByBarber = useMemo(() => groupServicesByBarber(services ?? []), [services]);
@@ -198,6 +201,20 @@ export default function DiscoverScreen({ navigation }: Props) {
           <Reveal index={2}>
             <View style={styles.section}>
               <RebookRail barbers={rebookBarbers} onOpen={openProfile} />
+            </View>
+          </Reveal>
+        ) : null}
+
+        {looksOn && !filtering && hasSnapshot ? (
+          <Reveal index={2}>
+            <View style={styles.section}>
+              <LooksFeedRail
+                barbers={barbers}
+                cityName={cityName}
+                de={de}
+                onOpenLook={(lookId) => navigation.navigate('LookDetail', { lookId })}
+                onOpenBarber={openProfile}
+              />
             </View>
           </Reveal>
         ) : null}

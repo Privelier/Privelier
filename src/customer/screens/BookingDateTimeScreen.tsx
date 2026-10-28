@@ -26,7 +26,7 @@ import type { CustomerStackParamList } from '../CustomerNavigator';
 type Props = NativeStackScreenProps<CustomerStackParamList, 'BookingDateTime'>;
 
 export default function BookingDateTimeScreen({ route, navigation }: Props) {
-  const { barberId, barberName, barberImage, service } = route.params;
+  const { barberId, barberName, barberImage, service, lookReference } = route.params;
   const { colors, fonts } = useTheme();
   const de = getAppLanguage() === 'de';
   const slots = useBookingSlots(barberId, service.duration_minutes);
@@ -37,7 +37,7 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
 
   const onContinue = () => {
     if (!selection.date || !selection.time) return;
-    navigation.navigate('BookingLocation', { barberId, barberName, barberImage, service, date: selection.date, time: selection.time });
+    navigation.navigate('BookingLocation', { barberId, barberName, barberImage, service, date: selection.date, time: selection.time, lookReference });
   };
 
   return (

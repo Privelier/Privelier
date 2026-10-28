@@ -23,6 +23,7 @@ import { useTabBarClearance } from '../../shared/navigation/tabBarClearance';
 import { useTheme } from '../../theme/useTheme';
 import type { BookingRow } from '../../types';
 import { LookCaptureEntry } from '../components/looks/LookCaptureEntry';
+import { LookReferenceNote } from '../components/looks/LookReferenceNote';
 import { HistoryToggle, RequestActions, RequestCard, SectionHeader } from '../components/requests/RequestCard';
 import { useRequestsStyles } from '../components/requests/requestsStyles';
 import { useBarberRequests } from '../hooks/useBarberRequests';
@@ -147,6 +148,9 @@ export default function RequestsScreen() {
               navigation.navigate('Trip', { booking: selected, customerName: customerNameOf(selected), serviceName: serviceNameOf(selected) });
             }}
           />
+          {looksOn && (selected.status === 'pending' || selected.status === 'accepted') ? (
+            <LookReferenceNote bookingId={selected.id} de={de} />
+          ) : null}
           {looksOn && selected.status === 'completed' ? (
             <LookCaptureEntry
               bookingId={selected.id}

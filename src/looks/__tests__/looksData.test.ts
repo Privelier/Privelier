@@ -2,6 +2,12 @@ import { supabase } from '../../../lib/supabase';
 import {
   answerLook,
   attachLookPhoto,
+  attachLookReference,
+  fetchBookableService,
+  fetchLookDetail,
+  fetchLookReference,
+  fetchLooksFeed,
+  fetchPortfolioFallback,
   fetchBarberLookStats,
   fetchLookForBooking,
   fetchLookStyles,
@@ -40,10 +46,10 @@ jest.mock('../../../lib/supabase', () => ({
 const mockRpc = supabase.rpc as jest.Mock;
 const mockFrom = supabase.from as jest.Mock;
 
-type Builder = Record<'select' | 'eq' | 'order' | 'maybeSingle', jest.Mock> & { then: (resolve: (v: unknown) => void) => void };
+type Builder = Record<'select' | 'eq' | 'in' | 'limit' | 'order' | 'maybeSingle', jest.Mock> & { then: (resolve: (v: unknown) => void) => void };
 function builder(result: unknown): Builder {
   const obj = {} as Builder;
-  for (const key of ['select', 'eq', 'order'] as const) obj[key] = jest.fn(() => obj);
+  for (const key of ['select', 'eq', 'in', 'limit', 'order'] as const) obj[key] = jest.fn(() => obj);
   obj.maybeSingle = jest.fn(async () => result);
   obj.then = (resolve) => resolve(result);
   return obj;
@@ -200,5 +206,48 @@ describe('client answers', () => {
     await expect(submitLookFeedback({ bookingId: 'b-1', style: 'skin_fade', verdict: 'exact' })).resolves.toMatchObject({
       status: 'error', code: 'already_done', message: 'You have already answered this.',
     });
+  });
+});
+
+describe('feed and references (S3)', () => {
+  it('pages the feed by style and keeps the client out of the request', async () => {
+    mockRpc.mockResolvedValueOnce({ data: [{ look_id: 'l1' }], error: null });
+    await expect(fetchLooksFeed({ style: 'taper' })).resolves.toEqual({ status: 'ok', value: [{ look_id: 'l1' }] });
+    expect(mockRpc).toHaveBeenCalledWith('looks_feed', { p_style: 'taper', p_before: null, p_limit: 12 });
+  });
+
+  it('reads one look for the detail, or null when it is gone', async () => {
+    mockRpc.mockResolvedValueOnce({ data: [{ look_id: 'l1' }], error: null });
+    await expect(fetchLookDetail('l1')).resolves.toEqual({ status: 'ok', value: { look_id: 'l1' } });
+    expect(mockRpc).toHaveBeenCalledWith('looks_feed', { p_look_id: 'l1', p_limit: 1 });
+    mockRpc.mockResolvedValueOnce({ data: [], error: null });
+    await expect(fetchLookDetail('l2')).resolves.toEqual({ status: 'ok', value: null });
+  });
+
+  it('attaches a reference and maps a missing booking', async () => {
+    mockRpc.mockResolvedValueOnce({ data: {}, error: null });
+    await expect(attachLookReference({ bookingId: 'b', lookId: 'l', style: 'taper' })).resolves.toEqual({ status: 'ok', value: null });
+    expect(mockRpc).toHaveBeenCalledWith('attach_look_reference', { p_booking_id: 'b', p_look_id: 'l', p_style: 'taper' });
+    mockRpc.mockResolvedValueOnce({ data: null, error: { code: 'P0002', message: 'pending booking not found' } });
+    await expect(attachLookReference({ bookingId: 'b', lookId: 'l', style: 'taper' })).resolves.toMatchObject({ code: 'not_found' });
+  });
+
+  it('reads a booking reference', async () => {
+    mockFrom.mockReturnValueOnce(builder({ data: { booking_id: 'b', look_id: 'l', style: 'taper' }, error: null }));
+    await expect(fetchLookReference('b')).resolves.toEqual({ status: 'ok', value: { booking_id: 'b', look_id: 'l', style: 'taper' } });
+  });
+
+  it('fills a thin feed from directory portfolios, never for an empty directory', async () => {
+    await expect(fetchPortfolioFallback([])).resolves.toEqual([]);
+    expect(mockFrom).not.toHaveBeenCalled();
+    const query = builder({ data: [{ id: 'p', barber_id: 'x', image_url: 'x/a.jpg' }, { id: 'q', barber_id: null, image_url: 'y' }], error: null });
+    mockFrom.mockReturnValueOnce(query);
+    await expect(fetchPortfolioFallback(['x'])).resolves.toEqual([{ id: 'p', barber_id: 'x', image_url: 'x/a.jpg' }]);
+    expect(query.limit).toHaveBeenCalledWith(6);
+  });
+
+  it('reads the look service, or null when the barber removed it', async () => {
+    mockFrom.mockReturnValueOnce(builder({ data: null, error: null }));
+    await expect(fetchBookableService('s')).resolves.toBeNull();
   });
 });

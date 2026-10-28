@@ -19,7 +19,8 @@ import { buildFailure, classifyPostgrestError, isNetworkMessage, sharedDataError
 import { readNormalizedImage } from '../shared/imageUpload';
 import { uniqueObjectName } from '../shared/objectNames';
 import { untypedRpc, untypedTable } from '../shared/untypedRpc';
-import type { BarberLookStat, Look, LookPhoto, LookStyle, LookVerdict } from './types';
+import type { ServiceRow } from '../types';
+import type { BarberLookStat, FeedLook, Look, LookPhoto, LookReference, LookStyle, LookVerdict } from './types';
 
 const LOOKS_BUCKET = 'looks';
 const SIGNED_URL_SECONDS = 600;
@@ -215,6 +216,71 @@ export async function fetchBarberLookStats(barberId: string): Promise<LooksResul
   const { data, error } = await untypedRpc<BarberLookStat[]>('barber_look_stats', { p_barber_id: barberId });
   if (error) return mapLooksError('fetchBarberLookStats', error);
   return ok(Array.isArray(data) ? data : []);
+}
+
+const FEED_PAGE = 12;
+
+/** Published looks in the caller's city, newest first (customers only). */
+export async function fetchLooksFeed(input: { style?: string | null; before?: string | null } = {}): Promise<LooksResult<FeedLook[]>> {
+  const { data, error } = await untypedRpc<FeedLook[]>('looks_feed', {
+    p_style: input.style ?? null,
+    p_before: input.before ?? null,
+    p_limit: FEED_PAGE,
+  });
+  if (error) return mapLooksError('fetchLooksFeed', error);
+  return ok(Array.isArray(data) ? data : []);
+}
+
+/** One published look with its proof chain, or null when it is gone. */
+export async function fetchLookDetail(lookId: string): Promise<LooksResult<FeedLook | null>> {
+  const { data, error } = await untypedRpc<FeedLook[]>('looks_feed', { p_look_id: lookId, p_limit: 1 });
+  if (error) return mapLooksError('fetchLookDetail', error);
+  return ok(Array.isArray(data) && data.length > 0 ? data[0] : null);
+}
+
+/** Link a just-created pending booking to the look it was made for. */
+export async function attachLookReference(input: { bookingId: string; lookId: string | null; style: string }): Promise<LooksResult<null>> {
+  const { error } = await untypedRpc<LookReference>('attach_look_reference', {
+    p_booking_id: input.bookingId,
+    p_look_id: input.lookId,
+    p_style: input.style,
+  });
+  if (error) return mapLooksError('attachLookReference', error);
+  return ok(null);
+}
+
+/** The look a booking was made for (booking participants only). */
+export async function fetchLookReference(bookingId: string): Promise<LooksResult<LookReference | null>> {
+  const { data, error } = await untypedTable('look_references').select('booking_id, look_id, style').eq('booking_id', bookingId).maybeSingle();
+  if (error) return mapLooksError('fetchLookReference', error);
+  return ok((data as LookReference | null) ?? null);
+}
+
+export interface PortfolioFallbackTile {
+  id: string;
+  barber_id: string;
+  image_url: string;
+}
+
+/**
+ * Portfolio images of approved barbers already shown in Discover, used to
+ * fill a thin feed. Always labelled "portfolio, not verified" in the UI.
+ */
+export async function fetchPortfolioFallback(barberIds: string[]): Promise<PortfolioFallbackTile[]> {
+  if (barberIds.length === 0) return [];
+  const { data, error } = await supabase.from('portfolio').select('id, barber_id, image_url').in('barber_id', barberIds.slice(0, 12)).limit(6);
+  if (error) {
+    devWarn('[looks] fetchPortfolioFallback', error);
+    return [];
+  }
+  return (data ?? []).filter((row): row is PortfolioFallbackTile => Boolean(row.barber_id && row.image_url));
+}
+
+/** The look's service, if the barber still offers it (RLS: approved barbers). */
+export async function fetchBookableService(serviceId: string): Promise<ServiceRow | null> {
+  const { data, error } = await supabase.from('services').select('*').eq('id', serviceId).maybeSingle();
+  if (error) devWarn('[looks] fetchBookableService', error);
+  return (data as ServiceRow | null) ?? null;
 }
 
 /** Test seam: forget the cached style list. */

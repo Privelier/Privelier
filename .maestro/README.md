@@ -26,6 +26,7 @@ maestro test .maestro/customer-explore-filters-list.yaml
 maestro test .maestro/customer-review-submit.yaml
 maestro test .maestro/barber-look-capture.yaml     # Looks S2, needs the 'looks' flag
 maestro test .maestro/customer-look-confirm.yaml   # Looks S2, run after the barber flow
+maestro test .maestro/customer-look-feed-book.yaml # Looks S3, a second customer, after the two above
 ```
 
 All flows target `appId: com.privelier.app`, the real Android package and iOS
