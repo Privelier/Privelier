@@ -16,9 +16,9 @@ export type BarberStackParamList = {
   Availability: undefined;
   BioEdit: undefined;
   LocationEdit: undefined;
-  // Chat (build-order step 15-16): title from the Chats row (service name —
-  // the customer's name is unreadable list-side under users RLS; the screen
-  // itself upgrades the title via the 0012 counterparts RPC).
+  // Chat (build-order step 15-16): title is the customer name or "Customer"
+  // fallback; subtitle is the service. The conversation refreshes identity
+  // through the participant-scoped 0012 counterparts RPC.
   Conversation: { room: ChatRoomRow; title: string; subtitle: string | null };
 };
 

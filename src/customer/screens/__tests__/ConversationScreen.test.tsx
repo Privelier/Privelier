@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import ConversationScreen from '../ConversationScreen';
 import { fetchConversation, fetchConversationNewerThan } from '../../conversationData';
+import { fetchBookingCounterpart } from '../../../shared/chatCounterparts';
 import { useMessagesRealtime } from '../../../shared/useMessagesRealtime';
 import { useSendQueue } from '../../../shared/useSendQueue';
 
@@ -16,6 +17,10 @@ jest.mock('../../conversationData', () => ({
   fetchConversation: jest.fn(),
   fetchConversationNewerThan: jest.fn(),
   sendMessage: jest.fn(),
+}));
+
+jest.mock('../../../shared/chatCounterparts', () => ({
+  fetchBookingCounterpart: jest.fn(),
 }));
 
 jest.mock('../../../../lib/supabase', () => ({
@@ -93,6 +98,8 @@ jest.mock('../../UnreadContext', () => {
 const mockFetchConversation = fetchConversation as jest.MockedFunction<typeof fetchConversation>;
 const mockFetchConversationNewerThan =
   fetchConversationNewerThan as jest.MockedFunction<typeof fetchConversationNewerThan>;
+const mockFetchBookingCounterpart =
+  fetchBookingCounterpart as jest.MockedFunction<typeof fetchBookingCounterpart>;
 const mockUseMessagesRealtime = useMessagesRealtime as jest.Mock;
 const mockUseSendQueue = useSendQueue as jest.Mock;
 type FetchResult = Awaited<ReturnType<typeof fetchConversation>>;
@@ -129,6 +136,35 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockFetchConversation.mockReset();
   mockFetchConversationNewerThan.mockReset();
+  mockFetchBookingCounterpart.mockReset();
+  mockFetchBookingCounterpart.mockResolvedValue(null);
+});
+
+describe('Customer ConversationScreen identity header', () => {
+  it('refreshes the barber name and keeps the service as secondary context', async () => {
+    mockFetchBookingCounterpart.mockResolvedValueOnce({
+      id: 'barber-1',
+      name: 'Julian M.',
+      profile_image: null,
+    });
+    mockFetchConversation.mockResolvedValueOnce({
+      status: 'ok',
+      messages: [],
+      hasEarlier: false,
+      earliestCursor: null,
+      latestCursor: null,
+    });
+
+    await render(
+      <ConversationScreen route={routeFor('room-1')} navigation={navigation} />
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('customer-conversation-title').props.children).toBe('Julian M.')
+    );
+    expect(screen.getByTestId('customer-conversation-service').props.children).toBe('Classic cut');
+    expect(mockFetchBookingCounterpart).toHaveBeenCalledWith('booking-room-1');
+  });
 });
 
 describe('Customer ConversationScreen history pagination', () => {

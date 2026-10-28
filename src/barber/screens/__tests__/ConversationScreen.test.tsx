@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor } from '@testing-library/react-native';
 import ConversationScreen from '../ConversationScreen';
-import { fetchConversation } from '../../conversationData';
+import { fetchBookingCounterpart, fetchConversation } from '../../conversationData';
 
 jest.mock('@react-navigation/native', () => {
   const React = jest.requireActual('react');
@@ -12,7 +12,7 @@ jest.mock('@react-navigation/native', () => {
 
 jest.mock('../../conversationData', () => ({
   fetchConversation: jest.fn(),
-  fetchBookingCounterpart: jest.fn().mockResolvedValue(null),
+  fetchBookingCounterpart: jest.fn(),
   sendMessage: jest.fn(),
 }));
 
@@ -89,6 +89,8 @@ jest.mock('../../UnreadContext', () => {
 });
 
 const mockFetchConversation = fetchConversation as jest.MockedFunction<typeof fetchConversation>;
+const mockFetchBookingCounterpart =
+  fetchBookingCounterpart as jest.MockedFunction<typeof fetchBookingCounterpart>;
 type FetchResult = Awaited<ReturnType<typeof fetchConversation>>;
 
 const cursor = { createdAt: '2026-09-23T10:00:00.000Z', id: 'message-40' };
@@ -100,8 +102,8 @@ const route = {
       customer_id: 'customer-1',
       barber_id: 'barber-1',
     },
-    title: 'Classic cut',
-    subtitle: null,
+    title: 'Customer',
+    subtitle: 'Classic cut',
   },
 } as never;
 const navigation = { goBack: jest.fn() } as never;
@@ -117,6 +119,33 @@ function deferred<T>() {
 beforeEach(() => {
   jest.clearAllMocks();
   mockFetchConversation.mockReset();
+  mockFetchBookingCounterpart.mockReset();
+  mockFetchBookingCounterpart.mockResolvedValue(null);
+});
+
+describe('Barber ConversationScreen identity header', () => {
+  it('refreshes the customer name and keeps the service as secondary context', async () => {
+    mockFetchBookingCounterpart.mockResolvedValueOnce({
+      id: 'customer-1',
+      name: 'Nora K.',
+      profile_image: null,
+    });
+    mockFetchConversation.mockResolvedValueOnce({
+      status: 'ok',
+      messages: [],
+      hasEarlier: false,
+      earliestCursor: null,
+      latestCursor: null,
+    });
+
+    await render(<ConversationScreen route={route} navigation={navigation} />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId('barber-conversation-title').props.children).toBe('Nora K.')
+    );
+    expect(screen.getByTestId('barber-conversation-service').props.children).toBe('Classic cut');
+    expect(mockFetchBookingCounterpart).toHaveBeenCalledWith('booking-1');
+  });
 });
 
 describe('Barber ConversationScreen history pagination', () => {

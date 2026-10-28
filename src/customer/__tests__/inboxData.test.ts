@@ -4,11 +4,11 @@
  * fetchOwnInboxView is a thin RLS-scoped read exercised on-device.
  */
 import type {
-  BarberDirectoryRow,
   BookingRow,
   ChatRoomRow,
   MessageRow,
 } from '../../types';
+import type { ChatCounterpart } from '../../shared/chatCounterparts';
 import { buildInboxThreads } from '../inboxData';
 
 jest.mock('../../../lib/supabase', () => ({
@@ -46,17 +46,10 @@ const booking = (id: string, date: string): BookingRow => ({
   created_at: '2026-07-01T00:00:00Z',
 });
 
-const barber: BarberDirectoryRow = {
+const counterpart: ChatCounterpart = {
   id: 'brb1',
   name: 'Atlas',
-  city: 'Eckental',
-  country: 'Germany',
   profile_image: null,
-  bio: null,
-  rating: 0,
-  verified: true,
-  display_latitude: null,
-  display_longitude: null,
 };
 
 describe('buildInboxThreads', () => {
@@ -87,7 +80,7 @@ describe('buildInboxThreads', () => {
   it('degrades to nulls when enrichment lookups are missing', () => {
     const threads = buildInboxThreads([room('r1', 'bk1')], [], new Map(), new Map(), new Map());
     expect(threads[0]).toMatchObject({
-      barber: null,
+      counterpart: null,
       booking: null,
       service: null,
       lastMessage: null,
@@ -97,12 +90,18 @@ describe('buildInboxThreads', () => {
 
   it('attaches barber and service context when present', () => {
     const bookingsById = new Map([['bk1', booking('bk1', '2026-07-07')]]);
-    const barbersById = new Map([['brb1', barber]]);
+    const counterpartsByBookingId = new Map([['bk1', counterpart]]);
     const servicesById = new Map([
       ['svc1', { id: 'svc1', barber_id: 'brb1', name: 'Signature cut', price: 40, duration_minutes: 45 }],
     ]);
-    const threads = buildInboxThreads([room('r1', 'bk1')], [], bookingsById, barbersById, servicesById);
-    expect(threads[0].barber?.name).toBe('Atlas');
+    const threads = buildInboxThreads(
+      [room('r1', 'bk1')],
+      [],
+      bookingsById,
+      counterpartsByBookingId,
+      servicesById
+    );
+    expect(threads[0].counterpart?.name).toBe('Atlas');
     expect(threads[0].service?.name).toBe('Signature cut');
     expect(threads[0].lastActivityIso).toBe('2026-07-07');
   });

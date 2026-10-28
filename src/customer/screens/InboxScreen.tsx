@@ -1,8 +1,8 @@
 /**
  * Customer Inbox tab — rebuild of the prototype's customer.inbox route:
  * serif header with the "Conversations with your barbers." subtitle and a
- * hairline-divided thread list (round avatar, barber name, preview line,
- * compact date on the right).
+ * hairline-divided thread list (round avatar, counterpart name with service
+ * context, latest-message preview, compact date on the right).
  *
  * Real data end to end via fetchOwnInboxView (RLS scopes chat_rooms and
  * messages to the caller's own threads). Until step 15-16 ships chat there
@@ -10,10 +10,9 @@
  *
  * Honesty deviations from the prototype: no fake "online" presence dot
  * (there is no presence system), and the preview line is the real latest
- * message — falling back to "About: {service}" booking context, which is
- * all the prototype ever showed — instead of mocked message text. Tapping
- * a thread opens the real conversation screen (step 15-16), carrying the
- * row's already-loaded barber/service context as the header.
+ * message instead of mocked copy. Tapping a thread opens the real
+ * conversation screen (step 15-16), carrying counterpart/service context
+ * as an immediate header fallback.
  *
  * Loads on FOCUS (not mount): returning from a conversation must show the
  * fresh last-message preview, and bottom-tab screens stay mounted.
@@ -72,7 +71,7 @@ export default function InboxScreen({ navigation }: Props) {
     (item: InboxThread) => {
       navigation.navigate('Conversation', {
         room: item.room,
-        title: item.barber?.name ?? 'Barber',
+        title: item.counterpart?.name ?? 'Barber',
         subtitle: item.service?.name ?? null,
       });
     },
@@ -122,16 +121,16 @@ export default function InboxScreen({ navigation }: Props) {
             </View>
           }
           renderItem={({ item, index }) => {
-            const name = item.barber?.name ?? 'Barber';
-            const preview =
-              item.lastMessage?.message ??
-              (item.service ? `About: ${item.service.name}` : 'No messages yet.');
+            const name = item.counterpart?.name ?? 'Barber';
+            const serviceName = item.service?.name ?? null;
+            const profileImage = item.counterpart?.profile_image;
+            const preview = item.lastMessage?.message ?? 'No messages yet.';
             const unread = unreadRoomIds.has(item.room.id);
             return (
               <Pressable
                 onPress={() => onOpenThread(item)}
                 accessibilityRole="button"
-                accessibilityLabel={`Open conversation with ${name}`}
+                accessibilityLabel={`Open conversation with ${name}${serviceName ? ` about ${serviceName}` : ''}`}
                 testID={`customer-inbox-row-${item.room.id}`}
                 style={({ pressed }) => [
                   styles.row,
@@ -139,8 +138,8 @@ export default function InboxScreen({ navigation }: Props) {
                   pressed ? { opacity: pressOpacity.soft } : null,
                 ]}
               >
-                {item.barber?.profile_image ? (
-                  <Image source={{ uri: item.barber.profile_image }} style={styles.avatar} />
+                {profileImage ? (
+                  <Image source={{ uri: profileImage }} style={styles.avatar} />
                 ) : (
                   <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: colors.surface }]}>
                     <Text style={[styles.avatarInitial, { color: colors.textSecondary, fontFamily: fonts.headingMedium }]}>
@@ -152,8 +151,17 @@ export default function InboxScreen({ navigation }: Props) {
                   <Text
                     numberOfLines={1}
                     style={[styles.rowName, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}
+                    testID={`customer-inbox-name-${item.room.id}`}
                   >
                     {name}
+                    {serviceName ? (
+                      <Text
+                        style={[styles.rowService, { color: colors.textSecondary, fontFamily: fonts.body }]}
+                        testID={`customer-inbox-service-${item.room.id}`}
+                      >
+                        {` · ${serviceName}`}
+                      </Text>
+                    ) : null}
                   </Text>
                   <Text
                     numberOfLines={1}
@@ -163,6 +171,7 @@ export default function InboxScreen({ navigation }: Props) {
                         ? { color: colors.textPrimary, fontFamily: fonts.bodySemiBold }
                         : { color: colors.textSecondary, fontFamily: fonts.body },
                     ]}
+                    testID={`customer-inbox-preview-${item.room.id}`}
                   >
                     {preview}
                   </Text>
@@ -215,6 +224,7 @@ const styles = StyleSheet.create({
   avatarInitial: { fontSize: 18 },
   rowInfo: { flex: 1, minWidth: 0 },
   rowName: { fontSize: 16 },
+  rowService: { fontSize: 12 },
   rowPreview: { fontSize: 12, marginTop: 3 },
   rowDate: { fontSize: 10 },
   unreadDot: { width: 8, height: 8, borderRadius: 4 },

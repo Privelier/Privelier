@@ -6,13 +6,12 @@
  * (`chat_rooms_select_participants` / `messages_select_participants`)
  * scopes every read to the caller's own rooms.
  *
- * No counterpart identity: users RLS is own-row-only, so a barber cannot
- * read the customer's name/photo (same gap as the Requests tab, tracked
- * for step 13-14 in CLAUDE.md). Threads carry `barber: null` and the
- * screen leads with the booking's service instead.
+ * Counterpart identity is best-effort through the narrow, participant-scoped
+ * get_booking_counterparts RPC. Direct users RLS remains unchanged.
  */
 import { supabase } from '../../lib/supabase';
 import type { BookingRow, ChatRoomRow, MessageRow, ServiceRow } from '../types';
+import { fetchBookingCounterparts } from '../shared/chatCounterparts';
 import { buildInboxThreads } from '../shared/threads';
 import { mapPostgrestError } from './errors';
 import type { OwnChatsViewResult } from './types';
@@ -30,7 +29,7 @@ export async function fetchOwnChatsView(): Promise<OwnChatsViewResult> {
   const roomIds = rooms.map((r) => r.id);
   const bookingIds = [...new Set(rooms.map((r) => r.booking_id))];
 
-  const [messagesResult, bookingsResult] = await Promise.all([
+  const [messagesResult, bookingsResult, counterpartsByBookingId] = await Promise.all([
     supabase
       .from('messages')
       .select('*')
@@ -38,6 +37,7 @@ export async function fetchOwnChatsView(): Promise<OwnChatsViewResult> {
       .order('created_at', { ascending: false })
       .limit(MESSAGES_SCAN_LIMIT),
     supabase.from('bookings').select('*').in('id', bookingIds),
+    fetchBookingCounterparts(bookingIds),
   ]);
 
   const bookingsById = new Map<string, BookingRow>();
@@ -54,7 +54,7 @@ export async function fetchOwnChatsView(): Promise<OwnChatsViewResult> {
     rooms,
     (messagesResult.data as MessageRow[]) ?? [],
     bookingsById,
-    new Map(), // no counterpart lookup — see file header
+    counterpartsByBookingId,
     servicesById
   );
   return { status: 'ok', threads };

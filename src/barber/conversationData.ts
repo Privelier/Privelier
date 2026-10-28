@@ -12,6 +12,7 @@
  */
 import { supabase } from '../../lib/supabase';
 import type { MessageRow } from '../types';
+import { fetchBookingCounterpart as fetchSharedBookingCounterpart } from '../shared/chatCounterparts';
 import {
   buildConversationHistoryPage,
   buildConversationRecoveryPage,
@@ -28,11 +29,6 @@ import type {
   FetchConversationResult,
   SendMessageResult,
 } from './types';
-
-/** Row shape returned by the get_booking_counterparts RPC. */
-interface CounterpartRpcRow extends BookingCounterpart {
-  booking_id: string;
-}
 
 /** Reads a bounded newest-first database page and returns ascending display rows. */
 export async function fetchConversation(
@@ -118,13 +114,5 @@ export async function sendMessage(roomId: string, text: string): Promise<SendMes
 export async function fetchBookingCounterpart(
   bookingId: string
 ): Promise<BookingCounterpart | null> {
-  const { data, error } = await supabase.rpc('get_booking_counterparts', {
-    p_booking_ids: [bookingId],
-  });
-  if (error) {
-    mapPostgrestError('fetchBookingCounterpart', error);
-    return null;
-  }
-  const row = ((data as CounterpartRpcRow[]) ?? [])[0];
-  return row ? { id: row.id, name: row.name, profile_image: row.profile_image } : null;
+  return fetchSharedBookingCounterpart(bookingId);
 }

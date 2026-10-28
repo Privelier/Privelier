@@ -7,23 +7,21 @@
  * messages). No rooms exist until step 15-16 ships chat, so the empty
  * state is the expected first render.
  *
- * Honesty deviations from the prototype: rows lead with the booking's
- * service name and a neutral avatar — the customer's name/photo is
- * unreadable list-side under users RLS (the conversation screen itself
- * upgrades to the real name via the 0012 counterparts RPC). Tapping a
- * thread opens the real conversation screen (step 15-16).
+ * Honesty deviations from the prototype: rows use the participant-scoped
+ * 0012 counterparts RPC for the customer's real display identity. Service
+ * context stays visually secondary and the latest-message preview remains
+ * independently visible. Tapping a thread opens the real conversation.
  *
  * Loads on FOCUS (not mount): returning from a conversation must show the
  * fresh last-message preview, and bottom-tab screens stay mounted.
  */
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../theme/useTheme';
 import { HAIRLINE, space } from '../../theme/spacing';
 import { pressOpacity } from '../../theme/motion';
@@ -72,10 +70,8 @@ export default function ChatsScreen({ navigation }: Props) {
     (item: InboxThread) => {
       navigation.navigate('Conversation', {
         room: item.room,
-        title: item.service?.name ?? 'Booking',
-        // No list-side subtitle: the screen swaps the service name down to
-        // the subtitle slot once the counterparts RPC resolves the name.
-        subtitle: null,
+        title: item.counterpart?.name ?? 'Customer',
+        subtitle: item.service?.name ?? null,
       });
     },
     [navigation]
@@ -119,14 +115,15 @@ export default function ChatsScreen({ navigation }: Props) {
             </View>
           }
           renderItem={({ item, index }) => {
-            const title = item.service?.name ?? 'Booking';
+            const name = item.counterpart?.name ?? 'Customer';
+            const serviceName = item.service?.name ?? null;
             const preview = item.lastMessage?.message ?? 'No messages yet.';
             const unread = unreadRoomIds.has(item.room.id);
             return (
               <Pressable
                 onPress={() => onOpenThread(item)}
                 accessibilityRole="button"
-                accessibilityLabel={`Open conversation about ${title}`}
+                accessibilityLabel={`Open conversation with ${name}${serviceName ? ` about ${serviceName}` : ''}`}
                 testID={`barber-chats-row-${item.room.id}`}
                 style={({ pressed }) => [
                   styles.row,
@@ -134,15 +131,30 @@ export default function ChatsScreen({ navigation }: Props) {
                   pressed ? { opacity: pressOpacity.soft } : null,
                 ]}
               >
-                <View style={[styles.avatar, { backgroundColor: colors.surface }]}>
-                  <Feather name="user" size={18} color={colors.textSecondary} />
-                </View>
+                {item.counterpart?.profile_image ? (
+                  <Image source={{ uri: item.counterpart.profile_image }} style={styles.avatar} />
+                ) : (
+                  <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: colors.surface }]}>
+                    <Text style={[styles.avatarInitial, { color: colors.textSecondary, fontFamily: fonts.headingMedium }]}>
+                      {name.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
                 <View style={styles.rowInfo}>
                   <Text
                     numberOfLines={1}
                     style={[styles.rowName, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}
+                    testID={`barber-chats-name-${item.room.id}`}
                   >
-                    {title}
+                    {name}
+                    {serviceName ? (
+                      <Text
+                        style={[styles.rowService, { color: colors.textSecondary, fontFamily: fonts.body }]}
+                        testID={`barber-chats-service-${item.room.id}`}
+                      >
+                        {` · ${serviceName}`}
+                      </Text>
+                    ) : null}
                   </Text>
                   <Text
                     numberOfLines={1}
@@ -152,6 +164,7 @@ export default function ChatsScreen({ navigation }: Props) {
                         ? { color: colors.textPrimary, fontFamily: fonts.bodySemiBold }
                         : { color: colors.textSecondary, fontFamily: fonts.body },
                     ]}
+                    testID={`barber-chats-preview-${item.room.id}`}
                   >
                     {preview}
                   </Text>
@@ -201,11 +214,12 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24, // circular disc — half its own size, computed inline (spacing.ts convention)
-    alignItems: 'center',
-    justifyContent: 'center',
   },
+  avatarFallback: { alignItems: 'center', justifyContent: 'center' },
+  avatarInitial: { fontSize: 18 },
   rowInfo: { flex: 1, minWidth: 0 },
   rowName: { fontSize: 16 },
+  rowService: { fontSize: 12 },
   rowPreview: { fontSize: 12, marginTop: 3 },
   rowDate: { fontSize: 10 },
   unreadDot: { width: 8, height: 8, borderRadius: 4 },

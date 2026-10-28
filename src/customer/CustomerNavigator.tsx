@@ -39,11 +39,10 @@ export type CustomerStackParamList = {
     time: string;
     location: string;
   };
-  // Chat (build-order step 15-16): the Inbox thread row carries the room
-  // plus its already-loaded display context so the conversation screen
-  // never re-fetches what the list already knew. title = barber name,
-  // subtitle = service context (both best-effort strings, prepared by the
-  // Inbox row).
+  // Chat (build-order step 15-16): the Inbox row supplies an immediate
+  // display fallback; the conversation refreshes the participant-scoped
+  // identity for direct entry or stale list data. title = barber name or
+  // "Barber" fallback; subtitle = service context.
   Conversation: { room: ChatRoomRow; title: string; subtitle: string | null };
   // Review submission (build-order step 18): reached from a completed booking's
   // Past card on the Bookings tab. barberName/serviceName ride along (already

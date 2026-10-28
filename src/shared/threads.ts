@@ -2,18 +2,12 @@
  * Chat-thread view assembly shared by the customer Inbox tab and the barber
  * Chats tab. Pure — no I/O; each side's data layer feeds it RLS-scoped rows.
  *
- * `barber` is the counterpart lookup for the CUSTOMER side (via
- * barber_directory). The barber side has no counterpart read path yet
- * (users RLS is own-row-only — gap tracked for step 13-14 in CLAUDE.md), so
- * it passes an empty map and its threads carry `barber: null` by design.
+ * Counterpart identity comes from the narrow, participant-scoped
+ * `get_booking_counterparts` RPC. Both role apps use the same projection;
+ * neither widens direct reads from `users`.
  */
-import type {
-  BarberDirectoryRow,
-  BookingRow,
-  ChatRoomRow,
-  MessageRow,
-  ServiceRow,
-} from '../types';
+import type { BookingRow, ChatRoomRow, MessageRow, ServiceRow } from '../types';
+import type { ChatCounterpart } from './chatCounterparts';
 
 /**
  * One thread row: a chat room plus best-effort context. Every lookup field
@@ -23,7 +17,7 @@ import type {
  */
 export interface InboxThread {
   room: ChatRoomRow;
-  barber: BarberDirectoryRow | null;
+  counterpart: ChatCounterpart | null;
   booking: BookingRow | null;
   service: ServiceRow | null;
   lastMessage: MessageRow | null;
@@ -39,7 +33,7 @@ export function buildInboxThreads(
   rooms: ChatRoomRow[],
   messages: MessageRow[],
   bookingsById: Map<string, BookingRow>,
-  barbersById: Map<string, BarberDirectoryRow>,
+  counterpartsByBookingId: Map<string, ChatCounterpart>,
   servicesById: Map<string, ServiceRow>
 ): InboxThread[] {
   const lastMessageByRoom = new Map<string, MessageRow>();
@@ -53,7 +47,7 @@ export function buildInboxThreads(
     const lastMessage = lastMessageByRoom.get(room.id) ?? null;
     return {
       room,
-      barber: barbersById.get(room.barber_id) ?? null,
+      counterpart: counterpartsByBookingId.get(room.booking_id) ?? null,
       booking,
       service: booking ? (servicesById.get(booking.service_id) ?? null) : null,
       lastMessage,

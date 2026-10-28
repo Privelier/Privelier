@@ -5,11 +5,10 @@
  * channel-before-fetch, idempotent merge with the F2 reference bailout, F1
  * onRecovered refetch; honest pending-send bubbles, no fabricated state).
  *
- * Counterpart identity: the Chats list can only offer the service name
- * (users RLS is own-row-only), so this screen opens with that as its title
- * and upgrades to the CUSTOMER's real name once get_booking_counterparts
- * (migration 0012) resolves — best-effort, same as the Requests tab: an RPC
- * failure just keeps the fallback title.
+ * Counterpart identity: the Chats list supplies its best-effort customer
+ * name, and this screen independently refreshes it through the participant-
+ * scoped get_booking_counterparts RPC (migration 0012). A failure keeps the
+ * role-specific fallback while service context stays visible.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -321,9 +320,9 @@ function ConversationRoom({ route, navigation }: Props) {
   const showSpinner = loading && messages.length === 0;
   const showError = error !== null && messages.length === 0;
   const canSend = draft.trim().length > 0;
-  // Title upgrades to the customer's name; the fallback then becomes context.
+  // Name stays primary; service context never gets promoted into its slot.
   const headerTitle = counterpartName ?? title;
-  const headerSubtitle = counterpartName ? title : subtitle;
+  const headerSubtitle = subtitle;
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']} testID="barber-conversation-screen">
@@ -334,11 +333,11 @@ function ConversationRoom({ route, navigation }: Props) {
           testID="barber-conversation-back"
         />
         <View style={styles.headerText}>
-          <Text numberOfLines={1} style={styles.headerTitle}>
+          <Text numberOfLines={1} style={styles.headerTitle} testID="barber-conversation-title">
             {headerTitle}
           </Text>
           {headerSubtitle ? (
-            <Text numberOfLines={1} style={styles.headerSubtitle}>
+            <Text numberOfLines={1} style={styles.headerSubtitle} testID="barber-conversation-service">
               {headerSubtitle}
             </Text>
           ) : null}

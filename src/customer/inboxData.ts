@@ -7,12 +7,13 @@
  * every read to rooms the caller participates in, so no explicit user-id
  * filters are needed.
  *
- * Enrichment (barber identity via barber_directory, booking/service
+ * Enrichment (counterpart identity via the 0012 RPC, booking/service
  * context via bookings+services) is best-effort, same pattern as
  * bookingsData: a missing lookup renders a calm fallback, never an error.
  */
 import { supabase } from '../../lib/supabase';
-import type { BarberDirectoryRow, BookingRow, ChatRoomRow, MessageRow, ServiceRow } from '../types';
+import type { BookingRow, ChatRoomRow, MessageRow, ServiceRow } from '../types';
+import { fetchBookingCounterparts } from '../shared/chatCounterparts';
 import { buildInboxThreads } from '../shared/threads';
 import { mapPostgrestError } from './errors';
 import type { OwnInboxViewResult } from './types';
@@ -36,9 +37,7 @@ export async function fetchOwnInboxView(): Promise<OwnInboxViewResult> {
 
   const roomIds = rooms.map((r) => r.id);
   const bookingIds = [...new Set(rooms.map((r) => r.booking_id))];
-  const barberIds = [...new Set(rooms.map((r) => r.barber_id))];
-
-  const [messagesResult, bookingsResult, barbersResult] = await Promise.all([
+  const [messagesResult, bookingsResult, counterpartsByBookingId] = await Promise.all([
     supabase
       .from('messages')
       .select('*')
@@ -46,14 +45,11 @@ export async function fetchOwnInboxView(): Promise<OwnInboxViewResult> {
       .order('created_at', { ascending: false })
       .limit(MESSAGES_SCAN_LIMIT),
     supabase.from('bookings').select('*').in('id', bookingIds),
-    supabase.from('barber_directory').select('*').in('id', barberIds),
+    fetchBookingCounterparts(bookingIds),
   ]);
 
   const bookingsById = new Map<string, BookingRow>();
   for (const row of (bookingsResult.data as BookingRow[]) ?? []) bookingsById.set(row.id, row);
-  const barbersById = new Map<string, BarberDirectoryRow>();
-  for (const row of (barbersResult.data as BarberDirectoryRow[]) ?? []) barbersById.set(row.id, row);
-
   const servicesById = new Map<string, ServiceRow>();
   const serviceIds = [...new Set([...bookingsById.values()].map((b) => b.service_id))];
   if (serviceIds.length > 0) {
@@ -65,7 +61,7 @@ export async function fetchOwnInboxView(): Promise<OwnInboxViewResult> {
     rooms,
     (messagesResult.data as MessageRow[]) ?? [],
     bookingsById,
-    barbersById,
+    counterpartsByBookingId,
     servicesById
   );
   return { status: 'ok', threads };

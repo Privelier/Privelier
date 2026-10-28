@@ -48,6 +48,7 @@ import { useTheme } from '../../theme/useTheme';
 import { pressOpacity } from '../../theme/motion';
 import { Notice } from '../../shared/components/Notice';
 import { BackButton } from '../../shared/components/ScreenBackHeader';
+import { fetchBookingCounterpart } from '../../shared/chatCounterparts';
 import type { Palette } from '../../theme/colors';
 import type { MessageRow } from '../../types';
 import type { CustomerStackParamList } from '../CustomerNavigator';
@@ -104,6 +105,7 @@ function ConversationRoom({ route, navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [focused, setFocused] = useState(false);
   const [myId, setMyId] = useState<string | null>(null);
+  const [counterpartName, setCounterpartName] = useState<string | null>(null);
   const [hasEarlier, setHasEarlier] = useState(false);
   const [earliestCursor, setEarliestCursor] = useState<ConversationCursor | null>(null);
   const [loadingEarlier, setLoadingEarlier] = useState(false);
@@ -129,6 +131,16 @@ function ConversationRoom({ route, navigation }: Props) {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    void fetchBookingCounterpart(room.booking_id).then((counterpart) => {
+      if (active && counterpart) setCounterpartName(counterpart.name);
+    });
+    return () => {
+      active = false;
+    };
+  }, [room.booking_id]);
 
   const loadInitial = useCallback(async () => {
     setLoading(true);
@@ -328,6 +340,7 @@ function ConversationRoom({ route, navigation }: Props) {
   const showSpinner = loading && messages.length === 0;
   const showError = error !== null && messages.length === 0;
   const canSend = draft.trim().length > 0;
+  const headerTitle = counterpartName ?? title;
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']} testID="customer-conversation-screen">
@@ -338,11 +351,11 @@ function ConversationRoom({ route, navigation }: Props) {
           testID="customer-conversation-back"
         />
         <View style={styles.headerText}>
-          <Text numberOfLines={1} style={styles.headerTitle}>
-            {title}
+          <Text numberOfLines={1} style={styles.headerTitle} testID="customer-conversation-title">
+            {headerTitle}
           </Text>
           {subtitle ? (
-            <Text numberOfLines={1} style={styles.headerSubtitle}>
+            <Text numberOfLines={1} style={styles.headerSubtitle} testID="customer-conversation-service">
               {subtitle}
             </Text>
           ) : null}
