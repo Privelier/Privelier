@@ -15,6 +15,6 @@ export function useAttachLookReference(created: BookingRow | null, reference: Lo
   useEffect(() => {
     if (!created || !reference || attachedFor.current === created.id) return;
     attachedFor.current = created.id;
-    void attachLookReference({ bookingId: created.id, lookId: reference.lookId, style: reference.style });
+    void attachLookReference({ bookingId: created.id, lookId: reference.lookId, style: reference.style, photoPath: reference.photoPath });
   }, [created, reference]);
 }

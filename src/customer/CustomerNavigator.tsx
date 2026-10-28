@@ -20,10 +20,14 @@ import NotificationCenterScreen from '../shared/screens/NotificationCenterScreen
 import LiveTripScreen from './screens/LiveTripScreen';
 import LookConfirmScreen from './screens/LookConfirmScreen';
 import LookDetailScreen from './screens/LookDetailScreen';
+import LookSearchScreen from './screens/LookSearchScreen';
 import type { LiveTripContext } from './liveTripData';
 
-/** Looks S3: the look a booking is made for, attached after creation. */
-export type LookReferenceParam = { lookId: string; style: string };
+/**
+ * Looks S3/S4: what a booking is made for, attached after creation: a feed
+ * look, or a searched style with an optional private reference photo.
+ */
+export type LookReferenceParam = { lookId: string | null; style: string; photoPath?: string | null };
 
 export type CustomerStackParamList = {
   CustomerTabs: NavigatorScreenParams<CustomerTabParamList> | undefined;
@@ -86,6 +90,8 @@ export type CustomerStackParamList = {
   LookConfirm: { bookingId: string };
   // Looks S3: one published look with its proof chain (from the Discover rail).
   LookDetail: { lookId: string };
+  // Looks S4: style, day and time window with instant matches.
+  LookSearch: { style?: string } | undefined;
 };
 
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
@@ -130,6 +136,7 @@ export default function CustomerNavigator({ onExit }: { onExit: () => void }) {
           <Stack.Screen name="LiveTrip" component={LiveTripScreen} options={{ animation: reduceMotion ? 'fade' : 'slide_from_bottom' }} />
           <Stack.Screen name="LookConfirm" component={LookConfirmScreen} />
           <Stack.Screen name="LookDetail" component={LookDetailScreen} />
+          <Stack.Screen name="LookSearch" component={LookSearchScreen} />
         </Stack.Navigator>
       </UnreadProvider>
     </RoleExitProvider>

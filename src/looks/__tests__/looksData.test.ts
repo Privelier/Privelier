@@ -12,6 +12,10 @@ import {
   fetchLookForBooking,
   fetchLookStyles,
   mapLooksError,
+  matchLook,
+  removeReferencePhoto,
+  signReferencePhoto,
+  uploadReferencePhoto,
   removeLookPhoto,
   resetLookStylesCache,
   saveLookDraft,
@@ -31,6 +35,7 @@ const mockRemove = jest.fn();
 const mockSign = jest.fn();
 jest.mock('../../../lib/supabase', () => ({
   supabase: {
+    auth: { getSession: jest.fn() },
     rpc: jest.fn(),
     from: jest.fn(),
     storage: {
@@ -249,5 +254,48 @@ describe('feed and references (S3)', () => {
   it('reads the look service, or null when the barber removed it', async () => {
     mockFrom.mockReturnValueOnce(builder({ data: null, error: null }));
     await expect(fetchBookableService('s')).resolves.toBeNull();
+  });
+});
+
+describe('look search (S4)', () => {
+  it('searches one window and returns the matches', async () => {
+    mockRpc.mockResolvedValueOnce({ data: [{ barber_id: 'x', first_free_time: '18:30:00' }], error: null });
+    const result = await matchLook({ style: 'taper', date: '2026-10-30', from: '18:00:00', to: '21:00:00' });
+    expect(mockRpc).toHaveBeenCalledWith('match_look', { p_style: 'taper', p_date: '2026-10-30', p_from: '18:00:00', p_to: '21:00:00' });
+    expect(result).toEqual({ status: 'ok', value: [{ barber_id: 'x', first_free_time: '18:30:00' }] });
+  });
+
+  it('uploads a reference photo into the client folder only when signed in', async () => {
+    (supabase.auth.getSession as jest.Mock).mockResolvedValueOnce({ data: { session: null } });
+    await expect(uploadReferencePhoto('file:///me.jpg')).resolves.toMatchObject({ code: 'forbidden' });
+    expect(mockUpload).not.toHaveBeenCalled();
+
+    (supabase.auth.getSession as jest.Mock).mockResolvedValueOnce({ data: { session: { user: { id: 'me' } } } });
+    mockUpload.mockResolvedValueOnce({ error: null });
+    const result = await uploadReferencePhoto('file:///me.jpg');
+    expect(result.status === 'ok' && result.value).toMatch(/^me\/ref-\d+-[0-9a-f]{24}\.jpg$/);
+    expect(supabase.storage.from).toHaveBeenLastCalledWith('look-references');
+  });
+
+  it('signs a reference photo from its own bucket, null when signing fails', async () => {
+    mockSign.mockResolvedValueOnce({ data: [{ path: 'me/ref.jpg', signedUrl: 'https://signed/ref' }], error: null });
+    await expect(signReferencePhoto('me/ref.jpg')).resolves.toBe('https://signed/ref');
+    expect(supabase.storage.from).toHaveBeenLastCalledWith('look-references');
+    mockSign.mockResolvedValueOnce({ data: null, error: { message: 'denied' } });
+    await expect(signReferencePhoto('me/ref.jpg')).resolves.toBeNull();
+  });
+
+  it('removes a reference photo the client took back', async () => {
+    mockRemove.mockResolvedValueOnce({ error: null });
+    await removeReferencePhoto('me/ref.jpg');
+    expect(mockRemove).toHaveBeenCalledWith(['me/ref.jpg']);
+  });
+
+  it('sends the photo path only when there is one, so 0065 still matches', async () => {
+    mockRpc.mockResolvedValue({ data: {}, error: null });
+    await attachLookReference({ bookingId: 'b', lookId: null, style: 'taper', photoPath: 'me/ref.jpg' });
+    expect(mockRpc).toHaveBeenLastCalledWith('attach_look_reference', { p_booking_id: 'b', p_look_id: null, p_style: 'taper', p_photo_path: 'me/ref.jpg' });
+    await attachLookReference({ bookingId: 'b', lookId: 'l', style: 'taper' });
+    expect(mockRpc).toHaveBeenLastCalledWith('attach_look_reference', { p_booking_id: 'b', p_look_id: 'l', p_style: 'taper' });
   });
 });

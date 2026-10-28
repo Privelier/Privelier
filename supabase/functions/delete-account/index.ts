@@ -19,6 +19,9 @@
 // customer but live in the BARBER's folder, so their paths are read before
 // step 1 (the rows cascade away with the account) and removed after it.
 // Before 0063 is applied that read fails and is skipped.
+// A customer's own reference photos (migration 0066, `look-references`)
+// live in their own folder and go with step 2; before 0066 that bucket is
+// missing and its cleanup only logs.
 //
 // Keys come from the function environment that Supabase injects, never from
 // the app. SUPABASE_PUBLISHABLE_KEYS / SUPABASE_SECRET_KEYS are JSON
@@ -28,7 +31,7 @@
 // eslint-disable-next-line import/no-unresolved
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-const BUCKETS = ['verification-docs', 'portfolio', 'looks'] as const;
+const BUCKETS = ['verification-docs', 'portfolio', 'looks', 'look-references'] as const;
 
 function json(status: number, body: Record<string, unknown>): Response {
   return new Response(JSON.stringify(body), {

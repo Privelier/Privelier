@@ -20,7 +20,7 @@ import { readNormalizedImage } from '../shared/imageUpload';
 import { uniqueObjectName } from '../shared/objectNames';
 import { untypedRpc, untypedTable } from '../shared/untypedRpc';
 import type { ServiceRow } from '../types';
-import type { BarberLookStat, FeedLook, Look, LookPhoto, LookReference, LookStyle, LookVerdict } from './types';
+import type { BarberLookStat, FeedLook, Look, LookMatch, LookPhoto, LookReference, LookStyle, LookVerdict } from './types';
 
 const LOOKS_BUCKET = 'looks';
 const SIGNED_URL_SECONDS = 600;
@@ -188,12 +188,16 @@ export async function takeBackLook(look: Look, mode: 'hide' | 'withdraw'): Promi
 }
 
 /** Short-lived signed URLs by path; a failure leaves the map empty. */
-export async function signLookPhotos(paths: string[]): Promise<Map<string, string>> {
+export function signLookPhotos(paths: string[]): Promise<Map<string, string>> {
+  return signPaths(LOOKS_BUCKET, paths);
+}
+
+async function signPaths(bucket: string, paths: string[]): Promise<Map<string, string>> {
   const urls = new Map<string, string>();
   if (paths.length === 0) return urls;
-  const { data, error } = await supabase.storage.from(LOOKS_BUCKET).createSignedUrls(paths, SIGNED_URL_SECONDS);
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrls(paths, SIGNED_URL_SECONDS);
   if (error) {
-    devWarn('[looks] signLookPhotos', error);
+    devWarn(`[looks] sign ${bucket}`, error);
     return urls;
   }
   for (const item of data ?? []) {
@@ -238,20 +242,25 @@ export async function fetchLookDetail(lookId: string): Promise<LooksResult<FeedL
   return ok(Array.isArray(data) && data.length > 0 ? data[0] : null);
 }
 
-/** Link a just-created pending booking to the look it was made for. */
-export async function attachLookReference(input: { bookingId: string; lookId: string | null; style: string }): Promise<LooksResult<null>> {
+/** Link a just-created pending booking to the look (and photo) it was made for. */
+export async function attachLookReference(input: { bookingId: string; lookId: string | null; style: string; photoPath?: string | null }): Promise<LooksResult<null>> {
   const { error } = await untypedRpc<LookReference>('attach_look_reference', {
     p_booking_id: input.bookingId,
     p_look_id: input.lookId,
     p_style: input.style,
+    // Sent only when present, so the call also matches the 0065 signature.
+    ...(input.photoPath ? { p_photo_path: input.photoPath } : {}),
   });
   if (error) return mapLooksError('attachLookReference', error);
   return ok(null);
 }
 
-/** The look a booking was made for (booking participants only). */
+/**
+ * The look a booking was made for (booking participants only). `*` because
+ * photo_path exists from 0066 on; the read keeps working on 0065 alone.
+ */
 export async function fetchLookReference(bookingId: string): Promise<LooksResult<LookReference | null>> {
-  const { data, error } = await untypedTable('look_references').select('booking_id, look_id, style').eq('booking_id', bookingId).maybeSingle();
+  const { data, error } = await untypedTable('look_references').select('*').eq('booking_id', bookingId).maybeSingle();
   if (error) return mapLooksError('fetchLookReference', error);
   return ok((data as LookReference | null) ?? null);
 }
@@ -281,6 +290,49 @@ export async function fetchBookableService(serviceId: string): Promise<ServiceRo
   const { data, error } = await supabase.from('services').select('*').eq('id', serviceId).maybeSingle();
   if (error) devWarn('[looks] fetchBookableService', error);
   return (data as ServiceRow | null) ?? null;
+}
+
+const REFERENCE_BUCKET = 'look-references';
+
+/** Upload the client's own reference photo into their private folder. */
+export async function uploadReferencePhoto(fileUri: string): Promise<LooksResult<string>> {
+  const { data } = await supabase.auth.getSession();
+  const customerId = data.session?.user.id;
+  if (!customerId) return looksFailure('forbidden');
+  const path = `${customerId}/${uniqueObjectName('ref')}`;
+  let image: Awaited<ReturnType<typeof readNormalizedImage>>;
+  try {
+    image = await readNormalizedImage(fileUri);
+  } catch (err) {
+    devWarn('[looks] uploadReferencePhoto.read', err);
+    return looksFailure('network');
+  }
+  const { error } = await supabase.storage.from(REFERENCE_BUCKET).upload(path, image.bytes, { contentType: image.contentType });
+  if (error) return mapLooksError('uploadReferencePhoto', { message: error.message });
+  return ok(path);
+}
+
+/** A short-lived URL for a booking's reference photo (its client or booked barber). */
+export async function signReferencePhoto(path: string): Promise<string | null> {
+  return (await signPaths(REFERENCE_BUCKET, [path])).get(path) ?? null;
+}
+
+/** Remove a reference photo the client took back before booking (best effort). */
+export async function removeReferencePhoto(path: string): Promise<void> {
+  const { error } = await supabase.storage.from(REFERENCE_BUCKET).remove([path]);
+  if (error) devWarn('[looks] removeReferencePhoto', error);
+}
+
+/** Barbers with proof in the style who are free in the window (0066). */
+export async function matchLook(input: { style: string; date: string; from: string; to: string }): Promise<LooksResult<LookMatch[]>> {
+  const { data, error } = await untypedRpc<LookMatch[]>('match_look', {
+    p_style: input.style,
+    p_date: input.date,
+    p_from: input.from,
+    p_to: input.to,
+  });
+  if (error) return mapLooksError('matchLook', error);
+  return ok(Array.isArray(data) ? data : []);
 }
 
 /** Test seam: forget the cached style list. */

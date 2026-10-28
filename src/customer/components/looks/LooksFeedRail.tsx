@@ -4,8 +4,8 @@
  * feed say "Portfolio, not verified" and open the barber's profile. Hidden
  * entirely until the feed answered, so Discover never shows a broken rail.
  *
- * Maestro contract: customer-home-looks / -style-all / -style-{key} /
- * -tile-{lookId} / -portfolio-{id}.
+ * Maestro contract: customer-home-looks / -search / -style-all /
+ * -style-{key} / -tile-{lookId} / -portfolio-{id}.
  */
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
@@ -20,12 +20,13 @@ import { useLooksFeed } from '../../hooks/useLooksFeed';
 
 const TILE_WIDTH = 148;
 
-export function LooksFeedRail({ barbers, cityName, de, onOpenLook, onOpenBarber }: {
+export function LooksFeedRail({ barbers, cityName, de, onOpenLook, onOpenBarber, onSearch }: {
   barbers: readonly BarberDirectoryRow[];
   cityName: string | null;
   de: boolean;
   onOpenLook: (lookId: string) => void;
   onOpenBarber: (barberId: string) => void;
+  onSearch: (style: string | null) => void;
 }) {
   const { colors, fonts } = useTheme();
   const feed = useLooksFeed(barbers.map((barber) => barber.id));
@@ -42,6 +43,15 @@ export function LooksFeedRail({ barbers, cityName, de, onOpenLook, onOpenBarber 
       <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: fonts.body }]}>
         {de ? 'Von Kunden als ihr Schnitt bestätigt.' : 'Confirmed by clients as their cut.'}
       </Text>
+      <Pressable
+        onPress={() => onSearch(feed.style)}
+        accessibilityRole="button"
+        accessibilityLabel={de ? 'Look suchen: wer ist wann frei' : 'Find a look: who is free when'}
+        testID="customer-home-looks-search"
+        style={({ pressed }) => [styles.search, { opacity: pressed ? pressOpacity.soft : 1 }]}
+      >
+        <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium, fontSize: 14 }}>{de ? 'Look suchen, wer ist wann frei' : 'Find a look, who is free when'}</Text>
+      </Pressable>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
         <GlassChip label={de ? 'Alle' : 'All'} selected={feed.style === null} onPress={() => feed.setStyle(null)} size="compact" testID="customer-home-looks-style-all" />
         {feed.styles.map((style) => (
@@ -102,4 +112,5 @@ const styles = StyleSheet.create({
   fill: { width: '100%', height: '100%' },
   name: { fontSize: 14, marginTop: space.sm },
   badge: { fontSize: 12, marginTop: 2 },
+  search: { minHeight: 44, justifyContent: 'center', paddingHorizontal: space.xl },
 });

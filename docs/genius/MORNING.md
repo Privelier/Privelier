@@ -24,8 +24,8 @@ Details: docs/genius/LOOKS_REVIEW.md
 | B Prüfung LOOKS_REVIEW.md, LOOKS.md verbessert | fertig | 8846577 |
 | C S1 Feature-Schalter | fertig, Tests grün | f6797c7 |
 | C S2 Beweis-Look und Look-Treffer | fertig, Tests grün | 7ee903c |
-| C S3 Looks-Feed, Look-Detail, "Diesen Look" | in Arbeit | offen |
-| C S4 Look-Suche | offen | offen |
+| C S3 Looks-Feed, Look-Detail, "Diesen Look" | fertig, Tests grün | f256166 |
+| C S4 Look-Suche mit sofortigen Treffern | fertig, Tests grün | siehe `git log` ("Looks S4") |
 | C S5 Look-Wunsch und Angebote | offen | offen |
 | C S6 Look-Pass | offen | offen |
 
@@ -52,17 +52,19 @@ Danach Pull Request `night/2026-10-28` nach `main`, CI läuft dort mit englische
 | 0062_feature_flags | Neue Tabellen `private.feature_flags`, `private.feature_flag_users`, Funktionen `private.flag_enabled`, `public.my_feature_flags`. Schalter `looks` ist aus | niedrig, rein additiv, nicht per API erreichbar | supabase/rollbacks/0062_feature_flags.sql |
 | 0063_looks_proof_and_match | Neue Tabellen `looks`, `look_photos`, `look_feedback`, `look_styles`, `private.looks_settings`; neuer **privater** Bucket `looks` (10 MB, nur Bilder) mit drei neuen Storage-Policies; 8 neue Funktionen | mittel: neue Storage-Policies und RLS. Ohne Schalter liest niemand etwas | supabase/rollbacks/0063_looks_proof_and_match.sql (löscht alle Looks; Bucket vorher im Dashboard leeren) |
 | 0064_looks_reports_and_notifications | **Ändert bestehende Objekte**: CHECK-Constraints von `notifications` und `user_reports`, ersetzt `notification_push_copy` und `private.resolve_report_target` (bestehende Texte identisch, nur ergänzt), neuer Trigger auf `looks` | mittel: berührt die Benachrichtigungen aller Nutzer; die bestehenden Fälle sind unverändert übernommen | supabase/rollbacks/0064_looks_reports_and_notifications.sql (löscht look_confirm-Benachrichtigungen, behält Look-Meldungen als Nutzer-Meldungen) |
+| 0065_looks_feed_and_reference | Neue Tabelle `look_references` (welcher Look zu welcher Buchung), Funktionen `looks_feed` und `attach_look_reference`, ersetzt `private.can_view_look_photo` (veröffentlichte Looks für Kunden sichtbar) | niedrig bis mittel: erweitert die Foto-Sicht auf veröffentlichte Looks, nur für Kunden mit Schalter, gleiche Stadt, nie über eine Blockierung | supabase/rollbacks/0065_looks_feed_and_reference.sql (löscht nur die Look-Verweise, Buchungen bleiben) |
+| 0066_looks_search | Neue Spalte `look_references.photo_path`, zwei Einstellungen in `private.looks_settings`, neuer **privater** Bucket `look-references` (10 MB, nur Bilder) mit drei Storage-Policies, Funktion `match_look`, `attach_look_reference` bekommt das optionale Foto (alte Version wird ersetzt) | mittel: neue Storage-Policies; der gebuchte Barber sieht das Referenzfoto nur, solange die Anfrage offen oder angenommen ist | supabase/rollbacks/0066_looks_search.sql (vor 0065 zurückrollen; Bucket vorher im Dashboard leeren) |
 
-Vorgehen (Befehle aus `tools/db/supa.py`, brauchen `SUPABASE_ACCESS_TOKEN`):
+Vorgehen (Befehle aus `tools/db/supa.py`, brauchen `SUPABASE_ACCESS_TOKEN`). `<alle>` steht für die fünf Dateien in dieser Reihenfolge:
+`supabase/migrations/0062_feature_flags.sql supabase/migrations/0063_looks_proof_and_match.sql supabase/migrations/0064_looks_reports_and_notifications.sql supabase/migrations/0065_looks_feed_and_reference.sql supabase/migrations/0066_looks_search.sql`
 
 1. Trockenlauf, alles in einer Transaktion, danach ROLLBACK:
-   `python tools/db/supa.py dry-run supabase/migrations/0062_feature_flags.sql supabase/migrations/0063_looks_proof_and_match.sql supabase/migrations/0064_looks_reports_and_notifications.sql`
-2. pgTAP-Tests (ebenfalls zurückgerollt):
-   `python tools/db/supa.py test --with supabase/migrations/0062_feature_flags.sql -- supabase/tests/feature_flags.test.sql`
-   `python tools/db/supa.py test --with supabase/migrations/0062_feature_flags.sql supabase/migrations/0063_looks_proof_and_match.sql supabase/migrations/0064_looks_reports_and_notifications.sql -- supabase/tests/looks_proof_and_match.test.sql`
-   und die bestehende Suite: `python tools/db/supa.py test --with <alle drei> -- supabase/tests/authorization_matrix.test.sql`
+   `python tools/db/supa.py dry-run <alle>`
+2. pgTAP-Tests (ebenfalls zurückgerollt), jede Datei einzeln. Der genaue Befehl steht im Kopf jeder Testdatei (jede Scheibe ist gegen ihren eigenen Migrationsstand geschrieben):
+   `supabase/tests/feature_flags.test.sql` (0062), `looks_proof_and_match.test.sql` (0062 bis 0064), `looks_feed_and_reference.test.sql` (0062 bis 0065), `looks_search.test.sql` (0062 bis 0066).
+   Danach die bestehenden Suiten mit `--with <alle>`: `authorization_matrix.test.sql` und `abuse_limits_and_account_deletion.test.sql`. Die Looks-Tests von S2 und S3 wurden nie gegen den vollen Stand 0062 bis 0066 geprüft; einmal mit `--with <alle>` laufen lassen zeigt, ob eine spätere Scheibe eine frühere Annahme verändert
 3. Erst wenn alles grün ist: anwenden, in dieser Reihenfolge, mit demselben Namen wie die Datei (AGENTS.md-Protokoll), danach `get_advisors` (security) und `npm run db:types`.
-4. Edge Function `delete-account` neu deployen (sonst bleiben Look-Fotos gelöschter Konten im Speicher liegen, unsichtbar, aber gespeichert).
+4. Edge Function `delete-account` neu deployen (sonst bleiben Look-Fotos und Referenzfotos gelöschter Konten im Speicher liegen, unsichtbar, aber gespeichert).
 
 ### c) Feature-Schalter einschalten
 
@@ -95,6 +97,8 @@ Look-Fotos ergänzen und den Einwilligungstext freigeben (Version
 | L8 neu | Kamera direkt in der App | später, braucht Berechtigung und neuen Build |
 | L9 neu | Schutz gegen Zweitkonten | für den Start: Kundenbestätigung, Mindestanzahl, Melden |
 | L10 neu | Wie lange bleibt ein unbeantworteter Entwurf? | 14 Tage |
+| L11 neu (S4) | Referenzfoto hochgeladen, aber nie gebucht | bleibt privat im eigenen Ordner des Kunden (höchstens 30 pro Kunde, gelöscht mit dem Konto). Empfehlung: später ein nächtlicher Aufräum-Job in `tools/automation` für Fotos ohne Buchung älter als 7 Tage |
+| L12 neu (S4) | Wie viele Tage und welche Zeitfenster bietet die Suche an? | 7 Tage, 4 feste Fenster (9 bis 12, 12 bis 15, 15 bis 18, 18 bis 21). Der Server erlaubt bis 30 Tage und Fenster bis 12 Stunden (einstellbar in `private.looks_settings`) |
 | neu | `tsconfig.json` soll `artifacts/` ausschließen wie Jest und ESLint | ja, dann ist `npm run check` lokal wieder aussagekräftig (heute Nacht nicht geändert: Regel "Baseline aufzeichnen, nicht reparieren") |
 
 ## 5. Was du am Handy testen sollst
@@ -110,7 +114,10 @@ Development Build reicht, `npm start` lädt den neuen JavaScript-Stand.
 | "Ist das dein Schnitt?" | Kunde | Push und Eintrag in der Glocke, Fotos sichtbar, Ja, Zeigen: "Dein Look wird gezeigt" |
 | Nicht mehr zeigen, Zurückziehen | Kunde | Status wechselt, Fotos verschwinden |
 | Look-Treffer | Kunde | Bewertung schreiben: Frage "Hat er deinen Look getroffen?" mit vorgewähltem Stil |
-| Kontolöschung | Testkunde | Look verschwindet (Dateien erst nach Neu-Deploy der Edge Function) |
+| Echte Looks in Discover (S3) | zweiter Kunde, gleiche Stadt | Leiste "Echte Looks", Stil filtern, Look öffnen: Beweiskette, "Diesen Look buchen" führt in die normale Buchung; der Barber sieht in der Anfrage "Gebucht über deinen Look" |
+| Look suchen (S4) | Kunde | In der Leiste "Look suchen", Stil, Tag, Fenster, optional eigenes Foto, "Freie Barber finden": Barber mit Beweis und erster freier Zeit, nie eine Entfernung. "Um HH:MM buchen" springt direkt zur Adresse |
+| Referenzfoto (S4) | Barber | Die Anfrage aus der Suche zeigt "Gebucht über die Look-Suche" und das Foto des Kunden; nach Ablehnen ist das Foto weg |
+| Kontolöschung | Testkunde | Look verschwindet (Dateien und Referenzfotos erst nach Neu-Deploy der Edge Function) |
 
 ## 6. Wichtig vor dem Start
 

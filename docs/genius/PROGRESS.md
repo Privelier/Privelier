@@ -34,19 +34,33 @@ Resume point for the next session. Updated after every item.
   labelled portfolio fill, LookDetail screen with proof chain and hit rate,
   lookReference threaded through BookingDateTime/Location/Confirm (absent =
   unchanged flow), barber reference note, Maestro flow. Gate: 955 jest tests,
-  0 new failures.
+  0 new failures. Commit f256166.
+
+- C S4 look search: 0066 + rollback + pgTAP (match_look: proof in the style,
+  free in the window by the same rule as validate_booking_slot incl. the
+  30-minute travel buffer, same city, no block, never a location; private
+  `look-references` bucket, owner upload, booked barber reads only while the
+  request is pending or accepted; attach_look_reference gains the optional
+  photo). delete-account also empties the client's `look-references` folder.
+  Client: matchLook / uploadReferencePhoto / signReferencePhoto, LookSearch
+  screen (style, 7 days, 4 windows, optional photo, instant matches, "Book at
+  HH:MM" straight into the address step), "Find a look" on the Discover
+  rail, barber reference note shows "booked through look search" and the
+  photo. Maestro flow customer-look-search.yaml. Gate: 970 jest tests, 0 new
+  failures. Commit: see git log ("Looks S4").
 
 ## In progress
 
-- C S4 look search: 0066 + rollback written (match_look, look-references
-  bucket, attach_look_reference with photo). Next: pgTAP test, data layer,
-  LookSearch screen (style, day, window, optional photo, instant matches,
-  book straight into the address step), entry from the Discover rail,
-  Maestro flow.
+- C S5 look wish and offers: not started. Plan: 0067 (look_wishes,
+  look_wish_offers, notifications.booking_id nullable + wish/offer types,
+  reports and denylist for offer notes, rate limits), create_wish,
+  offer_for_wish, accept_offer(offer, booking) linking a booking created by
+  the unchanged create_booking; customer "Send a wish" from an empty search
+  result, offers list; barber "Wishes in your city" with offer form.
 
 ## Next
 
-- S4 look search, S5 wish and offers, S6 look pass.
+- S5 wish and offers, S6 look pass, then LOOKS.md "how to switch it on".
 
 ## Check baseline (2026-10-28, origin/main 501f7f2, this machine)
 
