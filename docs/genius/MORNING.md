@@ -175,5 +175,5 @@ Stand für eine neue Sitzung: docs/genius/PROGRESS.md.
 | Supabase-MCP | Hat sich heute Nacht nicht verbunden. Keine Live-Abfrage möglich, alles beruht auf den Migrationsdateien |
 | `npm run check` lokal | Bricht beim ersten Schritt ab: 6 Typfehler im nicht versionierten Ordner `artifacts/privelier-rebuild/`. Jest hat auf diesem Rechner 60 Baseline-Fehler, alle wegen deutscher Locale und Zeitzone (CI läuft en-US/UTC). Liste: docs/genius/jest-baseline-failures.txt, Prüfskript: docs/genius/night_check.py |
 | Nicht gesichert | `.codex-eas-project-check/` (350-MB-APK und ein Screenshot) liegt weiter ungetrackt auf der Platte, zu groß für GitHub |
-| Nicht erlaubt in dieser Sitzung | `git config`, `git ls-tree`, Schreiben außerhalb des Repos; nichts davon wurde umgangen |
+| Nicht erlaubt in dieser Sitzung | `git config`, `git ls-tree`, Schreiben außerhalb des Repos, `graphify update .` (braucht eine Freigabe); nichts davon wurde umgangen. Der Wissensgraph in `graphify-out/` ist nur lokal und auf dem Stand vor den Looks: einmal `graphify update .` ausführen |
 | Untypisierter Zugriff | `src/shared/untypedRpc.ts` überbrückt, bis die Migrationen angewendet sind. Danach `npm run db:types` und die Aufrufe auf `supabase.rpc` umstellen |

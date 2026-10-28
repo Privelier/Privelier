@@ -133,4 +133,5 @@ failures, knip, jscpd and madge green.
   the staged migrations inside a rolled-back transaction on the live project.
   That is a founder decision (night rule: no writes to the live database).
 - `git config`, `git ls-tree` and writes outside the repo are not permitted in
-  this session.
+  this session. `graphify update .` needs an approval that nobody can give
+  at night, so graphify-out/ (gitignored, local) predates the Looks work.
