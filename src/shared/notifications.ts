@@ -7,7 +7,8 @@ export type NotificationEventType =
   | 'booking_status'
   | 'trip_started'
   | 'trip_arriving'
-  | 'trip_arrived';
+  | 'trip_arrived'
+  | 'look_confirm';
 export type NotificationChannelKind = 'notification-badge' | 'notifications';
 
 let notificationChannelSequence = 0;
@@ -63,6 +64,12 @@ export function notificationCopy(
     return isGerman
       ? { title: 'Dein Barber ist da', body: `${name} ist an deiner Adresse angekommen.` }
       : { title: 'Your barber has arrived', body: `${name} has arrived at your address.` };
+  }
+  // Looks (migration 0064): the barber captured the client's result.
+  if (row.event_type === 'look_confirm') {
+    return isGerman
+      ? { title: 'Ist das dein Schnitt?', body: `${name} hat das Ergebnis deines Termins festgehalten. Bestätige es oder lehne ab.` }
+      : { title: 'Is this your cut?', body: `${name} captured the result of your appointment. Confirm it or decline.` };
   }
   if (row.event_type === 'new_request') {
     return isGerman

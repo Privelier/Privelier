@@ -15,12 +15,14 @@ import { ConfirmSheet } from '../../shared/components/ConfirmSheet';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { LoadOlderBookings } from '../../shared/components/LoadOlderBookings';
 import { RetryNotice } from '../../shared/components/RetryNotice';
+import { useFeatureFlag } from '../../shared/featureFlags';
 import { getAppLanguage } from '../../shared/locale';
 import { byId } from '../../shared/lookup';
 import { CelebrationOverlay } from '../../shared/motion/CelebrationOverlay';
 import { useTabBarClearance } from '../../shared/navigation/tabBarClearance';
 import { useTheme } from '../../theme/useTheme';
 import type { BookingRow } from '../../types';
+import { LookCaptureEntry } from '../components/looks/LookCaptureEntry';
 import { HistoryToggle, RequestActions, RequestCard, SectionHeader } from '../components/requests/RequestCard';
 import { useRequestsStyles } from '../components/requests/requestsStyles';
 import { useBarberRequests } from '../hooks/useBarberRequests';
@@ -41,6 +43,7 @@ export default function RequestsScreen() {
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const data = useBarberRequests(de);
+  const looksOn = useFeatureFlag('looks');
   const { bookings, servicesById, counterpartsById, loading, error, load, runTransition } = data;
 
   const today = localDateKey(new Date());
@@ -144,6 +147,21 @@ export default function RequestsScreen() {
               navigation.navigate('Trip', { booking: selected, customerName: customerNameOf(selected), serviceName: serviceNameOf(selected) });
             }}
           />
+          {looksOn && selected.status === 'completed' ? (
+            <LookCaptureEntry
+              bookingId={selected.id}
+              de={de}
+              onOpen={() => {
+                setSelectedId(null);
+                navigation.navigate('LookCapture', {
+                  bookingId: selected.id,
+                  barberId: selected.barber_id,
+                  customerName: customerNameOf(selected),
+                  serviceName: serviceNameOf(selected),
+                });
+              }}
+            />
+          ) : null}
         </BookingDetails>
       ) : null}
       <ConfirmSheet

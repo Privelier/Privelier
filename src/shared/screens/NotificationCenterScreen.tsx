@@ -106,6 +106,7 @@ export default function NotificationCenterScreen({
             : item.event_type === 'trip_started' ? 'navigation'
             : item.event_type === 'trip_arriving' ? 'map-pin'
             : item.event_type === 'trip_arrived' ? 'home'
+            : item.event_type === 'look_confirm' ? 'camera'
             : item.booking_status === 'accepted' ? 'check-circle'
             : item.booking_status === 'completed' ? 'check'
             : item.booking_status === 'cancelled' ? 'x-circle'

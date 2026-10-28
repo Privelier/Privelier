@@ -18,6 +18,7 @@ import LegalDocumentScreen from '../legal/LegalDocumentScreen';
 import type { LegalDocument } from '../legal/legalConfig';
 import NotificationCenterScreen from '../shared/screens/NotificationCenterScreen';
 import LiveTripScreen from './screens/LiveTripScreen';
+import LookConfirmScreen from './screens/LookConfirmScreen';
 import type { LiveTripContext } from './liveTripData';
 
 export type CustomerStackParamList = {
@@ -74,6 +75,9 @@ export type CustomerStackParamList = {
     barberName: string;
     serviceName: string;
   };
+  // Looks S2: "Is this your cut?" for the look a barber captured on one of
+  // the client's completed bookings (opened from the look_confirm event).
+  LookConfirm: { bookingId: string };
 };
 
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
@@ -106,12 +110,17 @@ export default function CustomerNavigator({ onExit }: { onExit: () => void }) {
                   props.navigation.navigate('LiveTrip', { bookingId: row.booking_id });
                   return;
                 }
+                if (row.event_type === 'look_confirm') {
+                  props.navigation.navigate('LookConfirm', { bookingId: row.booking_id });
+                  return;
+                }
                 props.navigation.navigate('CustomerTabs', { screen: row.event_type === 'message' ? 'Inbox' : 'Bookings' });
               }}
             />}
           </Stack.Screen>
           <Stack.Screen name="ReviewSubmit" component={ReviewSubmitScreen} />
           <Stack.Screen name="LiveTrip" component={LiveTripScreen} options={{ animation: reduceMotion ? 'fade' : 'slide_from_bottom' }} />
+          <Stack.Screen name="LookConfirm" component={LookConfirmScreen} />
         </Stack.Navigator>
       </UnreadProvider>
     </RoleExitProvider>

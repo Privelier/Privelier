@@ -16,6 +16,7 @@ import LegalDocumentScreen from '../legal/LegalDocumentScreen';
 import type { LegalDocument } from '../legal/legalConfig';
 import NotificationCenterScreen from '../shared/screens/NotificationCenterScreen';
 import TripScreen from './screens/TripScreen';
+import LookCaptureScreen from './screens/LookCaptureScreen';
 
 export type BarberStackParamList = {
   BarberTabs: NavigatorScreenParams<BarberTabParamList> | undefined;
@@ -32,6 +33,9 @@ export type BarberStackParamList = {
   Settings: undefined;
   // "On my way" live arrival sharing for one accepted booking.
   Trip: { booking: BookingRow; customerName: string; serviceName: string };
+  // Looks S2 (behind the 'looks' flag): capture the result of a completed
+  // booking for the client to confirm.
+  LookCapture: { bookingId: string; barberId: string | null; customerName: string; serviceName: string };
 };
 
 const Stack = createNativeStackNavigator<BarberStackParamList>();
@@ -54,6 +58,7 @@ export default function BarberNavigator({ onExit }: { onExit: () => void }) {
           <Stack.Screen name="Settings" component={BarberSettingsScreen} />
           <Stack.Screen name="Conversation" component={ConversationScreen} />
           <Stack.Screen name="Trip" component={TripScreen} options={{ animation: reduceMotion ? 'fade' : 'slide_from_bottom' }} />
+          <Stack.Screen name="LookCapture" component={LookCaptureScreen} />
           <Stack.Screen name="NotificationCenter">
             {(props) => <NotificationCenterScreen
               role="barber"

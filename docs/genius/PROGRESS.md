@@ -17,17 +17,28 @@ Resume point for the next session. Updated after every item.
 - A6 npm ci: exit 0. Baseline `npm run check` (see "Check baseline" below).
 - B1 to B3: LOOKS_REVIEW.md written, LOOKS.md sections 5 and 6 improved.
 
+- C S1 feature flags: commit f6797c7 (0062 + rollback + pgTAP, useFeatureFlag
+  with 9 unit tests). No Maestro flow: S1 has no screen.
+
+- C S2 proof look and look match: 0063 + 0064 with rollbacks and pgTAP,
+  delete-account Edge Function (looks bucket, customer look photos),
+  src/looks data layer, barber LookCapture screen (from completed booking
+  details), customer LookConfirm screen (from the look_confirm notification
+  and push), look question on the review screen, look reports, 2 Maestro
+  flows. Gate: tsc/lint/knip/jscpd/madge green, jest 942 tests, 0 new
+  failures. Commit: see git log ("Looks S2").
+
 ## In progress
 
-- C S1 feature flags: migration 0062, rollback, pgTAP test, client hook and
-  unit tests written; unit tests pass.
+- C S3 feed, look detail, "This look" with reference: 0065 + rollback
+  written (not committed). Next: pgTAP test, data layer (looks_feed,
+  attach_look_reference), Discover rail, LookDetail screen, param threading
+  through BookingDateTime/Location/Confirm, barber sees the reference in the
+  booking details, Maestro flow.
 
 ## Next
 
-- C S2 proof look and look match: 0063 written (core), next 0064 (reports
-  and notifications), rollbacks, pgTAP tests, delete-account Edge Function,
-  barber capture screen, customer confirm screen, look feedback on the review
-  screen, Maestro flows.
+- S4 look search, S5 wish and offers, S6 look pass.
 
 ## Check baseline (2026-10-28, origin/main 501f7f2, this machine)
 

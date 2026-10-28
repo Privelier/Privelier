@@ -25,3 +25,8 @@ export async function untypedRpc<T>(fn: string, args?: Record<string, unknown>):
   const { data, error } = await client.rpc(fn, args);
   return { data: (data as T | null) ?? null, error: error ?? null };
 }
+
+/** A table read for a table that is not in the generated types yet. */
+export function untypedTable(table: string) {
+  return client.from(table);
+}
