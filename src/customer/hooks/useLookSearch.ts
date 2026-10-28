@@ -2,13 +2,16 @@
  * Look search (Looks S4, flag-gated): style, day and time window, an
  * optional own reference photo, then instant matches from match_look. The
  * photo is uploaded (EXIF dropped) only when the client adds it, into their
- * private folder; it reaches a barber only once a booking references it.
+ * private folder; it reaches a barber only once a booking references it, or
+ * while a wish with it is open (S5: when nobody is free, the same choice
+ * goes out as a wish to the city's proven barbers).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { fetchBookableService, fetchLookStyles, matchLook, removeReferencePhoto, uploadReferencePhoto } from '../../looks/looksData';
 import { SEARCH_WINDOWS, searchDays, type SearchWindow } from '../../looks/searchPresentation';
 import type { LookMatch, LookStyle } from '../../looks/types';
+import { createWish } from '../../looks/wishData';
 
 const DAYS = 7;
 
@@ -65,6 +68,18 @@ export function useLookSearch(initialStyle: string | undefined) {
     setMatches(result.value);
   }), [guard, style, day, slotWindow]);
 
+  /** The fallback when nobody is free: true once the wish went out. */
+  const sendWish = useCallback(async () => {
+    let sent = false;
+    await guard(async () => {
+      if (!style) return;
+      const result = await createWish({ style, day, from: slotWindow.from, to: slotWindow.to, photoPath: photo?.path ?? null });
+      if (result.status !== 'ok') return setError(result.message);
+      sent = true;
+    });
+    return sent;
+  }, [guard, style, day, slotWindow, photo]);
+
   const reset = <T,>(setter: (value: T) => void) => (value: T) => {
     setter(value);
     setMatches(null);
@@ -91,5 +106,6 @@ export function useLookSearch(initialStyle: string | undefined) {
     busy,
     error,
     search,
+    sendWish,
   };
 }

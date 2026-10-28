@@ -35,29 +35,30 @@ type LooksErrorCode =
   | 'already_done'
   | 'limit_reached'
   | 'rate_limited'
+  | 'blocked_language'
+  | 'not_free'
   | 'network'
   | 'unknown';
 
 export type LooksFailure = DataFailure<LooksErrorCode>;
 export type LooksResult<T> = { status: 'ok'; value: T } | LooksFailure;
 
-const { blocked_language: _unusedEn, ...sharedEn } = sharedDataErrorCopy.en;
-const { blocked_language: _unusedDe, ...sharedDe } = sharedDataErrorCopy.de;
-
 const looksErrorCopy = {
   en: {
-    ...sharedEn,
+    ...sharedDataErrorCopy.en,
     invalid_input: 'Pick one to three styles and at least one photo.',
     not_found: 'This look is no longer available.',
     state_changed: 'This look has already moved on. Refresh to see where it stands.',
     already_done: 'You have already answered this.',
+    not_free: 'You are not free at that time. Pick another start.',
   },
   de: {
-    ...sharedDe,
+    ...sharedDataErrorCopy.de,
     invalid_input: 'Wähle ein bis drei Stile und mindestens ein Foto.',
     not_found: 'Dieser Look ist nicht mehr verfügbar.',
     state_changed: 'Dieser Look ist schon weiter. Aktualisiere, um den Stand zu sehen.',
     already_done: 'Das hast du bereits beantwortet.',
+    not_free: 'Zu dieser Zeit bist du nicht frei. Wähle einen anderen Beginn.',
   },
 } satisfies Record<'en' | 'de', Record<LooksErrorCode, string>>;
 
@@ -77,9 +78,11 @@ export function mapLooksError(context: string, raw: PostgrestErrorLike | null): 
       return looksFailure('invalid_input');
     case UNIQUE_VIOLATION:
       return looksFailure('already_done');
+    case 'PA041':
+      return looksFailure('not_free');
   }
   const kind = classifyPostgrestError(raw);
-  if (kind === 'forbidden' || kind === 'rate_limited' || kind === 'limit_reached' || kind === 'network') {
+  if (kind === 'forbidden' || kind === 'rate_limited' || kind === 'limit_reached' || kind === 'blocked_language' || kind === 'network') {
     return looksFailure(kind);
   }
   if (kind === 'invalid_input') return looksFailure('invalid_input');

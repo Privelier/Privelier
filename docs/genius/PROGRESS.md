@@ -49,18 +49,35 @@ Resume point for the next session. Updated after every item.
   photo. Maestro flow customer-look-search.yaml. Gate: 970 jest tests, 0 new
   failures. Commit: see git log ("Looks S4").
 
+- C S5 look wish and offers: 0067 + rollback + pgTAP (look_wishes,
+  look_wish_offers, create_wish / cancel_wish / wish_offers / accept_offer,
+  open_wishes / offer_for_wish / withdraw_offer; expiry computed on read;
+  offers only from approved same-city barbers with proof, inside the
+  window, free by the booking rule incl. travel buffer, at the normal
+  service price, note through the denylist; accept links a matching normal
+  pending booking from create_booking and attaches the wish style and photo
+  as the reference; notifications.booking_id nullable + look_wish_id +
+  look_wish / look_offer events and push copy, every older event still
+  needs its booking; reports for wish and offer; wish photo visible to
+  barbers who may answer while it is open). Client: wishData, "Send as a
+  wish" on an empty search, customer LookWishes screen (offers, book into
+  the address step, withdraw, report), barber LookWishes screen (service,
+  start, note, send, change, withdraw, report) with an entry in Requests,
+  notification and push routing, shared LookOfferCard and openLookBooking.
+  Gate: 994 jest tests, 0 new failures. Commit: see git log ("Looks S5").
+
 ## In progress
 
-- C S5 look wish and offers: not started. Plan: 0067 (look_wishes,
-  look_wish_offers, notifications.booking_id nullable + wish/offer types,
-  reports and denylist for offer notes, rate limits), create_wish,
-  offer_for_wish, accept_offer(offer, booking) linking a booking created by
-  the unchanged create_booking; customer "Send a wish" from an empty search
-  result, offers list; barber "Wishes in your city" with offer form.
+- C S6 look pass: not started. Plan: my_looks() (the client's confirmed and
+  published looks with the barber, styles, photos; plus their reference
+  photos next to the result where a booking had one), a customer "Look
+  pass" screen reached from Account or Bookings, "This look again" into the
+  normal booking with the same barber and service. Probably no new table.
 
 ## Next
 
-- S5 wish and offers, S6 look pass, then LOOKS.md "how to switch it on".
+- S6 look pass, then LOOKS.md "how to switch it on" (exact SQL in order,
+  flag for Taha and Ali), then final MORNING.md pass.
 
 ## Check baseline (2026-10-28, origin/main 501f7f2, this machine)
 

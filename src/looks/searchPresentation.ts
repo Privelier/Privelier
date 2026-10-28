@@ -1,9 +1,11 @@
 /**
- * Look search (S4) presentation rules: the bookable days to pick from, the
- * time windows offered, and how a match reads. The server re-validates the
- * window (same day, at most twelve hours, not in the past).
+ * Look search (S4) and wish (S5) presentation rules: the bookable days to
+ * pick from, the time windows offered, how a match or offer reads and where
+ * a wish stands. The server re-validates the window (same day, at most
+ * twelve hours, not in the past).
  */
-import type { LookMatch } from './types';
+import { formatBookingWhen, formatMessageTime } from '../shared/format';
+import type { LookMatch, LookWish } from './types';
 
 export interface SearchWindow {
   key: 'morning' | 'midday' | 'afternoon' | 'evening';
@@ -35,8 +37,8 @@ export function shortTime(time: string): string {
   return time.slice(0, 5);
 }
 
-/** The one-line proof summary on a match card. */
-export function matchProofLine(match: LookMatch, styleLabel: string, de: boolean): string {
+/** The one-line proof summary on a match or offer card. */
+export function matchProofLine(match: Pick<LookMatch, 'hit_rate' | 'feedback_count' | 'proof_count'>, styleLabel: string, de: boolean): string {
   if (match.hit_rate !== null) {
     const value = Math.round(match.hit_rate * 100);
     return de
@@ -46,4 +48,32 @@ export function matchProofLine(match: LookMatch, styleLabel: string, de: boolean
   return de
     ? `${match.proof_count} bestätigte ${styleLabel}-Looks`
     : `${match.proof_count} confirmed ${styleLabel} looks`;
+}
+
+const minutesOf = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
+const clockOf = (minutes: number) => `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}:00`;
+
+/**
+ * The starts a barber can offer in a wish's window: every `step` minutes
+ * from the window start, so the service still ends inside the window (the
+ * server checks the same rule and the barber's free time).
+ */
+export function offerStarts(windowFrom: string, windowTo: string, durationMinutes: number, step = 15): string[] {
+  const starts: string[] = [];
+  for (let at = minutesOf(windowFrom); at + durationMinutes <= minutesOf(windowTo); at += step) starts.push(clockOf(at));
+  return starts;
+}
+
+/** "Fri 30 Oct · 18:00 to 21:00": a wish's day and window. */
+export function wishWindowLine(wish: Pick<LookWish, 'day' | 'window_from' | 'window_to'>, de: boolean): string {
+  return `${formatBookingWhen(wish.day, wish.window_from)} ${de ? 'bis' : 'to'} ${shortTime(wish.window_to)}`;
+}
+
+/** Where a wish stands. Offers already made stay bookable after expiry. */
+export function wishStatusLine(wish: Pick<LookWish, 'status' | 'expires_at'>, de: boolean, now: Date = new Date()): string {
+  if (wish.status === 'booked') return de ? 'Gebucht. Der Termin steht unter Termine.' : 'Booked. Find it under Bookings.';
+  if (wish.status === 'cancelled') return de ? 'Zurückgenommen' : 'Withdrawn';
+  if (new Date(wish.expires_at) <= now) return de ? 'Keine neuen Angebote mehr' : 'No new offers';
+  const until = formatMessageTime(wish.expires_at, now);
+  return de ? `Offen für Angebote bis ${until}` : `Open for offers until ${until}`;
 }

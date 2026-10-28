@@ -57,12 +57,14 @@ export default function CustomerTabs() {
     [stackNavigation]
   );
   // Push taps: trip pushes open live tracking, a look confirmation opens its
-  // screen, the rest the matching tab.
+  // screen, an offer on a look wish the wishes, the rest the matching tab.
   usePushOpen(useCallback((data) => {
     if (data.eventType?.startsWith('trip_') && data.bookingId) {
       stackNavigation.navigate('LiveTrip', { bookingId: data.bookingId });
     } else if (data.eventType === 'look_confirm' && data.bookingId) {
       stackNavigation.navigate('LookConfirm', { bookingId: data.bookingId });
+    } else if (data.eventType === 'look_offer') {
+      stackNavigation.navigate('LookWishes');
     } else if (data.eventType === 'message') {
       stackNavigation.navigate('CustomerTabs', { screen: 'Inbox' });
     } else if (data.eventType) {

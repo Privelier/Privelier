@@ -50,9 +50,10 @@ const TAB_ICONS: Record<keyof BarberTabParamList, keyof typeof Feather.glyphMap>
 
 export default function BarberTabs() {
   const stackNavigation = useNavigation<NativeStackNavigationProp<BarberStackParamList>>();
-  // Push taps open the matching tab.
+  // Push taps open the matching tab; a look wish opens the wishes.
   usePushOpen(useCallback((data) => {
     if (data.eventType === 'message') stackNavigation.navigate('BarberTabs', { screen: 'Chats' });
+    else if (data.eventType === 'look_wish') stackNavigation.navigate('LookWishes');
     else if (data.eventType) stackNavigation.navigate('BarberTabs', { screen: 'Requests' });
   }, [stackNavigation]));
   // A trip still running from before an app restart reattaches its UI state.

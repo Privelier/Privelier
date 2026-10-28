@@ -21,13 +21,15 @@ import LiveTripScreen from './screens/LiveTripScreen';
 import LookConfirmScreen from './screens/LookConfirmScreen';
 import LookDetailScreen from './screens/LookDetailScreen';
 import LookSearchScreen from './screens/LookSearchScreen';
+import LookWishesScreen from './screens/LookWishesScreen';
 import type { LiveTripContext } from './liveTripData';
 
 /**
- * Looks S3/S4: what a booking is made for, attached after creation: a feed
- * look, or a searched style with an optional private reference photo.
+ * Looks S3 to S5: what a booking is made for, attached after creation: a
+ * feed look, a searched style with an optional private reference photo, or
+ * a barber's offer on a wish (then accept_offer links the booking).
  */
-export type LookReferenceParam = { lookId: string | null; style: string; photoPath?: string | null };
+export type LookReferenceParam = { lookId: string | null; style: string; photoPath?: string | null; offerId?: string };
 
 export type CustomerStackParamList = {
   CustomerTabs: NavigatorScreenParams<CustomerTabParamList> | undefined;
@@ -92,6 +94,8 @@ export type CustomerStackParamList = {
   LookDetail: { lookId: string };
   // Looks S4: style, day and time window with instant matches.
   LookSearch: { style?: string } | undefined;
+  // Looks S5: the client's wishes and the barbers' offers on them.
+  LookWishes: undefined;
 };
 
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
@@ -120,12 +124,16 @@ export default function CustomerNavigator({ onExit }: { onExit: () => void }) {
               onBack={() => props.navigation.goBack()}
               onOpenNotification={(row) => {
                 props.navigation.goBack();
-                if (row.event_type.startsWith('trip_')) {
+                if (row.event_type.startsWith('trip_') && row.booking_id) {
                   props.navigation.navigate('LiveTrip', { bookingId: row.booking_id });
                   return;
                 }
-                if (row.event_type === 'look_confirm') {
+                if (row.event_type === 'look_confirm' && row.booking_id) {
                   props.navigation.navigate('LookConfirm', { bookingId: row.booking_id });
+                  return;
+                }
+                if (row.event_type === 'look_offer') {
+                  props.navigation.navigate('LookWishes');
                   return;
                 }
                 props.navigation.navigate('CustomerTabs', { screen: row.event_type === 'message' ? 'Inbox' : 'Bookings' });
@@ -137,6 +145,7 @@ export default function CustomerNavigator({ onExit }: { onExit: () => void }) {
           <Stack.Screen name="LookConfirm" component={LookConfirmScreen} />
           <Stack.Screen name="LookDetail" component={LookDetailScreen} />
           <Stack.Screen name="LookSearch" component={LookSearchScreen} />
+          <Stack.Screen name="LookWishes" component={LookWishesScreen} />
         </Stack.Navigator>
       </UnreadProvider>
     </RoleExitProvider>

@@ -6,6 +6,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import LookSearchScreen from '../LookSearchScreen';
 import { fetchBookableService, fetchLookStyles, matchLook } from '../../../looks/looksData';
+import { createWish } from '../../../looks/wishData';
 
 jest.mock('../../../shared/locale', () => ({ getAppLanguage: () => 'en' }));
 jest.mock('../../../looks/looksData', () => ({
@@ -15,6 +16,7 @@ jest.mock('../../../looks/looksData', () => ({
   removeReferencePhoto: jest.fn(),
   uploadReferencePhoto: jest.fn(),
 }));
+jest.mock('../../../looks/wishData', () => ({ createWish: jest.fn() }));
 jest.mock('expo-image-picker', () => ({ launchImageLibraryAsync: jest.fn() }));
 jest.mock('@expo/vector-icons', () => ({ Feather: () => null }));
 jest.mock('expo-image', () => {
@@ -63,11 +65,28 @@ it('finds free proven barbers and books straight into the address step', async (
   })));
 });
 
-it('says plainly when nobody with proof is free', async () => {
+it('says plainly when nobody with proof is free and sends the same choice as a wish', async () => {
   (matchLook as jest.Mock).mockResolvedValue({ status: 'ok', value: [] });
-  await render(<LookSearchScreen route={{ params: { style: 'taper' } } as never} navigation={{ goBack: jest.fn(), navigate: jest.fn() } as never} />);
+  (createWish as jest.Mock).mockResolvedValue({ status: 'ok', value: { id: 'w-1' } });
+  const navigation = { goBack: jest.fn(), navigate: jest.fn(), replace: jest.fn() };
+  await render(<LookSearchScreen route={{ params: { style: 'taper' } } as never} navigation={navigation as never} />);
   await fireEvent.press(await screen.findByTestId('customer-look-search-search'));
   expect(await screen.findByTestId('customer-look-search-empty')).toBeTruthy();
+
+  await fireEvent.press(screen.getByTestId('customer-look-search-wish'));
+  await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith('LookWishes'));
+  expect((createWish as jest.Mock).mock.calls[0][0]).toMatchObject({ style: 'taper', from: '18:00:00', to: '21:00:00', photoPath: null });
+});
+
+it('keeps the screen when the wish is refused', async () => {
+  (matchLook as jest.Mock).mockResolvedValue({ status: 'ok', value: [] });
+  (createWish as jest.Mock).mockResolvedValue({ status: 'error', code: 'limit_reached', message: 'You have reached the limit for this.', retryable: false });
+  const navigation = { goBack: jest.fn(), navigate: jest.fn(), replace: jest.fn() };
+  await render(<LookSearchScreen route={{ params: { style: 'taper' } } as never} navigation={navigation as never} />);
+  await fireEvent.press(await screen.findByTestId('customer-look-search-search'));
+  await fireEvent.press(await screen.findByTestId('customer-look-search-wish'));
+  expect(await screen.findByText('You have reached the limit for this.')).toBeTruthy();
+  expect(navigation.replace).not.toHaveBeenCalled();
 });
 
 it('cannot search before a style is picked', async () => {

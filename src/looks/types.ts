@@ -77,6 +77,57 @@ export interface LookReference {
   photo_path?: string | null;
 }
 
+/** A client's look wish (look_wishes, 0067). Takes offers until expires_at. */
+export interface LookWish {
+  id: string;
+  customer_id: string;
+  style: string;
+  day: string;
+  window_from: string;
+  window_to: string;
+  photo_path: string | null;
+  status: 'open' | 'booked' | 'cancelled';
+  booking_id: string | null;
+  expires_at: string;
+  created_at: string;
+}
+
+/** A bookable offer on one of the caller's wishes (wish_offers, 0067). */
+export interface WishOffer {
+  offer_id: string;
+  wish_id: string;
+  barber_id: string;
+  barber_name: string | null;
+  barber_image: string | null;
+  barber_rating: number | null;
+  proof_count: number;
+  feedback_count: number;
+  hit_rate: number | null;
+  service_id: string;
+  service_name: string;
+  service_price: number;
+  service_duration: number;
+  proposed_time: string;
+  note: string | null;
+  created_at: string;
+}
+
+/** An open wish a barber may answer (open_wishes, 0067). Never the client. */
+export interface OpenWish {
+  wish_id: string;
+  style: string;
+  day: string;
+  window_from: string;
+  window_to: string;
+  expires_at: string;
+  photo_path: string | null;
+  my_offer_id: string | null;
+  my_offer_status: 'open' | 'accepted' | 'withdrawn' | null;
+  my_offer_time: string | null;
+  my_offer_service_id: string | null;
+  my_offer_note: string | null;
+}
+
 /** One instant match for a look search (match_look, 0066). Never a location. */
 export interface LookMatch {
   barber_id: string;

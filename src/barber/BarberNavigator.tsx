@@ -17,6 +17,7 @@ import type { LegalDocument } from '../legal/legalConfig';
 import NotificationCenterScreen from '../shared/screens/NotificationCenterScreen';
 import TripScreen from './screens/TripScreen';
 import LookCaptureScreen from './screens/LookCaptureScreen';
+import LookWishesScreen from './screens/LookWishesScreen';
 
 export type BarberStackParamList = {
   BarberTabs: NavigatorScreenParams<BarberTabParamList> | undefined;
@@ -36,6 +37,8 @@ export type BarberStackParamList = {
   // Looks S2 (behind the 'looks' flag): capture the result of a completed
   // booking for the client to confirm.
   LookCapture: { bookingId: string; barberId: string | null; customerName: string; serviceName: string };
+  // Looks S5: open look wishes in the barber's city, with the offer form.
+  LookWishes: undefined;
 };
 
 const Stack = createNativeStackNavigator<BarberStackParamList>();
@@ -59,12 +62,17 @@ export default function BarberNavigator({ onExit }: { onExit: () => void }) {
           <Stack.Screen name="Conversation" component={ConversationScreen} />
           <Stack.Screen name="Trip" component={TripScreen} options={{ animation: reduceMotion ? 'fade' : 'slide_from_bottom' }} />
           <Stack.Screen name="LookCapture" component={LookCaptureScreen} />
+          <Stack.Screen name="LookWishes" component={LookWishesScreen} />
           <Stack.Screen name="NotificationCenter">
             {(props) => <NotificationCenterScreen
               role="barber"
               onBack={() => props.navigation.goBack()}
               onOpenNotification={(row) => {
                 props.navigation.goBack();
+                if (row.event_type === 'look_wish') {
+                  props.navigation.navigate('LookWishes');
+                  return;
+                }
                 props.navigation.navigate('BarberTabs', { screen: row.event_type === 'message' ? 'Chats' : 'Requests' });
               }}
             />}

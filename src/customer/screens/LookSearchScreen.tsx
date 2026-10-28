@@ -8,27 +8,28 @@
  *
  * Maestro contract: customer-look-search-screen / -back / -style-{key} /
  * -day-{n} / -window-{key} / -photo-add / -photo / -photo-remove / -search /
- * -results / -empty / -match-{barberId} / -book-{barberId} / -error.
+ * -results / -empty / -wish / -wishes / -match-{barberId} / -book-{barberId} /
+ * -error.
  */
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { GlassChip } from '../../shared/components/GlassChip';
-import { GlassSurface } from '../../shared/components/GlassSurface';
 import { Notice } from '../../shared/components/Notice';
 import { PrimaryButton } from '../../shared/components/PrimaryButton';
 import { ScreenBackHeader } from '../../shared/components/ScreenBackHeader';
-import { formatMoney } from '../../shared/format';
 import { getAppLanguage } from '../../shared/locale';
 import { LookPhotoTile } from '../../looks/components/LookPhotoTile';
 import { styleList } from '../../looks/lookPresentation';
-import { matchProofLine, SEARCH_WINDOWS, shortTime } from '../../looks/searchPresentation';
+import { matchProofLine, SEARCH_WINDOWS } from '../../looks/searchPresentation';
 import { pressOpacity } from '../../theme/motion';
 import { HAIRLINE, radius, space } from '../../theme/spacing';
 import { useTheme } from '../../theme/useTheme';
 import CalendarDateStrip from '../components/CalendarDateStrip';
+import { LookOfferCard } from '../components/looks/LookOfferCard';
 import { useLookSearch } from '../hooks/useLookSearch';
+import { openLookBooking } from '../lookBooking';
 import type { CustomerStackParamList } from '../CustomerNavigator';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'LookSearch'>;
@@ -63,7 +64,7 @@ export default function LookSearchScreen({ route, navigation }: Props) {
         </View>
 
         <Text style={label}>{de ? 'Dein Foto (optional)' : 'Your photo (optional)'}</Text>
-        <Text style={[styles.body, muted]}>{de ? 'Geht nur an den Barber, den du buchst. Nie öffentlich.' : 'Goes only to the barber you book. Never public.'}</Text>
+        <Text style={[styles.body, muted]}>{de ? 'Geht nur an den Barber, den du buchst, oder bei einem Wunsch an die Barber, die antworten dürfen. Nie öffentlich.' : 'Goes only to the barber you book, or for a wish to the barbers who may answer it. Never public.'}</Text>
         {search.photo ? (
           <View style={[styles.photo, styles.gapTop]}>
             <LookPhotoTile uri={search.photo.uri} label={de ? 'Dein Referenzfoto' : 'Your reference photo'} testID="customer-look-search-photo" onRemove={search.removePhoto} removeLabel={de ? 'Foto entfernen' : 'Remove photo'} />
@@ -88,49 +89,60 @@ export default function LookSearchScreen({ route, navigation }: Props) {
           <View testID="customer-look-search-results" style={styles.results}>
             <Text style={label}>{de ? `Frei und bewiesen: ${styleName}` : `Free and proven: ${styleName}`}</Text>
             {search.matches.length === 0 ? (
-              <Notice
-                variant="info"
-                testID="customer-look-search-empty"
-                message={de ? 'Niemand mit Beweis in diesem Stil ist dann frei. Probier ein anderes Zeitfenster oder einen anderen Tag.' : 'Nobody with proof in this style is free then. Try another window or day.'}
-              />
-            ) : null}
-            {search.matches.map((match) => (
-              <GlassSurface key={match.barber_id} style={styles.card} testID={`customer-look-search-match-${match.barber_id}`}>
-                <View style={styles.cardTop}>
-                  <View style={styles.flex}>
-                    <Text style={{ color: colors.textPrimary, fontFamily: fonts.bodyMedium, fontSize: 16 }}>{match.barber_name}</Text>
-                    <Text style={[styles.body, muted]}>{matchProofLine(match, styleName, de)}</Text>
-                    <Text style={[styles.body, muted]}>{`${match.service_name} · ${formatMoney(match.service_price)}`}</Text>
-                  </View>
-                  <Text style={{ color: colors.accentText, fontFamily: fonts.bodySemiBold, fontSize: 18 }}>{shortTime(match.first_free_time)}</Text>
-                </View>
+              <>
+                <Notice
+                  variant="info"
+                  testID="customer-look-search-empty"
+                  message={de
+                    ? 'Niemand mit Beweis in diesem Stil ist dann frei. Schick es als Wunsch: Barber in deiner Stadt mit diesem Stil schlagen dir eine Zeit vor, zum normalen Preis.'
+                    : 'Nobody with proof in this style is free then. Send it as a wish: barbers in your city with this style suggest a time, at their normal price.'}
+                />
                 <Pressable
-                  onPress={() => void search.serviceFor(match).then((service) => {
-                    if (!service) {
-                      navigation.navigate('BarberProfile', { barberId: match.barber_id });
-                      return;
-                    }
-                    navigation.navigate('BookingLocation', {
-                      barberId: match.barber_id,
-                      barberName: match.barber_name ?? '',
-                      barberImage: match.barber_image,
-                      service,
-                      date: search.day,
-                      time: match.first_free_time,
-                      lookReference: { lookId: null, style: search.style ?? '', photoPath: search.photo?.path ?? null },
-                    });
-                  })}
+                  onPress={() => void search.sendWish().then((sent) => { if (sent) navigation.replace('LookWishes'); })}
+                  disabled={search.busy}
                   accessibilityRole="button"
-                  accessibilityLabel={de ? `${match.barber_name ?? 'Barber'} um ${shortTime(match.first_free_time)} buchen` : `Book ${match.barber_name ?? 'barber'} at ${shortTime(match.first_free_time)}`}
-                  testID={`customer-look-search-book-${match.barber_id}`}
+                  accessibilityLabel={de ? 'Als Wunsch senden' : 'Send as a wish'}
+                  testID="customer-look-search-wish"
                   style={({ pressed }) => [styles.book, { borderColor: colors.accent, opacity: pressed ? pressOpacity.soft : 1 }]}
                 >
-                  <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium, fontSize: 15 }}>{de ? `Um ${shortTime(match.first_free_time)} buchen` : `Book at ${shortTime(match.first_free_time)}`}</Text>
+                  <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium, fontSize: 15 }}>{de ? 'Als Wunsch senden' : 'Send as a wish'}</Text>
                 </Pressable>
-              </GlassSurface>
+              </>
+            ) : null}
+            {search.matches.map((match) => (
+              <LookOfferCard
+                key={match.barber_id}
+                name={match.barber_name}
+                proofLine={matchProofLine(match, styleName, de)}
+                serviceName={match.service_name}
+                price={match.service_price}
+                time={match.first_free_time}
+                de={de}
+                testID={`customer-look-search-match-${match.barber_id}`}
+                bookTestID={`customer-look-search-book-${match.barber_id}`}
+                onBook={() => void search.serviceFor(match).then((service) => openLookBooking(navigation, {
+                  barberId: match.barber_id,
+                  barberName: match.barber_name,
+                  barberImage: match.barber_image,
+                  service,
+                  date: search.day,
+                  time: match.first_free_time,
+                  lookReference: { lookId: null, style: search.style ?? '', photoPath: search.photo?.path ?? null },
+                }))}
+              />
             ))}
           </View>
         ) : null}
+
+        <Pressable
+          onPress={() => navigation.navigate('LookWishes')}
+          accessibilityRole="button"
+          accessibilityLabel={de ? 'Meine Look-Wünsche und Angebote' : 'My look wishes and offers'}
+          testID="customer-look-search-wishes"
+          style={({ pressed }) => [styles.link, { opacity: pressed ? pressOpacity.soft : 1 }]}
+        >
+          <Text style={{ color: colors.textSecondary, fontFamily: fonts.bodyMedium, fontSize: 14 }}>{de ? 'Meine Wünsche und Angebote' : 'My wishes and offers'}</Text>
+        </Pressable>
       </ScrollView>
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
         {search.busy && search.matches === null ? <ActivityIndicator color={colors.accent} style={styles.spinner} accessibilityLabel={de ? 'Suche läuft' : 'Searching'} /> : null}
@@ -142,7 +154,6 @@ export default function LookSearchScreen({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  flex: { flex: 1 },
   content: { paddingHorizontal: space.xl, paddingTop: space.base, paddingBottom: space['2xl'] },
   label: { fontSize: 15, marginTop: space.xl, marginBottom: space.sm },
   body: { fontSize: 13, lineHeight: 19, marginTop: 2 },
@@ -151,9 +162,8 @@ const styles = StyleSheet.create({
   photo: { width: '47%' },
   addPhoto: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: space.sm, borderWidth: HAIRLINE, borderRadius: radius.md, paddingHorizontal: space.base, marginTop: space.md },
   results: { marginTop: space.sm },
-  card: { marginTop: space.md, padding: space.base },
-  cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
   book: { minHeight: 44, borderWidth: HAIRLINE, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', marginTop: space.md },
+  link: { minHeight: 44, justifyContent: 'center', marginTop: space.lg },
   footer: { paddingHorizontal: space.xl, paddingTop: 14, paddingBottom: 20, borderTopWidth: HAIRLINE },
   spinner: { marginBottom: space.sm },
 });

@@ -97,7 +97,9 @@ export type ReportTarget =
   | { type: 'user'; userId: string }
   | { type: 'message'; messageId: string }
   | { type: 'review'; reviewId: string }
-  | { type: 'look'; lookId: string };
+  | { type: 'look'; lookId: string }
+  | { type: 'wish'; wishId: string }
+  | { type: 'offer'; offerId: string };
 
 export async function reportUser(input: {
   target: ReportTarget;
@@ -116,6 +118,8 @@ export async function reportUser(input: {
     target_id: target.type === 'message' ? target.messageId
       : target.type === 'review' ? target.reviewId
       : target.type === 'look' ? target.lookId
+      : target.type === 'wish' ? target.wishId
+      : target.type === 'offer' ? target.offerId
       : null,
     reason: input.reason,
     details,

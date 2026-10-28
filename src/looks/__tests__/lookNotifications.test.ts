@@ -21,3 +21,24 @@ describe('look_confirm notification copy (mirrors notification_push_copy in 0064
     expect(notificationCopy(row, null, 'en').body.startsWith('Someone ')).toBe(true);
   });
 });
+
+describe('wish notification copy (mirrors notification_push_copy in 0067)', () => {
+  const wish: NotificationRow = { ...row, event_type: 'look_wish', booking_id: null, look_wish_id: 'w-1', actor_id: null, event_key: 'wish:w-1:x' };
+
+  it('tells the barber about a wish without naming the client', () => {
+    expect(notificationCopy(wish, null, 'en')).toEqual({
+      title: 'A look wish in your city',
+      body: 'A client wants a look you have proven. Suggest a time.',
+    });
+    expect(notificationCopy(wish, null, 'de')).toEqual({
+      title: 'Look-Wunsch in deiner Stadt',
+      body: 'Ein Kunde sucht einen Look, den du nachweislich schneidest. Schlag eine Zeit vor.',
+    });
+  });
+
+  it('names the barber who offered a time', () => {
+    const offer: NotificationRow = { ...wish, event_type: 'look_offer', actor_id: 'barber', event_key: 'offer:o-1' };
+    expect(notificationCopy(offer, 'Marco', 'en')).toEqual({ title: 'New offer for your look', body: 'Marco suggested a time for your look wish.' });
+    expect(notificationCopy(offer, 'Marco', 'de')).toEqual({ title: 'Neues Angebot für deinen Look', body: 'Marco hat dir eine Zeit für deinen Look-Wunsch vorgeschlagen.' });
+  });
+});

@@ -1,5 +1,6 @@
 import { renderHook } from '@testing-library/react-native';
 import { attachLookReference } from '../../../looks/looksData';
+import { acceptOffer } from '../../../looks/wishData';
 import type { FeedLook } from '../../../looks/types';
 import type { BookingRow } from '../../../types';
 import { useAttachLookReference } from '../useAttachLookReference';
@@ -11,6 +12,9 @@ jest.mock('../../../looks/looksData', () => ({
   fetchLookStyles: jest.fn(),
   fetchPortfolioFallback: jest.fn(),
   signLookPhotos: jest.fn(),
+}));
+jest.mock('../../../looks/wishData', () => ({
+  acceptOffer: jest.fn(async () => ({ status: 'ok', value: null })),
 }));
 jest.mock('../../../shared/portfolioImages', () => ({ getPublicPortfolioUrl: (path: string) => `https://public/${path}` }));
 
@@ -39,6 +43,7 @@ describe('feedTiles', () => {
 
 describe('useAttachLookReference', () => {
   const booking = { id: 'bk-1' } as BookingRow;
+  beforeEach(() => jest.clearAllMocks());
 
   it('does nothing for an ordinary booking', async () => {
     await renderHook(() => useAttachLookReference(booking, undefined));
@@ -55,5 +60,11 @@ describe('useAttachLookReference', () => {
     await hook.rerender({ created: { ...booking } });
     expect(attachLookReference).toHaveBeenCalledTimes(1);
     expect(attachLookReference).toHaveBeenCalledWith({ bookingId: 'bk-1', lookId: 'l-1', style: 'taper' });
+  });
+
+  it('links a booking made from a wish offer through accept_offer instead', async () => {
+    await renderHook(() => useAttachLookReference(booking, { lookId: null, style: 'taper', offerId: 'o-1' }));
+    expect(acceptOffer).toHaveBeenCalledWith('o-1', 'bk-1');
+    expect(attachLookReference).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,7 @@
-import { matchProofLine, SEARCH_WINDOWS, searchDays, shortTime } from '../searchPresentation';
+import { matchProofLine, offerStarts, SEARCH_WINDOWS, searchDays, shortTime, wishStatusLine, wishWindowLine } from '../searchPresentation';
 import type { LookMatch } from '../types';
+
+jest.mock('../../shared/locale', () => ({ getAppLanguage: () => 'en' }));
 
 const match = (hit_rate: number | null): LookMatch => ({
   barber_id: 'x', barber_name: 'Xavier', barber_image: null, barber_rating: 4.8, proof_count: 6, feedback_count: 9, hit_rate,
@@ -32,5 +34,31 @@ describe('match copy', () => {
   it('falls back to the proof count while the rate is hidden', () => {
     expect(matchProofLine(match(null), 'Taper', false)).toBe('6 confirmed Taper looks');
     expect(matchProofLine(match(null), 'Taper', true)).toBe('6 bestätigte Taper-Looks');
+  });
+});
+
+describe('offerStarts', () => {
+  it('steps through the window so the service still ends inside it', () => {
+    expect(offerStarts('18:00:00', '19:30:00', 60)).toEqual(['18:00:00', '18:15:00', '18:30:00']);
+    expect(offerStarts('09:00:00', '12:00:00', 45, 60)).toEqual(['09:00:00', '10:00:00', '11:00:00']);
+  });
+
+  it('offers nothing when the service is longer than the window', () => {
+    expect(offerStarts('18:00:00', '18:30:00', 45)).toEqual([]);
+  });
+});
+
+describe('wish lines', () => {
+  const now = new Date('2026-10-28T12:00:00');
+
+  it('reads the day and the window', () => {
+    expect(wishWindowLine({ day: '2026-10-30', window_from: '18:00:00', window_to: '21:00:00' }, false)).toBe('Fri 30 Oct · 18:00 to 21:00');
+  });
+
+  it('says where a wish stands; offers stay bookable after expiry', () => {
+    expect(wishStatusLine({ status: 'open', expires_at: '2026-10-28T16:30:00' }, false, now)).toBe('Open for offers until 16:30');
+    expect(wishStatusLine({ status: 'open', expires_at: '2026-10-28T11:00:00' }, false, now)).toBe('No new offers');
+    expect(wishStatusLine({ status: 'booked', expires_at: '2026-10-28T16:30:00' }, true, now)).toBe('Gebucht. Der Termin steht unter Termine.');
+    expect(wishStatusLine({ status: 'cancelled', expires_at: '2026-10-28T16:30:00' }, false, now)).toBe('Withdrawn');
   });
 });

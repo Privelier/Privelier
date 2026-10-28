@@ -24,6 +24,7 @@ import { useTheme } from '../../theme/useTheme';
 import type { BookingRow } from '../../types';
 import { LookCaptureEntry } from '../components/looks/LookCaptureEntry';
 import { LookReferenceNote } from '../components/looks/LookReferenceNote';
+import { LookWishesLink } from '../components/looks/LookWishesLink';
 import { HistoryToggle, RequestActions, RequestCard, SectionHeader } from '../components/requests/RequestCard';
 import { useRequestsStyles } from '../components/requests/requestsStyles';
 import { useBarberRequests } from '../hooks/useBarberRequests';
@@ -68,6 +69,7 @@ export default function RequestsScreen() {
       <View style={styles.header}>
         <Text style={styles.heading}>{de ? 'Deine Anfragen' : 'Your requests'}</Text>
         <Text style={styles.subtitle}>{de ? 'Terminanfragen deiner Kunden.' : 'Booking requests from your clients.'}</Text>
+        {looksOn ? <LookWishesLink de={de} onPress={() => navigation.navigate('LookWishes')} /> : null}
       </View>
 
       {showSkeleton ? (

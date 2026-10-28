@@ -1,0 +1,74 @@
+# Looks S5 (behind the 'looks' feature flag), barber half: Requests ->
+# "Look wishes in your city" -> the client's open wish (no name, no address)
+# -> pick a service and a start inside the window -> short note -> "Send
+# offer" -> "Your offer: HH:MM".
+#
+# NOT YET RUN. Same tooling gap as every other flow here (.maestro/README.md).
+# Also needs migrations 0062-0067 applied (docs/genius/LOOKS.md).
+#
+# Prerequisites:
+# - Run customer-look-wish.yaml (part 1) first, so one open skin_fade wish
+#   exists in the barber's city.
+# - The approved test barber is in the 'looks' flag, has a confirmed or
+#   published skin_fade look, and is free at the first offered start of that
+#   evening (temporarily add availability for that day if needed; the
+#   customer flow needed the barber NOT free when it searched).
+#
+# Run with:
+#   maestro test .maestro/barber-look-wish-offer.yaml \
+#     -e TEST_BARBER_EMAIL=... -e TEST_BARBER_PASSWORD=...
+appId: com.privelier.app
+env:
+  TEST_BARBER_EMAIL: barber.e2e@example.com
+  TEST_BARBER_PASSWORD: ChangeMe123!
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "role-select-barber"
+- tapOn:
+    id: "auth-entry-login"
+- tapOn:
+    id: "auth-login-email"
+- inputText: "${TEST_BARBER_EMAIL}"
+- tapOn:
+    id: "auth-login-password"
+- inputText: "${TEST_BARBER_PASSWORD}"
+- tapOn:
+    id: "auth-login-submit"
+- extendedWaitUntil:
+    visible:
+      id: "barber-tab-requests"
+    timeout: 15000
+
+# --- Requests -> look wishes ---
+- tapOn:
+    id: "barber-requests-look-wishes"
+- assertVisible:
+    id: "barber-look-wishes-screen"
+- extendedWaitUntil:
+    visible:
+      id: "barber-look-wishes-wish-.*"
+    timeout: 10000
+- assertNotVisible:
+    id: "barber-look-wishes-empty"
+
+# --- Offer: first service, first start, a note ---
+- tapOn:
+    id: "barber-look-wishes-service-.*"
+    index: 0
+- tapOn:
+    id: "barber-look-wishes-time-.*"
+    index: 0
+- tapOn:
+    id: "barber-look-wishes-note-.*"
+    index: 0
+- inputText: "Clean fade, see you then"
+- hideKeyboard
+- tapOn:
+    id: "barber-look-wishes-send-.*"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      text: "Your offer: .*|Dein Angebot: .*"
+    timeout: 10000
