@@ -66,18 +66,28 @@ Resume point for the next session. Updated after every item.
   notification and push routing, shared LookOfferCard and openLookBooking.
   Gate: 994 jest tests, 0 new failures. Commit: see git log ("Looks S5").
 
+- C S6 look pass: 0068 + rollback + pgTAP (my_looks(): the client's own
+  confirmed or published looks, reference photo or booked feed look next to
+  the result, result photos only while shown, can_rebook false across a
+  block or for an unapproved barber; read-only, no table). Client:
+  fetchMyLooks, useLookPass, LookPass screen (reference and result side by
+  side on the portfolio grid, calm placeholders, "This look again" into the
+  date step with the same barber and service). The Discover rail now keeps
+  its title and the two entries (look search, look pass) when the city has
+  no looks yet (it still hides on load failure). Also fixed: single look
+  photos in S4/S5 (search photo, barber reference note, barber wish photo)
+  rendered at about a quarter width; they now fill a half-width slot. Maestro
+  flow customer-look-pass.yaml. Gate: 998 jest tests, 0 new failures.
+  Commit: see git log ("Looks S6").
+
 ## In progress
 
-- C S6 look pass: not started. Plan: my_looks() (the client's confirmed and
-  published looks with the barber, styles, photos; plus their reference
-  photos next to the result where a booking had one), a customer "Look
-  pass" screen reached from Account or Bookings, "This look again" into the
-  normal booking with the same barber and service. Probably no new table.
+- Final: LOOKS.md "what was built and how to switch it on" (exact SQL in
+  order, flag for Taha and Ali), then the final MORNING.md pass.
 
 ## Next
 
-- S6 look pass, then LOOKS.md "how to switch it on" (exact SQL in order,
-  flag for Taha and Ali), then final MORNING.md pass.
+- Nothing else in NIGHT_SHIFT.md after that.
 
 ## Check baseline (2026-10-28, origin/main 501f7f2, this machine)
 

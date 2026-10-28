@@ -159,7 +159,8 @@ const styles = StyleSheet.create({
   body: { fontSize: 13, lineHeight: 19, marginTop: 2 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   gapTop: { marginTop: space.md },
-  photo: { width: '47%' },
+  // A row, so the grid tile (47%, flexGrow) fills this half-width slot.
+  photo: { width: '47%', flexDirection: 'row' },
   addPhoto: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: space.sm, borderWidth: HAIRLINE, borderRadius: radius.md, paddingHorizontal: space.base, marginTop: space.md },
   results: { marginTop: space.sm },
   book: { minHeight: 44, borderWidth: HAIRLINE, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', marginTop: space.md },

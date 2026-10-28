@@ -11,6 +11,7 @@ import {
   fetchBarberLookStats,
   fetchLookForBooking,
   fetchLookStyles,
+  fetchMyLooks,
   mapLooksError,
   matchLook,
   removeReferencePhoto,
@@ -283,6 +284,14 @@ describe('look search (S4)', () => {
     expect(supabase.storage.from).toHaveBeenLastCalledWith('look-references');
     mockSign.mockResolvedValueOnce({ data: null, error: { message: 'denied' } });
     await expect(signReferencePhoto('me/ref.jpg')).resolves.toBeNull();
+  });
+
+  it('reads the look pass, empty when the server sends nothing', async () => {
+    mockRpc.mockResolvedValueOnce({ data: [{ look_id: 'l-1' }], error: null });
+    await expect(fetchMyLooks()).resolves.toEqual({ status: 'ok', value: [{ look_id: 'l-1' }] });
+    expect(mockRpc).toHaveBeenCalledWith('my_looks', undefined);
+    mockRpc.mockResolvedValueOnce({ data: null, error: null });
+    await expect(fetchMyLooks()).resolves.toEqual({ status: 'ok', value: [] });
   });
 
   it('removes a reference photo the client took back', async () => {

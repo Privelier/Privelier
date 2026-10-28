@@ -27,7 +27,7 @@ Details: docs/genius/LOOKS_REVIEW.md
 | C S3 Looks-Feed, Look-Detail, "Diesen Look" | fertig, Tests grün | f256166 |
 | C S4 Look-Suche mit sofortigen Treffern | fertig, Tests grün | siehe `git log` ("Looks S4") |
 | C S5 Look-Wunsch und Angebote | fertig, Tests grün | siehe `git log` ("Looks S5") |
-| C S6 Look-Pass | offen | offen |
+| C S6 Look-Pass | fertig, Tests grün | siehe `git log` ("Looks S6") |
 
 "Tests grün" heißt: Typecheck, Lint, knip, jscpd und madge ohne Fehler, Jest
 ohne einen einzigen neuen Fehler gegenüber der Baseline. Die pgTAP-Tests sind
@@ -57,14 +57,16 @@ Danach Pull Request `night/2026-10-28` nach `main`, CI läuft dort mit englische
 
 | 0067_looks_wishes_and_offers | Neue Tabellen `look_wishes`, `look_wish_offers`, 7 neue Funktionen. **Ändert bestehende Objekte**: `notifications.booking_id` wird nullable, neue Spalte `look_wish_id`, neue Prüfregel "jedes bisherige Ereignis braucht weiter seine Buchung", Ereignisse `look_wish` und `look_offer`; ersetzt `notification_push_copy` (bestehende Texte identisch), `private.resolve_report_target` (um Wunsch und Angebot ergänzt) und `private.can_view_reference_photo` | mittel bis hoch: berührt die Benachrichtigungstabelle aller Nutzer. Beide Apps vertragen jetzt `booking_id = null`; Wunsch-Benachrichtigungen bekommen nur Nutzer mit Schalter, auf einem **alten App-Stand** sähen sie "Termin aktualisiert" und landen beim Tippen in "Termine" | supabase/rollbacks/0067_looks_wishes_and_offers.sql (vor 0066 zurückrollen; löscht Wünsche, Angebote und Wunsch-Benachrichtigungen, Buchungen bleiben) |
 
-Vorgehen (Befehle aus `tools/db/supa.py`, brauchen `SUPABASE_ACCESS_TOKEN`). `<alle>` steht für die sechs Dateien in dieser Reihenfolge:
-`supabase/migrations/0062_feature_flags.sql supabase/migrations/0063_looks_proof_and_match.sql supabase/migrations/0064_looks_reports_and_notifications.sql supabase/migrations/0065_looks_feed_and_reference.sql supabase/migrations/0066_looks_search.sql supabase/migrations/0067_looks_wishes_and_offers.sql`
+| 0068_looks_pass | Neue Lesefunktion `my_looks` (keine Tabelle) | niedrig: nur Lesen, nur eigene Looks, nur mit Schalter | supabase/rollbacks/0068_looks_pass.sql (vor 0067 zurückrollen) |
+
+Vorgehen (Befehle aus `tools/db/supa.py`, brauchen `SUPABASE_ACCESS_TOKEN`). `<alle>` steht für die sieben Dateien in dieser Reihenfolge:
+`supabase/migrations/0062_feature_flags.sql supabase/migrations/0063_looks_proof_and_match.sql supabase/migrations/0064_looks_reports_and_notifications.sql supabase/migrations/0065_looks_feed_and_reference.sql supabase/migrations/0066_looks_search.sql supabase/migrations/0067_looks_wishes_and_offers.sql supabase/migrations/0068_looks_pass.sql`
 
 1. Trockenlauf, alles in einer Transaktion, danach ROLLBACK:
    `python tools/db/supa.py dry-run <alle>`
 2. pgTAP-Tests (ebenfalls zurückgerollt), jede Datei einzeln. Der genaue Befehl steht im Kopf jeder Testdatei (jede Scheibe ist gegen ihren eigenen Migrationsstand geschrieben):
-   `supabase/tests/feature_flags.test.sql` (0062), `looks_proof_and_match.test.sql` (0062 bis 0064), `looks_feed_and_reference.test.sql` (0062 bis 0065), `looks_search.test.sql` (0062 bis 0066), `looks_wishes.test.sql` (0062 bis 0067).
-   Danach die bestehenden Suiten mit `--with <alle>`: `authorization_matrix.test.sql` und `abuse_limits_and_account_deletion.test.sql`. Die Looks-Tests der früheren Scheiben wurden nie gegen den vollen Stand 0062 bis 0067 geprüft; einmal mit `--with <alle>` laufen lassen zeigt, ob eine spätere Scheibe eine frühere Annahme verändert
+   `supabase/tests/feature_flags.test.sql` (0062), `looks_proof_and_match.test.sql` (0062 bis 0064), `looks_feed_and_reference.test.sql` (0062 bis 0065), `looks_search.test.sql` (0062 bis 0066), `looks_wishes.test.sql` (0062 bis 0067), `looks_pass.test.sql` (0062 bis 0068).
+   Danach die bestehenden Suiten mit `--with <alle>`: `authorization_matrix.test.sql` und `abuse_limits_and_account_deletion.test.sql`. Die Looks-Tests der früheren Scheiben wurden nie gegen den vollen Stand 0062 bis 0068 geprüft; einmal mit `--with <alle>` laufen lassen zeigt, ob eine spätere Scheibe eine frühere Annahme verändert
 3. Erst wenn alles grün ist: anwenden, in dieser Reihenfolge, mit demselben Namen wie die Datei (AGENTS.md-Protokoll), danach `get_advisors` (security) und `npm run db:types`.
 4. Edge Function `delete-account` neu deployen (sonst bleiben Look-Fotos und Referenzfotos gelöschter Konten im Speicher liegen, unsichtbar, aber gespeichert).
 
@@ -105,6 +107,7 @@ Look-Fotos ergänzen und den Einwilligungstext freigeben (Version
 | L14 neu (S5) | Wie viele Barber werden pro Wunsch benachrichtigt? | höchstens 20, die mit den meisten Beweisen im Stil zuerst; sehen können den Wunsch alle passenden Barber der Stadt (einstellbar: `wish_notify_barbers`) |
 | L15 neu (S5) | Was sieht ein Barber vom Kunden? | Nichts außer Stil, Tag, Fenster und dem freiwilligen Referenzfoto. Name und Adresse erst mit der normalen Anfrage |
 | L16 neu (S5) | Wie viele offene Wünsche pro Kunde? | 3 gleichzeitig, 10 pro Tag (einstellbar: `max_open_wishes`) |
+| L17 neu (S6) | Soll der Look-Pass Ergebnisfotos auch von Looks behalten, die der Kunde nicht zeigen will? | Heute nein: die App löscht die Dateien eines nicht gezeigten Looks (S2, Datenminimierung), der Pass zeigt dann nur die Stile. Wer das will, braucht eine eigene Einwilligung "nur für mich behalten" |
 | neu | `tsconfig.json` soll `artifacts/` ausschließen wie Jest und ESLint | ja, dann ist `npm run check` lokal wieder aussagekräftig (heute Nacht nicht geändert: Regel "Baseline aufzeichnen, nicht reparieren") |
 
 ## 5. Was du am Handy testen sollst
@@ -126,6 +129,7 @@ Development Build reicht, `npm start` lädt den neuen JavaScript-Stand.
 | Look-Wunsch senden (S5) | Kunde | Suche ohne Treffer: "Als Wunsch senden" öffnet "Deine Look-Wünsche", Status "Offen für Angebote bis ..." |
 | Angebot machen (S5) | Barber mit bestätigtem Look im Stil | Push "Look-Wunsch in deiner Stadt", Anfragen: "Look-Wünsche in deiner Stadt", Service, Beginn, Notiz, "Angebot senden". Ein belegter Beginn zeigt "Zu dieser Zeit bist du nicht frei" |
 | Angebot buchen (S5) | Kunde | Push "Neues Angebot für deinen Look", Angebot mit Preis und Notiz, "Um HH:MM buchen" führt zur Adresse, danach normale Anfrage; der Wunsch steht auf "Gebucht" |
+| Look-Pass (S6) | Kunde mit bestätigtem Look | Discover, Leiste "Echte Looks": "Dein Look-Pass", Wunsch und Ergebnis nebeneinander, "Diesen Look wieder" führt zu Datum und Uhrzeit beim selben Barber |
 | Kontolöschung | Testkunde | Look verschwindet (Dateien und Referenzfotos erst nach Neu-Deploy der Edge Function) |
 
 ## 6. Wichtig vor dem Start

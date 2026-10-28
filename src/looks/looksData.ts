@@ -1,5 +1,6 @@
 /**
- * Looks data layer shared by both apps (migrations 0063 and 0064).
+ * Looks data layer shared by both apps (migrations 0063 to 0066 and 0068;
+ * wishes and offers of 0067 live in wishData).
  *
  * Reads use RLS on looks / look_photos / look_feedback: the barber sees their
  * own looks, the customer sees a look once it was sent to them. Every write
@@ -20,7 +21,7 @@ import { readNormalizedImage } from '../shared/imageUpload';
 import { uniqueObjectName } from '../shared/objectNames';
 import { untypedRpc, untypedTable } from '../shared/untypedRpc';
 import type { ServiceRow } from '../types';
-import type { BarberLookStat, FeedLook, Look, LookMatch, LookPhoto, LookReference, LookStyle, LookVerdict } from './types';
+import type { BarberLookStat, FeedLook, Look, LookMatch, LookPhoto, LookReference, LookStyle, LookVerdict, PassLook } from './types';
 
 const LOOKS_BUCKET = 'looks';
 const SIGNED_URL_SECONDS = 600;
@@ -313,6 +314,13 @@ export async function uploadReferencePhoto(fileUri: string): Promise<LooksResult
   const { error } = await supabase.storage.from(REFERENCE_BUCKET).upload(path, image.bytes, { contentType: image.contentType });
   if (error) return mapLooksError('uploadReferencePhoto', { message: error.message });
   return ok(path);
+}
+
+/** The client's own looks with what they asked for, newest first (0068). */
+export async function fetchMyLooks(): Promise<LooksResult<PassLook[]>> {
+  const { data, error } = await untypedRpc<PassLook[]>('my_looks');
+  if (error) return mapLooksError('fetchMyLooks', error);
+  return ok(Array.isArray(data) ? data : []);
 }
 
 /** A short-lived URL for a booking's reference photo (its client or booked barber). */

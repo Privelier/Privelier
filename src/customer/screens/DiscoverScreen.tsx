@@ -215,6 +215,7 @@ export default function DiscoverScreen({ navigation }: Props) {
                 onOpenLook={(lookId) => navigation.navigate('LookDetail', { lookId })}
                 onOpenBarber={openProfile}
                 onSearch={(style) => navigation.navigate('LookSearch', style ? { style } : undefined)}
+                onOpenPass={() => navigation.navigate('LookPass')}
               />
             </View>
           </Reveal>

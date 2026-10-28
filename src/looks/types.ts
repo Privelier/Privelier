@@ -128,6 +128,29 @@ export interface OpenWish {
   my_offer_note: string | null;
 }
 
+/** One entry of the client's private look pass (my_looks, 0068). */
+export interface PassLook {
+  look_id: string;
+  booking_id: string;
+  barber_id: string;
+  barber_name: string | null;
+  barber_image: string | null;
+  styles: string[];
+  status: 'confirmed' | 'published';
+  appointment_date: string;
+  service_id: string | null;
+  service_name: string | null;
+  /** Result photos, only while the look is shown (files of others are removed). */
+  photo_paths: string[];
+  reference_style: string | null;
+  /** The client's own reference photo in `look-references`. */
+  reference_photo_path: string | null;
+  reference_look_id: string | null;
+  /** First photo of the feed look the client booked from, while it is shown. */
+  reference_look_photo: string | null;
+  can_rebook: boolean;
+}
+
 /** One instant match for a look search (match_look, 0066). Never a location. */
 export interface LookMatch {
   barber_id: string;

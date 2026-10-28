@@ -54,5 +54,6 @@ export function LookReferenceNote({ bookingId, de }: { bookingId: string; de: bo
 const styles = StyleSheet.create({
   block: { borderTopWidth: HAIRLINE, marginTop: space.base, paddingTop: space.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  photo: { width: '47%', marginTop: space.md },
+  // A row, so the grid tile (47%, flexGrow) fills this half-width slot.
+  photo: { width: '47%', flexDirection: 'row', marginTop: space.md },
 });

@@ -185,7 +185,8 @@ const styles = StyleSheet.create({
   label: { fontSize: 14, marginTop: space.base, marginBottom: space.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   gap: { marginTop: space.md },
-  photo: { width: '47%', marginTop: space.md },
+  // A row, so the grid tile (47%, flexGrow) fills this half-width slot.
+  photo: { width: '47%', flexDirection: 'row', marginTop: space.md },
   note: { borderWidth: HAIRLINE, borderRadius: radius.md, padding: 14, fontSize: 15, minHeight: 88, textAlignVertical: 'top' },
   links: { flexDirection: 'row', gap: space.lg },
   link: { minHeight: 44, justifyContent: 'center' },

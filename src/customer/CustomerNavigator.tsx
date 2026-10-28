@@ -22,6 +22,7 @@ import LookConfirmScreen from './screens/LookConfirmScreen';
 import LookDetailScreen from './screens/LookDetailScreen';
 import LookSearchScreen from './screens/LookSearchScreen';
 import LookWishesScreen from './screens/LookWishesScreen';
+import LookPassScreen from './screens/LookPassScreen';
 import type { LiveTripContext } from './liveTripData';
 
 /**
@@ -96,6 +97,8 @@ export type CustomerStackParamList = {
   LookSearch: { style?: string } | undefined;
   // Looks S5: the client's wishes and the barbers' offers on them.
   LookWishes: undefined;
+  // Looks S6: the client's private look pass (reference next to result).
+  LookPass: undefined;
 };
 
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
@@ -146,6 +149,7 @@ export default function CustomerNavigator({ onExit }: { onExit: () => void }) {
           <Stack.Screen name="LookDetail" component={LookDetailScreen} />
           <Stack.Screen name="LookSearch" component={LookSearchScreen} />
           <Stack.Screen name="LookWishes" component={LookWishesScreen} />
+          <Stack.Screen name="LookPass" component={LookPassScreen} />
         </Stack.Navigator>
       </UnreadProvider>
     </RoleExitProvider>
