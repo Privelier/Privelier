@@ -619,6 +619,395 @@ export type Database = {
         }
         Relationships: []
       }
+      look_feedback: {
+        Row: {
+          barber_id: string
+          booking_id: string
+          created_at: string
+          customer_id: string | null
+          style: string
+          verdict: string
+        }
+        Insert: {
+          barber_id: string
+          booking_id: string
+          created_at?: string
+          customer_id?: string | null
+          style: string
+          verdict: string
+        }
+        Update: {
+          barber_id?: string
+          booking_id?: string
+          created_at?: string
+          customer_id?: string | null
+          style?: string
+          verdict?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "look_feedback_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "look_feedback_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "look_feedback_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "look_feedback_style_fkey"
+            columns: ["style"]
+            isOneToOne: false
+            referencedRelation: "look_styles"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      look_photos: {
+        Row: {
+          created_at: string
+          id: string
+          look_id: string
+          position: number
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          look_id: string
+          position: number
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          look_id?: string
+          position?: number
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "look_photos_look_id_fkey"
+            columns: ["look_id"]
+            isOneToOne: false
+            referencedRelation: "looks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      look_references: {
+        Row: {
+          booking_id: string
+          created_at: string
+          customer_id: string
+          look_id: string | null
+          photo_path: string | null
+          style: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          customer_id: string
+          look_id?: string | null
+          photo_path?: string | null
+          style: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          customer_id?: string
+          look_id?: string | null
+          photo_path?: string | null
+          style?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "look_references_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "look_references_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "look_references_look_id_fkey"
+            columns: ["look_id"]
+            isOneToOne: false
+            referencedRelation: "looks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "look_references_style_fkey"
+            columns: ["style"]
+            isOneToOne: false
+            referencedRelation: "look_styles"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      look_styles: {
+        Row: {
+          active: boolean
+          key: string
+          label_de: string
+          label_en: string
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          key: string
+          label_de: string
+          label_en: string
+          sort_order: number
+        }
+        Update: {
+          active?: boolean
+          key?: string
+          label_de?: string
+          label_en?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      look_wish_offers: {
+        Row: {
+          barber_id: string
+          created_at: string
+          id: string
+          note: string | null
+          proposed_time: string
+          service_id: string
+          status: string
+          updated_at: string
+          wish_id: string
+        }
+        Insert: {
+          barber_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          proposed_time: string
+          service_id: string
+          status?: string
+          updated_at?: string
+          wish_id: string
+        }
+        Update: {
+          barber_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          proposed_time?: string
+          service_id?: string
+          status?: string
+          updated_at?: string
+          wish_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "look_wish_offers_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "look_wish_offers_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "look_wish_offers_wish_id_fkey"
+            columns: ["wish_id"]
+            isOneToOne: false
+            referencedRelation: "look_wishes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      look_wishes: {
+        Row: {
+          booking_id: string | null
+          city: string
+          created_at: string
+          customer_id: string
+          day: string
+          expires_at: string
+          id: string
+          photo_path: string | null
+          status: string
+          style: string
+          window_from: string
+          window_to: string
+        }
+        Insert: {
+          booking_id?: string | null
+          city: string
+          created_at?: string
+          customer_id: string
+          day: string
+          expires_at: string
+          id?: string
+          photo_path?: string | null
+          status?: string
+          style: string
+          window_from: string
+          window_to: string
+        }
+        Update: {
+          booking_id?: string | null
+          city?: string
+          created_at?: string
+          customer_id?: string
+          day?: string
+          expires_at?: string
+          id?: string
+          photo_path?: string | null
+          status?: string
+          style?: string
+          window_from?: string
+          window_to?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "look_wishes_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "look_wishes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "look_wishes_style_fkey"
+            columns: ["style"]
+            isOneToOne: false
+            referencedRelation: "look_styles"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      looks: {
+        Row: {
+          barber_id: string
+          booking_id: string
+          consent_version: string | null
+          consent_withdrawn_at: string | null
+          consented_at: string | null
+          created_at: string
+          customer_id: string
+          id: string
+          no_face_confirmed: boolean
+          responded_at: string | null
+          service_id: string | null
+          status: string
+          styles: string[]
+          submitted_at: string | null
+          updated_at: string
+          withdrawn_at: string | null
+          withdrawn_by: string | null
+        }
+        Insert: {
+          barber_id: string
+          booking_id: string
+          consent_version?: string | null
+          consent_withdrawn_at?: string | null
+          consented_at?: string | null
+          created_at?: string
+          customer_id: string
+          id?: string
+          no_face_confirmed?: boolean
+          responded_at?: string | null
+          service_id?: string | null
+          status?: string
+          styles: string[]
+          submitted_at?: string | null
+          updated_at?: string
+          withdrawn_at?: string | null
+          withdrawn_by?: string | null
+        }
+        Update: {
+          barber_id?: string
+          booking_id?: string
+          consent_version?: string | null
+          consent_withdrawn_at?: string | null
+          consented_at?: string | null
+          created_at?: string
+          customer_id?: string
+          id?: string
+          no_face_confirmed?: boolean
+          responded_at?: string | null
+          service_id?: string | null
+          status?: string
+          styles?: string[]
+          submitted_at?: string | null
+          updated_at?: string
+          withdrawn_at?: string | null
+          withdrawn_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "looks_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "looks_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "looks_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "looks_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "looks_withdrawn_by_fkey"
+            columns: ["withdrawn_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           chat_id: string
@@ -661,7 +1050,7 @@ export type Database = {
       notifications: {
         Row: {
           actor_id: string | null
-          booking_id: string
+          booking_id: string | null
           booking_status:
             | Database["public"]["Enums"]["booking_status_type"]
             | null
@@ -669,13 +1058,14 @@ export type Database = {
           event_key: string
           event_type: string
           id: string
+          look_wish_id: string | null
           message_id: string | null
           read_at: string | null
           recipient_id: string
         }
         Insert: {
           actor_id?: string | null
-          booking_id: string
+          booking_id?: string | null
           booking_status?:
             | Database["public"]["Enums"]["booking_status_type"]
             | null
@@ -683,13 +1073,14 @@ export type Database = {
           event_key: string
           event_type: string
           id?: string
+          look_wish_id?: string | null
           message_id?: string | null
           read_at?: string | null
           recipient_id: string
         }
         Update: {
           actor_id?: string | null
-          booking_id?: string
+          booking_id?: string | null
           booking_status?:
             | Database["public"]["Enums"]["booking_status_type"]
             | null
@@ -697,6 +1088,7 @@ export type Database = {
           event_key?: string
           event_type?: string
           id?: string
+          look_wish_id?: string | null
           message_id?: string | null
           read_at?: string | null
           recipient_id?: string
@@ -714,6 +1106,13 @@ export type Database = {
             columns: ["booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_look_wish_id_fkey"
+            columns: ["look_wish_id"]
+            isOneToOne: false
+            referencedRelation: "look_wishes"
             referencedColumns: ["id"]
           },
           {
@@ -1200,6 +1599,42 @@ export type Database = {
         Args: { p_confirmed_adult?: boolean }
         Returns: undefined
       }
+      accept_offer: {
+        Args: { p_booking_id: string; p_offer_id: string }
+        Returns: {
+          barber_id: string
+          created_at: string
+          id: string
+          note: string | null
+          proposed_time: string
+          service_id: string
+          status: string
+          updated_at: string
+          wish_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "look_wish_offers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      add_look_photo: {
+        Args: { p_look_id: string; p_storage_path: string }
+        Returns: {
+          created_at: string
+          id: string
+          look_id: string
+          position: number
+          storage_path: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "look_photos"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       assert_trip_allowed: {
         Args: { p_booking_id: string }
         Returns: {
@@ -1222,6 +1657,64 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      attach_look_reference: {
+        Args: {
+          p_booking_id: string
+          p_look_id: string
+          p_photo_path?: string
+          p_style: string
+        }
+        Returns: {
+          booking_id: string
+          created_at: string
+          customer_id: string
+          look_id: string | null
+          photo_path: string | null
+          style: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "look_references"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      barber_look_stats: {
+        Args: { p_barber_id: string }
+        Returns: {
+          close_count: number
+          exact_count: number
+          feedback_count: number
+          hit_rate: number
+          label_de: string
+          label_en: string
+          proof_count: number
+          style: string
+        }[]
+      }
+      cancel_wish: {
+        Args: { p_wish_id: string }
+        Returns: {
+          booking_id: string | null
+          city: string
+          created_at: string
+          customer_id: string
+          day: string
+          expires_at: string
+          id: string
+          photo_path: string | null
+          status: string
+          style: string
+          window_from: string
+          window_to: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "look_wishes"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1256,6 +1749,63 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_look_draft: {
+        Args: { p_booking_id: string; p_no_face: boolean; p_styles: string[] }
+        Returns: {
+          barber_id: string
+          booking_id: string
+          consent_version: string | null
+          consent_withdrawn_at: string | null
+          consented_at: string | null
+          created_at: string
+          customer_id: string
+          id: string
+          no_face_confirmed: boolean
+          responded_at: string | null
+          service_id: string | null
+          status: string
+          styles: string[]
+          submitted_at: string | null
+          updated_at: string
+          withdrawn_at: string | null
+          withdrawn_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "looks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_wish: {
+        Args: {
+          p_day: string
+          p_from: string
+          p_photo_path?: string
+          p_style: string
+          p_to: string
+        }
+        Returns: {
+          booking_id: string | null
+          city: string
+          created_at: string
+          customer_id: string
+          day: string
+          expires_at: string
+          id: string
+          photo_path: string | null
+          status: string
+          style: string
+          window_from: string
+          window_to: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "look_wishes"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1301,6 +1851,31 @@ export type Database = {
         }
         Returns: undefined
       }
+      looks_feed: {
+        Args: {
+          p_before?: string
+          p_limit?: number
+          p_look_id?: string
+          p_style?: string
+        }
+        Returns: {
+          arrival_confirmed: boolean
+          barber_id: string
+          barber_image: string
+          barber_name: string
+          barber_rating: number
+          look_id: string
+          photo_paths: string[]
+          proof_count: number
+          published_at: string
+          review_rating: number
+          service_duration: number
+          service_id: string
+          service_name: string
+          service_price: number
+          styles: string[]
+        }[]
+      }
       mark_trip_arrived: {
         Args: { p_booking_id: string }
         Returns: {
@@ -1333,6 +1908,45 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      match_look: {
+        Args: { p_date: string; p_from: string; p_style: string; p_to: string }
+        Returns: {
+          barber_id: string
+          barber_image: string
+          barber_name: string
+          barber_rating: number
+          feedback_count: number
+          first_free_time: string
+          hit_rate: number
+          proof_count: number
+          service_duration: number
+          service_id: string
+          service_name: string
+          service_price: number
+        }[]
+      }
+      my_feature_flags: { Args: never; Returns: string[] }
+      my_looks: {
+        Args: never
+        Returns: {
+          appointment_date: string
+          barber_id: string
+          barber_image: string
+          barber_name: string
+          booking_id: string
+          can_rebook: boolean
+          look_id: string
+          photo_paths: string[]
+          reference_look_id: string
+          reference_look_photo: string
+          reference_photo_path: string
+          reference_style: string
+          service_id: string
+          service_name: string
+          status: string
+          styles: string[]
+        }[]
+      }
       notification_push_copy: {
         Args: {
           p_actor_name: string
@@ -1345,9 +1959,80 @@ export type Database = {
           title: string
         }[]
       }
+      offer_for_wish: {
+        Args: {
+          p_note?: string
+          p_service_id: string
+          p_time: string
+          p_wish_id: string
+        }
+        Returns: {
+          barber_id: string
+          created_at: string
+          id: string
+          note: string | null
+          proposed_time: string
+          service_id: string
+          status: string
+          updated_at: string
+          wish_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "look_wish_offers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      open_wishes: {
+        Args: never
+        Returns: {
+          day: string
+          expires_at: string
+          my_offer_id: string
+          my_offer_note: string
+          my_offer_service_id: string
+          my_offer_status: string
+          my_offer_time: string
+          photo_path: string
+          style: string
+          window_from: string
+          window_to: string
+          wish_id: string
+        }[]
+      }
       register_push_token: {
         Args: { p_language?: string; p_platform: string; p_token: string }
         Returns: undefined
+      }
+      remove_look_photo: { Args: { p_photo_id: string }; Returns: undefined }
+      respond_to_look: {
+        Args: { p_is_mine: boolean; p_look_id: string; p_show: boolean }
+        Returns: {
+          barber_id: string
+          booking_id: string
+          consent_version: string | null
+          consent_withdrawn_at: string | null
+          consented_at: string | null
+          created_at: string
+          customer_id: string
+          id: string
+          no_face_confirmed: boolean
+          responded_at: string | null
+          service_id: string | null
+          status: string
+          styles: string[]
+          submitted_at: string | null
+          updated_at: string
+          withdrawn_at: string | null
+          withdrawn_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "looks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       start_trip: {
         Args: {
@@ -1387,6 +2072,51 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "booking_trips"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      submit_look: {
+        Args: { p_look_id: string }
+        Returns: {
+          barber_id: string
+          booking_id: string
+          consent_version: string | null
+          consent_withdrawn_at: string | null
+          consented_at: string | null
+          created_at: string
+          customer_id: string
+          id: string
+          no_face_confirmed: boolean
+          responded_at: string | null
+          service_id: string | null
+          status: string
+          styles: string[]
+          submitted_at: string | null
+          updated_at: string
+          withdrawn_at: string | null
+          withdrawn_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "looks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      submit_look_feedback: {
+        Args: { p_booking_id: string; p_style: string; p_verdict: string }
+        Returns: {
+          barber_id: string
+          booking_id: string
+          created_at: string
+          customer_id: string | null
+          style: string
+          verdict: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "look_feedback"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1431,6 +2161,75 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "booking_trips"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      wish_offers: {
+        Args: { p_wish_id?: string }
+        Returns: {
+          barber_id: string
+          barber_image: string
+          barber_name: string
+          barber_rating: number
+          created_at: string
+          feedback_count: number
+          hit_rate: number
+          note: string
+          offer_id: string
+          proof_count: number
+          proposed_time: string
+          service_duration: number
+          service_id: string
+          service_name: string
+          service_price: number
+          wish_id: string
+        }[]
+      }
+      withdraw_look: {
+        Args: { p_look_id: string; p_mode: string }
+        Returns: {
+          barber_id: string
+          booking_id: string
+          consent_version: string | null
+          consent_withdrawn_at: string | null
+          consented_at: string | null
+          created_at: string
+          customer_id: string
+          id: string
+          no_face_confirmed: boolean
+          responded_at: string | null
+          service_id: string | null
+          status: string
+          styles: string[]
+          submitted_at: string | null
+          updated_at: string
+          withdrawn_at: string | null
+          withdrawn_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "looks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      withdraw_offer: {
+        Args: { p_offer_id: string }
+        Returns: {
+          barber_id: string
+          created_at: string
+          id: string
+          note: string | null
+          proposed_time: string
+          service_id: string
+          status: string
+          updated_at: string
+          wish_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "look_wish_offers"
           isOneToOne: true
           isSetofReturn: false
         }

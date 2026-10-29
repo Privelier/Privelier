@@ -27,7 +27,7 @@ describe('loadFeatureFlags', () => {
   it('returns the enabled keys from my_feature_flags', async () => {
     mockRpc.mockResolvedValueOnce({ data: ['looks'], error: null });
     await expect(loadFeatureFlags()).resolves.toEqual(new Set(['looks']));
-    expect(mockRpc).toHaveBeenCalledWith('my_feature_flags', undefined);
+    expect(mockRpc).toHaveBeenCalledWith('my_feature_flags');
   });
 
   it('is off when the function does not exist yet (migration not applied)', async () => {

@@ -13,7 +13,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { devWarn } from './devLog';
-import { untypedRpc } from './untypedRpc';
 
 export type FeatureFlagKey = 'looks';
 
@@ -24,7 +23,7 @@ let cache: { userId: string; flags: Promise<ReadonlySet<string> | null> } | null
 /** The caller's enabled flags, or null when they could not be read. */
 async function fetchFlags(): Promise<ReadonlySet<string> | null> {
   try {
-    const { data, error } = await untypedRpc<unknown>('my_feature_flags');
+    const { data, error } = await supabase.rpc('my_feature_flags');
     if (error) {
       devWarn('[flags] my_feature_flags', error);
       return null;

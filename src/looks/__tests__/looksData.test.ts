@@ -219,7 +219,7 @@ describe('feed and references (S3)', () => {
   it('pages the feed by style and keeps the client out of the request', async () => {
     mockRpc.mockResolvedValueOnce({ data: [{ look_id: 'l1' }], error: null });
     await expect(fetchLooksFeed({ style: 'taper' })).resolves.toEqual({ status: 'ok', value: [{ look_id: 'l1' }] });
-    expect(mockRpc).toHaveBeenCalledWith('looks_feed', { p_style: 'taper', p_before: null, p_limit: 12 });
+    expect(mockRpc).toHaveBeenCalledWith('looks_feed', { p_style: 'taper', p_limit: 12 });
   });
 
   it('reads one look for the detail, or null when it is gone', async () => {
@@ -289,7 +289,7 @@ describe('look search (S4)', () => {
   it('reads the look pass, empty when the server sends nothing', async () => {
     mockRpc.mockResolvedValueOnce({ data: [{ look_id: 'l-1' }], error: null });
     await expect(fetchMyLooks()).resolves.toEqual({ status: 'ok', value: [{ look_id: 'l-1' }] });
-    expect(mockRpc).toHaveBeenCalledWith('my_looks', undefined);
+    expect(mockRpc).toHaveBeenCalledWith('my_looks');
     mockRpc.mockResolvedValueOnce({ data: null, error: null });
     await expect(fetchMyLooks()).resolves.toEqual({ status: 'ok', value: [] });
   });

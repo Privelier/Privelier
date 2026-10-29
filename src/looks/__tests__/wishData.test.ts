@@ -36,7 +36,7 @@ describe('client side', () => {
 
     mockRpc.mockResolvedValueOnce({ data: null, error: null });
     await expect(fetchWishOffers()).resolves.toEqual({ status: 'ok', value: [] });
-    expect(mockRpc).toHaveBeenCalledWith('wish_offers', undefined);
+    expect(mockRpc).toHaveBeenCalledWith('wish_offers');
   });
 
   it('links the booking to the offer, and withdraws a wish', async () => {
@@ -52,13 +52,13 @@ describe('barber side', () => {
   it('lists open wishes', async () => {
     mockRpc.mockResolvedValueOnce({ data: [{ wish_id: 'w-1' }], error: null });
     await expect(fetchOpenWishes()).resolves.toEqual({ status: 'ok', value: [{ wish_id: 'w-1' }] });
-    expect(mockRpc).toHaveBeenCalledWith('open_wishes', undefined);
+    expect(mockRpc).toHaveBeenCalledWith('open_wishes');
   });
 
   it('sends an offer and drops an empty note', async () => {
     mockRpc.mockResolvedValueOnce({ data: {}, error: null });
     await expect(sendOffer({ wishId: 'w-1', serviceId: 's-1', time: '18:30:00', note: '   ' })).resolves.toEqual({ status: 'ok', value: null });
-    expect(mockRpc).toHaveBeenCalledWith('offer_for_wish', { p_wish_id: 'w-1', p_service_id: 's-1', p_time: '18:30:00', p_note: null });
+    expect(mockRpc).toHaveBeenCalledWith('offer_for_wish', { p_wish_id: 'w-1', p_service_id: 's-1', p_time: '18:30:00' });
   });
 
   it.each([

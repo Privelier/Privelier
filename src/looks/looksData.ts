@@ -19,7 +19,6 @@ import { devWarn } from '../shared/devLog';
 import { buildFailure, classifyPostgrestError, isNetworkMessage, sharedDataErrorCopy, UNIQUE_VIOLATION, type DataFailure, type PostgrestErrorLike } from '../shared/dataErrors';
 import { readNormalizedImage } from '../shared/imageUpload';
 import { uniqueObjectName } from '../shared/objectNames';
-import { untypedRpc, untypedTable } from '../shared/untypedRpc';
 import type { ServiceRow } from '../types';
 import type { BarberLookStat, FeedLook, Look, LookMatch, LookPhoto, LookReference, LookStyle, LookVerdict, PassLook } from './types';
 
@@ -99,7 +98,7 @@ let stylesCache: LookStyle[] | null = null;
 /** The fixed style list, cached for the session once it loaded. */
 export async function fetchLookStyles(): Promise<LooksResult<LookStyle[]>> {
   if (stylesCache) return ok(stylesCache);
-  const { data, error } = await untypedTable('look_styles')
+  const { data, error } = await supabase.from('look_styles')
     .select('key, label_en, label_de, sort_order')
     .eq('active', true)
     .order('sort_order');
@@ -111,7 +110,7 @@ export async function fetchLookStyles(): Promise<LooksResult<LookStyle[]>> {
 
 /** The look of one booking (or null), with its photos in order. */
 export async function fetchLookForBooking(bookingId: string): Promise<LooksResult<Look | null>> {
-  const { data, error } = await untypedTable('looks').select(LOOK_COLUMNS).eq('booking_id', bookingId).maybeSingle();
+  const { data, error } = await supabase.from('looks').select(LOOK_COLUMNS).eq('booking_id', bookingId).maybeSingle();
   if (error) return mapLooksError('fetchLookForBooking', error);
   if (!data) return ok(null);
   const look = data as Look;
@@ -121,13 +120,13 @@ export async function fetchLookForBooking(bookingId: string): Promise<LooksResul
 }
 
 export async function saveLookDraft(input: { bookingId: string; styles: string[]; noFace: boolean }): Promise<LooksResult<Look>> {
-  const { data, error } = await untypedRpc<Look>('create_look_draft', {
+  const { data, error } = await supabase.rpc('create_look_draft', {
     p_booking_id: input.bookingId,
     p_styles: input.styles,
     p_no_face: input.noFace,
   });
   if (error || !data) return mapLooksError('saveLookDraft', error);
-  return ok({ ...data, look_photos: [] });
+  return ok({ ...(data as Omit<Look, 'look_photos'>), look_photos: [] });
 }
 
 /** Upload one picked photo into the barber's own folder; returns its path. */
@@ -146,7 +145,7 @@ export async function uploadLookPhoto(barberId: string, fileUri: string): Promis
 }
 
 export async function attachLookPhoto(lookId: string, path: string): Promise<LooksResult<LookPhoto>> {
-  const { data, error } = await untypedRpc<LookPhoto>('add_look_photo', { p_look_id: lookId, p_storage_path: path });
+  const { data, error } = await supabase.rpc('add_look_photo', { p_look_id: lookId, p_storage_path: path });
   if (error || !data) return mapLooksError('attachLookPhoto', error);
   return ok(data);
 }
@@ -159,36 +158,36 @@ async function removeLookFiles(paths: string[]): Promise<void> {
 }
 
 export async function removeLookPhoto(photo: LookPhoto): Promise<LooksResult<null>> {
-  const { error } = await untypedRpc<null>('remove_look_photo', { p_photo_id: photo.id });
+  const { error } = await supabase.rpc('remove_look_photo', { p_photo_id: photo.id });
   if (error) return mapLooksError('removeLookPhoto', error);
   await removeLookFiles([photo.storage_path]);
   return ok(null);
 }
 
 export async function sendLook(lookId: string): Promise<LooksResult<null>> {
-  const { error } = await untypedRpc<Look>('submit_look', { p_look_id: lookId });
+  const { error } = await supabase.rpc('submit_look', { p_look_id: lookId });
   if (error) return mapLooksError('sendLook', error);
   return ok(null);
 }
 
 /** The customer's answer. Files of a look that will not be shown are removed. */
 export async function answerLook(look: Look, answer: { isMine: boolean; show: boolean }): Promise<LooksResult<Look>> {
-  const { data, error } = await untypedRpc<Look>('respond_to_look', {
+  const { data, error } = await supabase.rpc('respond_to_look', {
     p_look_id: look.id,
     p_is_mine: answer.isMine,
     p_show: answer.isMine && answer.show,
   });
   if (error || !data) return mapLooksError('answerLook', error);
   if (data.status !== 'published') await removeLookFiles(look.look_photos.map((photo) => photo.storage_path));
-  return ok({ ...data, look_photos: look.look_photos });
+  return ok({ ...(data as Omit<Look, 'look_photos'>), look_photos: look.look_photos });
 }
 
 /** 'hide': stop showing (still counts). 'withdraw': take it back entirely. */
 export async function takeBackLook(look: Look, mode: 'hide' | 'withdraw'): Promise<LooksResult<Look>> {
-  const { data, error } = await untypedRpc<Look>('withdraw_look', { p_look_id: look.id, p_mode: mode });
+  const { data, error } = await supabase.rpc('withdraw_look', { p_look_id: look.id, p_mode: mode });
   if (error || !data) return mapLooksError('takeBackLook', error);
   await removeLookFiles(look.look_photos.map((photo) => photo.storage_path));
-  return ok({ ...data, look_photos: look.look_photos });
+  return ok({ ...(data as Omit<Look, 'look_photos'>), look_photos: look.look_photos });
 }
 
 /** Short-lived signed URLs by path; a failure leaves the map empty. */
@@ -211,7 +210,7 @@ async function signPaths(bucket: string, paths: string[]): Promise<Map<string, s
 }
 
 export async function submitLookFeedback(input: { bookingId: string; style: string; verdict: LookVerdict }): Promise<LooksResult<null>> {
-  const { error } = await untypedRpc<null>('submit_look_feedback', {
+  const { error } = await supabase.rpc('submit_look_feedback', {
     p_booking_id: input.bookingId,
     p_style: input.style,
     p_verdict: input.verdict,
@@ -221,7 +220,7 @@ export async function submitLookFeedback(input: { bookingId: string; style: stri
 }
 
 export async function fetchBarberLookStats(barberId: string): Promise<LooksResult<BarberLookStat[]>> {
-  const { data, error } = await untypedRpc<BarberLookStat[]>('barber_look_stats', { p_barber_id: barberId });
+  const { data, error } = await supabase.rpc('barber_look_stats', { p_barber_id: barberId });
   if (error) return mapLooksError('fetchBarberLookStats', error);
   return ok(Array.isArray(data) ? data : []);
 }
@@ -230,9 +229,9 @@ const FEED_PAGE = 12;
 
 /** Published looks in the caller's city, newest first (customers only). */
 export async function fetchLooksFeed(input: { style?: string | null; before?: string | null } = {}): Promise<LooksResult<FeedLook[]>> {
-  const { data, error } = await untypedRpc<FeedLook[]>('looks_feed', {
-    p_style: input.style ?? null,
-    p_before: input.before ?? null,
+  const { data, error } = await supabase.rpc('looks_feed', {
+    p_style: input.style ?? undefined,
+    p_before: input.before ?? undefined,
     p_limit: FEED_PAGE,
   });
   if (error) return mapLooksError('fetchLooksFeed', error);
@@ -241,19 +240,20 @@ export async function fetchLooksFeed(input: { style?: string | null; before?: st
 
 /** One published look with its proof chain, or null when it is gone. */
 export async function fetchLookDetail(lookId: string): Promise<LooksResult<FeedLook | null>> {
-  const { data, error } = await untypedRpc<FeedLook[]>('looks_feed', { p_look_id: lookId, p_limit: 1 });
+  const { data, error } = await supabase.rpc('looks_feed', { p_look_id: lookId, p_limit: 1 });
   if (error) return mapLooksError('fetchLookDetail', error);
   return ok(Array.isArray(data) && data.length > 0 ? data[0] : null);
 }
 
 /** Link a just-created pending booking to the look (and photo) it was made for. */
 export async function attachLookReference(input: { bookingId: string; lookId: string | null; style: string; photoPath?: string | null }): Promise<LooksResult<null>> {
-  const { error } = await untypedRpc<LookReference>('attach_look_reference', {
+  const { error } = await supabase.rpc('attach_look_reference', {
     p_booking_id: input.bookingId,
-    p_look_id: input.lookId,
+    // A look-search reference has no look; the SQL takes null, but the
+    // generator types parameters without a default as non-null.
+    p_look_id: input.lookId as string,
     p_style: input.style,
-    // Sent only when present, so the call also matches the 0065 signature.
-    ...(input.photoPath ? { p_photo_path: input.photoPath } : {}),
+    p_photo_path: input.photoPath ?? undefined,
   });
   if (error) return mapLooksError('attachLookReference', error);
   return ok(null);
@@ -264,7 +264,7 @@ export async function attachLookReference(input: { bookingId: string; lookId: st
  * photo_path exists from 0066 on; the read keeps working on 0065 alone.
  */
 export async function fetchLookReference(bookingId: string): Promise<LooksResult<LookReference | null>> {
-  const { data, error } = await untypedTable('look_references').select('*').eq('booking_id', bookingId).maybeSingle();
+  const { data, error } = await supabase.from('look_references').select('*').eq('booking_id', bookingId).maybeSingle();
   if (error) return mapLooksError('fetchLookReference', error);
   return ok((data as LookReference | null) ?? null);
 }
@@ -318,9 +318,9 @@ export async function uploadReferencePhoto(fileUri: string): Promise<LooksResult
 
 /** The client's own looks with what they asked for, newest first (0068). */
 export async function fetchMyLooks(): Promise<LooksResult<PassLook[]>> {
-  const { data, error } = await untypedRpc<PassLook[]>('my_looks');
+  const { data, error } = await supabase.rpc('my_looks');
   if (error) return mapLooksError('fetchMyLooks', error);
-  return ok(Array.isArray(data) ? data : []);
+  return ok(Array.isArray(data) ? (data as PassLook[]) : []);
 }
 
 /** A short-lived URL for a booking's reference photo (its client or booked barber). */
@@ -336,7 +336,7 @@ export async function removeReferencePhoto(path: string): Promise<void> {
 
 /** Barbers with proof in the style who are free in the window (0066). */
 export async function matchLook(input: { style: string; date: string; from: string; to: string }): Promise<LooksResult<LookMatch[]>> {
-  const { data, error } = await untypedRpc<LookMatch[]>('match_look', {
+  const { data, error } = await supabase.rpc('match_look', {
     p_style: input.style,
     p_date: input.date,
     p_from: input.from,
