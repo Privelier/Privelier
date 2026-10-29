@@ -1,0 +1,107 @@
+# Looks S5 (behind the 'looks' feature flag), client half: a look search
+# that finds nobody free -> "Send as a wish" -> "Your look wishes" shows the
+# wish open for offers -> once a barber offered (barber-look-wish-offer.yaml)
+# the offer appears with price and note -> "Book at HH:MM" lands on the
+# address step of the normal booking flow.
+#
+# NOT YET RUN. Same tooling gap as every other flow here (.maestro/README.md).
+# Also needs migrations 0062-0067 applied (docs/genius/LOOKS.md).
+#
+# Prerequisites:
+# - A test customer in the 'looks' flag, with the same city as the barber,
+#   and fewer than three open wishes.
+# - The barber has proof in skin_fade but is NOT free tomorrow evening
+#   (no availability then), so the search comes back empty.
+# Run this flow, then barber-look-wish-offer.yaml, then this flow again from
+# "Offers" with RUN_PART=offers (the first part is skipped).
+# The flow stops at the address step on purpose: completing it would create
+# a real pending request.
+#
+# Run with:
+#   maestro test .maestro/customer-look-wish.yaml \
+#     -e TEST_CUSTOMER_EMAIL=... -e TEST_CUSTOMER_PASSWORD=... [-e RUN_PART=offers]
+appId: com.privelier.app
+env:
+  TEST_CUSTOMER_EMAIL: customer2.e2e@example.com
+  TEST_CUSTOMER_PASSWORD: ChangeMe123!
+  RUN_PART: wish
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "role-select-customer"
+- tapOn:
+    id: "auth-entry-login"
+- tapOn:
+    id: "auth-login-email"
+- inputText: "${TEST_CUSTOMER_EMAIL}"
+- tapOn:
+    id: "auth-login-password"
+- inputText: "${TEST_CUSTOMER_PASSWORD}"
+- tapOn:
+    id: "auth-login-submit"
+- extendedWaitUntil:
+    visible:
+      id: "customer-home-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "customer-home-looks-search"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "customer-home-looks-search"
+- assertVisible:
+    id: "customer-look-search-screen"
+
+# --- Part 1: nobody free -> send the same choice as a wish ---
+- runFlow:
+    when:
+      true: ${RUN_PART == 'wish'}
+    commands:
+      - tapOn:
+          id: "customer-look-search-style-skin_fade"
+      - tapOn:
+          id: "customer-look-search-day-1"
+      - tapOn:
+          id: "customer-look-search-window-evening"
+      - tapOn:
+          id: "customer-look-search-search"
+      - extendedWaitUntil:
+          visible:
+            id: "customer-look-search-empty"
+          timeout: 10000
+      - tapOn:
+          id: "customer-look-search-wish"
+      - extendedWaitUntil:
+          visible:
+            id: "customer-look-wishes-screen"
+          timeout: 10000
+      - assertVisible:
+          text: "Open for offers until.*|Offen für Angebote bis.*"
+      - assertVisible:
+          text: "No offers yet. We will let you know.|Noch keine Angebote. Wir sagen dir Bescheid."
+
+# --- Part 2: an offer arrived -> book it ---
+- runFlow:
+    when:
+      true: ${RUN_PART == 'offers'}
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "customer-look-search-wishes"
+          direction: DOWN
+          timeout: 10000
+      - tapOn:
+          id: "customer-look-search-wishes"
+      - extendedWaitUntil:
+          visible:
+            id: "customer-look-wishes-offer-.*"
+          timeout: 10000
+      - assertNotVisible:
+          text: ".*km.*"
+      - tapOn:
+          id: "customer-look-wishes-book-.*"
+          index: 0
+      - assertVisible:
+          id: "customer-booking-location-screen"

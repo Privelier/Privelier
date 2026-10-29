@@ -44,6 +44,9 @@ import { ScreenBackHeader } from '../../shared/components/ScreenBackHeader';
 import { useTheme } from '../../theme/useTheme';
 import { space } from '../../theme/spacing';
 import { submitReview } from '../reviewsData';
+import { useFeatureFlag } from '../../shared/featureFlags';
+import { LookFeedbackField } from '../components/looks/LookFeedbackField';
+import { useLookFeedback } from '../hooks/useLookFeedback';
 import { customerDataErrorCopy } from '../errors';
 import type { CustomerStackParamList } from '../CustomerNavigator';
 
@@ -70,6 +73,9 @@ export default function ReviewSubmitScreen({ route, navigation }: Props) {
   const [noticeTone, setNoticeTone] = useState<'error' | 'info'>('error');
   const [success, setSuccess] = useState(false);
   const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Looks S2, behind the 'looks' flag: the optional look-match answer.
+  const looksOn = useFeatureFlag('looks');
+  const lookFeedback = useLookFeedback(bookingId, looksOn);
 
   useEffect(
     () => () => {
@@ -88,6 +94,7 @@ export default function ReviewSubmitScreen({ route, navigation }: Props) {
     setSubmitting(false);
 
     if (result.status === 'ok') {
+      await lookFeedback.submit();
       setSuccess(true);
       successTimeoutRef.current = setTimeout(() => navigation.goBack(), SUCCESS_PAUSE_MS);
       return;
@@ -100,7 +107,7 @@ export default function ReviewSubmitScreen({ route, navigation }: Props) {
       return;
     }
     setError(result.message);
-  }, [rating, comment, bookingId, barberId, navigation]);
+  }, [rating, comment, bookingId, barberId, navigation, lookFeedback]);
 
   if (success) {
     return (
@@ -195,6 +202,17 @@ export default function ReviewSubmitScreen({ route, navigation }: Props) {
               },
             ]}
           />
+          {looksOn ? (
+            <LookFeedbackField
+              styles={lookFeedback.styles}
+              style={lookFeedback.style}
+              onStyle={lookFeedback.setStyle}
+              verdict={lookFeedback.verdict}
+              onVerdict={lookFeedback.setVerdict}
+              de={de}
+              disabled={submitting}
+            />
+          ) : null}
         </ScrollView>
 
         <View style={[styles.footer, { borderTopColor: colors.border }]}>

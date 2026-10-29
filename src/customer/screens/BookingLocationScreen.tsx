@@ -30,7 +30,7 @@ type Props = NativeStackScreenProps<CustomerStackParamList, 'BookingLocation'>;
 
 export default function BookingLocationScreen({ route, navigation }: Props) {
   const de = getAppLanguage() === 'de';
-  const { barberId, barberName, barberImage, service, date, time } = route.params;
+  const { barberId, barberName, barberImage, service, date, time, lookReference } = route.params;
   const { colors, fonts, isDark } = useTheme();
 
   const [street, setStreet] = useState('');
@@ -80,8 +80,8 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
   const location = [trimmedStreet, unit.trim(), trimmedCity, instructions.trim()].filter(Boolean).join(', ');
 
   const goToConfirm = useCallback((chosenLocation: string) => {
-    navigation.navigate('BookingConfirm', { barberId, barberName, barberImage, service, date, time, location: chosenLocation });
-  }, [navigation, barberId, barberName, barberImage, service, date, time]);
+    navigation.navigate('BookingConfirm', { barberId, barberName, barberImage, service, date, time, location: chosenLocation, lookReference });
+  }, [navigation, barberId, barberName, barberImage, service, date, time, lookReference]);
 
   // Saved addresses are the customer's own data: removable at any time.
   const onRemoveSaved = useCallback((saved: SavedAddress) => {
@@ -117,8 +117,9 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
       time,
       location,
       geocodeQuery: `${trimmedStreet}, ${trimmedCity}`,
+      lookReference,
     });
-  }, [navigation, barberId, barberName, barberImage, service, date, time, location, trimmedCity, canContinue, saveForLater, savedAddresses, trimmedStreet, showToast, de]);
+  }, [navigation, barberId, barberName, barberImage, service, date, time, location, trimmedCity, canContinue, saveForLater, savedAddresses, trimmedStreet, showToast, de, lookReference]);
 
   const onSubmitLastField = useCallback(() => {
     Keyboard.dismiss();

@@ -29,18 +29,21 @@ import { BookingStepIndicator } from '../components/BookingStepIndicator';
 import { BookingSuccess, BookingSummary } from '../components/booking/BookingSummary';
 import { formatBookingWhen, formatMoney } from '../format';
 import { useBookingRequest } from '../hooks/useBookingRequest';
+import { useAttachLookReference } from '../hooks/useAttachLookReference';
 import { fetchRoomForBooking } from '../inboxData';
 import type { CustomerStackParamList } from '../CustomerNavigator';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'BookingConfirm'>;
 
 export default function BookingConfirmScreen({ route, navigation }: Props) {
-  const { barberId, barberName, barberImage, service, date, time, location, geocodeQuery } = route.params;
+  const { barberId, barberName, barberImage, service, date, time, location, geocodeQuery, lookReference } = route.params;
   const { colors, fonts } = useTheme();
   const de = getAppLanguage() === 'de';
   const { showToast } = useToast();
   const request = useBookingRequest({ serviceId: service.id, date, time, location, geocodeQuery }, de);
   const { created, submitting, error, conflict } = request;
+  // Looks S3: a booking made from a look carries it as a reference.
+  useAttachLookReference(created, lookReference);
   const [openingChat, setOpeningChat] = useState(false);
   const openingChatRef = useRef(false);
   const details = { barberName, serviceName: service.name, date, time, location };

@@ -18,7 +18,19 @@ import LegalDocumentScreen from '../legal/LegalDocumentScreen';
 import type { LegalDocument } from '../legal/legalConfig';
 import NotificationCenterScreen from '../shared/screens/NotificationCenterScreen';
 import LiveTripScreen from './screens/LiveTripScreen';
+import LookConfirmScreen from './screens/LookConfirmScreen';
+import LookDetailScreen from './screens/LookDetailScreen';
+import LookSearchScreen from './screens/LookSearchScreen';
+import LookWishesScreen from './screens/LookWishesScreen';
+import LookPassScreen from './screens/LookPassScreen';
 import type { LiveTripContext } from './liveTripData';
+
+/**
+ * Looks S3 to S5: what a booking is made for, attached after creation: a
+ * feed look, a searched style with an optional private reference photo, or
+ * a barber's offer on a wish (then accept_offer links the booking).
+ */
+export type LookReferenceParam = { lookId: string | null; style: string; photoPath?: string | null; offerId?: string };
 
 export type CustomerStackParamList = {
   CustomerTabs: NavigatorScreenParams<CustomerTabParamList> | undefined;
@@ -33,7 +45,7 @@ export type CustomerStackParamList = {
   // getBarberProfile call on the Confirm screen's summary. barberImage rides
   // along the same way so the chat opened from Confirm shows the barber's
   // photo, as it does when opened from Inbox or Bookings.
-  BookingDateTime: { barberId: string; barberName: string; barberImage?: string | null; service: ServiceRow };
+  BookingDateTime: { barberId: string; barberName: string; barberImage?: string | null; service: ServiceRow; lookReference?: LookReferenceParam };
   BookingLocation: {
     barberId: string;
     barberName: string;
@@ -41,6 +53,7 @@ export type CustomerStackParamList = {
     service: ServiceRow;
     date: string;
     time: string;
+    lookReference?: LookReferenceParam;
   };
   BookingConfirm: {
     barberId: string;
@@ -52,6 +65,7 @@ export type CustomerStackParamList = {
     location: string;
     /** Street + city only (no flat number or door notes) for an accurate pin. */
     geocodeQuery?: string;
+    lookReference?: LookReferenceParam;
   };
   // Chat: the Inbox thread row carries the room
   // plus its already-loaded display context so the conversation screen
@@ -74,6 +88,17 @@ export type CustomerStackParamList = {
     barberName: string;
     serviceName: string;
   };
+  // Looks S2: "Is this your cut?" for the look a barber captured on one of
+  // the client's completed bookings (opened from the look_confirm event).
+  LookConfirm: { bookingId: string };
+  // Looks S3: one published look with its proof chain (from the Discover rail).
+  LookDetail: { lookId: string };
+  // Looks S4: style, day and time window with instant matches.
+  LookSearch: { style?: string } | undefined;
+  // Looks S5: the client's wishes and the barbers' offers on them.
+  LookWishes: undefined;
+  // Looks S6: the client's private look pass (reference next to result).
+  LookPass: undefined;
 };
 
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
@@ -102,8 +127,16 @@ export default function CustomerNavigator({ onExit }: { onExit: () => void }) {
               onBack={() => props.navigation.goBack()}
               onOpenNotification={(row) => {
                 props.navigation.goBack();
-                if (row.event_type.startsWith('trip_')) {
+                if (row.event_type.startsWith('trip_') && row.booking_id) {
                   props.navigation.navigate('LiveTrip', { bookingId: row.booking_id });
+                  return;
+                }
+                if (row.event_type === 'look_confirm' && row.booking_id) {
+                  props.navigation.navigate('LookConfirm', { bookingId: row.booking_id });
+                  return;
+                }
+                if (row.event_type === 'look_offer') {
+                  props.navigation.navigate('LookWishes');
                   return;
                 }
                 props.navigation.navigate('CustomerTabs', { screen: row.event_type === 'message' ? 'Inbox' : 'Bookings' });
@@ -112,6 +145,11 @@ export default function CustomerNavigator({ onExit }: { onExit: () => void }) {
           </Stack.Screen>
           <Stack.Screen name="ReviewSubmit" component={ReviewSubmitScreen} />
           <Stack.Screen name="LiveTrip" component={LiveTripScreen} options={{ animation: reduceMotion ? 'fade' : 'slide_from_bottom' }} />
+          <Stack.Screen name="LookConfirm" component={LookConfirmScreen} />
+          <Stack.Screen name="LookDetail" component={LookDetailScreen} />
+          <Stack.Screen name="LookSearch" component={LookSearchScreen} />
+          <Stack.Screen name="LookWishes" component={LookWishesScreen} />
+          <Stack.Screen name="LookPass" component={LookPassScreen} />
         </Stack.Navigator>
       </UnreadProvider>
     </RoleExitProvider>

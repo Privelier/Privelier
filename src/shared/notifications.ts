@@ -7,7 +7,10 @@ export type NotificationEventType =
   | 'booking_status'
   | 'trip_started'
   | 'trip_arriving'
-  | 'trip_arrived';
+  | 'trip_arrived'
+  | 'look_confirm'
+  | 'look_wish'
+  | 'look_offer';
 export type NotificationChannelKind = 'notification-badge' | 'notifications';
 
 let notificationChannelSequence = 0;
@@ -24,7 +27,10 @@ export interface NotificationRow {
   id: string;
   recipient_id: string;
   event_type: NotificationEventType;
-  booking_id: string;
+  /** null only for look wishes and offers (0067), which have no booking yet. */
+  booking_id: string | null;
+  /** Set only for look_wish / look_offer (0067); absent before that migration. */
+  look_wish_id?: string | null;
   message_id: string | null;
   /** null when the change was made by Privelier itself (no user session). */
   actor_id: string | null;
@@ -63,6 +69,23 @@ export function notificationCopy(
     return isGerman
       ? { title: 'Dein Barber ist da', body: `${name} ist an deiner Adresse angekommen.` }
       : { title: 'Your barber has arrived', body: `${name} has arrived at your address.` };
+  }
+  // Looks (migration 0064): the barber captured the client's result.
+  if (row.event_type === 'look_confirm') {
+    return isGerman
+      ? { title: 'Ist das dein Schnitt?', body: `${name} hat das Ergebnis deines Termins festgehalten. Bestätige es oder lehne ab.` }
+      : { title: 'Is this your cut?', body: `${name} captured the result of your appointment. Confirm it or decline.` };
+  }
+  // Looks wishes (migration 0067). A wish never names the client.
+  if (row.event_type === 'look_wish') {
+    return isGerman
+      ? { title: 'Look-Wunsch in deiner Stadt', body: 'Ein Kunde sucht einen Look, den du nachweislich schneidest. Schlag eine Zeit vor.' }
+      : { title: 'A look wish in your city', body: 'A client wants a look you have proven. Suggest a time.' };
+  }
+  if (row.event_type === 'look_offer') {
+    return isGerman
+      ? { title: 'Neues Angebot für deinen Look', body: `${name} hat dir eine Zeit für deinen Look-Wunsch vorgeschlagen.` }
+      : { title: 'New offer for your look', body: `${name} suggested a time for your look wish.` };
   }
   if (row.event_type === 'new_request') {
     return isGerman

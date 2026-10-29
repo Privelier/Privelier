@@ -45,7 +45,7 @@ export default function NotificationCenterScreen({
     if (actorIds.length === 0) { setNames({}); return; }
     const identities = role === 'customer'
       ? await supabase.from('barber_directory').select('id,name').in('id', actorIds)
-      : await supabase.rpc('get_booking_counterparts', { p_booking_ids: [...new Set(notifications.map((row) => row.booking_id))] });
+      : await supabase.rpc('get_booking_counterparts', { p_booking_ids: [...new Set(notifications.map((row) => row.booking_id).filter((id): id is string => id !== null))] });
     if (!identities.error && identities.data) {
       const nameMap: Record<string, string | null> = {};
       for (const identity of identities.data as { user_id?: string; id?: string; name: string | null }[]) {
@@ -106,6 +106,9 @@ export default function NotificationCenterScreen({
             : item.event_type === 'trip_started' ? 'navigation'
             : item.event_type === 'trip_arriving' ? 'map-pin'
             : item.event_type === 'trip_arrived' ? 'home'
+            : item.event_type === 'look_confirm' ? 'camera'
+            : item.event_type === 'look_wish' ? 'scissors'
+            : item.event_type === 'look_offer' ? 'tag'
             : item.booking_status === 'accepted' ? 'check-circle'
             : item.booking_status === 'completed' ? 'check'
             : item.booking_status === 'cancelled' ? 'x-circle'
