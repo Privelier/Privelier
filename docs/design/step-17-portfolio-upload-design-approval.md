@@ -45,7 +45,7 @@ customer-facing profile**, which is the worse failure for a premium/trust brand.
 storage object best-effort (log + accept orphan on failure, do NOT roll back the row — the user
 asked for it gone and it is gone from every read path).
 
-**D6 — Max-6 concurrency gap: DEFER + TRACK.** `enforce_portfolio_max_six` is count-based, so two
+**D6 — Max-6 concurrency gap: DEFER + TRACK.** ✅ (advisory lock, migration 0055) `enforce_portfolio_max_six` is count-based, so two
 simultaneous inserts could both pass and yield 7. A single barber tapping sequentially cannot hit
 this; it needs two concurrent sessions of the same barber. Same risk class as the already-tracked
 double-booking-overlap follow-up. Added to the CLAUDE.md backlog rather than built now.

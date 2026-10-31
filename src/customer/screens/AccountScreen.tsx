@@ -7,9 +7,8 @@
  * Deliberate deviations from the prototype:
  * - Wallet & payments and Gift cards & credits rows are ABSENT — founder-
  *   excluded as out of MVP scope (payments are Phase 2). Do not add them.
- * - The stats strip (cuts / barbers / avg rating) is deferred until real
- *   bookings/reviews data exists — an all-zero strip on day one is noise,
- *   not information.
+ * - The stats strip (cuts / barbers / avg rating) appears only once the
+ *   customer has a completed booking — an all-zero strip is noise.
  * - No verified badge next to the customer's name: verification is a
  *   barber-only concept in this product.
  *
@@ -28,6 +27,8 @@ import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchOwnProfile } from '../../auth/authService';
+import { fetchOwnAccountStats, type AccountStats } from '../accountStatsData';
+import { AccountStatsStrip } from '../components/AccountStatsStrip';
 import { useExitRole } from '../../RoleContext';
 import { useTheme } from '../../theme/useTheme';
 import { pressOpacity } from '../../theme/motion';
@@ -66,14 +67,18 @@ export default function AccountScreen({ navigation }: Props) {
   const [profile, setProfile] = useState<UsersRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<AccountStats | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     const result = await fetchOwnProfile();
     setLoading(false);
-    if (result.status === 'ok') setProfile(result.profile);
-    else setError(result.message);
+    if (result.status === 'ok') {
+      setProfile(result.profile);
+      // Best-effort: the strip stays hidden when its reads fail.
+      if (result.profile) void fetchOwnAccountStats(result.profile.id).then(setStats);
+    } else setError(result.message);
   }, []);
 
   useFocusEffect(useCallback(() => { void load(); }, [load]));
@@ -92,8 +97,8 @@ export default function AccountScreen({ navigation }: Props) {
 
         {error ? (
           <Notice message={error} testID="customer-account-error" style={styles.errorNotice}>
-            <Pressable onPress={() => void load()} accessibilityRole="button" accessibilityLabel="Try loading profile again" style={styles.retryAction}>
-              <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}>Try again</Text>
+            <Pressable onPress={() => void load()} accessibilityRole="button" accessibilityLabel={de ? 'Profil erneut laden' : 'Try loading profile again'} style={styles.retryAction}>
+              <Text style={{ color: colors.accentText, fontFamily: fonts.bodyMedium }}>{de ? 'Erneut versuchen' : 'Try again'}</Text>
             </Pressable>
           </Notice>
         ) : null}
@@ -144,6 +149,7 @@ export default function AccountScreen({ navigation }: Props) {
             </View>
             <Feather name="edit-2" size={20} color={colors.textSecondary} />
           </Pressable>
+          <AccountStatsStrip stats={stats} de={de} />
         </Reveal> : null}
 
         <Reveal index={1}>

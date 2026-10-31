@@ -69,6 +69,6 @@ Traced the full path for every option above: OAuth session → `ensureProfile()`
 
 ---
 
-## Next stage
+## Next stage ✅
 
 Design gate: **PASSED**. Route to `supabase-schema-architect` for the formal "no schema change required" confirmation (Task 2.1 — expected to be a quick, low-effort sign-off given this gate found zero schema impact across every option), then Build (`fullstack-developer` for the data layer per 1.1–1.3, `mobile-developer` for the native/EAS work, `ui-ux-designer` for the button treatment).
