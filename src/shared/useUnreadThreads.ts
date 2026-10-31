@@ -85,6 +85,9 @@ export function useUnreadThreads(): UnreadState {
   const activeRoomRef = useRef<string | null>(null);
   const latestByRoomRef = useRef<Map<string, UnreadMessageInput>>(new Map());
   const myIdRef = useRef<string | null>(null);
+  // Rooms whose read-marker upsert has not settled yet: a baseline that races
+  // the write would read the old marker and briefly re-flag the room.
+  const inFlightMarkersRef = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
     let active = true;
@@ -117,6 +120,8 @@ export function useUnreadThreads(): UnreadState {
     // room writes nothing (finding M1 — see resolveReadMarker's contract).
     const marker = resolveReadMarker(latestByRoomRef.current.get(roomId)?.created_at ?? null);
     if (marker === null) return;
+    const inFlight = inFlightMarkersRef.current;
+    inFlight.set(roomId, (inFlight.get(roomId) ?? 0) + 1);
     void supabase
       .from('chat_read_state')
       .upsert(
@@ -124,9 +129,10 @@ export function useUnreadThreads(): UnreadState {
         { onConflict: 'chat_id,user_id' }
       )
       .then(({ error }) => {
-        if (error) {
-  devWarn('[unread] writeReadMarker failed', error);
-}
+        const left = (inFlight.get(roomId) ?? 1) - 1;
+        if (left > 0) inFlight.set(roomId, left);
+        else inFlight.delete(roomId);
+        if (error) devWarn('[unread] writeReadMarker failed', error);
       });
   }, []);
 
@@ -188,6 +194,8 @@ export function useUnreadThreads(): UnreadState {
     // The active room is being read right now — never re-flag it from a
     // baseline that raced a fresh message.
     if (activeRoomRef.current) next.delete(activeRoomRef.current);
+    // A marker still being written is newer than what this baseline read.
+    for (const roomId of inFlightMarkersRef.current.keys()) next.delete(roomId);
     setUnreadRoomIds(next);
   }, []);
 
