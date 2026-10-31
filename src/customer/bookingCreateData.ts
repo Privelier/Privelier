@@ -75,6 +75,12 @@ export async function insertBooking(input: {
       logCustomerDataError('insertBooking.slot', error);
       return { status: slotOutcome };
     }
+    // The shared mapper reads a bare P0001 as a refused status change
+    // ("can no longer be cancelled"), which is wrong copy for a new booking.
+    if (error.code === RAISE_EXCEPTION) {
+      logCustomerDataError('insertBooking', error);
+      return failure('unknown');
+    }
     return mapPostgrestError('insertBooking', error);
   }
   return { status: 'ok', booking: data as BookingRow };

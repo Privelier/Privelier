@@ -181,6 +181,17 @@ describe('send side (C4: debounced, never per-keystroke)', () => {
     expect(sentPayloads(fake).filter((p) => !p.typing)).toHaveLength(1);
   });
 
+  it('stops sending once the channel drops (SUBSCRIBED -> CHANNEL_ERROR)', async () => {
+    const fake = installFakeChannel();
+    const { result } = await renderTyping(baseArgs());
+    await act(() => fake.emitStatus('SUBSCRIBED'));
+    await act(() => fake.emitStatus('CHANNEL_ERROR'));
+
+    await act(() => result.current.notifyActivity());
+    await act(() => jest.advanceTimersByTime(TYPING_SENDER_IDLE_MS));
+    expect(fake.send).not.toHaveBeenCalled();
+  });
+
   it('notifyStopped sends the stop immediately, at most once per owed start', async () => {
     const fake = installFakeChannel();
     const { result } = await renderTyping(baseArgs());
@@ -275,5 +286,25 @@ describe('cleanup', () => {
     // No timer may fire anything after teardown.
     await act(() => jest.advanceTimersByTime(TYPING_RECEIVER_TTL_MS + TYPING_SENDER_IDLE_MS));
     expect(fake.send).toHaveBeenCalledTimes(2);
+  });
+
+  it('on a room switch: tears down the old channel and opens the new topic', async () => {
+    const first = installFakeChannel();
+    const { result, rerender } = await renderTyping(baseArgs());
+    await act(() => first.emitStatus('SUBSCRIBED'));
+    await act(() => first.emitBroadcast({ payload: { user_id: THEM, typing: true } }));
+
+    const second = installFakeChannel();
+    await rerender(baseArgs({ roomId: 'room-2' }));
+
+    expect(mockRemoveChannel).toHaveBeenCalledWith(first);
+    expect(mockChannel).toHaveBeenLastCalledWith('typing:room-2', {
+      config: { private: true, broadcast: { self: false } },
+    });
+    expect(result.current.counterpartTyping).toBe(false);
+
+    // The new channel is not joined yet, so nothing is sent on it.
+    await act(() => result.current.notifyActivity());
+    expect(second.send).not.toHaveBeenCalled();
   });
 });

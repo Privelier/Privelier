@@ -75,6 +75,7 @@ const profile: UsersRow = {
   accepted_terms_version: null,
   adult_confirmed_at: null,
   legal_accepted_at: null,
+  time_zone: 'Europe/Berlin',
 };
 
 const amir: BarberDirectoryRow = {

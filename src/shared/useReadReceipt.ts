@@ -68,7 +68,7 @@ export function useReadReceipt({ roomId, myId, enabled }: UseReadReceiptArgs): R
       setReceipt((prev) => {
         const base = prev && prev.roomId === roomId ? prev.lastReadAt : null;
         const next = mergeLastReadAt(base, incoming);
-        if (prev && prev.roomId === roomId && next === base) return prev;
+        if (next === base && (prev === null || prev.roomId === roomId)) return prev;
         return { roomId, lastReadAt: next };
       });
     };

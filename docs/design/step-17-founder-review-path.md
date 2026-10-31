@@ -32,34 +32,24 @@ That is the **only** gate on discoverability. Confirmed live: approved barber "T
 `verification_requests.status` do **not** affect discovery — they drive UI (the verified badge)
 and the audit trail respectively.
 
-## Founder procedure — APPROVE a barber
+## Founder procedure — APPROVE or REJECT a barber
 
-0. **Check the request is COMPLETE before anything else.** In **Table Editor →
-   `verification_requests`**, confirm the barber's row has **both** `id_image_url` **and**
-   `license_image_url` non-null. If either is `NULL` the barber has only submitted one document
-   so far — **do not approve, do not reject.** Leave it `pending` and wait; the barber's Verify
-   tab still shows the other document as not uploaded, and their next pick will fill it in.
-   Nothing in the database enforces this — the CHECK added in 0020 only requires *at least one*
-   document. **This step is a procedural control and it is the only thing standing between a
-   half-submitted request and an approval granted without ever seeing a licence.**
 1. **Storage → `verification-docs` bucket.** Open the barber's ID and license images and eyeball
    them. (Private bucket; the dashboard previews them with service credentials.)
-2. **Table Editor → `barber_profile`**, find the barber's row, set **both**:
-   - `verification_status` = `approved`
-   - `verified` = `true`
-   (These do not auto-sync — a trigger would be needed and none exists. Set both or the badge and
-   the discovery gate disagree.)
-3. **Table Editor → `verification_requests`**, same barber's row, set:
-   - `status` = `approved`
-   - `reviewed_by` = the founder's user id
-   - `reviewed_at` = now
-4. Confirm: the barber now appears in `barber_directory` (they are discoverable to customers).
+2. **SQL editor**, one call (migration 0069):
 
-## Founder procedure — REJECT a barber
+   ```sql
+   select private.review_barber_verification(
+     '<barber user id>', 'approved',   -- or 'rejected'
+     '<your founder user id>');
+   ```
 
-Same as above but `verification_status`/`status` = `rejected` and leave `verified` = `false`.
-The barber stays out of `barber_directory`. On the barber's Verify tab they see the rejected
-state and can re-upload.
+   It writes `barber_profile.verification_status` + `verified` and
+   `verification_requests.status` + `reviewed_by` + `reviewed_at` in one transaction, and
+   **refuses an approval while either document is missing** (a request with one document is the
+   normal state between the barber's two uploads — leave it pending). No app role can call it.
+3. Confirm: an approved barber now appears in `barber_directory`; a rejected one sees the rejected
+   state on the Verify tab and can re-upload.
 
 ## Resubmit behaviour (migration 0015 trigger — verified live)
 
@@ -71,20 +61,14 @@ Note this trigger touches only `verification_requests.status`; it does **not** r
 barber later changes their docs, the profile stays approved while the request goes pending — see
 the gap below.
 
-## Why the Table Editor (not raw SQL) for these edits
+## Editing the tables by hand
 
-`protect_barber_verification_fields` (migration 0005) reverts
-`verified`/`verification_status`/`rating` on any write **unless** `auth.role() = 'service_role'`.
-The dashboard Table Editor sets that role automatically, so edits stick. A raw Management-API SQL
-session does not — it silently reverts. If you must use SQL, first run in the same call:
-`select set_config('request.jwt.claim.role', 'service_role', false);`
+Avoid it; use the function above. `protect_barber_verification_fields` (migration 0005) reverts
+`verified`/`verification_status`/`rating` on any write unless `auth.role() = 'service_role'`, so a
+raw SQL edit silently reverts unless it first runs
+`select set_config('request.jwt.claim.role', 'service_role', true);` in the same transaction.
 
-## Known gap (not blocking Phase 1, tracked)
+## Remaining gap
 
-The two status surfaces — `barber_profile.verification_status` (+`verified`) and
-`verification_requests.status` (+`reviewed_by`/`reviewed_at`) — are **not** linked by any trigger.
-A manual dashboard flow must keep them consistent by hand, and the resubmit trigger only re-queues
-the request, not the profile. Acceptable for two founders doing low-volume manual review, but the
-right long-term fix (Phase 2, or whenever an in-app admin view is built) is a single
-`service_role`-owned approval path (RPC or Edge Function) that writes both tables atomically.
-Route any such change through `supabase-schema-architect`.
+The resubmit trigger re-queues only `verification_requests`; an approved barber who later
+replaces a document stays approved (and discoverable) until a founder reviews the new request.

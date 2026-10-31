@@ -23,25 +23,25 @@ Deliver a code-complete MVP release candidate for the Customer and Barber apps. 
 
 ## Remaining execution order
 
-### W01 — Portfolio upload
+### W01 — Portfolio upload ✅
 
 Replace the unfinished upload state with a real portfolio flow in the Barber app: choose an image, show progress, handle success and failure, delete an image, preserve the six-image hard limit, and provide honest loading/empty/error states. Reuse the existing storage/data contracts and test IDs where they already exist.
 
 Close criteria: focused component/data tests, max-six adversarial coverage, storage/security review, lint/typecheck, and a committed/pushed feature slice.
 
-### W02 — Manual verification submission
+### W02 — Manual verification submission ✅
 
 Complete the Barber verification surface for ID and license uploads, including per-document progress, partial submission, pending, rejected, resubmission, and approved states. Documents remain in the private Supabase bucket. Founder review remains manual through the Supabase dashboard; no OCR, selfie, face matching, or biometric processing.
 
 Close criteria: real submission path, private-storage/RLS review, focused tests, and a runnable barber-to-founder approval path.
 
-### W03 — Booking integrity
+### W03 — Booking integrity ✅
 
 Re-verify the live database authority for past dates, availability windows, duration overlap, and concurrent booking attempts. If any rule is still bypassable through a raw authenticated request, run a separate schema-owner pipeline for the forward-only migration and synchronize it live. Add matching client error states without weakening the state machine.
 
 Close criteria: schema-owner approval, migration/live verification, authenticated allow/deny probes, overlap/concurrency coverage, and no invalid booking accepted by the raw API.
 
-### W04 — Visible UX completion
+### W04 — Visible UX completion ✅
 
 Run a focused Sol 5.6 Ultra pass across the actual remaining defects, not a speculative rewrite:
 

@@ -1,6 +1,6 @@
 """Drive a fake barber to a real booking -- test live tracking from your desk.
 
-Signs in as a TEST BARBER (ordinary email/password auth, the anon key from
+Signs in as a TEST BARBER (ordinary email/password auth, the publishable key from
 .env -- never the service_role key), then plays a realistic drive along a
 real road route: start_trip, a position update every simulated 5 s with GPS
 noise and red-light stops, and mark_trip_arrived at the door. The customer
@@ -65,7 +65,7 @@ def load_env() -> tuple[str, str]:
     url = os.environ.get("EXPO_PUBLIC_SUPABASE_URL") or values.get("EXPO_PUBLIC_SUPABASE_URL")
     anon = os.environ.get("EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY") or values.get("EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY")
     if not url or not anon:
-        sys.exit("EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY missing (.env).")
+        sys.exit("EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY missing (.env).")
     return url.rstrip("/"), anon
 
 

@@ -29,8 +29,8 @@
  * The provider marks read when a room becomes active (the trigger:
  * opening that specific conversation) and again when an INSERT lands for the
  * active room (the user is looking at it). The written marker is
- * resolveReadMarker(now, newest known message) — see unread.ts for the
- * clock-skew rationale. Failures degrade silently (unread returns after
+ * resolveReadMarker(newest known message) — the server timestamp, never the
+ * device clock; see unread.ts for the clock-skew rationale. Failures degrade silently (unread returns after
  * restart until a write succeeds — truthful, nothing fake persisted).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -48,6 +48,14 @@ import {
   type UnreadMessageInput,
 } from './unread';
 import { devWarn } from './devLog';
+import { parseTimestampMs } from './readReceipts';
+
+function isNewer(candidate: string, current: string): boolean {
+  const a = parseTimestampMs(candidate);
+  const b = parseTimestampMs(current);
+  if (a === null) return false;
+  return b === null || a > b;
+}
 
 /** Same cap (and documented degradation) as the inbox preview scan. */
 const MESSAGE_SCAN_CAP = 200;
@@ -220,7 +228,10 @@ export function useUnreadThreads(): UnreadState {
           if (!row || !row.id) return;
 
           const current = latestByRoomRef.current.get(row.chat_id);
-          if (!current || row.created_at > current.created_at) {
+          // Numeric compare: the baseline row came through PostgREST and this
+          // one through Realtime, whose timestamp strings are formatted
+          // differently (readReceipts.ts, decision D3).
+          if (!current || isNewer(row.created_at, current.created_at)) {
             latestByRoomRef.current.set(row.chat_id, row);
           }
 
