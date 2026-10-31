@@ -9,7 +9,7 @@ import { Notice } from '../../../shared/components/Notice';
 import { PrimaryButton } from '../../../shared/components/PrimaryButton';
 import { pressOpacity } from '../../../theme/motion';
 import { useTheme } from '../../../theme/useTheme';
-import type { AvailabilityFormState, AvailabilityMode } from '../../hooks/useAvailabilityForm';
+import { formatDateEntry, formatTimeEntry, type AvailabilityFormState, type AvailabilityMode } from '../../hooks/useAvailabilityForm';
 import { availabilityStyles as styles, dayLabels, dayShort } from './availabilityStyles';
 
 type FieldName = 'date' | 'startTime' | 'endTime';
@@ -42,7 +42,10 @@ function LabeledField({
       <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyMedium }]}>{label}</Text>
       <TextInput
         value={value}
-        onChangeText={onChangeText}
+        // Digits only; the separators are inserted while typing.
+        onChangeText={(next) => onChangeText(field === 'date' ? formatDateEntry(next) : formatTimeEntry(next))}
+        keyboardType="number-pad"
+        maxLength={field === 'date' ? 10 : 5}
         onFocus={() => onFocusChange(field)}
         onBlur={() => onFocusChange(focused === field ? null : focused)}
         placeholder={placeholder}

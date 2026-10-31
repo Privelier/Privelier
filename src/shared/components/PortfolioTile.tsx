@@ -7,15 +7,20 @@
  *
  * - onDelete present  → renders a floating destructive delete disc (barber's
  *   own grid). deleteDisabled dims and disables it (e.g. an upload in flight).
- * - onDelete absent    → read-only tile (customer's Portfolio tab).
+ * - onDelete absent    → read-only tile (customer's Portfolio tab); a tap
+ *   opens the photo full screen.
+ * - A photo that fails to load shows a calm image glyph instead of a blank.
  *
  * The colour-shaped surface placeholder sits UNDER the Image so a slow-loading
  * photo settles into a calm card, never a flash of nothing.
  */
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import { getPublicPortfolioUrl } from '../portfolioImages';
+import { getAppLanguage } from '../locale';
 import { useTheme } from '../../theme/useTheme';
 import { portfolioTileStyle } from './PortfolioGrid';
 
@@ -49,17 +54,58 @@ export function PortfolioTile({
   deleteAccessibilityLabel = 'Delete portfolio image',
 }: PortfolioTileProps) {
   const { colors } = useTheme();
+  const [failed, setFailed] = useState(false);
+  const [open, setOpen] = useState(false);
+  const uri = getPublicPortfolioUrl(imagePath);
+  const de = getAppLanguage() === 'de';
+
+  const image = failed ? (
+    <View style={styles.fallback}>
+      <Feather name="image" size={22} color={colors.textSecondary} />
+    </View>
+  ) : (
+    <Image
+      source={{ uri }}
+      style={styles.image}
+      contentFit="cover"
+      cachePolicy="memory-disk"
+      recyclingKey={imagePath}
+      transition={{ duration: 200, effect: 'cross-dissolve' }}
+      onError={() => setFailed(true)}
+      testID={`${testID}-image`}
+    />
+  );
 
   return (
     <View style={[portfolioTileStyle, { backgroundColor: colors.surface }]} testID={testID}>
-      <Image
-        source={{ uri: getPublicPortfolioUrl(imagePath) }}
-        style={styles.image}
-        contentFit="cover"
-        cachePolicy="memory-disk"
-        recyclingKey={imagePath}
-        transition={{ duration: 200, effect: 'cross-dissolve' }}
-      />
+      {onDelete || failed ? image : (
+        <Pressable
+          onPress={() => setOpen(true)}
+          accessibilityRole="imagebutton"
+          accessibilityLabel={de ? 'Portfoliofoto vergrößern' : 'Open portfolio photo'}
+          testID={`${testID}-open`}
+          style={styles.image}
+        >
+          {image}
+        </Pressable>
+      )}
+      {open ? (
+        <Modal visible animationType="fade" onRequestClose={() => setOpen(false)} statusBarTranslucent>
+          <SafeAreaView style={[styles.preview, { backgroundColor: colors.background }]} testID={`${testID}-preview`}>
+            <Image source={{ uri }} style={styles.previewImage} contentFit="contain" cachePolicy="memory-disk" accessible={false} />
+            <Pressable
+              onPress={() => setOpen(false)}
+              accessibilityRole="button"
+              accessibilityLabel={de ? 'Schließen' : 'Close'}
+              hitSlop={8}
+              testID={`${testID}-preview-close`}
+              style={({ pressed }) => [styles.close, { opacity: pressed ? 0.7 : 1 }]}
+            >
+              <Feather name="x" size={22} color={DELETE_ICON} />
+            </Pressable>
+          </SafeAreaView>
+        </Modal>
+      ) : null}
       {onDelete ? (
         <Pressable
           onPress={onDelete}
@@ -89,6 +135,20 @@ export function PortfolioTile({
 
 const styles = StyleSheet.create({
   image: { width: '100%', height: '100%' },
+  fallback: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  preview: { flex: 1, justifyContent: 'center' },
+  previewImage: { flex: 1 },
+  close: {
+    position: 'absolute',
+    top: 56,
+    right: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: DELETE_SCRIM,
+  },
   deleteDisc: {
     position: 'absolute',
     top: 8,

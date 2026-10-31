@@ -88,7 +88,9 @@ export function BackLink({ onPress, testID }: { onPress: () => void; testID: str
 const shellStyles = StyleSheet.create({
   safe: { flex: 1 },
   flex: { flex: 1 },
-  content: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 12, paddingBottom: 32 },
+  // Capped so web and tablet layouts do not stretch the form; phones are
+  // narrower than the cap.
+  content: { flexGrow: 1, width: '100%', maxWidth: 560, alignSelf: 'center', paddingHorizontal: 24, paddingTop: 12, paddingBottom: 32 },
   heading: { marginTop: 24, marginBottom: 32 },
   title: { ...typeScale.title1, marginBottom: space.sm },
   subtitle: typeScale.bodyLarge,

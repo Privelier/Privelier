@@ -37,7 +37,7 @@ export default function RoleSelectScreen({ onSelectRole }: Props) {
         />
         <RoleOption
           label={de ? 'Weiter als Barber' : 'Continue as barber'}
-          description={de ? 'Verwalte deine Leistungen und Termine' : 'Manage your services and bookings'}
+          description={de ? 'Verwalte Leistungen und Termine. Die Prüfung deines Profils folgt nach der Registrierung.' : 'Manage your services and bookings. Profile verification follows after sign-up.'}
           onPress={() => onSelectRole('barber')}
           testID="role-select-barber"
         />

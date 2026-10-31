@@ -147,6 +147,11 @@ export default function BookingLocationScreen({ route, navigation }: Props) {
         <Text style={[styles.subheading, { color: colors.textSecondary, fontFamily: fonts.body }]}>
           {de ? 'Gib deine vollständige Adresse an, damit dein Barber dich findet.' : 'Add the full address so your barber can find you.'}
         </Text>
+        <Text style={[styles.privacyNote, { color: colors.textSecondary, fontFamily: fonts.body }]} testID="customer-booking-location-privacy">
+          {de
+            ? 'Nur der Barber dieses Termins sieht die Adresse, sobald du die Anfrage sendest.'
+            : 'Only the barber for this booking sees the address, once you send the request.'}
+        </Text>
 
         {savedAddresses.length > 0 ? (
           <SavedAddressList addresses={savedAddresses} de={de} onUse={onUseSaved} onRemove={onRemoveSaved} />
@@ -232,6 +237,7 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: space.xl, paddingTop: space.base, paddingBottom: space.xl },
   heading: { fontSize: 24 },
   subheading: { fontSize: 15, marginTop: 6, lineHeight: 19 },
+  privacyNote: { ...typeScale.secondary, marginTop: 8 },
 
   input: {
     borderWidth: HAIRLINE, borderRadius: 14, paddingHorizontal: 14,

@@ -26,6 +26,7 @@ import { applyAuthCallbackUrl, isOAuthSessionActive } from './deepLink';
 import { failure, type AuthFailure } from './errors';
 import type { EnsureProfileResult, ProfilePrefill, SetupFormFields } from './types';
 import type { UsersRow } from '../types';
+import { clearUnsentDrafts } from '../shared/unsentDrafts';
 
 /** What the PROVISIONING phase is currently showing. */
 type ProvisioningView =
@@ -93,6 +94,7 @@ export function useAuthShell(): AuthShell {
       // Synchronous state updates ONLY in this callback.
       switch (event) {
         case 'SIGNED_OUT':
+          clearUnsentDrafts();
           setSession(null);
           setProfile(null);
           setConsent({ kind: 'checking' });

@@ -43,7 +43,7 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
   const { created, submitting, error, conflict } = request;
   const [openingChat, setOpeningChat] = useState(false);
   const openingChatRef = useRef(false);
-  const details = { barberName, serviceName: service.name, date, time, location };
+  const details = { barberName, serviceName: service.name, date, time, location, durationMinutes: service.duration_minutes };
 
   const onMessageBarber = useCallback(async () => {
     if (!created || openingChatRef.current) return;
@@ -123,7 +123,15 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
           </Notice>
         ) : null}
 
-        <BookingSummary details={details} de={de} />
+        <BookingSummary
+          details={details}
+          de={de}
+          edits={submitting ? undefined : {
+            // Confirm sits on Location, which sits on DateTime.
+            onEditWhen: () => navigation.pop(2),
+            onEditLocation: () => navigation.goBack(),
+          }}
+        />
         <AddressPinPreview state={request.pin} />
 
         <View style={[styles.priceRow, { borderTopColor: colors.border }]}>

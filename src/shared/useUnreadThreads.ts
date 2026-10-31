@@ -70,11 +70,17 @@ export interface UnreadState {
    * blur; the provider handles mark-as-read from it.
    */
   setActiveRoom: (roomId: string | null) => void;
+  /**
+   * Increments on every message this user can see arriving live, so the
+   * thread lists can refresh their previews while they stay open.
+   */
+  messageTick: number;
 }
 
 export function useUnreadThreads(): UnreadState {
   const [unreadRoomIds, setUnreadRoomIds] = useState<Set<string>>(new Set());
   const [myId, setMyId] = useState<string | null>(null);
+  const [messageTick, setMessageTick] = useState(0);
 
   const activeRoomRef = useRef<string | null>(null);
   const latestByRoomRef = useRef<Map<string, UnreadMessageInput>>(new Map());
@@ -226,6 +232,7 @@ export function useUnreadThreads(): UnreadState {
         (payload: RealtimePostgresChangesPayload<MessageRow>) => {
           const row = payload.new as MessageRow;
           if (!row || !row.id) return;
+          setMessageTick((tick) => tick + 1);
 
           const current = latestByRoomRef.current.get(row.chat_id);
           // Numeric compare: the baseline row came through PostgREST and this
@@ -278,5 +285,5 @@ export function useUnreadThreads(): UnreadState {
     [markRead]
   );
 
-  return { unreadRoomIds, unreadCount: unreadRoomIds.size, setActiveRoom };
+  return { unreadRoomIds, unreadCount: unreadRoomIds.size, setActiveRoom, messageTick };
 }
