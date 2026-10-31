@@ -16,7 +16,7 @@
  *  - insertPortfolioRow's max-6 trigger mapping: the P0001 raise whose message
  *    contains "more than 6 portfolio images" surfaces as a typed
  *    'limit_reached' failure and does NOT fall through to the generic mapper,
- *    while any OTHER P0001 still maps via mapPostgrestError.
+ *    while any OTHER P0001 maps to 'unknown' (never booking/status copy).
  */
 import { supabase } from '../../../lib/supabase';
 import {
@@ -265,10 +265,9 @@ describe('insertPortfolioRow', () => {
     expect(result).not.toMatchObject({ code: 'transition_rejected' });
   });
 
-  it('does NOT treat a P0001 WITHOUT the max-six message as limit_reached (falls through to the mapper)', async () => {
-    // A different P0001 (e.g. some other raise) must go via mapPostgrestError,
-    // which maps a bare P0001 to transition_rejected — proving the limit guard
-    // is message-specific, not code-only.
+  it('does NOT treat a P0001 WITHOUT the max-six message as limit_reached', async () => {
+    // A different P0001 is 'unknown' — proving the limit guard is
+    // message-specific, and that status-change copy never shows here.
     const builder = insertChain({
       data: null,
       error: { code: 'P0001', message: 'some unrelated trigger raise' },
@@ -276,7 +275,7 @@ describe('insertPortfolioRow', () => {
     mockFrom.mockReturnValueOnce(builder);
 
     const result = await insertPortfolioRow('b1', 'b1/img-x.jpg');
-    expect(result).toMatchObject({ status: 'error', code: 'transition_rejected' });
+    expect(result).toMatchObject({ status: 'error', code: 'unknown' });
   });
 
   it('maps an RLS denial (42501) to forbidden via mapPostgrestError', async () => {

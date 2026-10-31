@@ -1,4 +1,5 @@
-import { Image, StyleSheet, View, type ImageSourcePropType, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Image } from 'expo-image';
 
 type BrandmarkSize = 'sm' | 'md' | 'lg' | 'xl';
 interface BaseProps {
@@ -15,7 +16,7 @@ export type BrandmarkProps = BaseProps &
     | { lockup: 'horizontal'; size?: 'sm' | 'md' | 'lg' }
   );
 
-const WORDMARK_WHITE = require('../../../assets/privelier-wordmark-white.png') as ImageSourcePropType;
+const WORDMARK_WHITE = require('../../../assets/privelier-wordmark-white.png') as number;
 
 const WIDTHS: Record<BrandmarkSize, number> = {
   sm: 120,
@@ -36,7 +37,7 @@ export default function Brandmark(props: BrandmarkProps) {
     <View {...a11y} testID={testID ?? 'brandmark'} style={[styles.root, style]}>
       <Image
         source={WORDMARK_WHITE}
-        resizeMode="contain"
+        contentFit="contain"
         accessible={false}
         importantForAccessibility="no"
         style={{ width, height: width * 0.114 }}

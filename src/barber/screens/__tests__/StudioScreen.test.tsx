@@ -42,6 +42,18 @@ jest.mock('../../../auth/authService', () => ({ fetchOwnProfile: jest.fn() }));
 jest.mock('../../dashboardData', () => ({ fetchDashboardView: jest.fn() }));
 jest.mock('../../../shared/components/NotificationBell', () => ({ NotificationBell: () => null }));
 jest.mock('../../../RoleContext', () => ({ useExitRole: () => jest.fn() }));
+jest.mock('../../profileData', () => ({ syncOwnTimeZone: jest.fn(() => Promise.resolve()) }));
+// The count-up animation keeps scheduling frames after each test settles;
+// the final value is what these tests assert.
+jest.mock('../../../shared/motion/AnimatedNumber', () => {
+  const { Text } = jest.requireActual('react-native');
+  const { numericText } = jest.requireActual('../../../theme/typography');
+  return {
+    AnimatedNumber: ({ value, format = (v: number) => String(Math.round(v)), style, testID }: { value: number; format?: (v: number) => string; style?: object; testID?: string }) => (
+      <Text style={[style, numericText]} accessibilityLabel={format(value)} testID={testID}>{format(value)}</Text>
+    ),
+  };
+});
 
 // SafeAreaView must forward props so the barber-dashboard-screen testID (on the
 // SafeAreaView itself) survives into the tree.

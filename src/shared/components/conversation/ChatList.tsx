@@ -8,6 +8,7 @@ import type { ConversationListItem, useConversation } from '../../useConversatio
 import { JUMP_TO_LATEST_THRESHOLD } from '../JumpToLatestButton';
 import { DayDivider, LoadEarlier, MessageBubble, PendingBubble } from './ChatRows';
 import type { ConversationStyles } from './conversationStyles';
+import { listPerformance } from '../../listPerformance';
 
 type Glass = StyleProp<ViewStyle>;
 
@@ -30,6 +31,9 @@ export function ChatList({ listRef, styles, chat, glass, de, testIDPrefix, onAwa
       onScroll={(event) => onAwayFromLatestChange(event.nativeEvent.contentOffset.y > JUMP_TO_LATEST_THRESHOLD)}
       scrollEventThrottle={64}
       data={chat.listData}
+      {...listPerformance}
+      // Inverted lists blank rows on Android with clipped subviews.
+      removeClippedSubviews={false}
       keyExtractor={(item) => (item.kind === 'pending' ? `pending-${item.pending.key}` : item.kind === 'day' ? item.key : item.message.id)}
       contentContainerStyle={styles.listContent}
       maintainVisibleContentPosition={{ minIndexForVisible: 0 }}

@@ -41,6 +41,7 @@ import { NotificationBell } from '../../shared/components/NotificationBell';
 import { Skeleton } from '../../shared/components/Skeleton';
 import { LegalLinks } from '../../legal/LegalComponents';
 import { DeleteAccountAction } from '../../shared/components/DeleteAccountAction';
+import { Colophon } from '../../shared/components/Colophon';
 import Animated from 'react-native-reanimated';
 import { Reveal, ScrollGlassHeader, useScrollGlass } from '../../shared/motion';
 import { useTabBarClearance } from '../../shared/navigation/tabBarClearance';
@@ -190,6 +191,7 @@ export default function AccountScreen({ navigation }: Props) {
         </Pressable>
         <DeleteAccountAction onDeleted={onSignOut} testID="customer-account-delete" />
         <LegalLinks includeAll testIDPrefix="customer-account-legal" />
+        <Colophon testID="customer-account-colophon" />
       </Animated.ScrollView>
       <ScrollGlassHeader title={de ? 'Konto' : 'Account'} scrollY={scrollY} start={48} testID="customer-account-glass-header" />
     </SafeAreaView>

@@ -19,6 +19,7 @@ import { availabilityStyles as styles, dayLabels } from '../components/availabil
 import { DaysOffStrip } from '../components/DaysOffStrip';
 import { toHm, useAvailabilityForm } from '../hooks/useAvailabilityForm';
 import type { BarberStackParamList } from '../BarberNavigator';
+import { listPerformance } from '../../shared/listPerformance';
 
 type Props = NativeStackScreenProps<BarberStackParamList, 'Availability'>;
 
@@ -84,6 +85,7 @@ export default function AvailabilityScreen({ navigation }: Props) {
 
       <FlatList
         data={windows}
+        {...listPerformance}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={

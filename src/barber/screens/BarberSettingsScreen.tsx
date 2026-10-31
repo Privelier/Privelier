@@ -11,6 +11,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useExitRole } from '../../RoleContext';
 import { LegalLinks } from '../../legal/LegalComponents';
 import { DeleteAccountAction } from '../../shared/components/DeleteAccountAction';
+import { Colophon } from '../../shared/components/Colophon';
 import { ScreenBackHeader } from '../../shared/components/ScreenBackHeader';
 import { Reveal } from '../../shared/motion';
 import { getAppLanguage } from '../../shared/locale';
@@ -116,6 +117,7 @@ export default function BarberSettingsScreen({ navigation }: Props) {
         </Reveal>
 
         <LegalLinks includeAll testIDPrefix="barber-settings-legal" />
+        <Colophon testID="barber-settings-colophon" />
       </ScrollView>
     </SafeAreaView>
   );

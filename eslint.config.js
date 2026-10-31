@@ -35,6 +35,17 @@ module.exports = defineConfig([
     },
   },
   {
+    // The Cinzel logo faces belong to the wordmark alone (typography.ts).
+    files: ['**/*.{ts,tsx}'],
+    ignores: ['src/shared/components/Brandmark.tsx', 'src/theme/typography.ts'],
+    rules: {
+      'no-restricted-syntax': ['error', {
+        selector: "MemberExpression[property.name=/^logo/][object.name='fonts']",
+        message: 'fonts.logo / fonts.logoSemiBold are for the Brandmark only; use a text font.',
+      }],
+    },
+  },
+  {
     files: ['**/__tests__/**', '**/*.test.{ts,tsx}', 'jest.setup.ts'],
     rules: {
       '@typescript-eslint/no-floating-promises': 'off',

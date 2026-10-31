@@ -82,7 +82,8 @@ export function PopularTimesChart({ grid, now = new Date(), testID }: { grid: Po
               accessibilityRole="tab"
               accessibilityState={{ selected }}
               accessibilityLabel={name}
-              hitSlop={4}
+              // 32pt tall + 6pt above and below = a 44pt target.
+              hitSlop={6}
               testID={testID ? `${testID}-day-${index}` : undefined}
               style={[styles.day, { borderColor: selected ? colors.accent : 'transparent' }]}
             >

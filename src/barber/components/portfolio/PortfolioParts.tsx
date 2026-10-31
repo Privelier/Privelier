@@ -2,7 +2,8 @@
  * Studio tab pieces: the "manage your studio" shortcuts and the portfolio
  * grid's uploading and add tiles.
  */
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import { GlassSurface } from '../../../shared/components/GlassSurface';
 import { portfolioTileStyle } from '../../../shared/components/PortfolioGrid';
@@ -69,7 +70,7 @@ export function UploadingTile({ uri, de }: { uri: string | null; de: boolean }) 
       accessibilityRole="progressbar"
       accessibilityLabel={de ? 'Bild wird hochgeladen' : 'Uploading image'}
     >
-      {uri ? <Image source={{ uri }} style={styles.uploadingImage} resizeMode="cover" /> : null}
+      {uri ? <Image source={{ uri }} style={styles.uploadingImage} contentFit="cover" /> : null}
       <View style={[styles.uploadingScrim, { backgroundColor: UPLOAD_SCRIM }]}>
         <ActivityIndicator size="small" color={colors.accent} />
       </View>

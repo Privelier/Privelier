@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
   skeletonTimeLabel: { width: 70, height: 13, marginTop: space['3xl'], marginBottom: 16 },
   skeletonSlots: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   skeletonSlot: { width: 72, height: 42, borderRadius: radius.lg },
-  nextAvailable: { alignSelf: 'flex-start', minHeight: 40, justifyContent: 'center', borderWidth: 0.5, borderRadius: 999, paddingHorizontal: 14, marginBottom: 14 },
+  nextAvailable: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', borderWidth: 0.5, borderRadius: 999, paddingHorizontal: 14, marginBottom: 14 },
   nextAvailableText: { fontSize: 13 },
   timeGroup: { marginBottom: space.lg },
   periodLabel: { fontSize: 14, lineHeight: 21, marginBottom: 10 },
