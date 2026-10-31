@@ -8,6 +8,7 @@ import { pressOpacity } from '../../../theme/motion';
 import { HAIRLINE, radius, space } from '../../../theme/spacing';
 import { useTheme } from '../../../theme/useTheme';
 import type { VerificationRequestRow, VerificationStatus } from '../../../types';
+import { typeScale } from '../../../theme/typography';
 
 type Language = 'de' | 'en';
 type StatusCopy = { word: string; line: string; icon: keyof typeof Feather.glyphMap };
@@ -137,7 +138,7 @@ const styles = StyleSheet.create({
   },
   statusText: { flexShrink: 1, minWidth: 0 },
   statusWord: { fontSize: 18 },
-  statusLine: { fontSize: 14, lineHeight: 21, marginTop: 6 },
+  statusLine: { ...typeScale.body, marginTop: 6 },
   docRow: {
     flexDirection: 'row',
     alignItems: 'center',

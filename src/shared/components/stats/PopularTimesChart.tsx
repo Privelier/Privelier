@@ -21,6 +21,7 @@ import { getAppLanguage } from '../../locale';
 import { haptics } from '../../haptics';
 import { useReducedMotionPreference } from '../../motion/useReducedMotionPreference';
 import { busyNow, weekdayIndex, WEEKDAYS, type PopularGrid } from '../../barberStats';
+import { typeScale } from '../../../theme/typography';
 
 const CHART_H = 72;
 
@@ -148,5 +149,5 @@ const styles = StyleSheet.create({
   bar: { borderTopLeftRadius: radius.xs, borderTopRightRadius: radius.xs },
   axis: { flexDirection: 'row', gap: 3, borderTopWidth: HAIRLINE, paddingTop: 4 },
   axisText: { flex: 1, fontSize: 10, textAlign: 'left' },
-  hint: { fontSize: 13, lineHeight: 19, marginTop: space.sm },
+  hint: { ...typeScale.secondary, marginTop: space.sm },
 });

@@ -12,6 +12,7 @@ import { pressOpacity } from '../../../theme/motion';
 import { radius, space } from '../../../theme/spacing';
 import { useTheme } from '../../../theme/useTheme';
 import type { PeriodKey } from '../../hooks/useBookingSlots';
+import { typeScale } from '../../../theme/typography';
 
 const PERIOD_LABELS: Record<PeriodKey, { en: string; de: string }> = {
   morning: { en: 'Morning', de: 'Vormittag' },
@@ -143,7 +144,7 @@ const styles = StyleSheet.create({
   nextAvailable: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', borderWidth: 0.5, borderRadius: 999, paddingHorizontal: 14, marginBottom: 14 },
   nextAvailableText: { fontSize: 13 },
   timeGroup: { marginBottom: space.lg },
-  periodLabel: { fontSize: 14, lineHeight: 21, marginBottom: 10 },
+  periodLabel: { ...typeScale.body, marginBottom: 10 },
   slotGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   slotChip: { borderRadius: radius.lg, paddingHorizontal: 18, paddingVertical: space.md, minWidth: 80, minHeight: 48, justifyContent: 'center', alignItems: 'center' },
   slotText: { fontSize: 16, fontVariant: ['tabular-nums'] },

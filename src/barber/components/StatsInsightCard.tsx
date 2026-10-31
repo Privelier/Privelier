@@ -18,6 +18,7 @@ import { GlassSurface } from '../../shared/components/GlassSurface';
 import { AnimatedNumber } from '../../shared/motion/AnimatedNumber';
 import { PopularTimesChart, clockLabel } from '../../shared/components/stats/PopularTimesChart';
 import { busiestWindow, isFastResponder, type BarberStatsRow } from '../../shared/barberStats';
+import { typeScale } from '../../theme/typography';
 
 export function StatsInsightCard({ stats }: { stats: BarberStatsRow }) {
   const { colors, fonts } = useTheme();
@@ -91,12 +92,12 @@ const styles = StyleSheet.create({
   card: { padding: space.lg, gap: space.base },
   heading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   eyebrow: { fontSize: 12, marginBottom: 2 },
-  title: { fontSize: 20, lineHeight: 26 },
+  title: { ...typeScale.title3 },
   facts: { flexDirection: 'row', gap: space.lg },
   fact: { flex: 1, gap: 2 },
   label: { fontSize: 12 },
   value: { fontSize: 26, lineHeight: 32 },
-  note: { fontSize: 12, lineHeight: 17 },
+  note: { ...typeScale.caption },
   chartBlock: { borderTopWidth: 0.5, paddingTop: space.base, gap: space.xs },
   window: { fontSize: 15, lineHeight: 21 },
 });

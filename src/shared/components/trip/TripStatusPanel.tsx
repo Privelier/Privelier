@@ -11,7 +11,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../../../theme/useTheme';
-import { numericText } from '../../../theme/typography';
+import { numericText, typeScale } from '../../../theme/typography';
 import { radius, space } from '../../../theme/spacing';
 import { useReducedMotionPreference } from '../../motion/useReducedMotionPreference';
 import { formatDistance, formatEta } from '../../tracking/eta';
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
   hero: { fontSize: 52, lineHeight: 60, flexShrink: 1 },
   heroSide: { alignItems: 'flex-end', paddingBottom: 8 },
   sideLabel: { fontSize: 12 },
-  sideValue: { fontSize: 20, lineHeight: 26 },
+  sideValue: { ...typeScale.title3 },
   caption: { fontSize: 14, lineHeight: 20, marginTop: 2 },
   track: { height: 4, borderRadius: radius.pill, marginTop: space.lg, overflow: 'visible', justifyContent: 'center' },
   fill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 999 },

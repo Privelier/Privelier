@@ -22,7 +22,7 @@ import { useToast } from '../../shared/components/ToastProvider';
 import { getAppLanguage } from '../../shared/locale';
 import { pressOpacity } from '../../theme/motion';
 import { space } from '../../theme/spacing';
-import { numericText } from '../../theme/typography';
+import { numericText, typeScale } from '../../theme/typography';
 import { useTheme } from '../../theme/useTheme';
 import { AddressPinPreview } from '../components/AddressPinPreview';
 import { BookingStepIndicator } from '../components/BookingStepIndicator';
@@ -151,7 +151,7 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 24 },
-  heading: { fontSize: 30, lineHeight: 38 },
+  heading: { ...typeScale.title1 },
   noticeSpacing: { marginTop: space.lg },
   noticeLink: { marginTop: space.sm, minHeight: 44, justifyContent: 'center' },
   noticeLinkText: { fontSize: 13 },

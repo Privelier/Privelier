@@ -6,6 +6,7 @@ import { Feather } from '@expo/vector-icons';
 import { GlassSurface } from '../../../shared/components/GlassSurface';
 import { pressOpacity } from '../../../theme/motion';
 import { useTheme } from '../../../theme/useTheme';
+import { typeScale } from '../../../theme/typography';
 
 export type ViewMode = 'list' | 'map';
 
@@ -69,7 +70,7 @@ const styles = StyleSheet.create({
   fallbackArea: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16, gap: 12 },
   card: { alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: 420, paddingHorizontal: 24, paddingVertical: 16, gap: 10 },
   title: { fontSize: 18, textAlign: 'center' },
-  blurb: { fontSize: 13, lineHeight: 19, textAlign: 'center' },
+  blurb: { ...typeScale.secondary, textAlign: 'center' },
   listAction: {
     minHeight: 44,
     paddingHorizontal: 18,

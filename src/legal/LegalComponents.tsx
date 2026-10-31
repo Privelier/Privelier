@@ -5,6 +5,7 @@ import type { Role } from '../types';
 import { useTheme } from '../theme/useTheme';
 import { space } from '../theme/spacing';
 import type { LegalDocument } from './legalConfig';
+import { typeScale } from '../theme/typography';
 
 type LegalNavigationParams = { Legal: { document: LegalDocument } };
 
@@ -179,6 +180,6 @@ const styles = StyleSheet.create({
   consentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm },
   checkbox: { width: 22, height: 22, borderWidth: 1, borderRadius: 5, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   checkmark: { fontSize: 17, lineHeight: 19 },
-  consentText: { flex: 1, fontSize: 13, lineHeight: 19 },
-  error: { marginLeft: 30, fontSize: 12, lineHeight: 17 },
+  consentText: { flex: 1, ...typeScale.secondary },
+  error: { marginLeft: 30, ...typeScale.caption },
 });

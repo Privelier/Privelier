@@ -22,6 +22,7 @@ import CalendarDateStrip from '../components/CalendarDateStrip';
 import { DateTimeSkeleton, NextAvailableChip, RetryAvailability, TimeSlotGroups } from '../components/booking/DateTimeParts';
 import { useBookingSlots } from '../hooks/useBookingSlots';
 import type { CustomerStackParamList } from '../CustomerNavigator';
+import { typeScale } from '../../theme/typography';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'BookingDateTime'>;
 
@@ -139,13 +140,13 @@ export default function BookingDateTimeScreen({ route, navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: space.xl, paddingTop: space.base, paddingBottom: space.xl },
-  heading: { fontSize: 30, lineHeight: 38 },
+  heading: { ...typeScale.title1 },
   subheading: { fontSize: 15, lineHeight: 23, marginTop: 8 },
   noticeSpacing: { marginTop: space.xl },
   emptyWrap: { gap: space.base, paddingVertical: space['3xl'] },
-  emptyText: { fontSize: 13, lineHeight: 19, textAlign: 'center' },
+  emptyText: { ...typeScale.secondary, textAlign: 'center' },
   hintText: { fontSize: 13, marginTop: space.base },
-  sectionLabel: { fontSize: 14, lineHeight: 21, marginTop: 28, marginBottom: 14 },
+  sectionLabel: { ...typeScale.body, marginTop: 28, marginBottom: 14 },
   timeLabel: { marginTop: space['2xl'] },
   footer: { paddingHorizontal: space.xl, paddingTop: 14, paddingBottom: space.lg, borderTopWidth: 0.5 },
   summary: { fontSize: 13, textAlign: 'center', marginBottom: space.md },

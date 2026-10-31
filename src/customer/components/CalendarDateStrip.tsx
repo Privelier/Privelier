@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  weekday: { fontSize: 11, letterSpacing: 0.2 },
+  weekday: { fontSize: 12, letterSpacing: 0.2 },
   day: { fontSize: 19 },
   dots: { flexDirection: 'row', gap: 3, height: 4 },
   dot: { width: 4, height: 4, borderRadius: 2 },

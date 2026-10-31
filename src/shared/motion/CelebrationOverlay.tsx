@@ -14,6 +14,7 @@ import { radius, space } from '../../theme/spacing';
 import { GlassSurface } from '../components/GlassSurface';
 import { haptics } from '../haptics';
 import { SuccessBurst } from './SuccessBurst';
+import { typeScale } from '../../theme/typography';
 
 const HOLD_MS = 1300;
 
@@ -49,5 +50,5 @@ export function CelebrationOverlay({ message, onDone, testID }: { message: strin
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   card: { alignItems: 'center', paddingHorizontal: space['2xl'], paddingBottom: space.xl, paddingTop: space.xs, borderRadius: radius.xl, minWidth: 220 },
-  text: { fontSize: 20, lineHeight: 26, marginTop: -space.sm },
+  text: { ...typeScale.title3, marginTop: -space.sm },
 });

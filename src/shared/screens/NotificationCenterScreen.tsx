@@ -12,6 +12,7 @@ import { BackButton } from '../components/ScreenBackHeader';
 import { Skeleton } from '../components/Skeleton';
 import { notificationChannelTopic, notificationCopy, type NotificationRow } from '../notifications';
 import { getAppLanguage } from '../locale';
+import { typeScale } from '../../theme/typography';
 
 export default function NotificationCenterScreen({
   role,
@@ -156,7 +157,7 @@ const styles = StyleSheet.create({
   marker: { width: 7, height: 7, borderRadius: 4 },
   copy: { flex: 1, gap: 4 },
   rowTitle: { fontSize: 15 },
-  body: { fontSize: 14, lineHeight: 21 },
+  body: { ...typeScale.body },
   time: { fontSize: 12, marginTop: 2 },
   empty: { flex: 1, minHeight: 260, alignItems: 'center', justifyContent: 'center', gap: 12 },
   emptyText: { padding: 24, textAlign: 'center', fontSize: 14 },

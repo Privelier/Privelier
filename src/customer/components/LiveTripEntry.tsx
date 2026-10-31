@@ -10,7 +10,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../theme/useTheme';
-import { numericText } from '../../theme/typography';
+import { numericText, typeScale } from '../../theme/typography';
 import { HAIRLINE, radius, space } from '../../theme/spacing';
 import { getAppLanguage } from '../../shared/locale';
 import { GlassSurface } from '../../shared/components/GlassSurface';
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
   iconDisc: { width: 36, height: 36, borderRadius: 18, borderWidth: HAIRLINE, alignItems: 'center', justifyContent: 'center' },
   bannerText: { flex: 1, minWidth: 0 },
   bannerTitle: { fontSize: 15, lineHeight: 21 },
-  bannerSub: { fontSize: 12, lineHeight: 17 },
+  bannerSub: { ...typeScale.caption },
   eta: { fontSize: 22, lineHeight: 28 },
   button: {
     minHeight: 48,

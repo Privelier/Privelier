@@ -25,6 +25,7 @@ import { haptics } from '../../shared/haptics';
 import { useToast } from '../../shared/components/ToastProvider';
 import { deleteSavedAddress, listSavedAddresses, saveAddress, type SavedAddress } from '../personalData';
 import type { CustomerStackParamList } from '../CustomerNavigator';
+import { typeScale } from '../../theme/typography';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'BookingLocation'>;
 
@@ -240,7 +241,7 @@ const styles = StyleSheet.create({
     minHeight: 88,
     textAlignVertical: 'top',
   },
-  validation: { fontSize: 13, lineHeight: 19, marginTop: space.base },
+  validation: { ...typeScale.secondary, marginTop: space.base },
 
   footer: { paddingHorizontal: space.xl, paddingTop: 14, paddingBottom: space.lg, borderTopWidth: HAIRLINE },
 });

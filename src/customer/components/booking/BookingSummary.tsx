@@ -12,6 +12,7 @@ import { radius, space } from '../../../theme/spacing';
 import { useTheme } from '../../../theme/useTheme';
 import type { BookingRow } from '../../../types';
 import { formatBookingWhen, formatMoney } from '../../format';
+import { typeScale } from '../../../theme/typography';
 
 interface SummaryDetails {
   barberName: string;
@@ -95,9 +96,9 @@ const styles = StyleSheet.create({
   successSummary: { alignSelf: 'stretch', marginTop: 8 },
   row: { gap: space.xs, padding: 16 },
   label: { fontSize: 13 },
-  value: { fontSize: 16, lineHeight: 24 },
+  value: { ...typeScale.bodyLarge },
   successWrap: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 },
-  successTitle: { fontSize: 30, lineHeight: 38, textAlign: 'center', marginTop: 4 },
+  successTitle: { ...typeScale.title1, textAlign: 'center', marginTop: 4 },
   successHint: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
   successTimeline: { alignSelf: 'stretch', marginBottom: space.lg },
   secondaryAction: {

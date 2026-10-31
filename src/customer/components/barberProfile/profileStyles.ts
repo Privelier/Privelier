@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { OVER_IMAGE_BG, OVER_IMAGE_ICON } from '../../../shared/components/ScreenBackHeader';
+import { typeScale } from '../../../theme/typography';
 
 // Text over the hero image sits on a flat dark scrim, so its colour is fixed
 // regardless of theme. HERO_TEXT/HERO_SCRIM are the shared ScreenBackHeader
@@ -57,7 +58,7 @@ export const profileStyles = StyleSheet.create({
   badgeRow: { paddingHorizontal: 24, paddingTop: 16, marginBottom: -8 },
   popularWrap: { paddingHorizontal: 24, paddingBottom: 24 },
   popularCard: { padding: 18, gap: 12 },
-  popularTitle: { fontSize: 18, lineHeight: 24 },
+  popularTitle: { ...typeScale.headline },
   bio: { fontSize: 14, lineHeight: 22 },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16 },
   chip: { borderWidth: 0.5, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 },

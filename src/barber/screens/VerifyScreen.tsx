@@ -15,6 +15,7 @@ import { useTheme } from '../../theme/useTheme';
 import { MembershipCard } from '../components/verify/MembershipCard';
 import { DocRow, StatusCard, statusCopyFor } from '../components/verify/VerificationParts';
 import { useVerification } from '../hooks/useVerification';
+import { typeScale } from '../../theme/typography';
 
 export default function VerifyScreen() {
   // Scroll the last row clear of the floating glass tab bar.
@@ -91,7 +92,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: space.xl, paddingTop: space.xl, paddingBottom: space['2xl'] },
   heading: { fontSize: 30 },
-  subtitle: { fontSize: 14, lineHeight: 21, marginTop: 8 },
+  subtitle: { ...typeScale.body, marginTop: 8 },
   noticeMargins: { marginTop: space.xl },
   noticeAction: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
   contactAction: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start', marginTop: space.sm },

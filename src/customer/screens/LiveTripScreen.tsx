@@ -39,6 +39,7 @@ import { useLiveTrip, useTripView } from '../../shared/tracking/tripData';
 import { fetchRoomForBooking } from '../inboxData';
 import { fetchLiveTripContext, type LiveTripContext } from '../liveTripData';
 import type { CustomerStackParamList } from '../CustomerNavigator';
+import { typeScale } from '../../theme/typography';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'LiveTrip'>;
 
@@ -221,7 +222,7 @@ const styles = StyleSheet.create({
   sheetContent: { padding: space.lg, gap: space.md },
   who: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   whoText: { flex: 1, minWidth: 0 },
-  name: { fontSize: 20, lineHeight: 26 },
+  name: { ...typeScale.title3 },
   meta: { fontSize: 13, lineHeight: 18 },
   loading: { gap: space.sm },
   skeletonLine: { height: 14, width: 120, borderRadius: radius.sm },
@@ -229,7 +230,7 @@ const styles = StyleSheet.create({
   waiting: { flexDirection: 'row', gap: space.md, borderTopWidth: HAIRLINE, borderBottomWidth: HAIRLINE, paddingVertical: space.md },
   waitingText: { flex: 1, gap: 2 },
   waitingTitle: { fontSize: 15, lineHeight: 21 },
-  waitingBody: { fontSize: 13, lineHeight: 19 },
+  waitingBody: { ...typeScale.secondary },
   divider: { height: HAIRLINE, marginVertical: space.xs },
-  privacy: { fontSize: 12, lineHeight: 17, textAlign: 'center' },
+  privacy: { ...typeScale.caption, textAlign: 'center' },
 });
