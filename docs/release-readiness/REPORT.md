@@ -11,7 +11,7 @@ Audit date: 2026-11-01. Baseline commit `bcf1ee9` on `main` plus the fixes liste
 
 The engineering side is in good shape:
 
-- All eleven database invariants are proven by pgTAP, 9 suite files with the staged migration 0070: 246 counted assertions plus three contract files.
+- All eleven database invariants are proven by pgTAP, 9 suite files (migration 0070 now live): 246 counted assertions plus three contract files.
 - The Security Advisor reports zero ERROR lints.
 - There are no secrets in git history or in either production bundle.
 - After this audit's patch bump, no High or Critical dependency advisories remain.
@@ -42,7 +42,7 @@ Severity is the release impact. Status values: **Fixed** (in this commit, with a
 | R8 | Medium | A generic Face ID purpose string ("Allow $(PRODUCT_NAME) to access your Face ID biometric data") was injected by `expo-secure-store`, although no code uses biometrics. | `npx expo config --type introspect` before; no `requireAuthentication` in `src`/`lib` | Apple 5.1.1(ii) | `expo-secure-store` plugin `faceIDPermission: false`. Introspect after: key removed. | Fixed |
 | R9 | Medium | The in-app deletion sheet did not say what is retained. The web page did. | `DeleteAccountAction.tsx:62-64` vs `site/delete-account.html:57` | Apple 5.1.1(v) | The sheet now says (EN/DE) that safety reports and SOS records stay for review without the account link. The review notes say the same. | Fixed |
 | R10 | Medium | 20 SECURITY DEFINER RPCs of the "Looks" feature are live and callable by `authenticated` (for example `looks_feed`, `create_wish`, `accept_offer`), but their code and migrations are only on Taha's unmerged branch, so this audit could not review them. | Security Advisor lint 0029 (33 functions: 13 justified in D15, 20 Looks); no Looks code on `main` except `src/database.types.ts` | MASVS-AUTH; CWE-284 | Taha merges and reviews them with pgTAP coverage, or revokes EXECUTE until the feature ships. F31. | Human |
-| R11 | Medium | Server password minimum is 6 while the app requires 8, so a direct Auth API call accepts a 6-character password. Leaked-password protection is off. | `config/auth`: `password_min_length=6`, `password_hibp_enabled=false`; `src/auth/screens/validation.ts:13` | CWE-521; OWASP ASVS 2.1.1 | Set the minimum to 8 in Supabase Auth. Leaked-password protection needs the Pro plan (D25). F29. | Human |
+| R11 | Medium | Server password minimum is 6 while the app requires 8, so a direct Auth API call accepts a 6-character password. Leaked-password protection is off. | `config/auth`: `password_min_length=6`, `password_hibp_enabled=false`; `src/auth/screens/validation.ts:13` | CWE-521; OWASP ASVS 2.1.1 | Server minimum set to 8 on 2026-11-01 through the Management API (`password_min_length = 8`, read back). Leaked-password protection still needs the Pro plan (D25). | Fixed (leaked-password protection: Human) |
 | R12 | Medium | The location foreground service (`FOREGROUND_SERVICE_LOCATION`) and the iOS `location` background mode are used for live arrival. Both need a declaration at review. | Merged manifest permissions; `UIBackgroundModes: fetch, location`; `src/barber/trip/tripService.ts:269` | Apple 2.5.4; Play foreground service and Location policies | Barber review note updated. The Play Console foreground-service declaration (with video) is a founder step. F30. | Human |
 | R13 | Low | `tools/db/overlap_concurrency_test.py` reported FAIL. Its "adjacent 11:00" control predates the 30-minute travel buffer (migration 0060), which correctly refuses 11:00. | Run output before: "C refused … FAIL" | Test accuracy | The control now uses 11:30, the first start after the buffer. The overlapping case is unchanged. Re-run: A inserted, B refused, C inserted, D inserted, PASS. | Fixed |
 | R14 | Low | 16 Maestro flows carried a stale `# TODO: replace once app.json defines a real package` on the `appId` line. | `.maestro/*.yaml` | 2.1 hygiene (test assets) | Comment removed. The ID is real. | Fixed |
@@ -50,7 +50,7 @@ Severity is the release impact. Status values: **Fixed** (in this commit, with a
 | R16 | Low | A block stops new messages and bookings and hides the barber from discovery. It does not hide an existing chat history or a blocked customer's review on the barber's profile. | `SafetyMenu.tsx` copy; `private.is_blocked_between` policies | Apple 1.2 | Acceptable for launch: the history belongs to both parties (D7). Revisit if reviewers ask. | Info |
 | R17 | Info | Known gap "double booking blocks only identical start times" is **closed**: an exclusion constraint on half-open ranges plus the 30-minute buffer. | Matrix assertions 37, 44-48; concurrency proof PASS | Invariant integrity | None needed. | Info |
 | R18 | Info | Known gap "a normally open date cannot be marked closed" is **closed**: `barber_days_off` (migration 0046). | Matrix assertions 82-84 | Product | None needed. | Info |
-| R20 | Medium | Removing a review did not update the barber's average. `trg_recompute_barber_rating` fires `AFTER INSERT` only, so the founder removal path in D24 (`delete from public.reviews …`) left a stale public rating. | `pg_get_triggerdef`: `AFTER INSERT ON public.reviews`. `review_removal.test.sql` on the live schema: "have: 3.00, want: 5.00", 2 of 6 failed | Apple 1.2 (acting on reports); data integrity | Forward migration `supabase/migrations/0070_recompute_rating_on_review_delete.sql` recomputes after INSERT or DELETE. `supa.py dry-run`: ok. `supa.py test --with 0070 -- <all suites>`: 9/9 passed. Not applied: production writes were not authorized in this run, so apply it with `python tools/db/supa.py apply supabase/migrations/0070_recompute_rating_on_review_delete.sql` (F33). | Fixed in code, apply pending |
+| R20 | Medium | Removing a review did not update the barber's average. `trg_recompute_barber_rating` fires `AFTER INSERT` only, so the founder removal path in D24 (`delete from public.reviews …`) left a stale public rating. | `pg_get_triggerdef`: `AFTER INSERT ON public.reviews`. `review_removal.test.sql` on the live schema: "have: 3.00, want: 5.00", 2 of 6 failed | Apple 1.2 (acting on reports); data integrity | Forward migration `supabase/migrations/0070_recompute_rating_on_review_delete.sql` recomputes after INSERT or DELETE. `supa.py dry-run`: ok. `supa.py test --with 0070 -- <all suites>`: 9/9 passed. Applied on 2026-11-01 with founder approval (`20261101113349`). After that, `npm run db:test` passes 9/9 and `npm run db:types` shows no diff. | Fixed |
 | R19 | Info | Developer-machine issue found mid-run: `uv.exe`/`uvx.exe` disappeared from `~/.local/bin`, and Git for Windows' `mingw64\bin\git.exe` is missing, so the `git` wrapper reports "BUG (fork bomb)". `mingw64\libexec\git-core\git.exe` still works. | Session observation | Tooling | Reinstall Git for Windows and uv. Check antivirus quarantine. | Human |
 
 ## 3. Scorecards
@@ -60,7 +60,7 @@ Severity is the release impact. Status values: **Fixed** (in this commit, with a
 | Item | Result | Evidence |
 |---|---|---|
 | Zero ERROR Supabase lints | Pass | Security Advisor: 0 ERROR. WARN: lint 0029 (13 justified in D15, 20 Looks functions per R10), leaked-password protection (R11). INFO: 6 RLS-enabled tables without policies (5 in `private`, `push_tokens` RPC-only by design, matrix assertion 86). Performance Advisor: INFO only (unused indexes on a small dataset, 5 unindexed FKs on Looks tables). |
-| pgTAP invariants 1-11 | Pass | `python tools/db/supa.py test --with 0070 -- <all>`: 9/9 files passed. New `release_invariants.test.sql` (56 assertions) and `review_removal.test.sql` (6). Until 0070 is applied live, a plain `npm run db:test` fails `review_removal.test.sql` by design (R20). See section 5. |
+| pgTAP invariants 1-11 | Pass | `python tools/db/supa.py test --with 0070 -- <all>`: 9/9 files passed. New `release_invariants.test.sql` (56 assertions) and `review_removal.test.sql` (6). 0070 is live, so a plain `npm run db:test` passes 9/9 as well. See section 5. |
 | No secrets in code or history | Pass | `gitleaks git`: 349 commits, "no leaks found". `gitleaks dir` on fresh `expo export` bundles (iOS and Android): "no leaks found". The working-tree hits are git-ignored `.env` (publishable key), `.expo/dev/logs` and a stale `dist/`, and every JWT decodes to `role=anon`. The only `EXPO_PUBLIC_*` values are the URL, the publishable key and optional public endpoints and CAPTCHA site key. |
 | No unaddressed High/Critical dependencies | Pass | `npm audit --omit=dev`: 12 moderate, 0 high, 0 critical (R5). |
 | Type check, lint, expo-doctor clean | Pass | `npm run check` exit 0 (tsc, ESLint `--max-warnings 0`, Jest, knip, jscpd 1.38 %, madge no cycles). `npx expo-doctor`: 20/20. |
@@ -80,7 +80,7 @@ Severity is the release impact. Status values: **Fixed** (in this commit, with a
 | 1.2 Report content and users | Pass | Message long-press, chat header, review flag and now the barber profile (R3). `user_reports` target types cover user, message and review. |
 | 1.2 Block users | Pass | `user_blocks`: blocks new messages and bookings, hides the barber (matrix 70-74). |
 | 1.2 Published contact information | Pass | `privelier@outlook.com` in customer Account > Help and barber Settings and Verify (`AccountSectionScreen.tsx:29`, `BarberSettingsScreen.tsx:51`). |
-| 1.2 Founder workflow incl. removing a "permanent" review | Pass with a human step | D24: reviewed within 24 h; warn, then suspend, then remove. Reports go to `public.user_reports` with push alerts to `private.safety_staff` (migration 0061). Removing a review: `delete from public.reviews where id = '<id>';` in the SQL editor (postgres role). The average recomputes once migration 0070 is applied (R20). The second founder still needs a device registered for alerts (F18). |
+| 1.2 Founder workflow incl. removing a "permanent" review | Pass with a human step | D24: reviewed within 24 h; warn, then suspend, then remove. Reports go to `public.user_reports` with push alerts to `private.safety_staff` (migration 0061). Removing a review: `delete from public.reviews where id = '<id>';` in the SQL editor (postgres role). The average recomputes (migration 0070, R20). The second founder still needs a device registered for alerts (F18). |
 | 1.2 Terms accepted before posting | **Fail → Human** | A consent gate exists (versioned `accept_current_legal_consent`), but the text is a placeholder without the zero-tolerance clause (R1). |
 | 5.1.1(i) Privacy policy link in app and metadata | **Fail → Human** | The in-app link exists (`LegalLinks`). No published URL (R1). |
 | 5.1.1(v) In-app account deletion, full record, states retention | Pass | `DeleteAccountAction` (typed confirmation) → `delete-account` Edge Function → `delete_own_account()`. It deletes the auth user, private rows and storage, anonymizes shared history (D7), and states what is retained (R9). Tested in `abuse_limits_and_account_deletion.test.sql` (35 assertions). |
@@ -112,11 +112,10 @@ Severity is the release impact. Status values: **Fixed** (in this commit, with a
 
 New items are also added to `docs/hardening/FOUNDER_ACTIONS.md` (F27-F33).
 
-0. **Apply migration 0070** (R20) when production writes are approved: `python tools/db/supa.py apply supabase/migrations/0070_recompute_rating_on_review_delete.sql`, then `npm run db:test` (expect 9/9) and `npm run db:types`.
 
 1. **Legal (blocks both stores):** publish the privacy notice, customer and barber terms (with zero-tolerance for objectionable content and abuse) and the Impressum at public URLs. Replace the drafts in `src/legal/documents`, then bump the consent versions (F20).
 2. **Email:** configure custom SMTP in Supabase Auth and raise the email rate limit (F28).
-3. **Auth settings:** set the password minimum to 8 (F29). Decide on CAPTCHA (F11).
+3. **Auth settings:** the password minimum is now 8 (done). Decide on CAPTCHA and leaked-password protection (F11).
 4. **Sign-in providers:** either keep them hidden (current default) or configure Google (OAuth client) and Apple (Services ID and key) in Supabase. Then set `EXPO_PUBLIC_OAUTH_PROVIDERS=apple,google` in EAS (F27).
 5. **App Store Connect:** privacy policy URL, support URL, App Privacy answers from `store-privacy-forms.md` (F22), age rating, review notes from `docs/release/app-review-notes-*.md`, and demo accounts (one customer, one pre-approved barber with data; F21). Confirm Xcode 26 in the EAS build log.
 6. **Play Console:** Data safety (F22), deletion URL after enabling Pages (F19), foreground-service location declaration with a short video (F30), app access with the demo accounts, content rating, and the closed test if it is a personal account.
@@ -147,7 +146,7 @@ ok    time_zone_and_verification_review.test.sql (21 assertions)
 9/9 files passed
 ```
 
-Without 0070 (the live schema today), the same run passes 8/9 files. `review_removal.test.sql` fails on the stale average, which is the defect R20 fixes.
+Before 0070 was applied, the same suites passed 8/9 on the live schema: `review_removal.test.sql` failed on the stale average. After applying it, plain `python tools/db/supa.py test` passes 9/9.
 
 `python tools/db/overlap_concurrency_test.py`: A inserted, B refused (lock wait on the in-flight overlap), C inserted (11:30, after the buffer), D inserted, PASS.
 
@@ -185,7 +184,7 @@ Source: `dqwang122/susvibes`, loaded with `datasets` as data only (186 rows, 74 
 | 287 / 306 authentication (4 / 2) | RPCs without auth checks | `anon can execute no public function` (matrix 113). Lint 0029 reviewed (R10 open) | Pass, R10 open |
 | 20 input validation (3) | Message length, ratings, prices | Check constraints (1-2000 characters, rating 1-5, price > 0) | Pass |
 | 532 sensitive data in logs (3) | Auth and trip logging | ESLint `no-console`; `devWarn` and `logAuthError` are dev-only. `.expo/dev/logs` are local and git-ignored | Pass |
-| 521 / 522 weak or insecure credentials (2 / 2) | Password policy, token storage | Server minimum 6 (R11). The session is encrypted (AES key in SecureStore) | Partial: R11 |
+| 521 / 522 weak or insecure credentials (2 / 2) | Password policy, token storage | Server minimum is now 8, matching the app (R11). The session is encrypted (AES key in SecureStore). Leaked-password protection is still off | Pass (HIBP: Human) |
 | 918 SSRF (2) | `pg_net` push calls | Fixed Expo push URL inside SECURITY DEFINER triggers; no user-supplied URL | Pass |
 | 203 / 209 error-message disclosure (2 / 1) | Auth errors, account enumeration | `errorCopy` maps codes to calm copy. The Auth API response is identical for unknown emails (hardening run) | Pass |
 | 295 certificate validation (1) | TLS | Platform TLS. No pinning, by decision (D11) | Accepted |
@@ -201,6 +200,6 @@ Source: `dqwang122/susvibes`, loaded with `datasets` as data only (186 rows, 74 
 
 ## Method and limits
 
-- **Database tests ran on the production project inside transactions that never commit.** No Docker (so no `supabase start`) and no paid branch were available. This is the established project practice (`tools/db/supa.py`, `docs/hardening/README.md`). No migration was applied and no live setting was changed in this run.
+- **Database tests ran on the production project inside transactions that never commit.** No Docker (so no `supabase start`) and no paid branch were available. This is the established project practice (`tools/db/supa.py`, `docs/hardening/README.md`). At founder request, two live changes followed the audit: migration 0070 was applied, and the Auth password minimum was raised to 8. Nothing else live was changed.
 - **Live Auth settings** were read through the Management API with only non-secret fields printed.
 - **Not performed:** release builds and Maestro runs on devices, iPad and screen-size checks, cold-start timing, and network-failure runs on hardware. iOS builds need macOS or EAS. A local Android `bundleRelease` failed in `react-native-worklets`' CMake step. The Windows 260-character path limit blocked it (`ninja: error: mkdir(…/Common/cpp/worklets/SharedItems/Serializable): No such file or directory`). The cause is the workstation, not the code: EAS builds on Linux and macOS. To build locally, enable Windows long paths or build from a short `subst` drive.
