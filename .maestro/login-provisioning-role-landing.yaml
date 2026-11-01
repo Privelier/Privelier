@@ -17,7 +17,7 @@
 #   credentials via --env at run time, e.g.:
 #     maestro test .maestro/login-provisioning-role-landing.yaml \
 #       -e TEST_CUSTOMER_EMAIL=... -e TEST_CUSTOMER_PASSWORD=...
-appId: com.privelier.app # TODO: replace once app.json defines a real package/bundleIdentifier
+appId: com.privelier.app
 env:
   TEST_CUSTOMER_EMAIL: customer.e2e@example.com
   TEST_CUSTOMER_PASSWORD: ChangeMe123!

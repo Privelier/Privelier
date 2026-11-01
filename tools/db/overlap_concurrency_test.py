@@ -6,8 +6,9 @@ commits (each request's open transaction is rolled back when it ends):
   A  inserts barber R's 10:00-11:00 booking, then holds its transaction open.
   B  meanwhile inserts R's overlapping 10:30 booking with a 2 s lock timeout:
      it must be refused while A's row is in flight (no race window).
-  C  meanwhile inserts R's adjacent 11:00 booking: it must succeed at once
-     (half-open [start, end) ranges do not conflict).
+  C  meanwhile inserts R's 11:30 booking, the first start after A's 30-minute
+     travel buffer (migration 0060): it must succeed at once (half-open
+     [start, end + buffer) ranges do not conflict).
   D  after A has rolled back, retries B's booking: it must now succeed,
      proving A's in-flight row was the only reason B was refused.
 
@@ -65,7 +66,7 @@ def main() -> None:
     time.sleep(3)  # A's row is now inserted and uncommitted.
     contenders = [
         threading.Thread(target=timed, args=("B", "10:30"), kwargs={"lock_timeout": "2s"}),
-        threading.Thread(target=timed, args=("C", "11:00"), kwargs={"lock_timeout": "2s"}),
+        threading.Thread(target=timed, args=("C", "11:30"), kwargs={"lock_timeout": "2s"}),
     ]
     for thread in contenders:
         thread.start()

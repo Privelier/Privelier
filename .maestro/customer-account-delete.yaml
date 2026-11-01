@@ -1,0 +1,93 @@
+# Account deletion (App Store 5.1.1(v), Google Play account deletion):
+# log in as a throwaway customer -> Account -> Delete account -> the sheet
+# states what is deleted and what is kept -> "Keep account" leaves the
+# account intact -> confirm with the typed word -> the app returns to the
+# signed-out role choice and the same credentials no longer log in.
+#
+# DESTRUCTIVE: the account is permanently deleted. Use a disposable,
+# pre-confirmed customer created for this run, never a reviewer or founder
+# account.
+#
+# Not run: no connected Android or iOS device is available in this workspace.
+#
+# Run with:
+#   maestro test .maestro/customer-account-delete.yaml \
+#     -e TEST_CUSTOMER_EMAIL=... -e TEST_CUSTOMER_PASSWORD=...
+appId: com.privelier.app
+env:
+  TEST_CUSTOMER_EMAIL: delete.e2e@example.com
+  TEST_CUSTOMER_PASSWORD: ChangeMe123!
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "role-select-customer"
+- tapOn:
+    id: "auth-entry-login"
+- tapOn:
+    id: "auth-login-email"
+- inputText: "${TEST_CUSTOMER_EMAIL}"
+- tapOn:
+    id: "auth-login-password"
+- inputText: "${TEST_CUSTOMER_PASSWORD}"
+- tapOn:
+    id: "auth-login-submit"
+- extendedWaitUntil:
+    visible:
+      id: "customer-home-screen"
+    timeout: 15000
+
+- tapOn:
+    id: "customer-tab-account"
+- assertVisible:
+    id: "customer-account-screen"
+- scrollUntilVisible:
+    element:
+      id: "customer-account-delete"
+    direction: DOWN
+
+# Backing out keeps the account.
+- tapOn:
+    id: "customer-account-delete"
+- assertVisible:
+    id: "customer-account-delete-confirm"
+- assertVisible: "Safety reports and SOS records stay for safety review, with your account removed.*"
+- tapOn:
+    id: "customer-account-delete-confirm-keep"
+- assertVisible:
+    id: "customer-account-screen"
+
+# The confirm button stays inert until the word is typed.
+- tapOn:
+    id: "customer-account-delete"
+- tapOn:
+    id: "customer-account-delete-confirm-confirm"
+- assertVisible:
+    id: "customer-account-delete-confirm"
+- tapOn:
+    id: "customer-account-delete-confirm-phrase"
+- inputText: "DELETE"
+- tapOn:
+    id: "customer-account-delete-confirm-confirm"
+- extendedWaitUntil:
+    visible:
+      id: "role-select-customer"
+    timeout: 20000
+
+# The deleted credentials no longer sign in.
+- tapOn:
+    id: "role-select-customer"
+- tapOn:
+    id: "auth-entry-login"
+- tapOn:
+    id: "auth-login-email"
+- inputText: "${TEST_CUSTOMER_EMAIL}"
+- tapOn:
+    id: "auth-login-password"
+- inputText: "${TEST_CUSTOMER_PASSWORD}"
+- tapOn:
+    id: "auth-login-submit"
+- assertNotVisible:
+    id: "customer-home-screen"
+- assertVisible:
+    id: "auth-login-screen"

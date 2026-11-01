@@ -19,6 +19,14 @@ jest.mock('../../../shared/components/ReportSheet', () => {
   const { Text } = jest.requireActual('react-native');
   return { ReportSheet: ({ target }: { target: { reviewId: string } }) => React.createElement(Text, { testID: 'report-sheet' }, target.reviewId) };
 });
+jest.mock('../../../shared/components/SafetyMenu', () => {
+  const React = jest.requireActual('react');
+  const { Text } = jest.requireActual('react-native');
+  return {
+    SafetyMenu: ({ counterpartId, bookingId, testIDPrefix }: { counterpartId: string; bookingId: string | null; testIDPrefix: string }) =>
+      React.createElement(Text, { testID: `${testIDPrefix}-safety` }, `${counterpartId}|${String(bookingId)}`),
+  };
+});
 jest.mock('@expo/vector-icons', () => ({ Feather: () => null, Ionicons: () => null, MaterialCommunityIcons: () => null }));
 jest.mock('../../../shared/components/ScreenBackHeader', () => ({
   BackButton: () => null,
@@ -116,4 +124,15 @@ it('keeps a failed reviews read local to its tab', async () => {
   await screen.findByTestId('barber-profile-services-empty');
   await fireEvent.press(screen.getByTestId('barber-profile-tab-reviews'));
   expect(screen.getByTestId('barber-profile-reviews-error')).toBeTruthy();
+});
+
+it('offers report and block for the barber on the public profile, outside any booking', async () => {
+  const barber = { id: 'barber-1', name: 'Ada Barber', city: 'Berlin', country: 'DE', rating: 0, profile_image: null, bio: 'Fades' };
+  jest.mocked(getBarberProfile).mockResolvedValue({ status: 'ok', barber } as never);
+  jest.mocked(listServicesForBarber).mockResolvedValue({ status: 'ok', services: [] });
+  jest.mocked(listPortfolioForBarber).mockResolvedValue({ status: 'ok', images: [] });
+  jest.mocked(fetchReviewsForBarber).mockResolvedValue({ status: 'ok', reviews: [], firstNameByReviewId: new Map() });
+  await render(<BarberProfileScreen route={{ params: { barberId: barber.id } } as never} navigation={{ goBack: jest.fn() } as never} />);
+
+  expect((await screen.findByTestId('barber-profile-safety')).props.children).toBe('barber-1|null');
 });

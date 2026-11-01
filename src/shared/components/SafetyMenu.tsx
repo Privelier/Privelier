@@ -1,13 +1,13 @@
 /**
- * Safety actions for a conversation counterpart: report and block/unblock.
- * Used by both conversation headers (each app keeps its own screen; this is
- * only the shared action surface). The database enforces the outcome: a
+ * Safety actions for another person: report and block/unblock. Used by both
+ * conversation headers and over the photo on a barber's public profile
+ * (portfolio and bio are reportable there). The database enforces the outcome: a
  * block stops new messages and booking requests in both directions and
  * hides the barber from the customer's discovery, so the copy describes
  * exactly that and nothing more.
  */
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, type PressableProps } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../theme/useTheme';
 import { getAppLanguage } from '../locale';
@@ -23,11 +23,15 @@ type Props = {
   counterpartName: string;
   bookingId: string | null;
   testIDPrefix: string;
+  /** Over a photo the trigger takes the caller's disc style and icon color. */
+  triggerStyle?: PressableProps['style'];
+  iconColor?: string;
+  iconSize?: number;
 };
 
 type Mode = 'closed' | 'menu' | 'report' | 'block';
 
-export function SafetyMenu({ counterpartId, counterpartName, bookingId, testIDPrefix }: Props) {
+export function SafetyMenu({ counterpartId, counterpartName, bookingId, testIDPrefix, triggerStyle, iconColor, iconSize = 22 }: Props) {
   const { colors } = useTheme();
   const de = getAppLanguage() === 'de';
   const { showToast } = useToast();
@@ -66,9 +70,9 @@ export function SafetyMenu({ counterpartId, counterpartName, bookingId, testIDPr
         accessibilityLabel={de ? 'Sicherheitsoptionen' : 'Safety options'}
         hitSlop={8}
         testID={`${testIDPrefix}-safety`}
-        style={styles.trigger}
+        style={triggerStyle ?? styles.trigger}
       >
-        <Feather name="more-horizontal" size={22} color={colors.textPrimary} />
+        <Feather name="more-horizontal" size={iconSize} color={iconColor ?? colors.textPrimary} />
       </Pressable>
 
       <ActionSheet open={mode === 'menu'} onClose={close} testID={`${testIDPrefix}-safety-menu`}>

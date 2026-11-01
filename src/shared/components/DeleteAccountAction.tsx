@@ -60,8 +60,8 @@ export function DeleteAccountAction({ onDeleted, testID }: { onDeleted: () => vo
         open={confirming}
         title={de ? 'Konto endgültig löschen?' : 'Delete your account?'}
         message={de
-          ? 'Dein Profil, deine Fotos und Dokumente werden dauerhaft gelöscht, offene und kommende Termine werden abgesagt. Wer mit dir gebucht oder geschrieben hat, behält den Verlauf ohne deinen Namen. Das kann nicht rückgängig gemacht werden.'
-          : 'Your profile, photos and documents are permanently deleted, and pending or upcoming bookings are cancelled. People you booked or chatted with keep their history without your name. This cannot be undone.'}
+          ? 'Dein Profil, deine Fotos und Dokumente werden dauerhaft gelöscht, offene und kommende Termine werden abgesagt. Wer mit dir gebucht oder geschrieben hat, behält den Verlauf ohne deinen Namen. Sicherheitsmeldungen und SOS-Einträge bleiben zur Prüfung erhalten, ohne Bezug zu deinem Konto. Das kann nicht rückgängig gemacht werden.'
+          : 'Your profile, photos and documents are permanently deleted, and pending or upcoming bookings are cancelled. People you booked or chatted with keep their history without your name. Safety reports and SOS records stay for safety review, with your account removed. This cannot be undone.'}
         confirmPhrase={de
           ? { word: 'LÖSCHEN', prompt: 'Tippe LÖSCHEN, um zu bestätigen' }
           : { word: 'DELETE', prompt: 'Type DELETE to confirm' }}

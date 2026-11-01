@@ -1,0 +1,63 @@
+# Chat length limit (negative path): typing past 2,000 characters stops at
+# the cap, the counter shows it, and the capped message still sends. The
+# database check (messages 1-2000 characters) is proven separately by the
+# pgTAP authorization matrix.
+#
+# Prerequisites: same as customer-chat-send-message.yaml (a pre-confirmed
+# customer with exactly one chat room).
+#
+# Not run: no connected Android or iOS device is available in this workspace.
+#
+# Run with:
+#   maestro test .maestro/customer-chat-message-limit.yaml \
+#     -e TEST_CUSTOMER_EMAIL=... -e TEST_CUSTOMER_PASSWORD=...
+appId: com.privelier.app
+env:
+  TEST_CUSTOMER_EMAIL: customer.e2e@example.com
+  TEST_CUSTOMER_PASSWORD: ChangeMe123!
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "role-select-customer"
+- tapOn:
+    id: "auth-entry-login"
+- tapOn:
+    id: "auth-login-email"
+- inputText: "${TEST_CUSTOMER_EMAIL}"
+- tapOn:
+    id: "auth-login-password"
+- inputText: "${TEST_CUSTOMER_PASSWORD}"
+- tapOn:
+    id: "auth-login-submit"
+- extendedWaitUntil:
+    visible:
+      id: "customer-home-screen"
+    timeout: 15000
+
+- tapOn:
+    id: "customer-tab-inbox"
+- extendedWaitUntil:
+    notVisible:
+      id: "customer-inbox-loading"
+    timeout: 15000
+- tapOn:
+    id: "customer-inbox-row-.*"
+- extendedWaitUntil:
+    notVisible:
+      id: "customer-conversation-loading"
+    timeout: 15000
+
+- tapOn:
+    id: "customer-conversation-input"
+- inputRandomText:
+    length: 2050
+- assertVisible:
+    id: "customer-conversation-counter"
+- assertVisible: "2000 / 2000"
+- tapOn:
+    id: "customer-conversation-send"
+- extendedWaitUntil:
+    notVisible:
+      id: "customer-conversation-counter"
+    timeout: 15000

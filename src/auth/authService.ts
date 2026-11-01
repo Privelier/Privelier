@@ -178,8 +178,23 @@ export async function signIn(
  * secret. App Store Guideline 4.8 requires it there because Google sign-in is
  * offered; Android users have Google and email.
  */
-export function isAppleSignInSupported(): boolean {
+function isAppleSignInSupported(): boolean {
   return Platform.OS === 'ios';
+}
+
+/**
+ * Provider buttons follow EXPO_PUBLIC_OAUTH_PROVIDERS ("apple,google"), set
+ * once the matching provider is switched on in Supabase Auth, so a build never
+ * offers a sign-in the project refuses. On iOS, Google is offered only
+ * together with Sign in with Apple (App Store guideline 4.8).
+ */
+export function isOAuthProviderEnabled(provider: 'google' | 'apple'): boolean {
+  const enabled = new Set(
+    (process.env.EXPO_PUBLIC_OAUTH_PROVIDERS ?? '').split(',').map((name: string) => name.trim().toLowerCase())
+  );
+  if (!enabled.has(provider)) return false;
+  if (provider === 'apple') return isAppleSignInSupported();
+  return Platform.OS !== 'ios' || enabled.has('apple');
 }
 
 /**

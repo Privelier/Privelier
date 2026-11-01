@@ -26,7 +26,7 @@
 # Prerequisites:
 # - A pre-confirmed test barber account.
 # - Same appId placeholder caveat as every other flow here.
-appId: com.privelier.app # TODO: replace once app.json defines a real package/bundleIdentifier
+appId: com.privelier.app
 env:
   TEST_BARBER_EMAIL: barber.e2e@example.com
   TEST_BARBER_PASSWORD: ChangeMe123!
