@@ -57,7 +57,19 @@ export function ProfileHero({
           <Text style={[styles.heroName, { fontFamily: fonts.headingMedium, color: hasPhoto ? HERO_TEXT : colors.textPrimary }]}>
             {barber.name}
           </Text>
-          <MaterialCommunityIcons name="check-decagram" size={18} color={colors.accent} />
+        </View>
+        {/* Only founder-approved barbers reach this screen (barber_directory),
+            so the badge states exactly that: manual ID and licence review. */}
+        <View
+          style={[styles.verifiedPill, { borderColor: colors.accent }]}
+          accessible
+          accessibilityLabel={german ? 'Verifiziert: Ausweis und Berufsnachweis von Privelier geprüft' : 'Verified: ID and licence checked by Privelier'}
+          testID="barber-profile-verified"
+        >
+          <MaterialCommunityIcons name="check-decagram" size={13} color={colors.accent} />
+          <Text style={[styles.verifiedText, { color: hasPhoto ? HERO_TEXT : colors.accentText, fontFamily: fonts.bodyMedium }]}>
+            {german ? 'Verifiziert' : 'Verified'}
+          </Text>
         </View>
         <View style={styles.heroMetaRow}>
           <Feather name="map-pin" size={11} color={meta.color} />

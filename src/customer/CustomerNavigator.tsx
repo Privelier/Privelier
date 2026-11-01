@@ -33,7 +33,7 @@ export type CustomerStackParamList = {
   // getBarberProfile call on the Confirm screen's summary. barberImage rides
   // along the same way so the chat opened from Confirm shows the barber's
   // photo, as it does when opened from Inbox or Bookings.
-  BookingDateTime: { barberId: string; barberName: string; barberImage?: string | null; service: ServiceRow };
+  BookingDateTime: { barberId: string; barberName: string; barberImage?: string | null; service: ServiceRow; preferredDate?: string };
   BookingLocation: {
     barberId: string;
     barberName: string;

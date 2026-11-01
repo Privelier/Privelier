@@ -27,10 +27,10 @@ import { typeScale } from '../../theme/typography';
 type Props = NativeStackScreenProps<CustomerStackParamList, 'BookingDateTime'>;
 
 export default function BookingDateTimeScreen({ route, navigation }: Props) {
-  const { barberId, barberName, barberImage, service } = route.params;
+  const { barberId, barberName, barberImage, service, preferredDate } = route.params;
   const { colors, fonts } = useTheme();
   const de = getAppLanguage() === 'de';
-  const slots = useBookingSlots(barberId, service.duration_minutes);
+  const slots = useBookingSlots(barberId, service.duration_minutes, preferredDate);
   const { selection, setSelection, unverifiedDates, nextAvailable, error, load } = slots;
   const retry = () => void load();
   const hintStyle = [styles.hintText, { color: colors.textSecondary, fontFamily: fonts.body }];

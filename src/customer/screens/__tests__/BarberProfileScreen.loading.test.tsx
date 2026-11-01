@@ -27,6 +27,14 @@ jest.mock('../../../shared/components/SafetyMenu', () => {
       React.createElement(Text, { testID: `${testIDPrefix}-safety` }, `${counterpartId}|${String(bookingId)}`),
   };
 });
+jest.mock('../../components/barberProfile/AvailabilityPreview', () => {
+  const React = jest.requireActual('react');
+  const { Pressable, Text } = jest.requireActual('react-native');
+  return {
+    AvailabilityPreview: ({ onPickDate }: { onPickDate: (date: string) => void }) =>
+      React.createElement(Pressable, { testID: 'availability-preview-pick', onPress: () => onPickDate('2026-11-04') }, React.createElement(Text, null, 'pick')),
+  };
+});
 jest.mock('@expo/vector-icons', () => ({ Feather: () => null, Ionicons: () => null, MaterialCommunityIcons: () => null }));
 jest.mock('../../../shared/components/ScreenBackHeader', () => ({
   BackButton: () => null,
@@ -135,4 +143,23 @@ it('offers report and block for the barber on the public profile, outside any bo
   await render(<BarberProfileScreen route={{ params: { barberId: barber.id } } as never} navigation={{ goBack: jest.fn() } as never} />);
 
   expect((await screen.findByTestId('barber-profile-safety')).props.children).toBe('barber-1|null');
+});
+
+it('carries a day picked in "Available this week" into the booking flow', async () => {
+  const barber = { id: 'barber-1', name: 'Ada Barber', city: 'Berlin', country: 'DE', rating: 0, profile_image: null, bio: null };
+  const service = { id: 'service-1', barber_id: barber.id, name: 'Haircut', price: 35, duration_minutes: 30 };
+  jest.mocked(getBarberProfile).mockResolvedValue({ status: 'ok', barber } as never);
+  jest.mocked(listServicesForBarber).mockResolvedValue({ status: 'ok', services: [service] } as never);
+  jest.mocked(listPortfolioForBarber).mockResolvedValue({ status: 'ok', images: [] });
+  jest.mocked(fetchReviewsForBarber).mockResolvedValue({ status: 'ok', reviews: [], firstNameByReviewId: new Map() });
+  const navigate = jest.fn();
+  await render(<BarberProfileScreen route={{ params: { barberId: barber.id } } as never} navigation={{ goBack: jest.fn(), navigate } as never} />);
+
+  await fireEvent.press(await screen.findByTestId('barber-profile-tab-portfolio'));
+  await fireEvent.press(screen.getByTestId('availability-preview-pick'));
+  expect(screen.getByTestId('barber-profile-preferred-date')).toBeTruthy();
+  await fireEvent.press(screen.getByTestId('barber-profile-book-service-1'));
+  expect(navigate).toHaveBeenCalledWith('BookingDateTime', {
+    barberId: barber.id, barberName: barber.name, barberImage: null, service, preferredDate: '2026-11-04',
+  });
 });
