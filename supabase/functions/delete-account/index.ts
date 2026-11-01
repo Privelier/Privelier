@@ -8,7 +8,8 @@
 //      auth.uid(), cancels their upcoming bookings, keeps the other party's
 //      history anonymized (migration 0057) and is rate limited per user.
 //   2. Only after that commits, the secret key empties the caller's folder
-//      (<uid>/...) in both buckets.
+//      (<uid>/...) in every bucket that stores per-user files. Look rows
+//      cascade with the user; their photos live under the same <uid>/ path.
 // If step 2 fails the account is still gone; the leftover objects sit under
 // a uid with no auth.users row and are logged for a manual sweep.
 // Repeating the call after success is harmless: step 1 is a no-op and the
@@ -22,7 +23,7 @@
 // eslint-disable-next-line import/no-unresolved
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-const BUCKETS = ['verification-docs', 'portfolio'] as const;
+const BUCKETS = ['verification-docs', 'portfolio', 'looks', 'look-references'] as const;
 
 function json(status: number, body: Record<string, unknown>): Response {
   return new Response(JSON.stringify(body), {
