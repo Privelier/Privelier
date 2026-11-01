@@ -5,7 +5,8 @@
  * to the profile, which asks for a service and preselects that day in the
  * booking flow; times are always re-checked there for the chosen service.
  * Nothing renders until availability has loaded, and a failed read stays
- * silent here because the booking flow owns the retry.
+ * silent here because the booking flow owns the retry. The view is separate
+ * so the dev gallery can show it with sample data.
  */
 import { StyleSheet, Text, View } from 'react-native';
 import { GlassSurface } from '../../../shared/components/GlassSurface';
@@ -17,6 +18,7 @@ import CalendarDateStrip from '../CalendarDateStrip';
 import { useBookingSlots } from '../../hooks/useBookingSlots';
 
 const PREVIEW_DAYS = 7;
+const CARD_INSET = 18;
 
 export function AvailabilityPreview({
   barberId,
@@ -32,12 +34,40 @@ export function AvailabilityPreview({
   german: boolean;
   onPickDate: (date: string) => void;
 }) {
-  const { colors, fonts } = useTheme();
   const slots = useBookingSlots(barberId, durationMinutes);
   if (slots.loading || slots.error || !slots.hasData) return null;
+  return (
+    <AvailabilityPreviewView
+      dates={slots.dates}
+      disabledDates={slots.disabledDates}
+      slotCounts={slots.slotCounts}
+      nextAvailable={slots.nextAvailable}
+      selectedDate={selectedDate}
+      german={german}
+      onPickDate={onPickDate}
+    />
+  );
+}
 
-  const dates = slots.dates.slice(0, PREVIEW_DAYS);
-  const next = slots.nextAvailable;
+export function AvailabilityPreviewView({
+  dates: lookahead,
+  disabledDates,
+  slotCounts,
+  nextAvailable: next,
+  selectedDate,
+  german,
+  onPickDate,
+}: {
+  dates: readonly string[];
+  disabledDates: ReadonlySet<string>;
+  slotCounts: ReadonlyMap<string, number>;
+  nextAvailable: { date: string; time: string } | null;
+  selectedDate: string | null;
+  german: boolean;
+  onPickDate: (date: string) => void;
+}) {
+  const { colors, fonts } = useTheme();
+  const dates = lookahead.slice(0, PREVIEW_DAYS);
   const nextLine = next
     ? `${german ? 'Nächster freier Termin' : 'Next free'} · ${formatBookingWhen(next.date, next.time)}`
     : german ? 'In den nächsten zwei Wochen ist nichts frei.' : 'Nothing free in the next two weeks.';
@@ -58,11 +88,12 @@ export function AvailabilityPreview({
         </View>
         <CalendarDateStrip
           dates={dates}
-          disabledDates={slots.disabledDates}
+          disabledDates={disabledDates}
           selectedDate={selectedDate}
           onSelectDate={onPickDate}
-          slotCounts={slots.slotCounts}
+          slotCounts={slotCounts}
           testIDPrefix="barber-profile-availability"
+          inset={CARD_INSET}
         />
       </GlassSurface>
     </Reveal>
@@ -72,5 +103,5 @@ export function AvailabilityPreview({
 const styles = StyleSheet.create({
   wrap: { paddingHorizontal: 24, paddingBottom: 24 },
   card: { paddingVertical: 18, gap: 12 },
-  header: { paddingHorizontal: 18, gap: 4 },
+  header: { paddingHorizontal: CARD_INSET, gap: 4 },
 });

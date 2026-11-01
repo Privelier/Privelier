@@ -62,6 +62,8 @@ interface CalendarDateStripProps {
   testIDPrefix: string;
   /** Bookable slots per date; drives the density dots (absent = no dots). */
   slotCounts?: ReadonlyMap<string, number>;
+  /** Horizontal inset inside a padded card, so the label and first chip line up with it while chips still scroll edge to edge. */
+  inset?: number;
 }
 
 /** 0–3 dots from a real slot count: few, some, many. Never invented. */
@@ -79,19 +81,20 @@ function CalendarDateStrip({
   onSelectDate,
   testIDPrefix,
   slotCounts,
+  inset = 0,
 }: CalendarDateStripProps) {
   const { colors, fonts } = useTheme();
   const monthLabel = useMemo(() => monthRangeLabel(dates), [dates]);
 
   return (
     <View>
-      <Text style={[styles.month, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+      <Text style={[styles.month, { color: colors.textPrimary, fontFamily: fonts.headingMedium, paddingHorizontal: inset }]}>
         {monthLabel}
       </Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.strip}
+        contentContainerStyle={[styles.strip, { paddingLeft: inset, paddingRight: 8 + inset }]}
       >
         {dates.map((date, index) => {
           const disabled = disabledDates.has(date);
