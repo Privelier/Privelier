@@ -1,0 +1,76 @@
+# Looks S2 (behind the 'looks' feature flag): log in as the customer -> open
+# the notification center -> tap "Is this your cut?" -> answer yes -> allow
+# showing -> see "Your look is shown" -> stop showing -> "Confirmed as your cut".
+#
+# NOT YET RUN. Same tooling gap as every other flow here (.maestro/README.md).
+# Also needs migrations 0062-0064 applied (docs/genius/LOOKS.md, "Einschalten").
+#
+# Prerequisites:
+# - The test customer is in the 'looks' flag (see barber-look-capture.yaml).
+# - Run barber-look-capture.yaml first: it sends a look for this customer's
+#   completed booking, which creates the look_confirm notification.
+# - Answers are final (a published look can be hidden or withdrawn, but not
+#   answered again): re-seed with a fresh completed booking for each run.
+#
+# Run with:
+#   maestro test .maestro/customer-look-confirm.yaml \
+#     -e TEST_CUSTOMER_EMAIL=... -e TEST_CUSTOMER_PASSWORD=...
+appId: com.privelier.app
+env:
+  TEST_CUSTOMER_EMAIL: customer.e2e@example.com
+  TEST_CUSTOMER_PASSWORD: ChangeMe123!
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "role-select-customer"
+- tapOn:
+    id: "auth-entry-login"
+- tapOn:
+    id: "auth-login-email"
+- inputText: "${TEST_CUSTOMER_EMAIL}"
+- tapOn:
+    id: "auth-login-password"
+- inputText: "${TEST_CUSTOMER_PASSWORD}"
+- tapOn:
+    id: "auth-login-submit"
+- extendedWaitUntil:
+    visible:
+      id: "customer-home-screen"
+    timeout: 15000
+
+# --- Notification center -> the look confirmation ---
+- tapOn:
+    id: "customer-home-notifications"
+- tapOn:
+    text: "Is this your cut\\?|Ist das dein Schnitt\\?"
+    index: 0
+
+- assertVisible:
+    id: "customer-look-confirm-screen"
+- extendedWaitUntil:
+    visible:
+      id: "customer-look-confirm-photo-1"
+    timeout: 10000
+- tapOn:
+    id: "customer-look-confirm-mine-yes"
+- assertVisible:
+    text: "May it be shown\\?|Darf er gezeigt werden\\?"
+- tapOn:
+    id: "customer-look-confirm-show-yes"
+- extendedWaitUntil:
+    visible:
+      id: "customer-look-confirm-status"
+    timeout: 10000
+- assertVisible:
+    text: "Your look is shown|Dein Look wird gezeigt"
+
+# --- Stop showing: still counts as proof ---
+- tapOn:
+    id: "customer-look-confirm-hide"
+- extendedWaitUntil:
+    visible:
+      text: "Confirmed as your cut|Als dein Schnitt bestätigt"
+    timeout: 10000
+- assertNotVisible:
+    id: "customer-look-confirm-error"

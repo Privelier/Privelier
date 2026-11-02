@@ -1,0 +1,98 @@
+# Looks S2 (behind the 'looks' feature flag): log in as the barber -> Requests
+# -> History -> open a COMPLETED booking -> "Capture the result" -> tag a
+# style -> pick one photo with the system picker -> confirm that no face is
+# recognizable -> send -> see "Waiting for the client".
+#
+# NOT YET RUN. Same tooling gap as every other flow here (.maestro/README.md).
+# Also needs migrations 0062-0064 applied (docs/genius/LOOKS.md, "Einschalten").
+#
+# Prerequisites:
+# - The approved test barber is in the 'looks' flag:
+#     insert into private.feature_flag_users (flag_key, user_id)
+#     select 'looks', id from auth.users where email = '<barber email>';
+# - That barber has EXACTLY ONE completed booking without a look, dated
+#   within the last 30 days (complete one with barber-requests-accept-reject).
+# - The device gallery holds at least one photo (back of a head, no face).
+#   The system photo picker is outside the app: the flow taps the first image
+#   by position, which differs per OS version; adjust PICKER_FIRST_PHOTO_*
+#   once on the target device.
+#
+# Run with:
+#   maestro test .maestro/barber-look-capture.yaml \
+#     -e TEST_BARBER_EMAIL=... -e TEST_BARBER_PASSWORD=...
+appId: com.privelier.app
+env:
+  TEST_BARBER_EMAIL: barber.e2e@example.com
+  TEST_BARBER_PASSWORD: ChangeMe123!
+  PICKER_FIRST_PHOTO_X: "17%"
+  PICKER_FIRST_PHOTO_Y: "30%"
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "role-select-barber"
+- tapOn:
+    id: "auth-entry-login"
+- tapOn:
+    id: "auth-login-email"
+- inputText: "${TEST_BARBER_EMAIL}"
+- tapOn:
+    id: "auth-login-password"
+- inputText: "${TEST_BARBER_PASSWORD}"
+- tapOn:
+    id: "auth-login-submit"
+- extendedWaitUntil:
+    visible:
+      id: "barber-tab-requests"
+    timeout: 15000
+
+# --- Requests -> History -> the completed booking ---
+- tapOn:
+    id: "barber-tab-requests"
+- extendedWaitUntil:
+    notVisible:
+      id: "barber-requests-loading"
+    timeout: 15000
+- tapOn:
+    id: "barber-requests-history-toggle"
+- tapOn:
+    id: "barber-requests-open-.*"
+    index: 0
+- assertVisible:
+    id: "booking-details"
+# The entry loads the look state, then appears (flag on, completed only).
+- extendedWaitUntil:
+    visible:
+      id: "barber-look-entry-.*"
+    timeout: 10000
+- tapOn:
+    id: "barber-look-entry-.*"
+
+# --- Capture ---
+- assertVisible:
+    id: "barber-look-capture-screen"
+- assertVisible:
+    text: "Capture the result|Ergebnis festhalten"
+- tapOn:
+    id: "barber-look-capture-style-skin_fade"
+- tapOn:
+    id: "barber-look-capture-add-photo"
+# System photo picker (outside the app).
+- tapOn:
+    point: "${PICKER_FIRST_PHOTO_X},${PICKER_FIRST_PHOTO_Y}"
+- extendedWaitUntil:
+    visible:
+      id: "barber-look-capture-photo-1"
+    timeout: 20000
+- tapOn:
+    id: "barber-look-capture-no-face"
+- tapOn:
+    id: "barber-look-capture-send"
+- extendedWaitUntil:
+    visible:
+      id: "barber-look-capture-status"
+    timeout: 10000
+- assertVisible:
+    text: "Waiting for the client|Wartet auf den Kunden"
+- assertNotVisible:
+    id: "barber-look-capture-error"

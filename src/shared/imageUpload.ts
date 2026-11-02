@@ -16,6 +16,13 @@ export interface NormalizedImage {
   mimeType: 'image/jpeg';
 }
 
+/** The normalized JPEG's bytes, ready for a Storage upload body. */
+export async function readNormalizedImage(uri: string): Promise<{ bytes: ArrayBuffer; contentType: 'image/jpeg' }> {
+  const normalized = await normalizeImageForUpload(uri);
+  const response = await fetch(normalized.uri);
+  return { bytes: await response.arrayBuffer(), contentType: normalized.mimeType };
+}
+
 export async function normalizeImageForUpload(uri: string): Promise<NormalizedImage> {
   let image = await ImageManipulator.manipulate(uri).renderAsync();
   if (Math.max(image.width, image.height) > MAX_EDGE) {

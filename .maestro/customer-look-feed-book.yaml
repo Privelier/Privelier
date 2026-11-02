@@ -1,0 +1,72 @@
+# Looks S3 (behind the 'looks' feature flag): a customer sees "Real looks"
+# on Discover -> opens a verified look -> sees its proof chain -> "Book this
+# look" -> lands in the normal booking flow (date and time step).
+#
+# NOT YET RUN. Same tooling gap as every other flow here (.maestro/README.md).
+# Also needs migrations 0062-0065 applied (docs/genius/LOOKS.md).
+#
+# Prerequisites:
+# - A SECOND test customer (not the one who published the look) in the
+#   'looks' flag, with the same city as the barber.
+# - At least one published look: run barber-look-capture.yaml and
+#   customer-look-confirm.yaml up to "Your look is shown" (do not hide it).
+# - The look's service still exists.
+# The flow stops at the date step on purpose: completing it would create a
+# real pending request (cover that with customer-booking-create.yaml).
+#
+# Run with:
+#   maestro test .maestro/customer-look-feed-book.yaml \
+#     -e TEST_CUSTOMER_EMAIL=... -e TEST_CUSTOMER_PASSWORD=...
+appId: com.privelier.app
+env:
+  TEST_CUSTOMER_EMAIL: customer2.e2e@example.com
+  TEST_CUSTOMER_PASSWORD: ChangeMe123!
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "role-select-customer"
+- tapOn:
+    id: "auth-entry-login"
+- tapOn:
+    id: "auth-login-email"
+- inputText: "${TEST_CUSTOMER_EMAIL}"
+- tapOn:
+    id: "auth-login-password"
+- inputText: "${TEST_CUSTOMER_PASSWORD}"
+- tapOn:
+    id: "auth-login-submit"
+- extendedWaitUntil:
+    visible:
+      id: "customer-home-screen"
+    timeout: 15000
+
+# --- Discover: the rail appears once the feed answered ---
+- scrollUntilVisible:
+    element:
+      id: "customer-home-looks"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "customer-home-looks-style-skin_fade"
+- tapOn:
+    id: "customer-home-looks-tile-.*"
+    index: 0
+
+# --- Look detail with its proof chain ---
+- assertVisible:
+    id: "customer-look-detail-screen"
+- extendedWaitUntil:
+    visible:
+      id: "customer-look-detail-proof"
+    timeout: 10000
+- assertVisible:
+    text: "Confirmed by the client as their cut|Vom Kunden als sein Schnitt bestätigt"
+- assertVisible:
+    id: "customer-look-detail-photo-1"
+- tapOn:
+    id: "customer-look-detail-book"
+
+# --- The normal booking flow, step 1 ---
+- assertVisible:
+    id: "customer-booking-datetime-screen"
