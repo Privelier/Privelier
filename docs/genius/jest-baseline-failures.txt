@@ -32,6 +32,7 @@ src/customer/__tests__/format.test.ts :: timeOfDayGreeting › hour 17 → Good 
 src/customer/__tests__/format.test.ts :: timeOfDayGreeting › hour 18 → Good evening
 src/customer/__tests__/format.test.ts :: timeOfDayGreeting › hour 23 → Good evening
 src/customer/screens/__tests__/AccountScreen.test.tsx :: AccountScreen avatar integration › replaces the neutral loading disc with the signed-in member monogram
+src/customer/screens/__tests__/AccountScreen.test.tsx :: AccountScreen avatar integration › shows the stats strip only once the customer has a completed cut
 src/customer/screens/__tests__/BarberProfileScreen.loading.test.tsx :: shows the review summary, a real distribution, and a report action on written reviews
 src/customer/screens/__tests__/BookingConfirmScreen.test.tsx :: confirms on tap and plays success feedback only after a real booking insert
 src/customer/screens/__tests__/BookingConfirmScreen.test.tsx :: explains a stale slot and routes back to time selection

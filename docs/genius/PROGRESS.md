@@ -94,18 +94,45 @@ Resume point for the next session. Updated after every item.
   rollback order). MORNING.md final pass (commits, apply command, app restart
   note, next steps table). Commit: see git log ("switch Looks on").
 
+- Steps 0 to 6 of NEXT_SESSION.md (2026-10-29): 0062 to 0068 live, types
+  regenerated, untypedRpc.ts removed, flag on for the two test accounts, PR #6
+  open.
+
+- Merge of origin/main 4544a55 into this branch (2026-11-02, merge commit
+  37d5452, no rebase, no force): Ali's 0069 and 0070, the release-readiness
+  audit, delete-account with the looks buckets, looks_authorization test.
+  Conflicts and decisions are in the merge commit message. Gate: tsc, lint,
+  knip, jscpd, madge and ui:audit green; jest 1047 tests. One failure beyond
+  the baseline, Ali's new AccountScreen stats test ("3 Termine" instead of
+  "3 cuts"), passes when the locale is forced to en-US, so it joined
+  jest-baseline-failures.txt (61 entries now). The 0062 to 0070 pgTAP files
+  were not re-run against the merge: they execute on the live project.
+
 ## In progress
 
-- Nothing. NIGHT_SHIFT.md parts A to D are done.
+- Phone test, step 7 of NEXT_SESSION.md: waits for Taha after the merge report.
 
-## Next (needs Taha, see MORNING.md section 7)
+## Open after the merge (decisions for Taha)
 
-- Push both branches, run the pgTAP files (never executed), apply 0062 to
-  0068, redeploy delete-account, regenerate types, switch the flag on for
-  the founders, phone tests.
-- Next code session: replace src/shared/untypedRpc.ts with generated types,
-  exclude artifacts/ in tsconfig.json, decide L11 and L17.
-- Ali's e-mail for the flag SQL is unknown here; it stays a placeholder.
+- Time zone: 0069 moved validate_booking_slot and the pending cap to
+  private.local_now(barber), but match_look, private.barber_slot_free,
+  wish_offers and create_wish still compare with localtimestamp, which is UTC
+  on the live project. Offered slots and offers can be refused by
+  create_booking inside the gap (1 hour in Berlin winter, 2 in summer, 2 today
+  for the test barber on Africa/Cairo); barbers west of UTC lose valid slots.
+  create_wish also reads the window start as UTC for expires_at. Needs a new
+  migration, nothing applied. pgTAP covers none of this yet.
+- delete-account: this source and the live function (version 8, docs say 7)
+  only empty the caller's own folders. A customer's look photos live in the
+  barber's folder, so they stay in storage after the customer deletes the
+  account, still readable by that barber. The step that removed them is in
+  768b8d6 (lookPhotosShowingCustomer); the merge dropped it on Taha's
+  instruction to keep Ali's deployed behaviour.
+
+## Next (needs Taha)
+
+- Phone tests from MORNING.md section 5.
+- Exclude artifacts/ in tsconfig.json, decide L11 and L17.
 
 ## Check baseline (2026-10-28, origin/main 501f7f2, this machine)
 
