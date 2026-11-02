@@ -142,6 +142,7 @@ Postgres, keine Schreibzugriffe auf die Live-Datenbank in der Nacht).
 | S4 | 0066_looks_search | `match_look` (Beweis im Stil, frei im Fenster, gleiche Stadt, nie ein Ort), privater Bucket `look-references`, Referenzfoto für den gebuchten Barber, "Um HH:MM buchen" direkt zur Adresse | f981a85 |
 | S5 | 0067_looks_wishes_and_offers | Wunsch als Rückfallweg (`create_wish`, `cancel_wish`, `wish_offers`, `accept_offer`), Angebote der Barber (`open_wishes`, `offer_for_wish`, `withdraw_offer`), Benachrichtigungen ohne Buchung (`look_wish`, `look_offer`), Meldungen für Wunsch und Angebot | 984ecd7 |
 | S6 | 0068_looks_pass | Look-Pass (`my_looks`): Wunsch und Ergebnis nebeneinander, "Diesen Look wieder" | af36bb9 |
+| Nachtrag | 0071_looks_barber_time_zone | Suche, Angebote und Wünsche rechnen mit derselben Uhr wie die Buchung (0069): Barber, beim Wunsch der Kunde | 5187509 |
 | Nachtrag | keine | Stil-Statistik "Deine Looks" im Studio des Barbers (stand in Abschnitt 6, war in S2 nicht gebaut) | 4aab115 |
 
 Bildschirme: Kunde `LookConfirm`, `LookDetail`, `LookSearch`, `LookWishes`,
@@ -238,5 +239,5 @@ update private.looks_settings set wish_notify_barbers = 10;     -- L14
 ```
 
 Komplett zurück: die Dateien in `supabase/rollbacks/` in umgekehrter
-Reihenfolge (0068 bis 0062), jede Datei nennt ihre Datenfolgen. Vorher die
+Reihenfolge (0071, dann 0068 bis 0062), jede Datei nennt ihre Datenfolgen. Vorher die
 Buckets `looks` und `look-references` im Dashboard leeren.

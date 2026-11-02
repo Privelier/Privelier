@@ -110,28 +110,34 @@ Resume point for the next session. Updated after every item.
 
 ## In progress
 
-- Phone test, step 7 of NEXT_SESSION.md: waits for Taha after the merge report.
+- Phone test, step 7 of NEXT_SESSION.md, option A first: results and order in
+  docs/genius/PHONE_TEST.md. The Expo Go check for React Native 0.88.1 is test 0:
+  Expo lists 0.88.1 for SDK 58 and the iOS bundle builds, the device is still open.
 
-## Open after the merge (decisions for Taha)
+## Done on 2026-11-02 (founder decisions by Taha)
 
-- Time zone: 0069 moved validate_booking_slot and the pending cap to
-  private.local_now(barber), but match_look, private.barber_slot_free,
-  wish_offers and create_wish still compare with localtimestamp, which is UTC
-  on the live project. Offered slots and offers can be refused by
-  create_booking inside the gap (1 hour in Berlin winter, 2 in summer, 2 today
-  for the test barber on Africa/Cairo); barbers west of UTC lose valid slots.
-  create_wish also reads the window start as UTC for expires_at. Needs a new
-  migration, nothing applied. pgTAP covers none of this yet.
-- delete-account: this source and the live function (version 8, docs say 7)
-  only empty the caller's own folders. A customer's look photos live in the
-  barber's folder, so they stay in storage after the customer deletes the
-  account, still readable by that barber. The step that removed them is in
-  768b8d6 (lookPhotosShowingCustomer); the merge dropped it on Taha's
-  instruction to keep Ali's deployed behaviour.
+- 0071_looks_barber_time_zone live as 20261102221147, commit 5187509: match_look,
+  private.barber_slot_free and wish_offers on the barber's clock, create_wish on
+  the customer's. Without 0071 10 of 29 assertions in looks_time_zone fail; with
+  it all 9 Looks and matrix files pass (414 assertions), also after applying.
+  The rollback restores the four functions byte for byte. Advisors unchanged.
+  delete_own_account and get_barber_dashboard_analytics still use localtimestamp;
+  neither is part of Looks.
+- delete-account version 9 live, commit f00bd92: restores the removal of a
+  customer's look photos on top of Ali's source. Verified after the deploy: JWT
+  verification on, 401 without a token, the step is in the bundle. Function tests
+  use a fake Deno and fake clients (no Deno here); a real deletion has not run.
 
-## Next (needs Taha)
+## Later
 
-- Phone tests from MORNING.md section 5.
+Tracked in docs/project/ACTIVE_BACKLOG.md:
+
+- Customers never get a time_zone written, only barbers in the Studio.
+- A barber can mark an appointment completed weeks before it happens.
+- Account deletion and flag-off phone tests, with a third test account.
+
+Only here:
+
 - Exclude artifacts/ in tsconfig.json, decide L11 and L17.
 
 ## Check baseline (2026-10-28, origin/main 501f7f2, this machine)
