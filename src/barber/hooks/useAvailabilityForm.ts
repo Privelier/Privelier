@@ -29,6 +29,21 @@ export function toHm(time: string): string {
   return time.length >= 5 ? time.slice(0, 5) : time;
 }
 
+/** Typed digits shaped into HH:MM as the barber types ("0930" → "09:30");
+ * an impossible time is still caught by the validation below. */
+export function formatTimeEntry(raw: string): string {
+  const digits = raw.replace(/\D/g, '').slice(0, 4);
+  return digits.length > 2 ? `${digits.slice(0, 2)}:${digits.slice(2)}` : digits;
+}
+
+/** Typed digits shaped into YYYY-MM-DD. */
+export function formatDateEntry(raw: string): string {
+  const digits = raw.replace(/\D/g, '').slice(0, 8);
+  if (digits.length > 6) return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
+  if (digits.length > 4) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+  return digits;
+}
+
 function dateFieldError(value: string, de: boolean): string | undefined {
   if (value.trim().length === 0) return de ? 'Gib ein Datum ein.' : 'Enter a date.';
   if (!DATE_PATTERN.test(value.trim())) return de ? 'Nutze das Format JJJJ-MM-TT.' : 'Use the format YYYY-MM-DD.';

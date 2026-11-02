@@ -13,6 +13,7 @@ import { space } from '../../theme/spacing';
 import { useTheme } from '../../theme/useTheme';
 import { useGlassStyle } from './GlassSurface';
 import { useReducedMotionPreference } from '../motion/useReducedMotionPreference';
+import { typeScale } from '../../theme/typography';
 
 type Props = {
   icon: keyof typeof Feather.glyphMap;
@@ -74,8 +75,8 @@ export function EmptyState({ icon, title, body, action, testID, style }: Props) 
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center', paddingHorizontal: space.xl, paddingVertical: space['3xl'] },
   medallion: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  title: { marginTop: space.base, fontSize: 18, lineHeight: 24, textAlign: 'center' },
-  body: { marginTop: space.sm, fontSize: 14, lineHeight: 21, textAlign: 'center', maxWidth: 300 },
+  title: { marginTop: space.base, ...typeScale.headline, textAlign: 'center' },
+  body: { marginTop: space.sm, ...typeScale.body, textAlign: 'center', maxWidth: 300 },
   action: {
     marginTop: space.lg,
     minHeight: 44,

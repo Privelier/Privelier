@@ -22,7 +22,7 @@ import { useToast } from '../../shared/components/ToastProvider';
 import { getAppLanguage } from '../../shared/locale';
 import { pressOpacity } from '../../theme/motion';
 import { space } from '../../theme/spacing';
-import { numericText } from '../../theme/typography';
+import { numericText, typeScale } from '../../theme/typography';
 import { useTheme } from '../../theme/useTheme';
 import { AddressPinPreview } from '../components/AddressPinPreview';
 import { BookingStepIndicator } from '../components/BookingStepIndicator';
@@ -46,7 +46,7 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
   useAttachLookReference(created, lookReference);
   const [openingChat, setOpeningChat] = useState(false);
   const openingChatRef = useRef(false);
-  const details = { barberName, serviceName: service.name, date, time, location };
+  const details = { barberName, serviceName: service.name, date, time, location, durationMinutes: service.duration_minutes };
 
   const onMessageBarber = useCallback(async () => {
     if (!created || openingChatRef.current) return;
@@ -126,7 +126,16 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
           </Notice>
         ) : null}
 
-        <BookingSummary details={details} de={de} />
+        <BookingSummary
+          details={details}
+          de={de}
+          edits={submitting ? undefined : {
+            // Confirm sits on Location, which sits on DateTime, or on the look
+            // search or wish offers when the time was chosen there.
+            onEditWhen: () => navigation.pop(2),
+            onEditLocation: () => navigation.goBack(),
+          }}
+        />
         <AddressPinPreview state={request.pin} />
 
         <View style={[styles.priceRow, { borderTopColor: colors.border }]}>
@@ -154,7 +163,7 @@ export default function BookingConfirmScreen({ route, navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 24 },
-  heading: { fontSize: 30, lineHeight: 38 },
+  heading: { ...typeScale.title1 },
   noticeSpacing: { marginTop: space.lg },
   noticeLink: { marginTop: space.sm, minHeight: 44, justifyContent: 'center' },
   noticeLinkText: { fontSize: 13 },

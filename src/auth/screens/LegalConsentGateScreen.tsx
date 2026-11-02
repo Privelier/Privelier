@@ -12,6 +12,7 @@ import { getAppLanguage } from '../../shared/locale';
 import { useTheme } from '../../theme/useTheme';
 import type { Role } from '../../types';
 import { AuthScreenShell, Notice, PrimaryButton, ScreenHeading, TextLink } from './ui';
+import { typeScale } from '../../theme/typography';
 
 export type LegalConsentView =
   | { kind: 'checking' }
@@ -96,5 +97,5 @@ export default function LegalConsentGateScreen({ view, role, onAccept, onRetry, 
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 64 },
-  footnote: { fontSize: 13, lineHeight: 19, marginTop: 12, textAlign: 'center' },
+  footnote: { ...typeScale.secondary, marginTop: 12, textAlign: 'center' },
 });

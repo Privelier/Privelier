@@ -147,9 +147,9 @@ This log records decisions for the Privelier Legendary Product Rebuild and Relea
 
 | ID | Decision needed | Blocks | Owner | Exact next step |
 |---|---|---|---|---|
-| ODEC-001 | Legacy booking timezone and backfill policy | P02 timezone Build and live migration | Founders | Choose the source timezone policy after the schema architect presents measured live-data cases. |
-| ODEC-002 | Production Customer/Barber identifiers, EAS projects, ownership, and migration strategy | P04 production variants and P10 release candidates | Founders | Approve exact identifiers only after the repository-local variant proposal and compatibility plan. |
-| ODEC-003 | Account deletion retention/anonymization policy | P03 destructive deletion completion | Founders | Decide which marketplace records must be retained, anonymized, or deleted and for how long. |
+| ODEC-001 ✅ | Legacy booking timezone and backfill policy | P02 timezone Build and live migration | Founders | Choose the source timezone policy after the schema architect presents measured live-data cases. |
+| ODEC-002 ✅ | Production Customer/Barber identifiers, EAS projects, ownership, and migration strategy | P04 production variants and P10 release candidates | Founders | Approve exact identifiers only after the repository-local variant proposal and compatibility plan. |
+| ODEC-003 ✅ | Account deletion retention/anonymization policy | P03 destructive deletion completion | Founders | Decide which marketplace records must be retained, anonymized, or deleted and for how long. |
 | ODEC-004 | Whether messaging remains writable after rejected/cancelled bookings | Terminal-state chat policy | Founders | Confirm current always-open behavior or approve a separate read-only terminal-state feature run. |
-| ODEC-005 | Whether the hosted-only `waitlist` table is retained as an intentional Privelier surface or decommissioned | P02 waitlist reconciliation | Founders | After the read-only catalog query establishes exact definition, dependencies, and row count, choose retention/reconstruction or authorize a separately decomposed decommission proposal. |
+| ODEC-005 ✅ | Whether the hosted-only `waitlist` table is retained as an intentional Privelier surface or decommissioned | P02 waitlist reconciliation | Founders | After the read-only catalog query establishes exact definition, dependencies, and row count, choose retention/reconstruction or authorize a separately decomposed decommission proposal. |
 

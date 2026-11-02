@@ -18,6 +18,7 @@ import { Skeleton } from '../../shared/components/Skeleton';
 import { PrivelierMap } from '../../shared/maps/PrivelierMap';
 import type { MapScene } from '../../shared/maps/mapScene';
 import type { GeocodeCandidate } from '../../shared/geocoding';
+import { typeScale } from '../../theme/typography';
 
 export type AddressPinState =
   | { status: 'loading' }
@@ -76,5 +77,5 @@ const styles = StyleSheet.create({
   caption: { flexDirection: 'row', gap: space.sm, padding: 14, alignItems: 'flex-start' },
   captionText: { flex: 1, gap: 2 },
   title: { fontSize: 14, lineHeight: 20 },
-  body: { fontSize: 13, lineHeight: 19 },
+  body: { ...typeScale.secondary },
 });

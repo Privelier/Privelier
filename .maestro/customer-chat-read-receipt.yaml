@@ -30,7 +30,7 @@
 #   maestro test .maestro/customer-chat-read-receipt.yaml \
 #     -e TEST_CUSTOMER_EMAIL=... -e TEST_CUSTOMER_PASSWORD=... \
 #     -e TEST_MESSAGE="..."
-appId: com.privelier.app # TODO: replace once app.json defines a real package/bundleIdentifier
+appId: com.privelier.app
 env:
   TEST_CUSTOMER_EMAIL: customer.e2e@example.com
   TEST_CUSTOMER_PASSWORD: ChangeMe123!

@@ -1427,6 +1427,7 @@ export type Database = {
           phone: string | null
           profile_image: string | null
           role: Database["public"]["Enums"]["user_role"]
+          time_zone: string
         }
         Insert: {
           accepted_privacy_version?: string | null
@@ -1442,6 +1443,7 @@ export type Database = {
           phone?: string | null
           profile_image?: string | null
           role: Database["public"]["Enums"]["user_role"]
+          time_zone?: string
         }
         Update: {
           accepted_privacy_version?: string | null
@@ -1457,6 +1459,7 @@ export type Database = {
           phone?: string | null
           profile_image?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          time_zone?: string
         }
         Relationships: []
       }

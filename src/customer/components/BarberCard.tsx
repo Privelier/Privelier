@@ -18,7 +18,7 @@ import { PressableScale } from '../../shared/motion/PressableScale';
 import { ResponseBadge } from '../../shared/components/stats/ResponseBadge';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/useTheme';
-import { numericText } from '../../theme/typography';
+import { numericText, typeScale } from '../../theme/typography';
 import { radius } from '../../theme/spacing';
 import { Avatar } from '../../shared/components/Avatar';
 import { GlassSurface } from '../../shared/components/GlassSurface';
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 12, borderRadius: radius.xl },
   rowImage: { width: 76, height: 76, borderRadius: radius.lg },
   rowText: { flex: 1, minWidth: 0, gap: 3 },
-  rowMeta: { fontSize: 13, lineHeight: 19 },
+  rowMeta: { ...typeScale.secondary },
   rowFoot: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 2 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4, justifyContent: 'flex-end' },

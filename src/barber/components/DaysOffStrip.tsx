@@ -9,7 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { HAIRLINE, radius, space } from '../../theme/spacing';
 import { useTheme } from '../../theme/useTheme';
-import { numericText } from '../../theme/typography';
+import { numericText, typeScale } from '../../theme/typography';
 import { getAppLanguage } from '../../shared/locale';
 import { haptics } from '../../shared/haptics';
 import { useToast } from '../../shared/components/ToastProvider';
@@ -117,11 +117,11 @@ export function DaysOffStrip({ barberId }: { barberId: string | null }) {
 
 const styles = StyleSheet.create({
   section: { marginTop: space.xl },
-  title: { fontSize: 20, lineHeight: 26 },
-  hint: { fontSize: 13, lineHeight: 19, marginTop: space.xs },
+  title: { ...typeScale.title3 },
+  hint: { ...typeScale.secondary, marginTop: space.xs },
   row: { gap: space.sm, paddingVertical: space.md },
   chip: { width: 56, minHeight: 72, borderWidth: HAIRLINE, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', gap: 2 },
   weekday: { fontSize: 12 },
   dayNumber: { fontSize: 18 },
-  state: { fontSize: 11 },
+  state: { fontSize: 12 },
 });

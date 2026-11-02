@@ -15,10 +15,10 @@ Upgrade the shared pre-auth and provisioning UI while preserving existing auth b
 
 ## Build order
 
-1. Centralize geometry changes in the shared auth UI primitives.
-2. Apply the same radius tokens to role selection and provisioning controls.
-3. Run typecheck, lint, and focused auth tests.
-4. Refresh the context graph and inspect the final diff for square auth surfaces.
+1. Centralize geometry changes in the shared auth UI primitives. ✅
+2. Apply the same radius tokens to role selection and provisioning controls. ✅
+3. Run typecheck, lint, and focused auth tests. ✅
+4. Refresh the context graph and inspect the final diff for square auth surfaces. ✅
 
 ## Acceptance criteria
 

@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import type { BookingRow } from '../../types';
 import { useTheme } from '../../theme/useTheme';
-import { numericText } from '../../theme/typography';
+import { numericText, typeScale } from '../../theme/typography';
 import { formatBookingWhen, formatMoney } from '../format';
 import { getAppLanguage } from '../locale';
 import { useReducedMotionPreference } from '../motion/useReducedMotionPreference';
@@ -174,13 +174,13 @@ const styles = StyleSheet.create({
   close: { minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
   content: { padding: 24, paddingBottom: 40 },
   person: { fontSize: 32, lineHeight: 40, marginTop: 24 },
-  service: { fontSize: 16, lineHeight: 24, marginTop: 8 },
+  service: { ...typeScale.bodyLarge, marginTop: 8 },
   summary: { padding: 20, marginTop: 28, gap: 22 },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 14 },
-  value: { flex: 1, fontSize: 16, lineHeight: 24 },
+  value: { flex: 1, ...typeScale.bodyLarge },
   total: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, borderTopWidth: 0.5, paddingTop: 20, alignItems: 'center' },
   price: { fontSize: 24 },
-  hint: { fontSize: 14, lineHeight: 21, marginTop: 18 },
+  hint: { ...typeScale.body, marginTop: 18 },
   actions: { marginTop: 12 },
   timeline: { flexDirection: 'row', marginTop: 24 },
   step: { flex: 1, minWidth: 0, gap: 8, alignItems: 'center' },

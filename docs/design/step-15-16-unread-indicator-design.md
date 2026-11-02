@@ -27,7 +27,7 @@ create table public.chat_read_state (
 
 A room is unread ⇔ its latest message exists, `sender_id ≠ me`, and `created_at > last_read_at` (or no read-state row). Own messages never make a room unread.
 
-**Clock-skew guard:** mark-read writes `last_read_at = max(device now, newest known message's created_at)`. Message timestamps are server-generated; a device clock running behind would otherwise mark "read" with a timestamp *older* than the message just read, leaving it unread forever. Pure helper `resolveReadMarker(nowIso, latestMessageIso)`, unit-tested.
+**Clock-skew guard:** mark-read writes `last_read_at = newest known message's created_at` (server-generated). The device clock is never consulted: one running behind would leave the room unread forever, and one running ahead would fabricate a receipt for later messages (since 0017 the marker is counterpart-visible). Pure helper `resolveReadMarker(latestMessageIso)`, unit-tested.
 
 ## 3. Runtime architecture (copies the step 13-14/15-16 realtime shape)
 

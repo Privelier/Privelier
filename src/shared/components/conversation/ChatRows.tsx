@@ -82,6 +82,9 @@ export function MessageBubble({ styles, message, own, showTimestamp, glass, coun
     <Pressable
       disabled={!reportable}
       onLongPress={onReport}
+      // A message reads as text; reporting is offered as an accessibility
+      // action (and long-press), not as a button.
+      accessibilityRole="text"
       accessibilityActions={reportable ? [{ name: 'report', label: de ? 'Nachricht melden' : 'Report message' }] : undefined}
       onAccessibilityAction={(event) => { if (event.nativeEvent.actionName === 'report') onReport(); }}
       style={[styles.bubble, own ? styles.bubbleOwn : styles.bubbleTheirs, glass]}

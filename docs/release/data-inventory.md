@@ -7,6 +7,7 @@ Source for the App Store App Privacy labels and the Google Play Data safety form
 | Name, email | All users | Account, sign-in, showing the barber's name to customers, the customer's name to their own barber, and a reviewer's first name on reviews | `auth.users`, `public.users` | Until account deletion | Supabase (processor); the email provider that sends auth emails |
 | Phone (optional) | All users | Contact for an appointment | `public.users` | Until account deletion | Supabase |
 | City and country | All users | Discovery by city | `public.users` | Until account deletion | Supabase |
+| Time zone | Barbers (default for everyone) | Checking that a requested appointment is in the future in the barber's local time | `public.users.time_zone`, from the device setting | Until account deletion | Supabase |
 | Appointment address | Customers | Where the barber travels | `public.bookings.location` | Kept with the booking; anonymized (customer id removed) on deletion, visible only to that booking's barber | Supabase; Photon (address search, the typed text only) |
 | Saved addresses | Customers | Faster booking | `public.customer_addresses` | Until the customer removes them or deletes the account | Supabase |
 | Barber base location | Barbers | Approximate map position (offset 200-500 m) | `public.barber_location` (exact point private to the barber) | Until account deletion | Supabase; OpenFreeMap tiles (map display, no user data) |

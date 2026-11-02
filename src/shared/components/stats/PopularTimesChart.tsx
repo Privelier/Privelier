@@ -21,6 +21,7 @@ import { getAppLanguage } from '../../locale';
 import { haptics } from '../../haptics';
 import { useReducedMotionPreference } from '../../motion/useReducedMotionPreference';
 import { busyNow, weekdayIndex, WEEKDAYS, type PopularGrid } from '../../barberStats';
+import { typeScale } from '../../../theme/typography';
 
 const CHART_H = 72;
 
@@ -82,7 +83,8 @@ export function PopularTimesChart({ grid, now = new Date(), testID }: { grid: Po
               accessibilityRole="tab"
               accessibilityState={{ selected }}
               accessibilityLabel={name}
-              hitSlop={4}
+              // 32pt tall + 6pt above and below = a 44pt target.
+              hitSlop={6}
               testID={testID ? `${testID}-day-${index}` : undefined}
               style={[styles.day, { borderColor: selected ? colors.accent : 'transparent' }]}
             >
@@ -147,5 +149,5 @@ const styles = StyleSheet.create({
   bar: { borderTopLeftRadius: radius.xs, borderTopRightRadius: radius.xs },
   axis: { flexDirection: 'row', gap: 3, borderTopWidth: HAIRLINE, paddingTop: 4 },
   axisText: { flex: 1, fontSize: 10, textAlign: 'left' },
-  hint: { fontSize: 13, lineHeight: 19, marginTop: space.sm },
+  hint: { ...typeScale.secondary, marginTop: space.sm },
 });

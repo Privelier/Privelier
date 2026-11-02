@@ -20,11 +20,13 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { ReportSheet } from '../../shared/components/ReportSheet';
 import { BackButton } from '../../shared/components/ScreenBackHeader';
+import { formatShortDate } from '../../shared/format';
 import { getAppLanguage } from '../../shared/locale';
 import { ScrollGlassHeader, useReducedMotionPreference, useScrollGlass } from '../../shared/motion';
 import { useTheme } from '../../theme/useTheme';
 import type { ServiceRow } from '../../types';
 import { BarberProfileSkeleton, BookingDock, HeroButtons } from '../components/barberProfile/ProfileChrome';
+import { AvailabilityPreview } from '../components/barberProfile/AvailabilityPreview';
 import { ProfileAbout, ProfileHero } from '../components/barberProfile/ProfileHero';
 import { PortfolioTab, ProfileTabStrip, ReviewsTab, ServicesTab, type ProfileTab } from '../components/barberProfile/ProfileTabs';
 import { HERO_PARALLAX_HEIGHT, profileStyles as styles } from '../components/barberProfile/profileStyles';
@@ -43,6 +45,8 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
   const { scrollY, onScroll } = useScrollGlass();
   const [tab, setTab] = useState<ProfileTab>('services');
   const [reportReviewId, setReportReviewId] = useState<string | null>(null);
+  // A day tapped in "Available this week": the next Book preselects it.
+  const [preferredDate, setPreferredDate] = useState<string | null>(null);
   const data = useBarberProfileData(barberId);
   const { barber, services, servicesError } = data;
 
@@ -61,9 +65,26 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
   const onBook = useCallback(
     (service: ServiceRow) => {
       if (!barber) return;
-      navigation.navigate('BookingDateTime', { barberId: barber.id, barberName: barber.name, barberImage: barber.profile_image, service });
+      navigation.navigate('BookingDateTime', {
+        barberId: barber.id,
+        barberName: barber.name,
+        barberImage: barber.profile_image,
+        service,
+        ...(preferredDate ? { preferredDate } : {}),
+      });
     },
-    [navigation, barber]
+    [navigation, barber, preferredDate]
+  );
+  const showServices = useCallback(() => {
+    setTab('services');
+    scrollRef.current?.scrollTo({ y: servicesY.current, animated: false });
+  }, []);
+  const onPickDate = useCallback(
+    (date: string) => {
+      setPreferredDate(date);
+      showServices();
+    },
+    [showServices]
   );
 
   // Loading, error and not-found render without the hero, with a plain
@@ -102,8 +123,26 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
       <Animated.ScrollView onScroll={onScroll} scrollEventThrottle={16} ref={scrollRef} contentContainerStyle={styles.scrollContent}>
         <ProfileHero barber={barber} topInset={insets.top} parallax={heroParallax} german={german} />
         <ProfileAbout barber={barber} chips={services.slice(0, 4).map((service) => service.name)} stats={data.stats} german={german} />
+        {canBook ? (
+          <AvailabilityPreview
+            barberId={barber.id}
+            durationMinutes={Math.min(...services.map((service) => service.duration_minutes))}
+            selectedDate={preferredDate}
+            german={german}
+            onPickDate={onPickDate}
+          />
+        ) : null}
         <ProfileTabStrip tab={tab} onChange={setTab} onLayoutY={(y) => { servicesY.current = y; }} german={german} />
         <View style={styles.tabContent}>
+          {tab === 'services' && preferredDate ? (
+            <Text
+              style={[styles.stateText, { color: colors.accentText, fontFamily: fonts.bodyMedium }]}
+              accessibilityLiveRegion="polite"
+              testID="barber-profile-preferred-date"
+            >
+              {german ? `Wähle eine Leistung für ${formatShortDate(preferredDate)}.` : `Choose a service for ${formatShortDate(preferredDate)}.`}
+            </Text>
+          ) : null}
           {tab === 'services' ? (
             <ServicesTab services={services} error={servicesError} german={german} onBook={onBook} />
           ) : tab === 'portfolio' ? (
@@ -131,10 +170,7 @@ export default function BarberProfileScreen({ route, navigation }: Props) {
           fromPrice={fromPrice}
           bottomInset={insets.bottom}
           german={german}
-          onChooseService={() => {
-            setTab('services');
-            scrollRef.current?.scrollTo({ y: servicesY.current, animated: false });
-          }}
+          onChooseService={showServices}
         />
       ) : null}
       <HeroButtons

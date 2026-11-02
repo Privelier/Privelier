@@ -4,15 +4,18 @@ import type { InboxThread } from '../../../shared/threads';
 import { fetchOwnChatsView } from '../../chatsData';
 import ChatsScreen from '../ChatsScreen';
 
+let mockMessageTick = 0;
+
 jest.mock('@react-navigation/native', () => {
   const React = jest.requireActual('react');
   return {
     useFocusEffect: (callback: () => void | (() => void)) => React.useEffect(callback, [callback]),
+    useIsFocused: () => true,
   };
 });
 jest.mock('../../chatsData', () => ({ fetchOwnChatsView: jest.fn() }));
 jest.mock('../../UnreadContext', () => ({
-  useUnread: () => ({ unreadRoomIds: new Set<string>() }),
+  useUnread: () => ({ unreadRoomIds: new Set<string>(), messageTick: mockMessageTick }),
 }));
 jest.mock('../../../theme/useTheme', () => ({
   useTheme: () => ({
@@ -56,6 +59,7 @@ const thread: InboxThread = {
 const mockFetchChats = jest.mocked(fetchOwnChatsView);
 
 beforeEach(() => {
+  mockMessageTick = 0;
   mockFetchChats.mockReset();
   mockFetchChats.mockResolvedValue({ status: 'ok', threads: [thread] });
 });

@@ -212,3 +212,13 @@ it('retries a failed attempt with the same idempotency key, so a lost response c
   const keys = (insertBooking as jest.Mock).mock.calls.map(([input]) => input.idempotencyKey);
   expect(keys).toEqual(['attempt-key-1', 'attempt-key-1']);
 });
+
+it('shows the duration and lets the customer change the time or the address before sending', async () => {
+  await render(<BookingConfirmScreen route={route as never} navigation={navigation as never} />);
+
+  expect(screen.getByText(new RegExp(`· ${route.params.service.duration_minutes} min$`))).toBeTruthy();
+  await fireEvent.press(screen.getByTestId('customer-booking-confirm-edit-when'));
+  expect(navigation.pop).toHaveBeenCalledWith(2);
+  await fireEvent.press(screen.getByTestId('customer-booking-confirm-edit-location'));
+  expect(navigation.goBack).toHaveBeenCalled();
+});

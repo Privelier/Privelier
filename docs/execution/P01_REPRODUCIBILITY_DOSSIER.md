@@ -22,16 +22,16 @@ The reproducible React warnings are not a generic configuration absence. Their f
 
 | Surface | Direct evidence | Classification | Proposed owner/slice |
 | --- | --- | --- | --- |
-| `VerifyScreen.test.tsx` | `renderLoaded` calls synchronous `render(<VerifyScreen />)` then immediately uses shared `screen`/`waitFor`; async effect state writes occur at VerifyScreen lines 79, 85, 90, and 91. Press-driven async permission/upload flows are also initiated outside an explicit awaited boundary. The default-worker flake occurs in this file; isolated in-band run passes with the same `act` warnings. | Proven test-lifecycle candidate; no product bug has been established. | `P01-A`: test-engineer must make one minimal test-lifecycle correction and show the relevant warning/failure disappears without changing `VerifyScreen` behavior. |
-| `PortfolioScreen.test.tsx` | Its helper already awaits React Native Testing Library v14 `render`, but multiple permission/upload/delete flows still emit `act` and overlapping-act warnings at PortfolioScreen lines 147–168 and 180–185. P00’s one concurrent timeout was here, but two P01 concurrent runs passed. | Separate nondeterministic candidate; root cause not yet proven. | `P01-B` only after P01-A; preserve the failed-upload/no-row, duplicate-upload, and delete-rollback assertions. |
+| `VerifyScreen.test.tsx` ✅ | `renderLoaded` calls synchronous `render(<VerifyScreen />)` then immediately uses shared `screen`/`waitFor`; async effect state writes occur at VerifyScreen lines 79, 85, 90, and 91. Press-driven async permission/upload flows are also initiated outside an explicit awaited boundary. The default-worker flake occurs in this file; isolated in-band run passes with the same `act` warnings. | Proven test-lifecycle candidate; no product bug has been established. | `P01-A`: test-engineer must make one minimal test-lifecycle correction and show the relevant warning/failure disappears without changing `VerifyScreen` behavior. |
+| `PortfolioScreen.test.tsx` ✅ | Its helper already awaits React Native Testing Library v14 `render`, but multiple permission/upload/delete flows still emit `act` and overlapping-act warnings at PortfolioScreen lines 147–168 and 180–185. P00’s one concurrent timeout was here, but two P01 concurrent runs passed. | Separate nondeterministic candidate; root cause not yet proven. | `P01-B` only after P01-A; preserve the failed-upload/no-row, duplicate-upload, and delete-rollback assertions. |
 | Typed-error tests | Auth/customer/barber data-layer tests intentionally exercise failure mapping, which emits `__DEV__` `console.warn` logging of mocked errors. | Expected diagnostic logging, separate from React `act` warnings. | Do not suppress in P01-A; decide noise policy only through a separate explicit test/logging review if needed. |
 
 ## Expo configuration and compatibility
 
 `npx expo-doctor` reports 19/21 checks passing:
 
-1. `app.json` retains the obsolete top-level `expo.splash` field.
-2. Seven Expo SDK 57 patch mismatches: `expo` 57.0.18 → ~57.0.20; `expo-constants` 57.0.16 → ~57.0.17; `expo-dev-client` 57.0.16 → ~57.0.18; `expo-font` 57.0.2 → ~57.0.3; `expo-image-picker` 57.0.14 → ~57.0.16; `expo-linking` 57.0.8 → ~57.0.9; and `expo-secure-store` 57.0.2 → ~57.0.3.
+1. `app.json` retains the obsolete top-level `expo.splash` field. ✅
+2. Seven Expo SDK 57 patch mismatches: `expo` 57.0.18 → ~57.0.20; `expo-constants` 57.0.16 → ~57.0.17; `expo-dev-client` 57.0.16 → ~57.0.18; `expo-font` 57.0.2 → ~57.0.3; `expo-image-picker` 57.0.14 → ~57.0.16; `expo-linking` 57.0.8 → ~57.0.9; and `expo-secure-store` 57.0.2 → ~57.0.3. ✅
 
 These are deliberately split: `P01-C2` may evaluate only Expo-supported patch alignment, while `P01-C1` is a native startup/UI configuration migration requiring Sol 5.6 Ultra review and later visual/device evidence. Neither begins in this task.
 

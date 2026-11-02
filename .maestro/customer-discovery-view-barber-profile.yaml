@@ -27,7 +27,7 @@
 #   screen is matched by visible text (`TEST_BARBER_NAME`) rather than its
 #   `customer-home-barber-{id}` testID, since the id is also unknown at
 #   authoring time and Maestro has no way to look it up ahead of the run.
-appId: com.privelier.app # TODO: replace once app.json defines a real package/bundleIdentifier
+appId: com.privelier.app
 env:
   TEST_CUSTOMER_EMAIL: customer.e2e@example.com
   TEST_CUSTOMER_PASSWORD: ChangeMe123!

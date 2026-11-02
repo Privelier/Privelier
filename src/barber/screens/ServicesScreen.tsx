@@ -22,6 +22,7 @@ import { ServiceForm } from '../components/services/ServiceForm';
 import { servicesStyles as styles } from '../components/services/servicesStyles';
 import { useServicesForm } from '../hooks/useServicesForm';
 import type { BarberStackParamList } from '../BarberNavigator';
+import { listPerformance } from '../../shared/listPerformance';
 
 type Props = NativeStackScreenProps<BarberStackParamList, 'Services'>;
 
@@ -82,6 +83,7 @@ export default function ServicesScreen({ navigation }: Props) {
 
       <FlatList
         data={services}
+        {...listPerformance}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={

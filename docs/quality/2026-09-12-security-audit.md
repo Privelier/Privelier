@@ -121,9 +121,9 @@ Required owner/action: keep a dependency-path disposition, monitor compatible up
 
 ## Recommended order
 
-1. Correct SEC-001 with a forward schema migration and verify anonymous/unrelated/approved-owner matrices.
-2. Harden the view/functions/search paths and rerun Supabase security advisors.
-3. Add bucket size/MIME limits and define verification-object retention/orphan cleanup.
+1. Correct SEC-001 with a forward schema migration and verify anonymous/unrelated/approved-owner matrices. ✅
+2. Harden the view/functions/search paths and rerun Supabase security advisors. ✅
+3. Add bucket size/MIME limits and define verification-object retention/orphan cleanup. ✅
 4. Enable leaked-password protection and re-test auth policy behavior.
-5. Reconcile dependency advisories without force upgrades.
+5. Reconcile dependency advisories without force upgrades. ✅
 6. Run the native Maestro and two-actor realtime gates, then repeat the final security and release review.

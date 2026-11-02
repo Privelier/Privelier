@@ -10,6 +10,8 @@ jest.mock('@react-navigation/native', () => {
   };
 });
 jest.mock('../../../auth/authService', () => ({ fetchOwnProfile: jest.fn() }));
+const mockFetchStats = jest.fn();
+jest.mock('../../accountStatsData', () => ({ fetchOwnAccountStats: (...args: unknown[]) => mockFetchStats(...args) }));
 jest.mock('../../../shared/components/NotificationBell', () => ({ NotificationBell: () => null }));
 jest.mock('../../../RoleContext', () => ({ useExitRole: () => jest.fn() }));
 jest.mock('../../../legal/LegalComponents', () => ({ LegalLinks: () => null }));
@@ -53,6 +55,7 @@ const profile: UsersRow = {
   accepted_terms_version: null,
   adult_confirmed_at: null,
   legal_accepted_at: null,
+  time_zone: 'Europe/Berlin',
 };
 
 const mockFetchProfile = jest.mocked(fetchOwnProfile);
@@ -60,6 +63,8 @@ const mockFetchProfile = jest.mocked(fetchOwnProfile);
 beforeEach(() => {
   mockFetchProfile.mockReset();
   mockFetchProfile.mockResolvedValue({ status: 'ok', profile });
+  mockFetchStats.mockReset();
+  mockFetchStats.mockResolvedValue(null);
 });
 
 afterEach(async () => {
@@ -95,5 +100,23 @@ describe('AccountScreen avatar integration', () => {
     expect(screen.getByTestId('customer-account-avatar-monogram').props.children).toBe('NH');
     expect(screen.getByTestId('customer-account-avatar').props.accessible).toBe(false);
     expect(screen.getByTestId('customer-account-edit-profile').props.accessibilityLabel).toBe('Edit profile');
+  });
+
+  it('shows the stats strip only once the customer has a completed cut', async () => {
+    mockFetchStats.mockResolvedValue({ cuts: 3, barbers: 2, averageRating: 4.5 });
+    await render(<AccountScreen navigation={{ navigate: jest.fn() } as never} route={{} as never} />);
+
+    await waitFor(() => expect(screen.getByTestId('customer-account-stats')).toBeTruthy());
+    expect(screen.getByTestId('customer-account-stats-cuts').props.accessibilityLabel).toBe('3 cuts');
+    expect(screen.getByTestId('customer-account-stats-rating').props.accessibilityLabel).toBe('4.5 avg rating');
+    expect(mockFetchStats).toHaveBeenCalledWith(profile.id);
+  });
+
+  it('hides the strip before the first completed cut', async () => {
+    mockFetchStats.mockResolvedValue({ cuts: 0, barbers: 0, averageRating: null });
+    await render(<AccountScreen navigation={{ navigate: jest.fn() } as never} route={{} as never} />);
+
+    await waitFor(() => expect(screen.getByTestId('customer-account-avatar')).toBeTruthy());
+    expect(screen.queryByTestId('customer-account-stats')).toBeNull();
   });
 });

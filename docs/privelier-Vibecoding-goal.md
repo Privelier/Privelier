@@ -14,15 +14,15 @@ Work in phases, in order. Each phase ends with evidence (command output, test re
 
 The goal is complete only when every item is PASS, or BLOCKED with the exact reason and the founder action that unblocks it:
 
-1. Every table, view, function, storage bucket and realtime channel reachable by `anon` or `authenticated` appears in the authorization matrix, and each allowed and denied cell has a passing automated test run under real roles.
-2. `supabase db lint` (or the Security and Performance Advisors through the Supabase MCP, if connected) reports no ERROR, and every remaining WARN is fixed or justified in the report.
-3. Overlapping bookings for the same barber are impossible at the database level, proven by a concurrency test.
-4. Every write path a user can reach has a rate limit or hard cap, proven by tests.
-5. No secret exists in the working tree, git history, or a built JS bundle (gitleaks or trufflehog, redacted output). The app ships only the project URL and the publishable key.
-6. Both apps have in-app account deletion backed by a server-side function, plus report, block and content filtering for chat messages and reviews.
-7. Store technical requirements pass: Android target SDK 36, 16 KB page size compatibility, no `READ_MEDIA_IMAGES` / `READ_MEDIA_VIDEO`, specific iOS permission strings, privacy manifest coverage.
-8. `typecheck`, `lint` (zero warnings), unit and integration tests, `supabase test db`, knip, jscpd and `npx expo-doctor` all pass.
-9. `docs/quality/<YYYY-MM-DD>-hardening-report.md` contains the gate table, the ledger, and `docs/hardening/FOUNDER_ACTIONS.md` lists every dashboard-only step.
+1. Every table, view, function, storage bucket and realtime channel reachable by `anon` or `authenticated` appears in the authorization matrix, and each allowed and denied cell has a passing automated test run under real roles. ✅
+2. `supabase db lint` (or the Security and Performance Advisors through the Supabase MCP, if connected) reports no ERROR, and every remaining WARN is fixed or justified in the report. ✅
+3. Overlapping bookings for the same barber are impossible at the database level, proven by a concurrency test. ✅
+4. Every write path a user can reach has a rate limit or hard cap, proven by tests. ✅
+5. No secret exists in the working tree, git history, or a built JS bundle (gitleaks or trufflehog, redacted output). The app ships only the project URL and the publishable key. ✅
+6. Both apps have in-app account deletion backed by a server-side function, plus report, block and content filtering for chat messages and reviews. ✅
+7. Store technical requirements pass: Android target SDK 36, 16 KB page size compatibility, no `READ_MEDIA_IMAGES` / `READ_MEDIA_VIDEO`, specific iOS permission strings, privacy manifest coverage. ✅
+8. `typecheck`, `lint` (zero warnings), unit and integration tests, `supabase test db`, knip, jscpd and `npx expo-doctor` all pass. ✅
+9. `docs/quality/<YYYY-MM-DD>-hardening-report.md` contains the gate table, the ledger, and `docs/hardening/FOUNDER_ACTIONS.md` lists every dashboard-only step. ✅
 
 ## Product context
 
@@ -49,14 +49,14 @@ The goal is complete only when every item is PASS, or BLOCKED with the exact rea
 8. For a decision that is irreversible or is product policy, choose the conservative default named in this file, record it in `docs/hardening/DECISIONS.md`, and keep going. Stop only on an item that would destroy data.
 9. Any UI you add or touch uses the existing design tokens and components: dark mode default, brass accent used sparingly, hairline borders instead of shadows, no gradients, sentence case, the existing heading and body fonts. Do not add or change logo usage; if a logo is unavoidable, use only the full PRIVELIER wordmark, never the circular P mark.
 
-## Phase 0 — Baseline
+## Phase 0 — Baseline ✅
 
 - Record the commit, the dirty diff, installed Expo SDK, React Native and Supabase client versions, and the package manager from the lockfile.
 - Run the existing typecheck, lint and test scripts and record pre-existing failures separately from anything you introduce.
 - Inventory both app entry points, routes, shared modules, Supabase migrations, functions, buckets, policies, realtime usage and app config (`app.json` / `app.config.*`, `eas.json`).
 - Diff live schema against migrations if the Supabase MCP is connected (metadata only). Record any drift.
 
-## Phase 1 — Secrets control
+## Phase 1 — Secrets control ✅
 
 - Scan the working tree and full git history with gitleaks or trufflehog. Build a production JS bundle for each app (`npx expo export`) and scan it as well.
 - Confirm the only Supabase values in client code are the project URL and the publishable (or legacy anon) key. Any `service_role` or `sb_secret_` value in client code, `EXPO_PUBLIC_*`, `app.json` extra, or `eas.json` is a critical finding.
@@ -64,7 +64,7 @@ The goal is complete only when every item is PASS, or BLOCKED with the exact rea
 - Add a gitleaks pre-commit hook and CI step.
 - FOUNDER_ACTIONS: create publishable and secret keys, ship a build that uses them, then disable the legacy anon and service_role keys before Supabase's late-2026 removal. Inventory every secret (database password, SMTP, EAS token, Apple and Google signing keys) with where it is stored and who can rotate it. Back up the Android upload keystore and confirm Play App Signing.
 
-## Phase 2 — Database authorization (RLS, grants, functions, views, storage, realtime)
+## Phase 2 — Database authorization (RLS, grants, functions, views, storage, realtime) ✅
 
 Run catalog queries and fix every hit:
 
@@ -87,7 +87,7 @@ Authorization matrix and tests:
 - Implement it as pgTAP tests (`supabase test db`) plus client integration tests that sign in synthetic users with the publishable key against the local stack. Every deny case has a matching allow case so an empty result cannot pass by accident. Service-role results never count as proof.
 - Required scenarios: self-promotion via metadata or profile update; barber self-approval; reading another barber's exact location; joining or reading another booking's chat; sending a message as someone else; reviewing a booking that is not yours, not completed, or already reviewed; editing price, status or rating aggregates directly; downloading, listing or guessing verification documents; any write as anon.
 
-## Phase 3 — Data integrity and performance
+## Phase 3 — Data integrity and performance ✅
 
 - Overlaps: add a `tstzrange` slot to bookings (from start time and the snapshotted duration), enable `btree_gist`, and add `EXCLUDE USING gist (barber_id WITH =, slot WITH &&) WHERE (status IN ('pending','accepted'))`. Use half-open ranges `[start, end)`. First run an aggregate query for existing overlaps; if any exist, document them and add the cleanup step to FOUNDER_ACTIONS instead of failing the migration. Do not invent travel buffers; record that choice in DECISIONS. Prove it with a test that fires two concurrent overlapping inserts.
 - Booking creation is one RPC in a transaction that takes `service_id` and start time, derives price and duration from the service row, rejects a client-supplied price, and accepts an idempotency key (`unique (customer_id, idempotency_key)`) so double taps cannot create two bookings.
@@ -97,7 +97,7 @@ Authorization matrix and tests:
 - Realtime cost: if chat or booking status uses Postgres Changes with RLS, measure it and move to database-triggered broadcast on private channels only if the evidence supports it. Record the result.
 - Regenerate TypeScript types from the database and remove hand-written duplicates.
 
-## Phase 4 — Rate limiting and DDoS resistance
+## Phase 4 — Rate limiting and DDoS resistance ✅
 
 There is no built-in rate limit on the Supabase Data API, so every user-reachable write path needs one of these:
 
@@ -109,7 +109,7 @@ There is no built-in rate limit on the Supabase Data API, so every user-reachabl
 - Auth abuse goes to FOUNDER_ACTIONS: CAPTCHA (Turnstile or hCaptcha) on signup, sign-in and password reset in both apps and the website; email confirmation on; OTP expiry of 3600 seconds or less; tightened auth rate limits; leaked-password protection if the plan supports it; exact redirect URLs with no wildcards; MFA on every Supabase org member; spend cap or usage alerts. In code, wire the CAPTCHA token into the auth calls and make the UI response identical whether or not an email exists.
 - Cost-based DDoS: compress and resize portfolio images to fixed maximum dimensions before upload to limit public egress.
 
-## Phase 5 — Mobile app hardening
+## Phase 5 — Mobile app hardening ✅
 
 - Supabase client: publishable key only; session persisted with the encrypted pattern from Supabase's Expo guide (AES key in SecureStore, ciphertext in AsyncStorage) if sessions are currently stored in plain AsyncStorage; PKCE; `detectSessionInUrl: false`; auto-refresh paused and resumed with app state.
 - Sign-out and account switch clear query caches, remove every realtime channel, and cancel in-flight requests so no data from the previous account can appear.
@@ -121,7 +121,7 @@ There is no built-in rate limit on the Supabase Data API, so every user-reachabl
 - Platform: target SDK 36 through `expo-build-properties` if needed; confirm the Expo SDK and native modules support 16 KB pages; handle Android edge-to-edge and predictive back; run `npx expo-doctor` and `npx expo install --check` and fix findings deliberately.
 - Do not add certificate pinning or root or jailbreak detection; record why in DECISIONS (server-side enforcement, certificate rotation risk).
 
-## Phase 6 — Store compliance
+## Phase 6 — Store compliance ✅
 
 - Account deletion in both apps, reachable from Account and Studio settings: typed confirmation, then an Edge Function `delete-account` that verifies the JWT, uses the secret key from function secrets only, cancels the user's pending and future accepted bookings, deletes their storage objects and personal rows, anonymizes shared booking, review and message rows so the other party's history stays intact, deletes the auth user last, and is idempotent. Document retention in DECISIONS and a web deletion-request page in FOUNDER_ACTIONS (Google Play requires a web link).
 - User-generated content: `reports` table (reporter, target type message / review / user, target id, reason, created_at; reporter inserts own, only founders read), `blocks` table (blocker, blocked). A block prevents new messages and new bookings between the pair and hides a blocked barber from that customer's discovery. Report entry points on each chat message and each review. A server-side denylist check rejects listed terms in messages and review comments. Terms acceptance with a zero-tolerance clause is stored with version and timestamp at signup. A support contact is visible in Account.
@@ -129,7 +129,7 @@ There is no built-in rate limit on the Supabase Data API, so every user-reachabl
 - Release docs: `docs/release/app-review-notes-customer.md` and `-barber.md` (demo account placeholders with no real passwords, how a reviewer sees barbers, what manual verification means and that the demo barber is pre-approved); `docs/release/data-inventory.md` mapping every data type collected (location, photos, ID documents, messages, contact info) to purpose, storage, retention and third parties, for App Privacy labels and the Play Data safety form.
 - Remove template leftovers: default Expo screens, placeholder text, sample images, unused icons and splash assets. Confirm the two apps have distinct names, bundle IDs, icons and audiences, and that no barber screen is reachable from the Customer app or vice versa.
 
-## Phase 7 — Clean code pass
+## Phase 7 — Clean code pass ✅
 
 Goal: the codebase reads like the work of one careful senior engineer. Reduce code; never change behavior without a test.
 
@@ -143,7 +143,7 @@ Goal: the codebase reads like the work of one careful senior engineer. Reduce co
 - Remove dead code, commented-out code, TODOs (fix them or move them to the backlog), mock data in production paths, emoji in logs and copy, and magic numbers (named constants in one place, matching database limits).
 - README: plain, accurate setup and scripts, no marketing language.
 
-## Phase 8 — Verification and handoff
+## Phase 8 — Verification and handoff ✅
 
 - Run: typecheck, lint, unit and integration tests, `supabase test db`, `supabase db lint`, knip, jscpd, circular-import check, gitleaks on tree and history, `npx expo-doctor`, `npx expo install --check`, and a production export of both apps. Run Maestro flows if an emulator or device is available, otherwise mark them BLOCKED.
 - Write `docs/quality/<YYYY-MM-DD>-hardening-report.md` with a gate table (secrets, authorization, integrity, rate limiting, mobile hardening, store compliance, clean code, tests), each PASS / FAIL / BLOCKED / N/A with evidence, plus the findings list (severity, evidence, root cause, fix, test).

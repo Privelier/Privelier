@@ -5,6 +5,7 @@
 import { Pressable, ScrollView, Share, Text, View } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { GlassSurface } from '../../../shared/components/GlassSurface';
+import { SafetyMenu } from '../../../shared/components/SafetyMenu';
 import { BackButton, OVER_IMAGE_BG, OVER_IMAGE_ICON } from '../../../shared/components/ScreenBackHeader';
 import { Skeleton } from '../../../shared/components/Skeleton';
 import { barberProfileLink } from '../../../shared/profileLinks';
@@ -100,6 +101,15 @@ export function HeroButtons({
         >
           <Ionicons name={favorite ? 'heart' : 'heart-outline'} size={17} color={favorite ? colors.accent : OVER_IMAGE_ICON} />
         </Pressable>
+        <SafetyMenu
+          counterpartId={barber.id}
+          counterpartName={barber.name}
+          bookingId={null}
+          testIDPrefix="barber-profile"
+          triggerStyle={disc}
+          iconColor={OVER_IMAGE_ICON}
+          iconSize={17}
+        />
       </View>
     </>
   );

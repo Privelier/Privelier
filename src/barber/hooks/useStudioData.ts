@@ -9,6 +9,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { fetchOwnProfile } from '../../auth/authService';
 import { fetchBarberStats, type BarberStatsRow } from '../../shared/barberStats';
 import { fetchDashboardView } from '../dashboardData';
+import { syncOwnTimeZone } from '../profileData';
 import type { DashboardView } from '../types';
 
 export function useStudioData(de: boolean) {
@@ -31,6 +32,7 @@ export function useStudioData(de: boolean) {
         fetchDashboardView(profileResult.profile.id),
         fetchBarberStats([profileResult.profile.id]),
       ]);
+      void syncOwnTimeZone(profileResult.profile.id, profileResult.profile.time_zone);
       setStats(statsById.get(profileResult.profile.id) ?? null);
       setName(profileResult.profile.name);
       setView(nextView);

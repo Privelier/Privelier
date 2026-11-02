@@ -6,6 +6,7 @@ import { HAIRLINE, radius, space } from '../../theme/spacing';
 import { useTheme } from '../../theme/useTheme';
 import { SheetGlassBackground } from './SheetGlassBackground';
 import { SheetTextInput } from './SheetTextInput';
+import { typeScale } from '../../theme/typography';
 
 type ConfirmSheetProps = {
   open: boolean;
@@ -112,7 +113,7 @@ export function ConfirmSheet({ open, title, message, confirmLabel, cancelLabel, 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: space.xl, paddingTop: space.base, paddingBottom: space['3xl'] },
   title: { fontSize: 24, lineHeight: 30 },
-  message: { fontSize: 14, lineHeight: 21, marginTop: space.sm },
+  message: { ...typeScale.body, marginTop: space.sm },
   prompt: { fontSize: 14, lineHeight: 20, marginTop: space.lg },
   input: { minHeight: 48, borderWidth: HAIRLINE, borderRadius: radius.md, paddingHorizontal: space.md, marginTop: space.sm, fontSize: 16 },
   actions: { flexDirection: 'row', gap: space.sm, marginTop: space.xl },

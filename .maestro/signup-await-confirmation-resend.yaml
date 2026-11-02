@@ -16,7 +16,7 @@
 #       -e TEST_NEW_CUSTOMER_EMAIL=customer.e2e.$(date +%s)@example.com
 # - This flow does not confirm the email or log in afterwards — it only
 #   verifies the signup -> await-confirmation -> resend UI path.
-appId: com.privelier.app # TODO: replace once app.json defines a real package/bundleIdentifier
+appId: com.privelier.app
 env:
   TEST_NEW_CUSTOMER_EMAIL: customer.e2e.signup@example.com
   TEST_NEW_CUSTOMER_PASSWORD: ChangeMe123!

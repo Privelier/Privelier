@@ -31,5 +31,5 @@ Running record for `docs/privelier-Vibecoding-goal.md`. Evidence is live (produc
 | Release docs | `docs/release/*` | Yes | N/A | Demo accounts (F21) |
 | Clean code | ESLint zero warnings with no-console, no-explicit-any, promise rules; knip clean; jscpd 1.55 %; no circular imports; every screen is a data hook plus presentational components (D22) | Yes | `npm run check` | None |
 | Dependencies | `npm audit --omit=dev`: 5 high, all inside `@expo/cli` | Yes | CI gate at critical | Watch Expo updates (D10) |
-| Flaky test | One Jest failure in 1 of 6 full runs, not reproducible in 5 reruns | Partly | Not isolated | Backlog: run Jest with `--runInBand --detectOpenHandles` repeatedly to isolate |
+| Flaky test ✅ | One Jest failure in 1 of 6 full runs, not reproducible in 5 reruns | Partly | Not isolated | Backlog: run Jest with `--runInBand --detectOpenHandles` repeatedly to isolate |
 | Maestro and devices | Flows exist in `.maestro/` | No | Blocked: no emulator or device session | F25 |

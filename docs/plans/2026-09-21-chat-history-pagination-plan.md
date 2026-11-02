@@ -12,15 +12,15 @@ Replace unbounded conversation reads with keyset-paginated history for both cust
 - Cursor is server-derived `{ createdAt, id }` from the oldest returned row.
 - Older-page predicate is strict composite less-than on `(created_at, id)`; no offsets or counts.
 
-## Realtime recovery
+## Realtime recovery ✅
 
 Keep channel-before-fetch and idempotent message merges. Retain a REST-page-derived high-water separately from displayed state. After reconnect, coalesce recovery passes, refresh the newest page, then page newer-than the pre-recovery high-water through exhaustion with a timestamp tie window and ID dedupe. A successful send or stream event must merge after snapshots; an older-page cursor must not be replaced by a newest-page cursor.
 
-## UI
+## UI ✅
 
 Use an explicit, accessible visual-top `Load earlier messages` control in each inverted list. It has loading, retry, and exhausted states and must preserve scroll position when earlier rows load.
 
-## Schema owner decision
+## Schema owner decision ✅
 
 Only the schema architect may add the candidate index:
 

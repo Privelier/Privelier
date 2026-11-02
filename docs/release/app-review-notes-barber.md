@@ -21,7 +21,7 @@ A new barber uploads a photo of an ID document and of a professional licence. Th
 
 ## Location (when in use only)
 
-Location is asked only when the barber taps "On my way" for an accepted booking, and only "while using the app". During that trip the customer sees the barber's position and arrival time; sharing stops when the barber arrives, ends the trip or the booking closes, and the position is deleted. Location is never needed to sign up, sign in or use the rest of the app. Android does not request background location.
+Location is asked only when the barber taps "On my way" for an accepted booking, and only "while using the app". During that trip the customer sees the barber's position and arrival time; sharing stops when the barber arrives, ends the trip or the booking closes, and the position is deleted. Location is never needed to sign up, sign in or use the rest of the app. Android does not request background location; it keeps the trip running with a visible foreground-service notification ("Sharing your trip"). On iOS the app uses the location background mode only for this trip, with the system's blue location indicator showing, so arrival updates continue if the barber locks the phone while driving; it never asks for "Always" permission.
 
 ## Photos
 

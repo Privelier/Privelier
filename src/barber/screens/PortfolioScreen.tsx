@@ -27,6 +27,7 @@ import { usePortfolio } from '../hooks/usePortfolio';
 import { MAX_PORTFOLIO_IMAGES } from '../portfolioData';
 import type { BarberTabParamList } from '../BarberTabs';
 import type { BarberStackParamList } from '../BarberNavigator';
+import { typeScale } from '../../theme/typography';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<BarberTabParamList, 'Portfolio'>,
@@ -107,7 +108,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: space.xl, paddingTop: space.xl, paddingBottom: space['2xl'] },
   heading: { fontSize: 30 },
-  subtitle: { fontSize: 14, lineHeight: 21, marginTop: 6 },
+  subtitle: { ...typeScale.body, marginTop: 6 },
   noticeMargins: { marginTop: space.xl },
   gridSpacing: { marginTop: space.xl },
   workHeading: { fontSize: 21, lineHeight: 28, marginTop: space['2xl'] },

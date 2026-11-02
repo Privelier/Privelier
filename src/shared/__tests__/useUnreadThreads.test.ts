@@ -188,6 +188,34 @@ describe('baseline ordering (M2)', () => {
   });
 });
 
+describe('in-flight read markers (review L2)', () => {
+  it('a recovery baseline does not re-flag a room whose marker write is still in flight', async () => {
+    const fake = installFakeChannel();
+    const { upsert } = installTables({
+      rooms: [{ id: 'r1' }],
+      readStates: [],
+      messages: [msg('r1', THEM, '2026-07-10T10:00:00+00:00')],
+    });
+    // The write never settles during this test.
+    upsert.mockImplementation(() => ({ then: () => new Promise(() => {}) }));
+    const { result } = await renderJoined(fake);
+    await waitFor(() => expect(result.current.unreadRoomIds).toEqual(new Set(['r1'])));
+
+    await act(() => result.current.setActiveRoom('r1'));
+    expect(upsert).toHaveBeenCalledTimes(1);
+    await act(() => result.current.setActiveRoom(null));
+
+    // Outage recovery re-reads the stale (pre-write) read state.
+    const callsBefore = mockFrom.mock.calls.length;
+    await act(() => fake.emitStatus('CHANNEL_ERROR'));
+    await act(() => fake.emitStatus('SUBSCRIBED'));
+    await waitFor(() => expect(mockFrom.mock.calls.length).toBeGreaterThan(callsBefore));
+    await act(async () => {});
+
+    expect(result.current.unreadRoomIds.has('r1')).toBe(false);
+  });
+});
+
 describe('live INSERT handling', () => {
   it('a counterpart message in a non-active room flags it; an own send does not', async () => {
     const fake = installFakeChannel();

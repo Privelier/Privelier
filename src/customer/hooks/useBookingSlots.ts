@@ -14,6 +14,10 @@
  * survives a refetch only if it is still valid. A per-date busy-read failure
  * greys out that one date ("unverified") instead of failing the screen;
  * only a failure to read the availability windows is a page-level error.
+ *
+ * `preferredDate` (a day the customer tapped on the barber profile) is
+ * preselected on the first load, and only if it really has an open slot for
+ * this service; otherwise nothing is preselected.
  */
 import { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
@@ -66,7 +70,7 @@ function firstOpenSlot(
   return null;
 }
 
-export function useBookingSlots(barberId: string, durationMinutes: number) {
+export function useBookingSlots(barberId: string, durationMinutes: number, preferredDate?: string) {
   const [dates] = useState<string[]>(() => buildLookaheadDates());
   const [slotsByDate, setSlotsByDate] = useState<Map<string, string[]>>(new Map());
   const [unverifiedDates, setUnverifiedDates] = useState<Set<string>>(new Set());
@@ -120,14 +124,16 @@ export function useBookingSlots(barberId: string, durationMinutes: number) {
     setUnverifiedDates(failedDates);
     setSlotsByDate(map);
     setSelection((current) => {
-      if (!current.date) return current;
+      if (!current.date) {
+        return preferredDate && (map.get(preferredDate) ?? []).length > 0 ? { date: preferredDate, time: null } : current;
+      }
       const freshSlots = map.get(current.date) ?? [];
       if (freshSlots.length === 0) return { date: null, time: null };
       if (current.time && !freshSlots.includes(current.time)) return { date: current.date, time: null };
       return current;
     });
     setLoading(false);
-  }, [barberId, dates, durationMinutes]);
+  }, [barberId, dates, durationMinutes, preferredDate]);
 
   useFocusEffect(
     useCallback(() => {

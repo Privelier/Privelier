@@ -23,7 +23,7 @@
 # Prerequisites:
 # - A pre-confirmed test customer account with a city set.
 # - Same appId placeholder caveat as every other flow here.
-appId: com.privelier.app # TODO: replace once app.json defines a real package/bundleIdentifier
+appId: com.privelier.app
 env:
   TEST_CUSTOMER_EMAIL: customer.e2e@example.com
   TEST_CUSTOMER_PASSWORD: ChangeMe123!

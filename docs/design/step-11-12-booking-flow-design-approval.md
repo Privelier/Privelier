@@ -206,4 +206,4 @@ One migration package, three objects, all serving booking-creation:
 
 ## Open questions for the founders (not blocking this pipeline run)
 
-1. No way to model a barber closure/blackout on a normally-open recurring day (Decision 1, step 2) — `AVAILABILITY` has no "closed" row type. Fast-follow candidate, not urgent at MVP scale (a solo barber can currently only add hours, not subtract them).
+1. No way to model a barber closure/blackout on a normally-open recurring day (Decision 1, step 2) — `AVAILABILITY` has no "closed" row type. Fast-follow candidate, not urgent at MVP scale (a solo barber can currently only add hours, not subtract them). ✅ (days off, migration 0046)

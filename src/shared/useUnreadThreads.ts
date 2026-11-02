@@ -29,8 +29,8 @@
  * The provider marks read when a room becomes active (the trigger:
  * opening that specific conversation) and again when an INSERT lands for the
  * active room (the user is looking at it). The written marker is
- * resolveReadMarker(now, newest known message) — see unread.ts for the
- * clock-skew rationale. Failures degrade silently (unread returns after
+ * resolveReadMarker(newest known message) — the server timestamp, never the
+ * device clock; see unread.ts for the clock-skew rationale. Failures degrade silently (unread returns after
  * restart until a write succeeds — truthful, nothing fake persisted).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -48,6 +48,14 @@ import {
   type UnreadMessageInput,
 } from './unread';
 import { devWarn } from './devLog';
+import { parseTimestampMs } from './readReceipts';
+
+function isNewer(candidate: string, current: string): boolean {
+  const a = parseTimestampMs(candidate);
+  const b = parseTimestampMs(current);
+  if (a === null) return false;
+  return b === null || a > b;
+}
 
 /** Same cap (and documented degradation) as the inbox preview scan. */
 const MESSAGE_SCAN_CAP = 200;
@@ -62,15 +70,24 @@ export interface UnreadState {
    * blur; the provider handles mark-as-read from it.
    */
   setActiveRoom: (roomId: string | null) => void;
+  /**
+   * Increments on every message this user can see arriving live, so the
+   * thread lists can refresh their previews while they stay open.
+   */
+  messageTick: number;
 }
 
 export function useUnreadThreads(): UnreadState {
   const [unreadRoomIds, setUnreadRoomIds] = useState<Set<string>>(new Set());
   const [myId, setMyId] = useState<string | null>(null);
+  const [messageTick, setMessageTick] = useState(0);
 
   const activeRoomRef = useRef<string | null>(null);
   const latestByRoomRef = useRef<Map<string, UnreadMessageInput>>(new Map());
   const myIdRef = useRef<string | null>(null);
+  // Rooms whose read-marker upsert has not settled yet: a baseline that races
+  // the write would read the old marker and briefly re-flag the room.
+  const inFlightMarkersRef = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
     let active = true;
@@ -103,6 +120,8 @@ export function useUnreadThreads(): UnreadState {
     // room writes nothing (finding M1 — see resolveReadMarker's contract).
     const marker = resolveReadMarker(latestByRoomRef.current.get(roomId)?.created_at ?? null);
     if (marker === null) return;
+    const inFlight = inFlightMarkersRef.current;
+    inFlight.set(roomId, (inFlight.get(roomId) ?? 0) + 1);
     void supabase
       .from('chat_read_state')
       .upsert(
@@ -110,9 +129,10 @@ export function useUnreadThreads(): UnreadState {
         { onConflict: 'chat_id,user_id' }
       )
       .then(({ error }) => {
-        if (error) {
-  devWarn('[unread] writeReadMarker failed', error);
-}
+        const left = (inFlight.get(roomId) ?? 1) - 1;
+        if (left > 0) inFlight.set(roomId, left);
+        else inFlight.delete(roomId);
+        if (error) devWarn('[unread] writeReadMarker failed', error);
       });
   }, []);
 
@@ -174,6 +194,8 @@ export function useUnreadThreads(): UnreadState {
     // The active room is being read right now — never re-flag it from a
     // baseline that raced a fresh message.
     if (activeRoomRef.current) next.delete(activeRoomRef.current);
+    // A marker still being written is newer than what this baseline read.
+    for (const roomId of inFlightMarkersRef.current.keys()) next.delete(roomId);
     setUnreadRoomIds(next);
   }, []);
 
@@ -218,9 +240,13 @@ export function useUnreadThreads(): UnreadState {
         (payload: RealtimePostgresChangesPayload<MessageRow>) => {
           const row = payload.new as MessageRow;
           if (!row || !row.id) return;
+          setMessageTick((tick) => tick + 1);
 
           const current = latestByRoomRef.current.get(row.chat_id);
-          if (!current || row.created_at > current.created_at) {
+          // Numeric compare: the baseline row came through PostgREST and this
+          // one through Realtime, whose timestamp strings are formatted
+          // differently (readReceipts.ts, decision D3).
+          if (!current || isNewer(row.created_at, current.created_at)) {
             latestByRoomRef.current.set(row.chat_id, row);
           }
 
@@ -267,5 +293,5 @@ export function useUnreadThreads(): UnreadState {
     [markRead]
   );
 
-  return { unreadRoomIds, unreadCount: unreadRoomIds.size, setActiveRoom };
+  return { unreadRoomIds, unreadCount: unreadRoomIds.size, setActiveRoom, messageTick };
 }

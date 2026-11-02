@@ -10,6 +10,7 @@ import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { getAppLanguage } from '../../shared/locale';
 import { useTheme } from '../../theme/useTheme';
 import { CAPTCHA_ORIGIN, CAPTCHA_SITE_KEY, captchaHtml, parseCaptchaMessage } from '../captcha';
+import { typeScale } from '../../theme/typography';
 
 export interface CaptchaState {
   /** True when a token must accompany the request. */
@@ -93,5 +94,5 @@ function CaptchaField({
 const styles = StyleSheet.create({
   wrap: { marginVertical: 8, alignItems: 'center' },
   web: { width: 310, height: 70, backgroundColor: 'transparent' },
-  error: { fontSize: 13, lineHeight: 19, marginTop: 4, textAlign: 'center' },
+  error: { ...typeScale.secondary, marginTop: 4, textAlign: 'center' },
 });

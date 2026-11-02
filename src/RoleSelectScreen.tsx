@@ -18,13 +18,19 @@ export default function RoleSelectScreen({ onSelectRole }: Props) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* The app's threshold: the full lockup up top, one plain promise, and
+          both choices low on the screen within thumb reach. */}
       <View style={styles.header}>
-        {/* The app's threshold — the one screen that most earns the full
-            lockup. Replaces the previous bare Playfair "Privelier" text (which
-            carried no testID, so nothing depends on it). */}
         <Brandmark lockup="vertical" size="xl" />
+      </View>
+      <View style={styles.promise}>
+        <Text accessibilityRole="header" style={[styles.headline, { color: colors.textPrimary, fontFamily: fonts.headingMedium }]}>
+          {de ? 'Dein Barber kommt zu dir.' : 'Your barber, at your door.'}
+        </Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: fonts.body }]}>
-          {de ? 'Wie möchtest du fortfahren?' : 'Choose how you’d like to continue'}
+          {de
+            ? 'Geprüfte Barber bei dir zu Hause, im Büro oder im Hotel. Wie möchtest du fortfahren?'
+            : 'Verified barbers at your home, office or hotel. How would you like to continue?'}
         </Text>
       </View>
 
@@ -37,7 +43,7 @@ export default function RoleSelectScreen({ onSelectRole }: Props) {
         />
         <RoleOption
           label={de ? 'Weiter als Barber' : 'Continue as barber'}
-          description={de ? 'Verwalte deine Leistungen und Termine' : 'Manage your services and bookings'}
+          description={de ? 'Verwalte Leistungen und Termine. Die Prüfung deines Profils folgt nach der Registrierung.' : 'Manage your services and bookings. Profile verification follows after sign-up.'}
           onPress={() => onSelectRole('barber')}
           testID="role-select-barber"
         />
@@ -92,20 +98,26 @@ function RoleOption({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
     paddingHorizontal: 24,
+    paddingBottom: space.xl,
   },
   header: {
-    marginBottom: 48,
+    flex: 1,
     // Centred only here. RoleSelect is the app's one pure threshold — no
-    // scroll, no content, full-width cards below — so a centred header
+    // scroll, no content, full-width cards below — so a centred lockup
     // creates no ragged edge. Other screens stay left-aligned.
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  promise: {
+    marginBottom: space.xl,
+  },
+  headline: {
+    ...typeScale.title1,
   },
   subtitle: {
     ...typeScale.bodyLarge,
-    marginTop: space.base,
-    textAlign: 'center',
+    marginTop: space.md,
   },
   optionList: {
     gap: space.md,

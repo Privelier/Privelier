@@ -30,7 +30,7 @@ export function useConversationStyles(colors: Palette) {
     dayDivider: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 34, marginVertical: 6 },
     dayRule: { flex: 1, height: 0.5, backgroundColor: 'rgba(191,160,107,0.32)' },
     dayPill: { borderRadius: 16, paddingHorizontal: 12, paddingVertical: 5, overflow: 'hidden' },
-    dayLabel: { color: colors.textSecondary, fontSize: 11, fontFamily: fonts.bodyMedium },
+    dayLabel: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.bodyMedium },
     historyControl: { alignItems: 'center', paddingBottom: 16 },
     earlierError: {
       maxWidth: 280,
@@ -73,10 +73,10 @@ export function useConversationStyles(colors: Palette) {
     bubblePending: { opacity: 0.78 },
     bubbleText: { fontSize: 16, lineHeight: 23, color: colors.textPrimary, fontFamily: fonts.body },
     bubbleFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6, marginTop: 4 },
-    bubbleMeta: { fontSize: 11, color: colors.textSecondary, fontFamily: fonts.body },
+    bubbleMeta: { fontSize: 12, color: colors.textSecondary, fontFamily: fonts.body },
     bubbleMetaFailed: { fontSize: 12, marginTop: 4, color: colors.errorText, fontFamily: fonts.bodyMedium },
     bubbleFailureReason: {
-      fontSize: 11,
+      fontSize: 12,
       lineHeight: 15,
       marginTop: 2,
       color: colors.textSecondary,
@@ -85,7 +85,7 @@ export function useConversationStyles(colors: Palette) {
     // Muted and weight-only near the cap — never red: maxLength makes overflow
     // impossible, so reaching the limit is not an error state.
     messageCounter: {
-      fontSize: 11,
+      fontSize: 12,
       textAlign: 'right',
       paddingHorizontal: 16,
       paddingBottom: 4,
@@ -94,7 +94,7 @@ export function useConversationStyles(colors: Palette) {
     },
 
     typingSlot: { height: 18, justifyContent: 'center', paddingHorizontal: 24 },
-    typingText: { fontSize: 11, color: colors.textSecondary, fontFamily: fonts.body },
+    typingText: { fontSize: 12, color: colors.textSecondary, fontFamily: fonts.body },
 
     inputRow: {
       flexDirection: 'row',

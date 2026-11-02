@@ -8,20 +8,12 @@
 //      auth.uid(), cancels their upcoming bookings, keeps the other party's
 //      history anonymized (migration 0057) and is rate limited per user.
 //   2. Only after that commits, the secret key empties the caller's folder
-//      (<uid>/...) in both buckets.
+//      (<uid>/...) in every bucket that stores per-user files. Look rows
+//      cascade with the user; their photos live under the same <uid>/ path.
 // If step 2 fails the account is still gone; the leftover objects sit under
 // a uid with no auth.users row and are logged for a manual sweep.
 // Repeating the call after success is harmless: step 1 is a no-op and the
 // folders are already empty.
-//
-// Looks (migration 0063): a barber's look photos live in their own folder of
-// the `looks` bucket and go with step 2. A customer's look photos show the
-// customer but live in the BARBER's folder, so their paths are read before
-// step 1 (the rows cascade away with the account) and removed after it.
-// Before 0063 is applied that read fails and is skipped.
-// A customer's own reference photos (migration 0066, `look-references`)
-// live in their own folder and go with step 2; before 0066 that bucket is
-// missing and its cleanup only logs.
 //
 // Keys come from the function environment that Supabase injects, never from
 // the app. SUPABASE_PUBLISHABLE_KEYS / SUPABASE_SECRET_KEYS are JSON
@@ -66,22 +58,6 @@ async function listOwnObjects(
   }
 }
 
-async function lookPhotosShowingCustomer(
-  admin: ReturnType<typeof createClient>,
-  userId: string,
-): Promise<string[]> {
-  const { data, error } = await admin
-    .from('looks')
-    .select('look_photos(storage_path)')
-    .eq('customer_id', userId);
-  if (error) {
-    console.error(`look photo lookup skipped user=${userId}`, error.code);
-    return [];
-  }
-  const rows = (data ?? []) as { look_photos: { storage_path: string }[] | null }[];
-  return rows.flatMap((row) => (row.look_photos ?? []).map((photo) => photo.storage_path));
-}
-
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' });
   const authorization = req.headers.get('Authorization');
@@ -96,11 +72,6 @@ Deno.serve(async (req) => {
   if (userError || !userData.user) return json(401, { error: 'unauthorized' });
   const userId = userData.user.id;
 
-  const admin = createClient(url, projectKey('SUPABASE_SECRET_KEYS', 'SUPABASE_SERVICE_ROLE_KEY'), {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-  const customerLookPhotos = await lookPhotosShowingCustomer(admin, userId);
-
   const { error: rpcError } = await asCaller.rpc('delete_own_account');
   if (rpcError) {
     if (rpcError.code === 'PA429') return json(429, { error: 'rate_limited' });
@@ -108,10 +79,9 @@ Deno.serve(async (req) => {
     return json(500, { error: 'delete_failed' });
   }
 
-  if (customerLookPhotos.length > 0) {
-    const { error } = await admin.storage.from('looks').remove(customerLookPhotos);
-    if (error) console.error(`storage cleanup failed bucket=looks customer=${userId}`, String(error));
-  }
+  const admin = createClient(url, projectKey('SUPABASE_SECRET_KEYS', 'SUPABASE_SERVICE_ROLE_KEY'), {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
   for (const bucket of BUCKETS) {
     try {
       const paths = await listOwnObjects(admin, bucket, userId);

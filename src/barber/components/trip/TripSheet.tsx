@@ -12,6 +12,7 @@ import { TripStatusPanel, type TripPhase } from '../../../shared/components/trip
 import { HAIRLINE, radius, space } from '../../../theme/spacing';
 import { useTheme } from '../../../theme/useTheme';
 import type { LiveTripState, StartTripError } from '../../trip/tripService';
+import { typeScale } from '../../../theme/typography';
 
 const ERROR_COPY: Record<'de' | 'en', Record<StartTripError, string>> = {
   de: {
@@ -155,7 +156,7 @@ const styles = StyleSheet.create({
   errorBox: { gap: space.xs },
   errorText: { fontSize: 14, lineHeight: 20 },
   link: { fontSize: 14, paddingVertical: space.xs },
-  note: { fontSize: 13, lineHeight: 19 },
+  note: { ...typeScale.secondary },
   actions: { gap: space.sm, marginTop: space.xs },
   actionRow: { flexDirection: 'row', gap: space.sm },
   secondary: {

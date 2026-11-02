@@ -102,7 +102,8 @@ export async function uploadPortfolioImage(
  * (SQLSTATE P0001, message contains "more than 6 portfolio images") when the
  * barber already holds 6 images — that specific case is surfaced as a typed
  * 'limit_reached' failure (not generic) so the UI can show honest at-the-cap
- * copy; every other error goes through mapPostgrestError.
+ * copy; any other P0001 is 'unknown', and every other error goes through
+ * mapPostgrestError.
  */
 export async function insertPortfolioRow(
   barberId: string,
@@ -123,6 +124,12 @@ export async function insertPortfolioRow(
           ? 'Du kannst höchstens 6 Portfoliobilder haben. Lösche eines, bevor du ein neues hinzufügst.'
           : 'You can have at most 6 portfolio images. Delete one before adding another.',
       });
+    }
+    // Any other raise is not a refused status change; the shared mapper's
+    // P0001 copy ("can no longer be changed") would mislead here.
+    if (error.code === RAISE_EXCEPTION) {
+      logBarberDataError('insertPortfolioRow', error);
+      return failure('unknown');
     }
     return mapPostgrestError('insertPortfolioRow', error);
   }

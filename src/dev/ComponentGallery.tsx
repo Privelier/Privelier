@@ -9,6 +9,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../theme/useTheme';
 import { space } from '../theme/spacing';
 import BarberCard from '../customer/components/BarberCard';
+import { AvailabilityPreviewView } from '../customer/components/barberProfile/AvailabilityPreview';
 import { ResponseBadge } from '../shared/components/stats/ResponseBadge';
 import { PopularTimesChart } from '../shared/components/stats/PopularTimesChart';
 import { StatsInsightCard } from '../barber/components/StatsInsightCard';
@@ -38,6 +39,15 @@ const SERVICES = [
   { id: 's1', barber_id: BARBER.id, name: 'Signature cut', price: 45, duration_minutes: 45 },
   { id: 's2', barber_id: BARBER.id, name: 'Beard sculpt', price: 25, duration_minutes: 30 },
 ] as unknown as ServiceRow[];
+function isoInDays(days: number): string {
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+const PREVIEW_DATES = Array.from({ length: 14 }, (_, i) => isoInDays(i));
+const PREVIEW_COUNTS = new Map(PREVIEW_DATES.map((date, i) => [date, [0, 2, 6, 0, 4, 9, 1][i % 7]]));
+const PREVIEW_CLOSED = new Set(PREVIEW_DATES.filter((date) => PREVIEW_COUNTS.get(date) === 0));
+
 const STATS: BarberStatsRow = {
   barber_id: BARBER.id, median_response_minutes: 12, response_samples: 31, popular_hours: GRID,
   popular_samples: 120, completed_count: 214, repeat_client_rate: 0.42, computed_at: new Date().toISOString(),
@@ -67,6 +77,7 @@ export default function ComponentGallery() {
   const [burstKey, setBurstKey] = useState(0);
   const [celebration, setCelebration] = useState<string | null>(null);
   const [value, setValue] = useState(1840);
+  const [pickedDay, setPickedDay] = useState<string | null>(null);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -78,6 +89,20 @@ export default function ComponentGallery() {
           <View style={styles.row}>
             <ResponseBadge minutes={12} />
             <ResponseBadge minutes={95} />
+          </View>
+        </Section>
+
+        <Section title="Barber profile · available this week">
+          <View style={{ marginHorizontal: -24 }}>
+            <AvailabilityPreviewView
+              dates={PREVIEW_DATES}
+              disabledDates={PREVIEW_CLOSED}
+              slotCounts={PREVIEW_COUNTS}
+              nextAvailable={{ date: PREVIEW_DATES[1], time: '10:30:00' }}
+              selectedDate={pickedDay}
+              german={false}
+              onPickDate={setPickedDay}
+            />
           </View>
         </Section>
 

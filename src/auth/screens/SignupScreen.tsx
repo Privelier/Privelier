@@ -17,7 +17,7 @@ import { defaultCountry, getAppLanguage } from '../../shared/locale';
 import { useCallback, useRef, useState } from 'react';
 import { AccessibilityInfo, StyleSheet, Text, View, type TextInputInstance } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { isAppleSignInSupported, signInWithProvider, signUpBarber, signUpCustomer } from '../authService';
+import { isOAuthProviderEnabled, signInWithProvider, signUpBarber, signUpCustomer } from '../authService';
 import { LegalConsentFields, LegalLinks } from '../../legal/LegalComponents';
 import { useTheme } from '../../theme/useTheme';
 import type { AuthStackParamList } from './AuthNavigator';
@@ -33,6 +33,7 @@ import {
   TextLink,
 } from './ui';
 import { useCaptcha } from '../components/CaptchaField';
+import { typeScale } from '../../theme/typography';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Signup'>;
 
@@ -55,6 +56,9 @@ export default function SignupScreen({ navigation, route }: Props) {
   const [city, setCity] = useState('');
   const [country, setCountry] = useState(defaultCountry);
   const [phone, setPhone] = useState('');
+  // Phone (and a barber's bio) are optional and can wait; folding them away
+  // keeps the primary action within reach on a phone-sized screen.
+  const [showMore, setShowMore] = useState(false);
   const [bio, setBio] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -220,33 +224,43 @@ export default function SignupScreen({ navigation, route }: Props) {
         textContentType="countryName"
         testID="auth-signup-country"
       />
-      <FormTextField
-        label={de ? 'Telefon' : 'Phone'}
-        value={phone}
-        onChangeText={setPhone}
-        optional
-        keyboardType="phone-pad"
-        autoComplete="tel"
-        textContentType="telephoneNumber"
-        testID="auth-signup-phone"
-      />
-      {isBarber ? (
-        <FormTextField
-          label="Bio"
-          value={bio}
-          onChangeText={setBio}
-          optional
-          multiline
-          helper={de ? 'Ein paar Zeilen über dein Handwerk. Du kannst das später ändern.' : 'A few lines about your craft. You can edit this later.'}
-          testID="auth-signup-bio"
+      {showMore ? (
+        <>
+          <FormTextField
+            label={de ? 'Telefon' : 'Phone'}
+            value={phone}
+            onChangeText={setPhone}
+            optional
+            keyboardType="phone-pad"
+            autoComplete="tel"
+            textContentType="telephoneNumber"
+            testID="auth-signup-phone"
+          />
+          {isBarber ? (
+            <FormTextField
+              label="Bio"
+              value={bio}
+              onChangeText={setBio}
+              optional
+              multiline
+              helper={de ? 'Ein paar Zeilen über dein Handwerk. Du kannst das später ändern.' : 'A few lines about your craft. You can edit this later.'}
+              testID="auth-signup-bio"
+            />
+          ) : null}
+        </>
+      ) : (
+        <TextLink
+          label={de ? 'Weitere Angaben hinzufügen (optional)' : 'Add more details (optional)'}
+          onPress={() => setShowMore(true)}
+          testID="auth-signup-more-details"
         />
-      ) : null}
+      )}
       {isBarber ? (
         <Text
           testID="auth-signup-verify-note"
           style={[styles.verifyNote, { color: colors.textSecondary, fontFamily: fonts.body }]}
         >
-          Your profile will be verified before you appear in search.
+          {de ? 'Dein Profil wird geprüft, bevor du in der Suche erscheinst.' : 'Your profile will be verified before you appear in search.'}
         </Text>
       ) : null}
       <LegalConsentFields
@@ -275,17 +289,19 @@ export default function SignupScreen({ navigation, route }: Props) {
           testID="auth-signup-go-login"
         />
       </View>
-      <View style={styles.providerActions}>
-        <OAuthButton provider="google" onPress={() => onProviderPress('google')} loading={providerSubmitting === 'google'} disabled={submitting || providerSubmitting !== null} testID="auth-signup-google" />
-        {isAppleSignInSupported() ? <OAuthButton provider="apple" onPress={() => onProviderPress('apple')} loading={providerSubmitting === 'apple'} disabled={submitting || providerSubmitting !== null} testID="auth-signup-apple" /> : null}
-      </View>
+      {isOAuthProviderEnabled('google') || isOAuthProviderEnabled('apple') ? (
+        <View style={styles.providerActions}>
+          {isOAuthProviderEnabled('google') ? <OAuthButton provider="google" onPress={() => onProviderPress('google')} loading={providerSubmitting === 'google'} disabled={submitting || providerSubmitting !== null} testID="auth-signup-google" /> : null}
+          {isOAuthProviderEnabled('apple') ? <OAuthButton provider="apple" onPress={() => onProviderPress('apple')} loading={providerSubmitting === 'apple'} disabled={submitting || providerSubmitting !== null} testID="auth-signup-apple" /> : null}
+        </View>
+      ) : null}
       <LegalLinks role={role} testIDPrefix="auth-signup-legal" />
     </AuthScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  verifyNote: { fontSize: 13, lineHeight: 19, marginBottom: 20 },
+  verifyNote: { ...typeScale.secondary, marginBottom: 20 },
   actions: { marginTop: 8, gap: 8 },
   providerActions: { marginTop: 24, gap: 10 },
 });

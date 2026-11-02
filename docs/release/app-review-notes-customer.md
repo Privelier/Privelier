@@ -22,6 +22,7 @@ Every barber in the app was checked by hand by the founders: an ID document and 
 
 - Chat is one conversation per booking. Long-press any message from the other person to report it; the header menu reports or blocks the person.
 - Each written review on a barber's profile has a report button (flag icon).
+- A barber's public profile (photo, bio, portfolio) has a menu (three dots, top right) to report or block that barber.
 - A block stops new messages and booking requests in both directions and hides the barber from discovery.
 - Messages and review comments are checked against a list of prohibited terms on the server before they are stored.
 - Sign-up requires accepting terms that state zero tolerance for abusive, threatening or objectionable content.
@@ -29,7 +30,7 @@ Every barber in the app was checked by hand by the founders: an ID document and 
 
 ## Account deletion (guideline 5.1.1(v))
 
-Account > Delete account. The user types DELETE to confirm; the server cancels upcoming bookings, deletes the account and its photos and documents, and keeps the other person's booking and chat history without the deleted user's name.
+Account > Delete account. The user types DELETE to confirm; the server cancels upcoming bookings, deletes the account and its photos and documents, and keeps the other person's booking and chat history without the deleted user's name. Safety reports and SOS records are kept, without the link to the deleted account, so the founders can still act on them; the confirmation sheet says so.
 
 ## Permissions
 

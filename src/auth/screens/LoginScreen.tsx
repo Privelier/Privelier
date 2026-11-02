@@ -11,7 +11,7 @@ import { getAppLanguage } from '../../shared/locale';
 import { useCallback, useRef, useState } from 'react';
 import { StyleSheet, View, type TextInputInstance } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { isAppleSignInSupported, signIn, signInWithProvider } from '../authService';
+import { isOAuthProviderEnabled, signIn, signInWithProvider } from '../authService';
 import { LegalLinks } from '../../legal/LegalComponents';
 import type { AuthStackParamList } from './AuthNavigator';
 import { emailError, loginPasswordError } from './validation';
@@ -162,10 +162,12 @@ export default function LoginScreen({ navigation, route }: Props) {
           testID="auth-login-go-signup"
         />
       </View>
-      <View style={styles.providerActions}>
-        <OAuthButton provider="google" onPress={() => onProviderPress('google')} loading={providerSubmitting === 'google'} disabled={submitting || providerSubmitting !== null} testID="auth-login-google" />
-        {isAppleSignInSupported() ? <OAuthButton provider="apple" onPress={() => onProviderPress('apple')} loading={providerSubmitting === 'apple'} disabled={submitting || providerSubmitting !== null} testID="auth-login-apple" /> : null}
-      </View>
+      {isOAuthProviderEnabled('google') || isOAuthProviderEnabled('apple') ? (
+        <View style={styles.providerActions}>
+          {isOAuthProviderEnabled('google') ? <OAuthButton provider="google" onPress={() => onProviderPress('google')} loading={providerSubmitting === 'google'} disabled={submitting || providerSubmitting !== null} testID="auth-login-google" /> : null}
+          {isOAuthProviderEnabled('apple') ? <OAuthButton provider="apple" onPress={() => onProviderPress('apple')} loading={providerSubmitting === 'apple'} disabled={submitting || providerSubmitting !== null} testID="auth-login-apple" /> : null}
+        </View>
+      ) : null}
       <LegalLinks role={role} testIDPrefix="auth-login-legal" />
     </AuthScreenShell>
   );

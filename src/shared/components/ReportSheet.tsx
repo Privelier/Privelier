@@ -20,6 +20,7 @@ import {
 import { ActionSheet } from './ActionSheet';
 import { SheetTextInput } from './SheetTextInput';
 import { useToast } from './ToastProvider';
+import { typeScale } from '../../theme/typography';
 
 type Props = {
   open: boolean;
@@ -130,7 +131,7 @@ const styles = StyleSheet.create({
   reason: { minHeight: 44, borderWidth: HAIRLINE, borderRadius: radius.pill, paddingHorizontal: space.base, justifyContent: 'center' },
   reasonText: { fontSize: 14 },
   details: { minHeight: 88, borderWidth: HAIRLINE, borderRadius: radius.md, padding: space.md, fontSize: 15, textAlignVertical: 'top' },
-  note: { fontSize: 13, lineHeight: 19 },
+  note: { ...typeScale.secondary },
   submit: { minHeight: 52, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
   submitText: { fontSize: 15 },
 });

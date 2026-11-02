@@ -20,7 +20,7 @@
 #   match "any row" — safe here because the flow starts from a clean slate
 #   for the one service it creates and only ever has that single row visible
 #   at the point each regex selector is used.
-appId: com.privelier.app # TODO: replace once app.json defines a real package/bundleIdentifier
+appId: com.privelier.app
 env:
   TEST_BARBER_EMAIL: barber.e2e@example.com
   TEST_BARBER_PASSWORD: ChangeMe123!

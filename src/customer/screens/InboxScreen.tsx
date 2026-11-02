@@ -21,10 +21,10 @@
 import { listPerformance } from '../../shared/listPerformance';
 import { RevealItem } from '../../shared/motion/Reveal';
 import { getAppLanguage } from '../../shared/locale';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -56,16 +56,21 @@ export default function InboxScreen({ navigation }: Props) {
   const { colors, fonts } = useTheme();
   // Real per-user read state (provider in CustomerNavigator): unread rows
   // render bold with a brass dot; the set updates live via realtime.
-  const { unreadRoomIds } = useUnread();
+  const { unreadRoomIds, messageTick } = useUnread();
 
   const [threads, setThreads] = useState<InboxThread[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  // silent: a live refresh after a new message keeps the list as it is
+  // (no pull-to-refresh spinner) and only swaps in the new previews.
+  const load = useCallback(async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
     const result = await fetchOwnInboxView();
+    if (silent && result.status !== 'ok') return;
     setLoading(false);
     if (result.status === 'ok') {
       setThreads(result.threads);
@@ -79,6 +84,20 @@ export default function InboxScreen({ navigation }: Props) {
       void load();
     }, [load])
   );
+
+  // A message arrived while this list is open: refresh the previews. Ticks
+  // that land while the tab is in the background are absorbed; the focus
+  // load above covers them.
+  const isFocused = useIsFocused();
+  const handledTick = useRef(messageTick);
+  useEffect(() => {
+    if (messageTick === handledTick.current) return;
+    handledTick.current = messageTick;
+    if (!isFocused) return;
+    // A short delay folds a burst of messages into one refresh.
+    const timer = setTimeout(() => void load(true), 300);
+    return () => clearTimeout(timer);
+  }, [isFocused, messageTick, load]);
 
   const onOpenThread = useCallback(
     (item: InboxThread) => {

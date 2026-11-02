@@ -4,16 +4,19 @@ import type { InboxThread } from '../../types';
 import { fetchOwnInboxView } from '../../inboxData';
 import InboxScreen from '../InboxScreen';
 
+let mockMessageTick = 0;
+
 jest.mock('@react-navigation/native', () => {
   const React = jest.requireActual('react');
   return {
     useFocusEffect: (callback: () => void | (() => void)) => React.useEffect(callback, [callback]),
+    useIsFocused: () => true,
   };
 });
 
 jest.mock('../../inboxData', () => ({ fetchOwnInboxView: jest.fn() }));
 jest.mock('../../UnreadContext', () => ({
-  useUnread: () => ({ unreadRoomIds: new Set<string>() }),
+  useUnread: () => ({ unreadRoomIds: new Set<string>(), messageTick: mockMessageTick }),
 }));
 jest.mock('../../../theme/useTheme', () => ({
   useTheme: () => ({
@@ -70,6 +73,7 @@ const thread: InboxThread = {
 const mockFetchInbox = jest.mocked(fetchOwnInboxView);
 
 beforeEach(() => {
+  mockMessageTick = 0;
   mockFetchInbox.mockReset();
   mockFetchInbox.mockResolvedValue({ status: 'ok', threads: [thread] });
 });
@@ -92,6 +96,18 @@ describe('InboxScreen avatar integration', () => {
     expect(mockFetchInbox).toHaveBeenCalledTimes(2);
     expect(screen.getByTestId('customer-inbox-row-room-1')).toBeTruthy();
     expect(screen.getByTestId('customer-inbox-list').props.refreshControl.props.refreshing).toBe(true);
+  });
+
+  it('refreshes the previews quietly when a message arrives while the list is open', async () => {
+    const view = await render(<InboxScreen navigation={{ navigate: jest.fn() } as never} route={{} as never} />);
+    await waitFor(() => expect(screen.getByTestId('customer-inbox-row-room-1')).toBeTruthy());
+    expect(mockFetchInbox).toHaveBeenCalledTimes(1);
+
+    mockMessageTick = 1;
+    await view.rerender(<InboxScreen navigation={{ navigate: jest.fn() } as never} route={{} as never} />);
+
+    await waitFor(() => expect(mockFetchInbox).toHaveBeenCalledTimes(2));
+    expect(screen.getByTestId('customer-inbox-list').props.refreshControl.props.refreshing).toBe(false);
   });
 
   it('keeps the empty state hidden while thread previews load', async () => {

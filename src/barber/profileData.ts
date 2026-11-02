@@ -81,6 +81,29 @@ export async function updateOwnBio(userId: string, bio: string): Promise<UpdateB
   return { status: 'ok', profile: data as BarberProfileRow };
 }
 
+/** The device's IANA time zone, or null where Intl cannot tell. */
+export function deviceTimeZone(): string | null {
+  try {
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return typeof zone === 'string' && zone.length > 0 ? zone : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Keep `users.time_zone` on the barber's device zone. Booking date and time
+ * are the barber's wall-clock time, and the server's "in the future" check
+ * reads this column (migration 0069). Best-effort: a failed write leaves the
+ * previous zone in place and is retried on the next Studio load.
+ */
+export async function syncOwnTimeZone(userId: string, storedZone: string | null | undefined): Promise<void> {
+  const zone = deviceTimeZone();
+  if (!zone || zone === storedZone) return;
+  const { error } = await supabase.from('users').update({ time_zone: zone }).eq('id', userId);
+  if (error) mapPostgrestError('syncOwnTimeZone', error);
+}
+
 /**
  * The signed-in barber's verification request, if any (newest first if
  * several exist). Read-only — submitting documents lives in verificationData.ts;

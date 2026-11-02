@@ -92,4 +92,21 @@ describe('PortfolioTile', () => {
     const disc = screen.getByTestId('tile-1-delete');
     expect(disc.props.accessibilityState.disabled).toBe(true);
   });
+
+  it('opens a read-only photo full screen and closes it again', async () => {
+    await render(<PortfolioTile imagePath="b1/img-1.jpg" testID="tile-1" />);
+
+    await fireEvent.press(screen.getByTestId('tile-1-open'));
+    expect(screen.getByTestId('tile-1-preview')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('tile-1-preview-close'));
+    expect(screen.queryByTestId('tile-1-preview')).toBeNull();
+  });
+
+  it('shows a calm fallback instead of a blank when the photo fails to load', async () => {
+    await render(<PortfolioTile imagePath="b1/img-1.jpg" testID="tile-1" />);
+
+    await fireEvent(screen.getByTestId('tile-1-image'), 'error', { nativeEvent: { error: 'not found' } });
+    expect(screen.queryByTestId('tile-1-image')).toBeNull();
+    expect(screen.queryByTestId('tile-1-open')).toBeNull();
+  });
 });

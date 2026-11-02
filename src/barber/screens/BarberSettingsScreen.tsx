@@ -11,6 +11,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useExitRole } from '../../RoleContext';
 import { LegalLinks } from '../../legal/LegalComponents';
 import { DeleteAccountAction } from '../../shared/components/DeleteAccountAction';
+import { Colophon } from '../../shared/components/Colophon';
 import { ScreenBackHeader } from '../../shared/components/ScreenBackHeader';
 import { Reveal } from '../../shared/motion';
 import { getAppLanguage } from '../../shared/locale';
@@ -21,6 +22,7 @@ import type { BarberStackParamList } from '../BarberNavigator';
 import { supabase } from '../../../lib/supabase';
 import { barberProfileLink } from '../../shared/profileLinks';
 import { ProfileQrCode } from '../components/ProfileQrCode';
+import { typeScale } from '../../theme/typography';
 
 type Props = NativeStackScreenProps<BarberStackParamList, 'Settings'>;
 
@@ -116,6 +118,7 @@ export default function BarberSettingsScreen({ navigation }: Props) {
         </Reveal>
 
         <LegalLinks includeAll testIDPrefix="barber-settings-legal" />
+        <Colophon testID="barber-settings-colophon" />
       </ScrollView>
     </SafeAreaView>
   );
@@ -124,12 +127,12 @@ export default function BarberSettingsScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: space.xl, paddingBottom: space['2xl'] },
-  heading: { fontSize: 30, lineHeight: 38, marginTop: space.md },
+  heading: { ...typeScale.title1, marginTop: space.md },
   list: { marginTop: space['2xl'], borderRadius: radius.xl, borderWidth: HAIRLINE, paddingHorizontal: 18 },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 56 },
   rowLabel: { flex: 1, fontSize: 16 },
   qrCard: { marginTop: space.lg, borderWidth: HAIRLINE, borderRadius: radius.xl, padding: space.lg, alignItems: 'center', gap: space.md },
-  qrHint: { fontSize: 13, lineHeight: 19, textAlign: 'center' },
+  qrHint: { ...typeScale.secondary, textAlign: 'center' },
   qrShare: { flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: 44, borderWidth: HAIRLINE, borderRadius: radius.md, paddingHorizontal: space.base },
   qrShareText: { fontSize: 14 },
   dangerZone: { marginTop: space['2xl'], borderTopWidth: HAIRLINE, paddingTop: space.md },

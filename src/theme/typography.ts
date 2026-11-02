@@ -43,6 +43,9 @@ export const fontFamily = {
  * Type scale: every text size in the app is one of these roles. Sizes and line
  * heights travel together so a screen never picks them separately. 12 is the
  * floor — anything smaller is unreadable on a phone and breaks large-text mode.
+ * Deliberate compact exceptions, each in a fixed-size slot: tab-bar labels
+ * (11pt so the German labels fit), unread badges, chart axis hours, the
+ * avatar-stack "+N" and the map pin subtitle.
  * Pair a role with a family from `fontFamily`; roles carry no weight.
  */
 export const typeScale = {

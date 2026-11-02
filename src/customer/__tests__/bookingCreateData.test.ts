@@ -90,6 +90,12 @@ describe('insertBooking', () => {
     expect(result).toHaveProperty('message', expect.any(String));
   });
 
+  it('does not show cancellation copy for an unrecognized P0001', async () => {
+    rejectWith('P0001', 'some other refusal');
+
+    expect(await insertBooking(INPUT)).toMatchObject({ status: 'error', code: 'unknown' });
+  });
+
   it('never surfaces raw server text', async () => {
     rejectWith('XX000', 'internal: relation "bookings" secret detail');
 

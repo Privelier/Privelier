@@ -12,4 +12,4 @@
 
 - Native Maestro/device flow: Maestro 2.10.0 is installed, but `adb devices` reports zero devices. The real-user flow, two-session Realtime check, image picker, Secure Store, native Mapbox, and iOS build checks therefore remain blocked_external.
 - Founder visual review remains required across Customer and Barber surfaces, booking, and reviews. This is a human release gate and is not replaced by web export or unit tests.
-- Final security scope still has the previously accepted `barber_directory` SECURITY DEFINER view, five intended SECURITY DEFINER RPC warnings, three mutable search-path warnings, and leaked-password protection warning. No new waitlist finding remains.
+- Final security scope still has the previously accepted `barber_directory` SECURITY DEFINER view, five intended SECURITY DEFINER RPC warnings, three mutable search-path warnings, and leaked-password protection warning. No new waitlist finding remains. ✅ (cleared by the 2026-10-27 hardening run: invoker directory view, pinned search paths, D15 accepted RPCs)

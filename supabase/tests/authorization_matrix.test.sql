@@ -120,6 +120,9 @@ select is(tests.run(tests.id('a'), format($$insert into public.messages (chat_id
 select is(tests.run(tests.id('x'), format($$update public.messages set message = 'edited' where chat_id = %L$$, tests.id('chat'))), '42501', 'messages cannot be edited');
 
 -- Realtime typing channel: participants only.
+-- Realtime creates its daily partitions only while it has traffic (postgres
+-- may not create them). "no partition of relation messages" here means:
+-- open any Realtime channel on the project once, then rerun.
 insert into realtime.messages (topic, extension, payload, event, private)
 values ('typing:' || tests.id('chat'), 'broadcast', '{}', 'typing', true);
 select set_config('realtime.topic', 'typing:' || tests.id('chat'), true);

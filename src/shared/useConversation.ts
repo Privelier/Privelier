@@ -30,6 +30,7 @@ import { useMessagesRealtime } from './useMessagesRealtime';
 import { useReadReceipt } from './useReadReceipt';
 import { useSendQueue, type PendingSend } from './useSendQueue';
 import { useTypingBroadcast } from './useTypingBroadcast';
+import { getUnsentDraft, setUnsentDraft } from './unsentDrafts';
 
 type Failure = { status: 'error'; message: string };
 
@@ -87,11 +88,12 @@ export function useConversation(room: ChatRoomRow, api: ConversationApi, setActi
   const refreshRunningRef = useRef(false);
   const refreshQueuedRef = useRef(false);
 
-  const [draft, setDraft] = useState('');
+  // An unsent draft survives leaving and reopening the room (unsentDrafts).
+  const [draft, setDraft] = useState(() => getUnsentDraft(room.id));
   // Synchronous mirror of the draft: a same-tick double-fire of Send reads
   // '' from here and no-ops (review finding M1) — setDraft('') alone only
   // lands after the next commit.
-  const draftRef = useRef('');
+  const draftRef = useRef(draft);
 
   useEffect(() => {
     let active = true;
@@ -249,13 +251,14 @@ export function useConversation(room: ChatRoomRow, api: ConversationApi, setActi
     (text: string) => {
       draftRef.current = text;
       setDraft(text);
+      setUnsentDraft(room.id, text);
       if (text.trim().length > 0) {
         notifyActivity(); // debounced inside the hook — never per-keystroke traffic
       } else {
         notifyStopped();
       }
     },
-    [notifyActivity, notifyStopped]
+    [notifyActivity, notifyStopped, room.id]
   );
 
   const send = useCallback(() => {
@@ -263,9 +266,10 @@ export function useConversation(room: ChatRoomRow, api: ConversationApi, setActi
     if (text.length === 0) return;
     draftRef.current = ''; // synchronous — a double-fire sees '' and no-ops
     setDraft('');
+    setUnsentDraft(room.id, '');
     notifyStopped();
     submit(text);
-  }, [submit, notifyStopped]);
+  }, [submit, notifyStopped, room.id]);
 
   // The single quiet "Read" marker (design D5) — shared derivation (L2).
   const readMarkerId = useMemo(
